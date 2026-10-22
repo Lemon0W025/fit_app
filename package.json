@@ -1,0 +1,12 @@
+{
+  "name": "yangsheng-coach",
+  "version": "1.0.0",
+  "private": true,
+  "description": "养生师打卡小程序：拍照打卡每餐，AI 养生师点评与监督减重",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
