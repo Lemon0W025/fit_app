@@ -9,6 +9,12 @@ const MEAL_LABELS = {
   snack: '加餐',
 }
 
+const RATING_LABELS = {
+  green: '吃得好',
+  yellow: '还可以',
+  red: '要注意',
+}
+
 function isMealType(t) {
   return MEAL_ORDER.indexOf(t) !== -1
 }
@@ -24,6 +30,7 @@ function guessMealType(hour) {
 module.exports = {
   MEAL_ORDER,
   MEAL_LABELS,
+  RATING_LABELS,
   isMealType,
   guessMealType,
 }
