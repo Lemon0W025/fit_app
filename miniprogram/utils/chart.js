@@ -1,10 +1,16 @@
 // 体重折线图：computeChart 负责算坐标（纯函数，有单测），drawChart 负责画到 canvas 2d 上
 
+// 目标离曲线超过这么多公斤就先不画目标线，否则曲线会被压成一条平线，看不出变化
+const TARGET_NEAR_KG = 2
+
 function computeChart(values, { width, height, padding = 24, target = null }) {
   if (!values.length) return { points: [], min: 0, max: 0, targetY: null }
 
   let min = Math.min(...values)
   let max = Math.max(...values)
+  if (target != null && (target < min - TARGET_NEAR_KG || target > max + TARGET_NEAR_KG)) {
+    target = null
+  }
   if (target != null) {
     min = Math.min(min, target)
     max = Math.max(max, target)
@@ -44,8 +50,11 @@ function drawChart(ctx, chart, { width, height, padding, colors }) {
     ctx.moveTo(padding, y)
     ctx.lineTo(width - padding, y)
     ctx.stroke()
-    ctx.fillStyle = colors.text
-    ctx.fillText(value.toFixed(1), padding, y - 4)
+    // 目标线贴得太近时省掉这条刻度文字，避免重叠
+    if (chart.targetY == null || Math.abs(y - chart.targetY) > 16) {
+      ctx.fillStyle = colors.text
+      ctx.fillText(value.toFixed(1), padding, y - 4)
+    }
   }
 
   if (chart.targetY != null) {
@@ -74,10 +83,13 @@ function drawChart(ctx, chart, { width, height, padding, colors }) {
     ctx.fill()
   })
 
+  // 最新值标在折线来向的另一侧，避免压在线上
   const last = chart.points[chart.points.length - 1]
+  const prev = chart.points[chart.points.length - 2]
+  const labelY = prev && prev.y < last.y ? last.y + 18 : last.y - 10
   ctx.fillStyle = colors.text
   ctx.font = 'bold 12px sans-serif'
-  ctx.fillText(String(last.value), Math.min(last.x - 12, width - padding - 30), last.y - 10)
+  ctx.fillText(String(last.value), Math.min(last.x - 12, width - padding - 30), labelY)
 }
 
 module.exports = { computeChart, drawChart }

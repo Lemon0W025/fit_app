@@ -35,9 +35,20 @@ test('只有一个点时水平居中', () => {
   assert.ok(Number.isFinite(points[0].y))
 })
 
-test('目标体重纳入纵轴范围', () => {
-  const { points, targetY, min } = computeChart([70, 69], { ...box, target: 60 })
-  assert.ok(min <= 60)
+test('目标体重接近时纳入纵轴范围并画目标线', () => {
+  const { points, targetY, min } = computeChart([70, 69], { ...box, target: 68 })
+  assert.ok(min <= 68)
   assert.ok(targetY > points[1].y)
   assert.ok(targetY <= 180)
+})
+
+test('目标体重离得太远时不画目标线，免得把曲线压扁', () => {
+  const { targetY, min } = computeChart([70, 69], { ...box, target: 60 })
+  assert.equal(targetY, null)
+  assert.ok(min > 60)
+})
+
+test('目标体重在曲线上方（想增重）且接近时也画', () => {
+  const { points, targetY } = computeChart([50, 51], { ...box, target: 52 })
+  assert.ok(targetY < points[1].y)
 })

@@ -28,6 +28,10 @@
   color: var(--muted);
 }
 
+.portion {
+  margin-left: 12rpx;
+}
+
 .coach {
   background: var(--primary-soft);
 }
