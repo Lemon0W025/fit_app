@@ -4,7 +4,7 @@ const { buildSummaryMessages } = require('../lib/prompts')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey, isDateKey } = require('../lib/shared/date')
 
-function createDayService({ repo, chat, config, now, log = () => {} }) {
+function createDayService({ repo, chat, config, now, forest, log = () => {} }) {
   function resolveDate(input) {
     const date = (input || {}).date
     if (date === undefined || date === null || date === '') return dateKey(now())
@@ -30,6 +30,7 @@ function createDayService({ repo, chat, config, now, log = () => {} }) {
         totals,
         remainingKcal: dailyKcal == null ? null : dailyKcal - totals.kcal,
         summary,
+        tree: await forest.today(openid, date, meals),
       }
     },
 

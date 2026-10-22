@@ -14,6 +14,7 @@ function setup(overrides = {}) {
     meal: { analyze: record('meal.analyze'), reanalyze: record('meal.reanalyze'), get: record('meal.get'), remove: record('meal.remove') },
     day: { get: record('day.get'), summarize: record('day.summarize') },
     weight: { save: record('weight.save'), list: record('weight.list') },
+    forest: { get: record('forest.get'), setSpecies: record('forest.setSpecies') },
     ...overrides,
   }
   const logs = []
@@ -34,6 +35,8 @@ test('把 action 分发到对应 service，并传入 openid 和 data', async () 
     ['summary.generate', 'day.summarize'],
     ['weight.save', 'weight.save'],
     ['weight.list', 'weight.list'],
+    ['forest.get', 'forest.get'],
+    ['forest.setSpecies', 'forest.setSpecies'],
   ]
   for (const [action, target] of pairs) {
     const res = await route({ action, data: { x: 1 } }, 'u1')

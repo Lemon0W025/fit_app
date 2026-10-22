@@ -4,6 +4,7 @@ const { buildMealMessages } = require('../lib/prompts')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
+const { MAIN_MEALS, STAGES, STAGE_LABELS, dayTree, treeHint } = require('../lib/shared/forest')
 
 const NOTE_MAX = 200
 
@@ -11,7 +12,25 @@ function text(v, max) {
   return typeof v === 'string' ? v.trim().slice(0, max) : ''
 }
 
-function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, log = () => {} }) {
+function isMainMeal(mealType) {
+  return MAIN_MEALS.indexOf(mealType) !== -1
+}
+
+// 这次打卡前后，今天的树长成了什么样，给打卡结果页做即时反馈
+function treeChange(beforeMeals, afterMeals, species) {
+  const before = dayTree(beforeMeals)
+  const after = dayTree(afterMeals)
+  return {
+    before: before.stage,
+    after: after.stage,
+    grew: STAGES.indexOf(after.stage) > STAGES.indexOf(before.stage),
+    stageLabel: STAGE_LABELS[after.stage],
+    hint: treeHint(after),
+    species,
+  }
+}
+
+function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, log = () => {} }) {
   async function requireProfile(openid) {
     const profile = await repo.getProfile(openid)
     if (!profile) throw new AppError(CODES.NO_PROFILE, '先完善一下个人档案吧')
@@ -91,8 +110,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, l
         createdAt: at.getTime(),
         updatedAt: at.getTime(),
       }
-      const id = await repo.addMeal(meal)
-      return { _id: id, ...meal }
+      const saved = { _id: await repo.addMeal(meal), ...meal }
+
+      // 只有正餐影响今天的树，加餐不算
+      let tree = null
+      if (isMainMeal(src.mealType)) {
+        const garden = await forest.recordDay(openid, date)
+        tree = treeChange(meals, meals.concat(saved), garden.days[date])
+      }
+      return { ...saved, tree }
     },
 
     async reanalyze(openid, input) {
@@ -117,7 +143,14 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, l
 
       const patch = { note, ...result, updatedAt: now().getTime() }
       await repo.updateMeal(meal._id, patch)
-      return { ...meal, ...patch }
+      const updated = { ...meal, ...patch }
+
+      let tree = null
+      if (isMainMeal(meal.mealType)) {
+        const garden = await forest.recordDay(openid, meal.date)
+        tree = treeChange(meals, meals.map((m) => (m._id === meal._id ? updated : m)), garden.days[meal.date])
+      }
+      return { ...updated, tree }
     },
 
     async get(openid, input) {
@@ -127,6 +160,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, l
     async remove(openid, input) {
       const meal = await requireMeal(openid, (input || {}).mealId)
       await repo.deleteMeal(meal._id)
+      if (isMainMeal(meal.mealType)) await forest.pruneDay(openid, meal.date)
       if (meal.fileID) {
         try {
           await deleteFile(meal.fileID)

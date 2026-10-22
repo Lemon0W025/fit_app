@@ -92,3 +92,42 @@ test('没有 openid 与未知 action', async () => {
   cloud.setOpenid('u1')
   assert.equal((await main({ action: 'nope' })).code, 'UNKNOWN_ACTION')
 })
+
+test('养生森林：三顿全绿结果、森林月视图、切换未解锁树种、删除后回退', async () => {
+  const green = analysisJson({ rating: 'green' })
+  const cloud = createFakeCloud({ replies: [green, green, green] })
+  const { main } = loadCloudFunction(cloud)
+  const today = dateKey()
+  await main({ action: 'profile.save', data: profileInput })
+
+  const stages = []
+  const ids = []
+  for (const mealType of ['breakfast', 'lunch', 'dinner']) {
+    const res = await main({ action: 'meal.analyze', data: { mealType, note: '家常菜' } })
+    assert.equal(res.ok, true, res.message)
+    stages.push(res.data.tree.after)
+    ids.push(res.data._id)
+  }
+  assert.deepEqual(stages, ['sprout', 'small', 'fruit'])
+
+  const garden = cloud.db.collections.get('gardens').get('u1')
+  assert.equal(garden._openid, 'u1')
+  assert.deepEqual(garden.days, { [today]: 'apple' })
+
+  const forest = await main({ action: 'forest.get' })
+  assert.equal(forest.ok, true, forest.message)
+  assert.equal(forest.data.today.stage, 'fruit')
+  assert.equal(forest.data.today.streak, 1)
+  assert.equal(forest.data.days.find((d) => d.date === today).stage, 'fruit')
+  assert.deepEqual(forest.data.stats, { trees: 1, fruits: 1 })
+
+  const day = await main({ action: 'day.get' })
+  assert.equal(day.data.tree.stage, 'fruit')
+
+  const locked = await main({ action: 'forest.setSpecies', data: { species: 'peach' } })
+  assert.equal(locked.code, 'BAD_REQUEST')
+
+  for (const mealId of ids) await main({ action: 'meal.delete', data: { mealId } })
+  assert.deepEqual(cloud.db.collections.get('gardens').get('u1').days, {})
+  assert.equal((await main({ action: 'forest.get' })).data.today.streak, 0)
+})

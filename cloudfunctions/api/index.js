@@ -13,6 +13,7 @@ const { createProfileService } = require('./services/profile')
 const { createMealService } = require('./services/meal')
 const { createDayService } = require('./services/day')
 const { createWeightService } = require('./services/weight')
+const { createForestService } = require('./services/forest')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -20,13 +21,15 @@ const now = () => new Date()
 const repo = createRepo(cloud.database())
 const chat = createChat(cloud)
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
+const forest = createForestService({ repo, now })
 
 const route = createRouter(
   {
     profile: createProfileService({ repo, now }),
-    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, log }),
-    day: createDayService({ repo, chat, config, now, log }),
+    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, log }),
+    day: createDayService({ repo, chat, config, now, forest, log }),
     weight: createWeightService({ repo, now }),
+    forest,
   },
   { log },
 )

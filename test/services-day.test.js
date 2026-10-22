@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createDayService } = require('../cloudfunctions/api/services/day')
+const { createForestService } = require('../cloudfunctions/api/services/forest')
 const { createFakeRepo, createFakeChat, PROFILE, NOW, TODAY, CONFIG } = require('./helpers/fake-repo')
 
 function setup({ results = [], withProfile = true } = {}) {
@@ -8,7 +9,8 @@ function setup({ results = [], withProfile = true } = {}) {
   if (withProfile) repo.state.profiles.set('u1', { ...PROFILE })
   const chat = createFakeChat(results)
   const logs = []
-  const service = createDayService({ repo, chat, config: CONFIG, now: () => NOW, log: (...a) => logs.push(a) })
+  const forest = createForestService({ repo, now: () => NOW })
+  const service = createDayService({ repo, chat, config: CONFIG, now: () => NOW, log: (...a) => logs.push(a), forest })
   return { repo, chat, service, logs }
 }
 
@@ -92,4 +94,13 @@ test('summarize：AI 失败或返回空时 AI_FAILED', async () => {
   const b = setup({ results: ['   '] })
   await seedMeals(b.repo)
   await assert.rejects(b.service.summarize('u1', {}), { code: 'AI_FAILED' })
+})
+
+test('get：带上今天的树', async () => {
+  const { repo, service } = setup()
+  await seedMeals(repo)
+  const day = await service.get('u1', {})
+  assert.equal(day.tree.stage, 'small')
+  assert.equal(day.tree.hint, '再打卡晚餐就能长成大树')
+  assert.equal(day.tree.species, 'apple')
 })
