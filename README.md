@@ -105,6 +105,18 @@ module.exports = {
 
 > 如果以后想正式上架给外人用：含生成式 AI 的小程序需要相应的主体和资质，个人主体一般过不了审核。家人自用请用体验版。
 
+### 7.（可选）让 Claude 在云端直接部署
+
+用微信官方的 [miniprogram-ci](https://www.npmjs.com/package/miniprogram-ci)，不用开开发者工具也能上传代码、部署云函数、生成预览二维码（`scripts/wechat.js`）。一次性准备：
+
+1. 小程序后台「开发管理 → 开发设置 → 小程序代码上传」：生成**代码上传密钥**并下载；IP 白名单选择关闭（云端出口 IP 不固定）。密钥能上传开发版本，不要外传
+2. Claude 云端环境设置（会话标题栏的环境菜单 → Edit）：
+   - Network access 放行 `servicewechat.com`、`tcb.tencentcloudapi.com`、`scf.tencentcloudapi.com`、`flexdb.tencentcloudapi.com`
+   - 新增环境变量 `WX_UPLOAD_KEY`，值为密钥文件的全部内容（用记事本打开复制）
+3. 设置对新会话生效：开一个新会话说「部署」即可，项目背景在 `CLAUDE.md`
+
+命令：`npm install` 之后 `npm run wx:function` / `npm run wx:preview` / `npm run wx:upload -- 版本号 描述`。
+
 ## 常见问题
 
 | 现象 | 原因和处理 |

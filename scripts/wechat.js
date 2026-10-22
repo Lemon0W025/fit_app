@@ -1,0 +1,118 @@
+// 用微信官方的 miniprogram-ci 在命令行里部署，不用开微信开发者工具。
+//
+// 需要：
+//   - 环境变量 WX_UPLOAD_KEY：小程序后台生成的「代码上传密钥」文件的全部内容
+//   - miniprogram/config.js 里填好云开发环境 ID（envId）
+//   - 能访问 servicewechat.com、tcb/scf/flexdb.tencentcloudapi.com
+//
+// 用法：
+//   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
+//   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
+//   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
+
+const fs = require('fs')
+const path = require('path')
+const { execSync } = require('child_process')
+
+const ROOT = path.join(__dirname, '..')
+const OUT_DIR = path.join(ROOT, '.wechat')
+const ROBOT = 1
+
+function fail(message) {
+  console.error(`\n✗ ${message}\n`)
+  process.exit(1)
+}
+
+// 环境变量里的换行可能被写成 \n 或整个丢掉，统一还原成标准 PEM 格式
+function privateKey() {
+  const raw = process.env.WX_UPLOAD_KEY
+  if (!raw) fail('缺少环境变量 WX_UPLOAD_KEY（小程序后台「开发管理 → 开发设置 → 小程序代码上传」生成的密钥内容）')
+  let key = raw.replace(/\\n/g, '\n').trim()
+  if (key.indexOf('\n') === -1) {
+    const m = key.match(/^(-----BEGIN [A-Z ]+-----)(.+?)(-----END [A-Z ]+-----)$/)
+    if (m) key = [m[1], ...m[2].replace(/\s+/g, '').match(/.{1,64}/g), m[3]].join('\n')
+  }
+  return key + '\n'
+}
+
+function envId() {
+  const { envId: id } = require(path.join(ROOT, 'miniprogram/config.js'))
+  if (!id) fail('miniprogram/config.js 里的 envId 还没填（云开发控制台 → 设置 → 环境 ID）')
+  return id
+}
+
+function lastCommitSubject() {
+  try {
+    return execSync('git log -1 --pretty=%s', { cwd: ROOT }).toString().trim().slice(0, 60)
+  } catch (e) {
+    return ''
+  }
+}
+
+function loadCi() {
+  try {
+    return require('miniprogram-ci')
+  } catch (e) {
+    fail('还没装 miniprogram-ci，先在项目根目录运行 npm install')
+  }
+}
+
+async function main() {
+  const [command, ...args] = process.argv.slice(2)
+  if (!['function', 'preview', 'upload'].includes(command)) {
+    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述]')
+  }
+
+  const ci = loadCi()
+  // 云端环境的出网走代理，miniprogram-ci 需要单独告诉它
+  const proxy = process.env.HTTPS_PROXY || process.env.https_proxy
+  if (proxy) ci.proxy(proxy)
+
+  const { appid } = JSON.parse(fs.readFileSync(path.join(ROOT, 'project.config.json'), 'utf8'))
+  const project = new ci.Project({
+    appid,
+    type: 'miniProgram',
+    projectPath: ROOT,
+    privateKey: privateKey(),
+    ignores: ['node_modules/**/*', 'test/**/*', 'docs/**/*', 'scripts/**/*', '.wechat/**/*'],
+  })
+
+  if (command === 'function') {
+    const env = envId()
+    console.log(`上传云函数 api → 环境 ${env}（云端安装依赖）…`)
+    const res = await ci.cloud.uploadFunction({
+      project,
+      env,
+      name: 'api',
+      path: path.join(ROOT, 'cloudfunctions/api'),
+      remoteNpmInstall: true,
+    })
+    console.log(`✓ 云函数已部署：${res.filesCount} 个文件，${res.packSize} 字节`)
+    return
+  }
+
+  const setting = { es6: true, enhance: true, minify: true, minifyWXSS: true, minifyWXML: true }
+
+  if (command === 'preview') {
+    fs.mkdirSync(OUT_DIR, { recursive: true })
+    const dest = path.join(OUT_DIR, 'preview-qrcode.jpg')
+    await ci.preview({
+      project,
+      desc: lastCommitSubject() || 'preview',
+      setting,
+      robot: ROBOT,
+      qrcodeFormat: 'image',
+      qrcodeOutputDest: dest,
+    })
+    console.log(`✓ 预览二维码已生成：${dest}`)
+    return
+  }
+
+  const version = args[0] || require(path.join(ROOT, 'package.json')).version
+  const desc = args[1] || lastCommitSubject() || `v${version}`
+  await ci.upload({ project, version, desc, setting, robot: ROBOT })
+  console.log(`✓ 已上传开发版本 ${version}（ci 机器人 ${ROBOT}）：${desc}`)
+  console.log('  第一次上传后，到小程序后台「版本管理」把它选为体验版')
+}
+
+main().catch((e) => fail((e && (e.message || e.errMsg)) || String(e)))

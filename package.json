@@ -4,9 +4,15 @@
   "private": true,
   "description": "养生师打卡小程序：拍照打卡每餐，AI 养生师点评与监督减重",
   "scripts": {
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "wx:function": "node scripts/wechat.js function",
+    "wx:preview": "node scripts/wechat.js preview",
+    "wx:upload": "node scripts/wechat.js upload"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "miniprogram-ci": "^2.1.31"
   }
 }
