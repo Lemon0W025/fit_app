@@ -61,7 +61,10 @@ Page({
         this.setData({ stage: '小暖正在仔细看你的饭菜…' })
         return api.call('meal.analyze', { fileID, mealType, note })
       })
-      .then((meal) => wx.redirectTo({ url: `/pages/meal/meal?id=${meal._id}` }))
+      .then((meal) => {
+        getApp().globalData.lastTree = { mealId: meal._id, tree: meal.tree }
+        wx.redirectTo({ url: `/pages/meal/meal?id=${meal._id}` })
+      })
       .catch((err) => {
         this.setData({ submitting: false, stage: '' })
         api.showError(err)

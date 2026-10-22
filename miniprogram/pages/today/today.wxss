@@ -4,6 +4,48 @@
   margin: 8rpx 8rpx 24rpx;
 }
 
+.tree-card {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: linear-gradient(90deg, #e9f3e3 0%, #ffffff 80%);
+}
+
+.tree-card-image {
+  width: 150rpx;
+  height: 150rpx;
+  flex-shrink: 0;
+}
+
+.tree-card-body {
+  flex: 1;
+  margin-left: 16rpx;
+  min-width: 0;
+}
+
+.tree-card-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.tree-card-hint {
+  font-size: 28rpx;
+  margin-top: 4rpx;
+}
+
+.tree-card-streak {
+  font-size: 26rpx;
+  color: var(--muted);
+  margin-top: 4rpx;
+}
+
+.tree-card-arrow {
+  font-size: 44rpx;
+  color: var(--gray);
+  margin-left: 8rpx;
+}
+
 .hero-top {
   display: flex;
   justify-content: space-between;

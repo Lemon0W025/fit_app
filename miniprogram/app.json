@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/today/today",
+    "pages/forest/forest",
     "pages/weight/weight",
     "pages/profile/profile",
     "pages/checkin/checkin",
@@ -24,6 +25,12 @@
         "text": "今日",
         "iconPath": "images/tab-today.png",
         "selectedIconPath": "images/tab-today-on.png"
+      },
+      {
+        "pagePath": "pages/forest/forest",
+        "text": "森林",
+        "iconPath": "images/tab-forest.png",
+        "selectedIconPath": "images/tab-forest-on.png"
       },
       {
         "pagePath": "pages/weight/weight",

@@ -4,6 +4,16 @@
   <block wx:if="{{view}}">
     <view class="greeting">{{greeting}}</view>
 
+    <view wx:if="{{tree}}" class="card tree-card" bindtap="goForest">
+      <image class="tree-card-image" src="{{tree.image}}" mode="aspectFit" />
+      <view class="tree-card-body">
+        <view class="tree-card-title">{{tree.title}}</view>
+        <view class="tree-card-hint">{{tree.hint}}</view>
+        <view wx:if="{{tree.streakText}}" class="tree-card-streak">{{tree.streakText}}</view>
+      </view>
+      <text class="tree-card-arrow">›</text>
+    </view>
+
     <view class="card hero">
       <view class="hero-top">
         <text>{{view.dateLabel}}</text>

@@ -1,0 +1,153 @@
+.today-tree {
+  text-align: center;
+  background: linear-gradient(180deg, #e9f3e3 0%, #ffffff 70%);
+}
+
+.today-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.today-image {
+  width: 360rpx;
+  height: 360rpx;
+  display: block;
+  margin: 8rpx auto 0;
+}
+
+.today-hint {
+  font-size: 30rpx;
+  margin-top: 8rpx;
+}
+
+.today-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32rpx;
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.species-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.species {
+  width: calc((100% - 32rpx) / 3);
+  box-sizing: border-box;
+  text-align: center;
+  padding: 12rpx 8rpx 16rpx;
+  border-radius: 20rpx;
+  border: 3rpx solid transparent;
+  background: var(--gray-soft);
+}
+
+.species-on {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.species-image {
+  width: 120rpx;
+  height: 120rpx;
+  display: block;
+  margin: 0 auto;
+}
+
+.species-name {
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.species-locked .species-image {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.species-locked .species-name {
+  color: var(--gray);
+}
+
+.species-lock {
+  font-size: 22rpx;
+  color: var(--gray);
+}
+
+.unlock-tip {
+  margin-top: 20rpx;
+  text-align: center;
+}
+
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.month-label {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.month-arrow {
+  font-size: 48rpx;
+  color: var(--primary);
+  padding: 0 24rpx;
+  line-height: 1;
+}
+
+.month-arrow-off {
+  color: var(--line);
+}
+
+.weekdays,
+.grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.weekday {
+  width: calc(100% / 7);
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--muted);
+}
+
+.cell {
+  width: calc(100% / 7);
+  text-align: center;
+  margin-top: 8rpx;
+}
+
+.cell-image {
+  width: 88rpx;
+  height: 88rpx;
+  display: block;
+  margin: 0 auto;
+}
+
+.cell-future {
+  border-radius: 50%;
+  background: var(--gray-soft);
+  transform: scale(0.5);
+}
+
+.cell-day {
+  font-size: 22rpx;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.month-stats {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 2rpx solid var(--line);
+  text-align: center;
+  font-size: 28rpx;
+  color: var(--muted);
+}

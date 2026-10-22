@@ -5,7 +5,7 @@ const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
 const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
 
-const PAGES = ['today', 'checkin', 'meal', 'weight', 'profile']
+const PAGES = ['today', 'forest', 'checkin', 'meal', 'weight', 'profile']
 
 test('app.json 里的页面文件和 tabBar 图标都存在', () => {
   const fs = require('node:fs')
@@ -94,6 +94,9 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(meal.data.meal.kcalText, '约 520 千卡')
   assert.equal(meal.data.meal.label, '午餐')
   assert.equal(meal.data.note, '米饭吃了一半')
+  assert.equal(meal.data.tree.title, '🌱 种下了今天的树苗')
+  assert.equal(meal.data.tree.image, '/images/forest/sprout.png')
+  assert.equal(wx.app.globalData.lastTree, null)
 
   // 5. 估得不准 → 补充描述重新分析
   meal.startEdit()
@@ -102,12 +105,17 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   await settle()
   assert.equal(meal.data.meal.kcalText, '约 300 千卡')
   assert.equal(meal.data.editing, false)
+  assert.equal(meal.data.tree.title, '今天的树：树苗')
 
   // 6. 今日页展示
   today.onShow()
   await settle()
   assert.equal(today.data.view.totals.kcal, 300)
   assert.equal(today.data.view.meals.length, 1)
+  assert.equal(today.data.tree.title, '今天的苹果树：树苗')
+  assert.equal(today.data.tree.streakText, '🔥 已连续 1 天')
+  today.goForest()
+  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/forest/forest'])
   assert.match(today.data.greeting, /妈妈/)
   today.openMeal(event({ id: mealId }))
   assert.deepEqual(wx.log.nav.pop(), ['navigateTo', `/pages/meal/meal?id=${mealId}`])
@@ -115,6 +123,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   // 7. 只写文字再打一餐，然后生成总结
   const checkin2 = loadPage('checkin', wx)
   checkin2.onLoad()
+  checkin2.pickMealType(event({ value: 'dinner' }))
   checkin2.onNote(event({}, { value: '一碗面条' }))
   checkin2.submit()
   await settle()
@@ -135,7 +144,28 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   await settle()
   assert.equal(today.data.view.meals.length, 1)
 
-  // 9. 体重：建档时已记 70，今天更新为 69.5
+  // 9. 森林页：午餐删掉了，只剩晚餐 → 树苗
+  const forest = loadPage('forest', wx)
+  forest.onShow()
+  await settle()
+  assert.equal(forest.data.loaded, true)
+  assert.equal(forest.data.today.title, '今天的苹果树：树苗')
+  assert.equal(forest.data.view.totalTrees, 1)
+  assert.equal(forest.data.species.length, 6)
+  assert.equal(forest.data.species[0].current, true)
+  assert.equal(forest.data.species[1].lockText, '种满 7 棵')
+  const todayCell = forest.data.cells.find((c) => c.date === today.data.view.date)
+  assert.equal(todayCell.image, '/images/forest/sprout.png')
+  forest.openDay(event({ key: todayCell.key }))
+  assert.match(wx.log.modals.pop(), /树苗 · 打卡 1 顿/)
+  forest.pickSpecies(event({ id: 'orange' }))
+  assert.match(wx.log.toasts.pop(), /再种 6 棵树就能解锁橘子树/)
+  forest.prevMonth()
+  await settle()
+  assert.ok(forest.data.month < todayCell.date.slice(0, 7))
+  assert.ok(forest.data.cells.every((c) => c.blank || c.image === '/images/forest/empty.png'))
+
+  // 10. 体重：建档时已记 70，今天更新为 69.5
   const weight = loadPage('weight', wx)
   weight.onShow()
   await settle()

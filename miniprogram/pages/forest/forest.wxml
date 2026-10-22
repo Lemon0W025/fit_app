@@ -1,0 +1,46 @@
+<view wx:if="{{!loaded}}" class="empty">正在走进森林…</view>
+
+<view class="page" wx:if="{{loaded}}">
+  <view class="card today-tree">
+    <view class="today-title">{{today.title}}</view>
+    <image class="today-image" src="{{today.image}}" mode="aspectFit" />
+    <view class="today-hint">{{today.hint}}</view>
+    <view class="today-stats">
+      <text wx:if="{{today.streakText}}" class="today-stat">{{today.streakText}}</text>
+      <text class="today-stat">🌳 累计种了 {{view.totalTrees}} 棵</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">今天种哪种树</view>
+    <view class="species-list">
+      <view wx:for="{{species}}" wx:key="id" class="species {{item.current ? 'species-on' : ''}} {{item.unlocked ? '' : 'species-locked'}}" data-id="{{item.id}}" bindtap="pickSpecies">
+        <image class="species-image" src="{{item.image}}" mode="aspectFit" />
+        <view class="species-name">{{item.name}}</view>
+        <view wx:if="{{!item.unlocked}}" class="species-lock">🔒 {{item.lockText}}</view>
+      </view>
+    </view>
+    <view wx:if="{{view.nextUnlock}}" class="muted small unlock-tip">再种 {{view.nextUnlock.remaining}} 棵树，就能解锁{{view.nextUnlock.name}}</view>
+  </view>
+
+  <view class="card">
+    <view class="month-bar">
+      <text class="month-arrow" bindtap="prevMonth">‹</text>
+      <text class="month-label">{{view.monthLabel}}的森林</text>
+      <text class="month-arrow {{view.nextMonth ? '' : 'month-arrow-off'}}" bindtap="nextMonth">›</text>
+    </view>
+    <view class="weekdays">
+      <text wx:for="{{weekdays}}" wx:key="*this" class="weekday">{{item}}</text>
+    </view>
+    <view class="grid">
+      <view wx:for="{{cells}}" wx:key="key" class="cell" data-key="{{item.key}}" bindtap="openDay">
+        <block wx:if="{{!item.blank}}">
+          <image wx:if="{{item.image}}" class="cell-image" src="{{item.image}}" mode="aspectFit" />
+          <view wx:else class="cell-image cell-future"></view>
+          <view class="cell-day">{{item.day}}</view>
+        </block>
+      </view>
+    </view>
+    <view class="month-stats">这个月种了 {{view.stats.trees}} 棵树，其中 {{view.stats.fruits}} 棵结了果</view>
+  </view>
+</view>

@@ -93,3 +93,57 @@ test('greetingText 按时段问候', () => {
   assert.equal(greetingText(15, '妈妈'), '下午好，妈妈')
   assert.equal(greetingText(22, ''), '晚上好')
 })
+
+const { treeImage, decorateTree, treeCard, buildForestCells } = require('../miniprogram/utils/view')
+
+test('treeImage：按阶段和树种取图片', () => {
+  assert.equal(treeImage('empty', 'apple'), '/images/forest/empty.png')
+  assert.equal(treeImage('sprout', 'peach'), '/images/forest/sprout.png')
+  assert.equal(treeImage('small', 'peach'), '/images/forest/small.png')
+  assert.equal(treeImage('bloom', 'peach'), '/images/forest/bloom-peach.png')
+  assert.equal(treeImage('fruit', 'cherry'), '/images/forest/fruit-cherry.png')
+  assert.equal(treeImage('big', undefined), '/images/forest/big-apple.png')
+  assert.equal(treeImage('future', 'apple'), '')
+})
+
+test('decorateTree：长大了用庆祝的标题，没变就说明现状', () => {
+  const grew = decorateTree({ before: 'sprout', after: 'small', grew: true, stageLabel: '小树', hint: '再打卡晚餐就能长成大树', species: 'apple' })
+  assert.equal(grew.title, '🎉 今天的树长成小树了')
+  assert.equal(grew.image, '/images/forest/small.png')
+  assert.equal(decorateTree({ after: 'sprout', grew: true, stageLabel: '树苗', species: 'apple' }).title, '🌱 种下了今天的树苗')
+  assert.equal(decorateTree({ after: 'bloom', grew: true, stageLabel: '开花', species: 'apple' }).title, '🌸 今天的树开花了')
+  assert.equal(decorateTree({ after: 'fruit', grew: true, stageLabel: '结果', species: 'apple' }).title, '🍎 今天的树结果了！')
+  assert.equal(decorateTree({ after: 'big', grew: false, stageLabel: '大树', species: 'apple' }).title, '今天的树：大树')
+  assert.equal(decorateTree(null), null)
+})
+
+test('treeCard：今日页的小树卡片', () => {
+  const card = treeCard({ stage: 'small', stageLabel: '小树', species: 'orange', speciesName: '橘子树', hint: '再打卡晚餐就能长成大树', streak: 3 })
+  assert.equal(card.image, '/images/forest/small.png')
+  assert.equal(card.title, '今天的橘子树：小树')
+  assert.equal(card.streakText, '🔥 已连续 3 天')
+  assert.equal(treeCard({ stage: 'empty', stageLabel: '空地', species: 'apple', speciesName: '苹果树', hint: 'x', streak: 0 }).title, '今天还没种树')
+  assert.equal(treeCard({ stage: 'empty', stageLabel: '空地', species: 'apple', speciesName: '苹果树', hint: 'x', streak: 0 }).streakText, '')
+  assert.equal(treeCard(null), null)
+})
+
+test('buildForestCells：周一开头的日历，前面补空格', () => {
+  const days = [
+    { date: '2026-10-01', day: 1, stage: 'fruit', species: 'apple', mealsCount: 3, kcal: 1200 },
+    { date: '2026-10-02', day: 2, stage: 'empty', species: 'apple', mealsCount: 0, kcal: 0 },
+    { date: '2026-10-03', day: 3, stage: 'future', species: 'apple', mealsCount: 0, kcal: 0 },
+  ]
+  // 2026-10-01 是周四（firstWeekday = 4），周一开头前面补 3 个空格
+  const cells = buildForestCells(days, 4)
+  assert.equal(cells.length, 6)
+  assert.deepEqual(cells.slice(0, 3).map((c) => c.blank), [true, true, true])
+  assert.equal(cells[3].image, '/images/forest/fruit-apple.png')
+  assert.equal(cells[3].day, 1)
+  assert.equal(cells[4].image, '/images/forest/empty.png')
+  assert.equal(cells[5].future, true)
+  assert.equal(cells[5].image, '')
+  assert.ok(cells.every((c) => c.key))
+  // 周日开头的月份补 6 个
+  assert.equal(buildForestCells(days, 0).filter((c) => c.blank).length, 6)
+  assert.equal(buildForestCells(days, 1).filter((c) => c.blank).length, 0)
+})

@@ -1,10 +1,11 @@
 const api = require('../../utils/api')
-const { decorateMeal } = require('../../utils/view')
+const { decorateMeal, decorateTree } = require('../../utils/view')
 
 Page({
   data: {
     loading: true,
     meal: null,
+    tree: null,
     note: '',
     editing: false,
     working: false,
@@ -12,6 +13,13 @@ Page({
 
   onLoad(options) {
     this.mealId = options.id
+    // 刚打完卡跳过来时，展示这次打卡让今天的树长成了什么样
+    const app = getApp()
+    const last = app.globalData.lastTree
+    if (last && last.mealId === options.id) {
+      this.setData({ tree: decorateTree(last.tree) })
+      app.globalData.lastTree = null
+    }
     api.call('meal.get', { mealId: this.mealId })
       .then((meal) => this.showMeal(meal))
       .catch((err) => {
@@ -43,7 +51,7 @@ Page({
     api.call('meal.reanalyze', { mealId: this.mealId, note: this.data.note })
       .then((meal) => {
         wx.hideLoading()
-        this.setData({ working: false, editing: false })
+        this.setData({ working: false, editing: false, tree: decorateTree(meal.tree) })
         this.showMeal(meal)
         if (meal.status === 'failed') api.showError(new Error(meal.error))
       })
@@ -74,6 +82,10 @@ Page({
           })
       },
     })
+  },
+
+  goForest() {
+    wx.switchTab({ url: '/pages/forest/forest' })
   },
 
   backToToday() {

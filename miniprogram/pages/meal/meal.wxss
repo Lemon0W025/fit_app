@@ -1,3 +1,32 @@
+.tree-banner {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 24rpx;
+  background: linear-gradient(90deg, #e9f3e3 0%, #ffffff 80%);
+}
+
+.tree-banner-image {
+  width: 140rpx;
+  height: 140rpx;
+  flex-shrink: 0;
+}
+
+.tree-banner-body {
+  flex: 1;
+  margin-left: 16rpx;
+}
+
+.tree-banner-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.tree-banner-hint {
+  font-size: 28rpx;
+  margin-top: 4rpx;
+}
+
 .hero-photo {
   width: 100%;
   height: 520rpx;

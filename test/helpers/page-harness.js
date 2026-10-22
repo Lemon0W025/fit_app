@@ -23,6 +23,7 @@ function createWx(main) {
   const log = { toasts: [], modals: [], nav: [], uploads: [] }
   const wx = {
     log,
+    app: { globalData: { lastTree: null } },
     cloud: {
       callFunction({ name, data, success, fail }) {
         Promise.resolve()
@@ -83,6 +84,7 @@ function loadPage(name, wx) {
   const file = path.join(PAGES_DIR, name, `${name}.js`)
   let def = null
   global.wx = wx
+  global.getApp = () => wx.app
   global.Page = (d) => {
     def = d
   }

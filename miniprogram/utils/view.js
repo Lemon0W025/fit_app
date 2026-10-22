@@ -60,6 +60,60 @@ function buildDayView(day) {
   }
 }
 
+// ---------------------------------------------------------------- 养生森林
+
+const GREW_TITLES = {
+  sprout: '🌱 种下了今天的树苗',
+  small: '🎉 今天的树长成小树了',
+  big: '🎉 今天的树长成大树了',
+  bloom: '🌸 今天的树开花了',
+  fruit: '🍎 今天的树结果了！',
+}
+
+// 树苗、小树各树种通用；大树、开花、结果每个树种一张
+function treeImage(stage, species) {
+  if (!stage || stage === 'future') return ''
+  if (stage === 'empty' || stage === 'sprout' || stage === 'small') return `/images/forest/${stage}.png`
+  return `/images/forest/${stage}-${species || 'apple'}.png`
+}
+
+// 打卡结果页：这次打卡让今天的树发生了什么
+function decorateTree(tree) {
+  if (!tree) return null
+  return {
+    ...tree,
+    image: treeImage(tree.after, tree.species),
+    title: tree.grew && GREW_TITLES[tree.after] ? GREW_TITLES[tree.after] : `今天的树：${tree.stageLabel}`,
+  }
+}
+
+// 今日页顶部的小树卡片
+function treeCard(tree) {
+  if (!tree) return null
+  return {
+    ...tree,
+    image: treeImage(tree.stage, tree.species),
+    title: tree.stage === 'empty' ? '今天还没种树' : `今天的${tree.speciesName}：${tree.stageLabel}`,
+    streakText: tree.streak > 0 ? `🔥 已连续 ${tree.streak} 天` : '',
+  }
+}
+
+// 森林日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）
+function buildForestCells(days, firstWeekday) {
+  const blanks = (firstWeekday + 6) % 7
+  const cells = []
+  for (let i = 0; i < blanks; i++) cells.push({ key: `blank-${i}`, blank: true })
+  days.forEach((d) => {
+    cells.push({
+      ...d,
+      key: d.date,
+      future: d.stage === 'future',
+      image: treeImage(d.stage, d.species),
+    })
+  })
+  return cells
+}
+
 function greetingText(hour, nickname) {
   let hello = '晚上好'
   if (hour >= 5 && hour < 11) hello = '早上好'
@@ -68,4 +122,12 @@ function greetingText(hour, nickname) {
   return nickname ? `${hello}，${nickname}` : hello
 }
 
-module.exports = { decorateMeal, buildDayView, greetingText }
+module.exports = {
+  decorateMeal,
+  buildDayView,
+  greetingText,
+  treeImage,
+  decorateTree,
+  treeCard,
+  buildForestCells,
+}
