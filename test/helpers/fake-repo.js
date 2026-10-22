@@ -10,6 +10,7 @@ function createFakeRepo() {
     meals: [],
     summaries: new Map(),
     weights: new Map(),
+    gardens: new Map(),
     seq: 0,
   }
 
@@ -27,6 +28,12 @@ function createFakeRepo() {
       return state.meals
         .filter((m) => m._openid === openid && m.date === date)
         .sort((a, b) => a.createdAt - b.createdAt)
+        .map(clone)
+    },
+    async listMealsBetween(openid, startDate, endDate) {
+      return state.meals
+        .filter((m) => m._openid === openid && m.date >= startDate && m.date <= endDate)
+        .sort((a, b) => (a.date === b.date ? a.createdAt - b.createdAt : a.date < b.date ? -1 : 1))
         .map(clone)
     },
     async getMeal(openid, id) {
@@ -52,6 +59,13 @@ function createFakeRepo() {
     },
     async saveSummary(openid, date, doc) {
       state.summaries.set(`${openid}_${date}`, { ...clone(doc), _openid: openid, date })
+    },
+
+    async getGarden(openid) {
+      return clone(state.gardens.get(openid)) || null
+    },
+    async saveGarden(openid, garden) {
+      state.gardens.set(openid, clone(garden))
     },
 
     async saveWeight(openid, date, weightKg) {

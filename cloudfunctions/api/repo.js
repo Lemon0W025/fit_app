@@ -2,6 +2,8 @@
 // 集合第一次用到时如果还没建，会自动创建，省去控制台手动建表
 
 const MEALS_PER_DAY_LIMIT = 100
+// 一个月最多 31 天，每天几顿，1000 条足够（也是服务端单次查询上限）
+const MEALS_PER_RANGE_LIMIT = 1000
 
 function isMissingCollection(e) {
   const msg = String((e && (e.errMsg || e.message)) || '')
@@ -49,6 +51,15 @@ function createRepo(db) {
         c.where({ _openid: openid, date }).orderBy('createdAt', 'asc').limit(MEALS_PER_DAY_LIMIT).get())
       return res.data
     },
+    async listMealsBetween(openid, startDate, endDate) {
+      const res = await withCollection('meals', (c) =>
+        c.where({ _openid: openid, date: _.gte(startDate).and(_.lte(endDate)) })
+          .orderBy('date', 'asc')
+          .orderBy('createdAt', 'asc')
+          .limit(MEALS_PER_RANGE_LIMIT)
+          .get())
+      return res.data
+    },
     getMeal(openid, id) {
       return findOne('meals', { _id: id, _openid: openid })
     },
@@ -71,6 +82,13 @@ function createRepo(db) {
     },
     async saveSummary(openid, date, doc) {
       await setDoc('summaries', `${openid}_${date}`, { ...doc, _openid: openid, date })
+    },
+
+    getGarden(openid) {
+      return findOne('gardens', { _id: openid })
+    },
+    async saveGarden(openid, garden) {
+      await setDoc('gardens', openid, { ...garden, _openid: openid })
     },
 
     async saveWeight(openid, date, weightKg) {

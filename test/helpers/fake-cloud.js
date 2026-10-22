@@ -22,6 +22,17 @@ function deepMerge(target, source) {
   return out
 }
 
+// 查询指令：只实现用到的 gte / lte / and
+const OP = Symbol('command.op')
+
+function makeOp(test) {
+  return { [OP]: test, and: (other) => makeOp((v) => test(v) && other[OP](v)) }
+}
+
+function matchValue(actual, expected) {
+  return expected && expected[OP] ? expected[OP](actual) : actual === expected
+}
+
 function createFakeDb() {
   const collections = new Map()
   let seq = 0
@@ -38,13 +49,19 @@ function createFakeDb() {
   function query(name, where, order, lim) {
     return {
       where: (w) => query(name, w, order, lim),
-      orderBy: (field, dir) => query(name, where, { field, dir }, lim),
+      orderBy: (field, dir) => query(name, where, [...(order || []), { field, dir }], lim),
       limit: (n) => query(name, where, order, n),
       async get() {
-        const docs = [...getCol(name).values()].filter((d) => Object.keys(where).every((k) => d[k] === where[k]))
+        const docs = [...getCol(name).values()].filter((d) => Object.keys(where).every((k) => matchValue(d[k], where[k])))
         if (order) {
-          const sign = order.dir === 'desc' ? -1 : 1
-          docs.sort((a, b) => (a[order.field] < b[order.field] ? -1 : a[order.field] > b[order.field] ? 1 : 0) * sign)
+          docs.sort((a, b) => {
+            for (const { field, dir } of order) {
+              const sign = dir === 'desc' ? -1 : 1
+              if (a[field] < b[field]) return -sign
+              if (a[field] > b[field]) return sign
+            }
+            return 0
+          })
         }
         return { data: docs.slice(0, lim).map(clone) }
       },
@@ -53,7 +70,11 @@ function createFakeDb() {
 
   return {
     collections,
-    command: { set: (value) => ({ [SET]: true, value }) },
+    command: {
+      set: (value) => ({ [SET]: true, value }),
+      gte: (x) => makeOp((v) => v >= x),
+      lte: (x) => makeOp((v) => v <= x),
+    },
     async createCollection(name) {
       if (!collections.has(name)) collections.set(name, new Map())
     },
