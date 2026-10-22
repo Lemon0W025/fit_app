@@ -59,7 +59,7 @@ docs/superpowers/            设计文档与实现计划
 
 ### 2. 导入项目
 
-开发者工具 → 导入项目 → 选择本仓库根目录 → AppID 填你自己的（会替换 `project.config.json` 里的 `touristappid`）。
+开发者工具 → 导入项目 → 选择本仓库根目录。AppID 已经写在 `project.config.json` 里，会自动带出；换了小程序账号的话改成新的 AppID。
 
 ### 3. 开通云开发
 
