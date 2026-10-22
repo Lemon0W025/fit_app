@@ -9,21 +9,43 @@
 - **没拍照也能打卡**：直接写吃了什么，按文字估算
 - **今日页**：已吃 / 剩余热量进度条，每餐卡片，一键生成「今日总结」
 - **估得不准**：补充描述后重新分析；可删除打卡
-- **体重**：每天记录，30 天折线图 + 目标线；记录当天体重会自动调整每日预算
+- **体重**：每天记录，30 天折线图（接近目标时显示目标线）；记录当天体重会自动调整每日预算
+- **养生森林**：每天种一棵树，三顿正餐的打卡决定它长多大，坚持的日子按月连成一片森林（详见下文）
+
+## 养生森林（打卡奖励）
+
+参考 Forest：每天一棵树，让人每天都有成就感、愿意坚持。
+
+| 今天的正餐 | 今天的树 |
+|---|---|
+| 没打卡 | 空地（不会有枯树） |
+| 打卡 1 顿 | 🌱 树苗 |
+| 打卡 2 顿 | 🌿 小树 |
+| 三顿都打卡 | 🌳 大树 |
+| 三顿都打卡，其中两顿绿色评级 | 🌸 开花 |
+| 三顿都打卡，全是绿色 | 🍎 结果 |
+
+- 加餐照常点评但不影响树；吃得不好不扣分，免得不敢拍
+- 每次打卡后结果页告诉你树长成了什么样、下一步怎么做；今日页顶部有今天的树
+- 「森林」页按月显示每天的树，点某天能看到吃了几顿、多少千卡；🔥 连续天数
+- 累计种满 7 / 15 / 30 / 50 / 80 棵树，依次解锁橘子树、桃树、石榴树、柿子树、樱桃树，可以选今天种哪种
+- 规则细节见 `docs/superpowers/specs/2026-10-22-forest-reward-design.md`
 
 ## 目录结构
 
 ```
 miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
-  pages/today|checkin|meal|weight|profile
+  pages/today|forest|checkin|meal|weight|profile
   utils/api.js               调用云函数、上传照片、错误提示
   utils/view.js, chart.js    页面展示整理、体重图
-  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次）
+  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、森林规则）
+  images/                    tabBar 图标、森林树块（由 scripts/draw-images.py 生成）
   config.js                  云开发环境 ID
 cloudfunctions/api/          唯一的云函数，按 action 路由
   config.js                  ← AI 模型配置在这里
-  services/                  建档、打卡、今日/总结、体重
+  services/                  建档、打卡、今日/总结、体重、森林
   lib/                       提示词、AI 输出解析、校验等纯逻辑
+scripts/draw-images.py      重新生成图片（需要 Pillow：pip install pillow）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
 docs/superpowers/            设计文档与实现计划
 ```
@@ -72,7 +94,7 @@ module.exports = {
 1. 在开发者工具里右键 `cloudfunctions/api` → **上传并部署：云端安装依赖**
 2. 打开 **云开发控制台 → 云函数 → api → 函数配置**，把 **超时时间改成 60 秒**（默认 3 秒，AI 看图来不及）
 
-数据库**不用手动建集合**：`users`、`meals`、`weights`、`summaries` 会在第一次使用时自动创建，权限保持默认的「仅创建者可读写」即可。
+数据库**不用手动建集合**：`users`、`meals`、`weights`、`summaries`、`gardens` 会在第一次使用时自动创建，权限保持默认的「仅创建者可读写」即可。
 
 以后改了 `cloudfunctions/api/config.js` 或其他云函数代码，都要重新「上传并部署」。
 
@@ -114,6 +136,7 @@ npm test
 - `cloudfunctions/api/lib/shared/` 和 `miniprogram/utils/shared/` 两份文件必须一模一样（测试会检查），改了一边记得复制到另一边
 - 云函数响应统一为 `{ ok: true, data }` 或 `{ ok: false, code, message }`，`message` 会直接展示给用户
 - 提示词在 `cloudfunctions/api/lib/prompts.js`，想调整小暖的说话风格改这里
+- 森林规则（阶段、树种、解锁门槛）在 `cloudfunctions/api/lib/shared/forest.js`；加新树种时同时在 `scripts/draw-images.py` 里加颜色并重新生成图片
 
 ## 第二期计划
 
