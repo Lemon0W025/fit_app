@@ -1,0 +1,46 @@
+.weight-row {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.weight-input {
+  flex: 1;
+}
+
+button.btn-inline {
+  width: 180rpx !important;
+  margin: 0;
+  padding: 16rpx 0;
+  flex-shrink: 0;
+}
+
+.budget-tip {
+  color: var(--primary);
+  font-size: 28rpx;
+  margin-bottom: 8rpx;
+}
+
+.latest-num {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.latest-unit {
+  font-size: 28rpx;
+  color: var(--muted);
+  margin-left: 8rpx;
+}
+
+.change {
+  font-size: 30rpx;
+  margin: 4rpx 0;
+}
+
+.chart {
+  width: 100%;
+  height: 400rpx;
+  margin-top: 24rpx;
+}

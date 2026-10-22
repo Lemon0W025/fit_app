@@ -1,0 +1,35 @@
+<view class="page">
+  <view class="section-title section-first">这是哪一餐？</view>
+  <view class="chips">
+    <view wx:for="{{mealTypes}}" wx:key="value" class="chip {{mealType === item.value ? 'chip-on' : ''}}" data-value="{{item.value}}" bindtap="pickMealType">{{item.label}}</view>
+  </view>
+
+  <view class="section-title">拍下这一餐</view>
+  <view wx:if="{{!photo}}" class="card photo-picker" bindtap="choosePhoto">
+    <view class="photo-icon">📷</view>
+    <view class="photo-tip">点这里拍照，或从相册选</view>
+    <view class="muted small">把所有菜都拍进去，旁边有碗筷更容易估份量</view>
+  </view>
+  <view wx:else class="card photo-box">
+    <image class="photo" src="{{photo}}" mode="aspectFill" bindtap="previewPhoto" />
+    <view class="photo-actions">
+      <text class="link" bindtap="choosePhoto">重拍</text>
+      <text class="link link-muted" bindtap="removePhoto">不用照片</text>
+    </view>
+  </view>
+
+  <view class="section-title">想跟小暖说点什么（选填）</view>
+  <!-- textarea 是原生组件，提交时换成普通文字，避免盖住加载层 -->
+  <textarea wx:if="{{!submitting}}" class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：米饭只吃了半碗。没拍照的话，直接写吃了什么也行" />
+  <view wx:else class="note">{{note}}</view>
+
+  <button class="btn-primary btn-big" bindtap="submit" disabled="{{submitting}}">交给小暖看看</button>
+
+  <view wx:if="{{submitting}}" class="overlay">
+    <view class="overlay-card">
+      <view class="spinner"></view>
+      <view class="overlay-stage">{{stage}}</view>
+      <view class="muted small">一般需要 10～30 秒，请稍等</view>
+    </view>
+  </view>
+</view>

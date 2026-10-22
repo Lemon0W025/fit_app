@@ -1,0 +1,108 @@
+.greeting {
+  font-size: 40rpx;
+  font-weight: 700;
+  margin: 8rpx 8rpx 24rpx;
+}
+
+.hero-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+.hero-main {
+  margin: 12rpx 0 20rpx;
+}
+
+.hero-num {
+  font-size: 80rpx;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.hero-unit {
+  font-size: 28rpx;
+  color: var(--muted);
+  margin-left: 12rpx;
+}
+
+.bar {
+  height: 20rpx;
+  border-radius: 10rpx;
+  background: var(--gray-soft);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 10rpx;
+  background: var(--primary);
+  transition: width 0.4s;
+}
+
+.bar-over {
+  background: var(--red);
+}
+
+.hero-status {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+}
+
+.hero-status-over {
+  color: var(--red);
+}
+
+.meal {
+  display: flex;
+  padding: 24rpx;
+}
+
+.meal-thumb {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+  background: var(--gray-soft);
+}
+
+.meal-thumb-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+}
+
+.meal-body {
+  flex: 1;
+  margin-left: 24rpx;
+  min-width: 0;
+}
+
+.meal-kcal {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 4rpx;
+}
+
+.meal-kcal-failed {
+  color: var(--gray);
+}
+
+.meal-comment {
+  font-size: 28rpx;
+  color: var(--muted);
+  margin-top: 4rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.summary-text {
+  white-space: pre-wrap;
+  line-height: 1.8;
+}

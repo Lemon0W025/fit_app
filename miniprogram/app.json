@@ -1,0 +1,45 @@
+{
+  "pages": [
+    "pages/today/today",
+    "pages/weight/weight",
+    "pages/profile/profile",
+    "pages/checkin/checkin",
+    "pages/meal/meal"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#F6F1E7",
+    "navigationBarTitleText": "小暖养生",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F6F1E7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8A8378",
+    "selectedColor": "#4E7D5B",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/today/today",
+        "text": "今日",
+        "iconPath": "images/tab-today.png",
+        "selectedIconPath": "images/tab-today-on.png"
+      },
+      {
+        "pagePath": "pages/weight/weight",
+        "text": "体重",
+        "iconPath": "images/tab-weight.png",
+        "selectedIconPath": "images/tab-weight-on.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tab-profile.png",
+        "selectedIconPath": "images/tab-profile-on.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

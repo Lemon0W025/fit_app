@@ -1,0 +1,81 @@
+<view class="page" wx:if="{{!loading}}">
+  <view wx:if="{{isNew}}" class="card welcome">
+    <view class="welcome-title">你好，我是小暖 👋</view>
+    <view class="welcome-text">我会陪你每天好好吃饭、慢慢变轻。先告诉我一些基本情况，我来算算你每天吃多少合适。</view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-label">怎么称呼你</view>
+      <view class="input-wrap">
+        <input class="field-input" value="{{form.nickname}}" data-field="nickname" bindinput="onInput" placeholder="比如：妈妈" maxlength="20" />
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">性别</view>
+      <view class="chips">
+        <view class="chip {{form.sex === 'female' ? 'chip-on' : ''}}" data-field="sex" data-value="female" bindtap="onPick">女</view>
+        <view class="chip {{form.sex === 'male' ? 'chip-on' : ''}}" data-field="sex" data-value="male" bindtap="onPick">男</view>
+      </view>
+    </view>
+
+    <view class="field-row">
+      <view class="field">
+        <view class="field-label">年龄</view>
+        <view class="input-wrap">
+          <input class="field-input" type="number" value="{{form.age}}" data-field="age" bindinput="onInput" placeholder="50" />
+          <text class="unit">岁</text>
+        </view>
+      </view>
+      <view class="field">
+        <view class="field-label">身高</view>
+        <view class="input-wrap">
+          <input class="field-input" type="digit" value="{{form.heightCm}}" data-field="heightCm" bindinput="onInput" placeholder="160" />
+          <text class="unit">cm</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="field-row">
+      <view class="field">
+        <view class="field-label">现在体重</view>
+        <view class="input-wrap">
+          <input class="field-input" type="digit" value="{{form.weightKg}}" data-field="weightKg" bindinput="onInput" placeholder="65" />
+          <text class="unit">kg</text>
+        </view>
+      </view>
+      <view class="field">
+        <view class="field-label">目标体重</view>
+        <view class="input-wrap">
+          <input class="field-input" type="digit" value="{{form.targetWeightKg}}" data-field="targetWeightKg" bindinput="onInput" placeholder="58" />
+          <text class="unit">kg</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="field-label">平时活动量</view>
+      <view class="chips chips-col">
+        <view wx:for="{{activityOptions}}" wx:key="value" class="chip {{form.activity === item.value ? 'chip-on' : ''}}" data-field="activity" data-value="{{item.value}}" bindtap="onPick">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="field field-last">
+      <view class="field-label">忌口 / 饮食习惯（选填）</view>
+      <view class="input-wrap">
+        <input class="field-input" value="{{form.avoid}}" data-field="avoid" bindinput="onInput" placeholder="比如：不吃香菜、爱吃面食" maxlength="100" />
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{previewKcal}}" class="card budget">
+    <view class="muted">按你的情况，每天建议吃</view>
+    <view class="budget-num">{{previewKcal}}<text class="budget-unit"> 千卡</text></view>
+    <view class="muted small">已经留出健康减重的空间，不会让你饿着。以后记体重时会自动调整。</view>
+  </view>
+
+  <button class="btn-primary btn-big" bindtap="save" loading="{{saving}}" disabled="{{saving}}">{{isNew ? '开始打卡' : '保存'}}</button>
+
+  <view class="disclaimer">小暖的建议仅供日常参考，不能替代医生。如有糖尿病、高血压等慢性病，或正在孕期、哺乳期，请先咨询医生再控制饮食。</view>
+</view>

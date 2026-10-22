@@ -1,0 +1,43 @@
+.welcome {
+  background: var(--primary-soft);
+}
+
+.welcome-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12rpx;
+}
+
+.welcome-text {
+  color: var(--text);
+}
+
+.field-last {
+  margin-bottom: 0;
+}
+
+.budget {
+  text-align: center;
+}
+
+.budget-num {
+  font-size: 72rpx;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.3;
+  margin: 8rpx 0;
+}
+
+.budget-unit {
+  font-size: 30rpx;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.disclaimer {
+  font-size: 24rpx;
+  color: var(--gray);
+  line-height: 1.6;
+  padding: 0 8rpx;
+}

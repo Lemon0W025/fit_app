@@ -1,0 +1,68 @@
+<view wx:if="{{loading}}" class="empty">加载中…</view>
+
+<view class="page" wx:if="{{meal}}">
+  <image wx:if="{{meal.fileID}}" class="hero-photo" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
+
+  <view class="card">
+    <view class="meal-head">
+      <text class="meal-label">{{meal.label}}</text>
+      <text class="meal-time">{{meal.timeText}}</text>
+      <text wx:if="{{meal.ratingText}}" class="badge badge-{{meal.ratingClass}}">{{meal.ratingText}}</text>
+    </view>
+
+    <block wx:if="{{meal.status === 'done'}}">
+      <view class="big-kcal">{{meal.kcalText}}</view>
+      <view wx:if="{{meal.mode === 'text'}}" class="muted small">（根据文字描述估算）</view>
+      <view wx:if="{{meal.analysis.isFood}}" class="macros">
+        <view class="macro">
+          <view class="macro-num">{{meal.analysis.protein}}g</view>
+          <view class="macro-label">蛋白质</view>
+        </view>
+        <view class="macro">
+          <view class="macro-num">{{meal.analysis.carbs}}g</view>
+          <view class="macro-label">碳水</view>
+        </view>
+        <view class="macro">
+          <view class="macro-num">{{meal.analysis.fat}}g</view>
+          <view class="macro-label">脂肪</view>
+        </view>
+      </view>
+    </block>
+    <view wx:else class="error-box">{{meal.error}}</view>
+
+    <view wx:if="{{meal.note}}" class="note-line">我的备注：{{meal.note}}</view>
+  </view>
+
+  <view wx:if="{{meal.analysis && meal.analysis.foods.length}}" class="card">
+    <view class="card-title">认出来的食物</view>
+    <view wx:for="{{meal.analysis.foods}}" wx:key="name" class="list-row">
+      <view>
+        <text>{{item.name}}</text>
+        <text wx:if="{{item.portion}}" class="muted small"> · {{item.portion}}</text>
+      </view>
+      <text class="muted">{{item.kcal}} 千卡</text>
+    </view>
+  </view>
+
+  <view wx:if="{{meal.analysis}}" class="card coach">
+    <view class="coach-name">🌿 小暖说</view>
+    <view class="coach-text">{{meal.analysis.comment}}</view>
+    <block wx:if="{{meal.analysis.suggestion}}">
+      <view class="coach-name coach-name-next">下一餐建议</view>
+      <view class="coach-text">{{meal.analysis.suggestion}}</view>
+    </block>
+  </view>
+
+  <view wx:if="{{meal.status === 'failed' || editing}}" class="card">
+    <view class="card-title">{{meal.status === 'failed' ? '补充一下描述，帮小暖认清楚' : '估得不准？补充描述后重新分析'}}</view>
+    <textarea class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：一碗米饭、半盘青椒肉丝，汤没喝" />
+    <button class="btn-primary" bindtap="reanalyze" disabled="{{working}}">重新分析</button>
+  </view>
+
+  <view class="actions">
+    <text wx:if="{{meal.status === 'done' && !editing}}" class="link" bindtap="startEdit">估得不准？</text>
+    <text class="link link-danger" bindtap="remove">删除这条打卡</text>
+  </view>
+
+  <button class="btn-plain" bindtap="backToToday">回到今日</button>
+</view>

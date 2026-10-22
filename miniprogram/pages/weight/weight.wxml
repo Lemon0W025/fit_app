@@ -1,0 +1,36 @@
+<view class="page">
+  <view class="card">
+    <view class="card-title">{{todayRecorded ? '今天已经记过了，可以更新' : '记录今天的体重'}}</view>
+    <view class="weight-row">
+      <view class="input-wrap weight-input">
+        <input class="field-input" type="digit" value="{{input}}" bindinput="onInput" placeholder="{{latest ? '上次 ' + latest.weightKg : '比如 65.5'}}" />
+        <text class="unit">kg</text>
+      </view>
+      <button class="btn-primary btn-inline" bindtap="save" loading="{{saving}}" disabled="{{saving}}">记录</button>
+    </view>
+    <view wx:if="{{budgetText}}" class="budget-tip">{{budgetText}}</view>
+    <view class="muted small">每天早上起床、上完厕所、空腹称一次最准</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">最近的变化</view>
+    <block wx:if="{{items.length}}">
+      <view class="latest">
+        <text class="latest-num">{{latest.weightKg}}</text>
+        <text class="latest-unit">kg</text>
+      </view>
+      <view wx:if="{{changeText}}" class="change">{{changeText}}</view>
+      <view wx:if="{{targetText}}" class="muted">{{targetText}}</view>
+      <canvas type="2d" id="chart" class="chart"></canvas>
+    </block>
+    <view wx:elif="{{loaded}}" class="empty">还没有体重记录，先记一次吧</view>
+  </view>
+
+  <view wx:if="{{recent.length}}" class="card">
+    <view class="card-title">最近 7 次</view>
+    <view wx:for="{{recent}}" wx:key="date" class="list-row">
+      <text>{{item.date}}</text>
+      <text>{{item.weightKg}} kg</text>
+    </view>
+  </view>
+</view>

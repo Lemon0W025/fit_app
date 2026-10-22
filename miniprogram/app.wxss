@@ -1,0 +1,278 @@
+/* 全局样式：字号偏大、对比清晰，方便长辈使用 */
+page {
+  --bg: #f6f1e7;
+  --card: #ffffff;
+  --primary: #4e7d5b;
+  --primary-soft: #e6efe7;
+  --text: #2f2a24;
+  --muted: #7a7166;
+  --line: #ece4d6;
+  --green: #4f8f5c;
+  --green-soft: #e6f1e8;
+  --yellow: #c98a14;
+  --yellow-soft: #fbf0d9;
+  --red: #d1543f;
+  --red-soft: #fbe6e1;
+  --gray: #a8a095;
+  --gray-soft: #f1ede6;
+
+  background: var(--bg);
+  color: var(--text);
+  font-size: 32rpx;
+  line-height: 1.6;
+  font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+}
+
+.page {
+  padding: 24rpx 32rpx 64rpx;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(80, 60, 30, 0.05);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 40rpx 8rpx 16rpx;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 26rpx;
+}
+
+.empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 48rpx 32rpx;
+}
+
+/* 按钮 */
+button::after {
+  border: none;
+}
+
+button.btn-primary {
+  width: 100% !important;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 48rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  padding: 20rpx 0;
+  margin: 24rpx 0;
+}
+
+button.btn-primary[disabled] {
+  background: #9db5a3 !important;
+  color: #fff !important;
+}
+
+button.btn-big {
+  padding: 28rpx 0;
+  font-size: 36rpx;
+}
+
+button.btn-plain {
+  width: 100% !important;
+  background: transparent;
+  color: var(--primary);
+  border: 2rpx solid var(--primary);
+  border-radius: 48rpx;
+  font-size: 30rpx;
+  font-weight: 500;
+  padding: 16rpx 0;
+  margin-top: 24rpx;
+}
+
+button.btn-plain[disabled] {
+  color: var(--gray) !important;
+  border-color: var(--line) !important;
+  background: transparent !important;
+}
+
+.link {
+  color: var(--primary);
+  padding: 16rpx;
+}
+
+.link-muted {
+  color: var(--muted);
+}
+
+.link-danger {
+  color: var(--red);
+}
+
+/* 选项小块 */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.chips-col {
+  flex-direction: column;
+}
+
+.chip {
+  padding: 16rpx 36rpx;
+  border-radius: 40rpx;
+  background: var(--gray-soft);
+  color: var(--text);
+  border: 2rpx solid transparent;
+}
+
+.chip-on {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+/* 评级标签 */
+.badge {
+  font-size: 24rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  margin-left: 12rpx;
+}
+
+.badge-green {
+  color: var(--green);
+  background: var(--green-soft);
+}
+
+.badge-yellow {
+  color: var(--yellow);
+  background: var(--yellow-soft);
+}
+
+.badge-red {
+  color: var(--red);
+  background: var(--red-soft);
+}
+
+.badge-failed,
+.badge-none {
+  color: var(--gray);
+  background: var(--gray-soft);
+}
+
+/* 表单 */
+.field {
+  margin-bottom: 32rpx;
+}
+
+.field-label {
+  font-size: 28rpx;
+  color: var(--muted);
+  margin-bottom: 12rpx;
+}
+
+.field-row {
+  display: flex;
+  gap: 24rpx;
+}
+
+.field-row .field {
+  flex: 1;
+}
+
+.input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--gray-soft);
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+}
+
+.field-input {
+  flex: 1;
+  height: 88rpx;
+  font-size: 32rpx;
+}
+
+.unit {
+  color: var(--muted);
+  font-size: 28rpx;
+  margin-left: 8rpx;
+}
+
+.note {
+  width: 100%;
+  min-height: 160rpx;
+  box-sizing: border-box;
+  background: var(--gray-soft);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  font-size: 30rpx;
+}
+
+/* 营养素三栏 */
+.macros {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid var(--line);
+}
+
+.macro {
+  flex: 1;
+  text-align: center;
+}
+
+.macro-num {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.macro-label {
+  font-size: 24rpx;
+  color: var(--muted);
+}
+
+/* 餐食通用 */
+.meal-head {
+  display: flex;
+  align-items: center;
+}
+
+.meal-label {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.meal-time {
+  font-size: 26rpx;
+  color: var(--muted);
+  margin-left: 12rpx;
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.list-row:last-child {
+  border-bottom: none;
+}
