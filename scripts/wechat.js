@@ -132,7 +132,10 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((e) => fail((e && (e.message || e.errMsg)) || String(e)))
+  main()
+    // miniprogram-ci 完成后有时还留着网络连接，进程不退出
+    .then(() => process.exit(0))
+    .catch((e) => fail((e && (e.message || e.errMsg)) || String(e)))
 }
 
 module.exports = { normalizePrivateKey }

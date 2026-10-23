@@ -1,8 +1,10 @@
-"""生成小程序里用到的图片：tabBar 图标、每天的树、庭院地块，以及庭院物品的占位图。
+"""生成小程序里用到的图片：tabBar 图标、庭院地块，以及每天的树、庭院物品和界面图的占位图。
 
 用法（需要 Pillow）：
-    python3 scripts/draw-images.py            # 物品占位图只补缺的，不覆盖已有的正式美术
-    python3 scripts/draw-images.py --force    # 连物品占位图一起重画
+    python3 scripts/draw-images.py            # 占位图只补缺的，不覆盖已有的正式美术
+    python3 scripts/draw-images.py --force    # 占位图全部重画（会盖掉正式美术，之后再跑 scripts/slice-art.py）
+
+正式美术由 scripts/slice-art.py 从 art/raw/ 的整图切出来。
 
 输出到 miniprogram/images/。所有图先按 4 倍尺寸画，再缩小，边缘更平滑。
 """
@@ -214,14 +216,22 @@ def draw_fruits(d, color, r, seed):
         d.ellipse(P(x - r * 0.55, y - r * 0.6, x - r * 0.1, y - r * 0.15), fill=tint(color, 0.55))
 
 
-def draw_tiles():
+def draw_tiles(force=False):
+    # 只补缺的：每天的树已经有正式美术
+    def missing(stage):
+        return force or not os.path.exists(os.path.join(ROOT, 'forest', f'{stage}.png'))
+
     for name, fn in (('empty', draw_empty), ('sprout', draw_sprout), ('small', draw_small)):
+        if not missing(name):
+            continue
         img, d = tile_canvas()
         fn(img, d)
         save(img, TILE, 'forest', f'{name}.png')
 
     canopy, flower, fruit, fruit_r = TREE
     for stage in ('big', 'bloom', 'fruit'):
+        if not missing(stage):
+            continue
         img, d = tile_canvas()
         draw_big(img, d, canopy)
         if stage == 'bloom':
@@ -376,6 +386,6 @@ def draw_garden(force=False):
 
 if __name__ == '__main__':
     draw_tabs()
-    draw_tiles()
+    draw_tiles(force='--force' in sys.argv)
     draw_garden(force='--force' in sys.argv)
     print('images written to', os.path.normpath(ROOT))

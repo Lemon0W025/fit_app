@@ -12,7 +12,7 @@
 - 云函数响应统一 `{ ok, data }` / `{ ok: false, code, message }`，message 直接展示给用户，用中文
 - services 通过依赖注入拿 repo / chat / forest，测试用 `test/helpers/fake-repo.js`；端到端用 `test/helpers/fake-cloud.js` 加载真实 `index.js`；页面用 `test/helpers/page-harness.js` 跑
 - 页面面向长辈：字号偏大、文案口语化
-- 图片由 `scripts/draw-images.py` 生成（需要 Pillow）；庭院物件/扭蛋 UI 现在是 emoji 占位图，正式图换进同名文件即可（主包上限 2MB）
+- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成每日树/物件/界面图；`scripts/draw-images.py` 画 tab 图标、地块和缺图时的占位图。主包上限 2MB（现在约 1.6MB）
 
 ## 从云端部署（miniprogram-ci）
 
@@ -44,7 +44,7 @@
 - 小程序成长计划：用户已报名
 - AI 模型（按用户控制台截图）：生文模型列表里有 `hy3`（标注小程序成长计划）、`hy-vision-2.0-instruct`（图生文）、`hunyuan-t1-vision-20250916` 等；开关「套餐抵扣」默认全关。config 已改为 provider `cloudbase` + 备用 `hunyuan-exp`，vision `hy-vision-2.0-instruct`，text `hy3`。分组名未验证：ai.js 会自动试备用分组，看云函数日志里的 `AI 分组 … 失败` 确认哪个分组调通，再把 `provider` 定下来。也可以试 miniprogram-ci 内部的 `dist/ci/cloud/cloudapi` 的 `boundTransactRequest` 调 tcb `DescribeAIModels` 直接查（未验证）
 - 用户电脑上已用开发者工具导入项目（从 GitHub ZIP），能跑起来
-- 2026-10-23：养生庭院 + 扭蛋机 + 图鉴上线（占位图）；原「森林」tab 改为「庭院」，森林页变成「打卡日历」。用户在 Codex 生成 3D 风格美术（按 art brief 的 3×3 sprite sheet），原图还没传进来：让用户作为附件发送或传到仓库 `art/raw/`，再切图、去底、底部对齐、量化后替换占位图
+- 2026-10-23：养生庭院 + 扭蛋机 + 图鉴上线；原「森林」tab 改为「庭院」，森林页变成「打卡日历」。用户用 Codex 生成的 3D 风格美术（zip 上传，8 张整图）已全部切好换上，48 个物件、6 个树阶段、扭蛋机/扭蛋/礼盒/图鉴/暖豆都是正式图
 - 2026-10-23：`api` 已由用户在开发者工具里创建、超时改为 60 秒；之后用 `npm run wx:function` 从云端更新成功；`npm run wx:preview` 生成预览二维码成功，已发给用户试用
 
 ## 首次部署清单（新会话从这里接）

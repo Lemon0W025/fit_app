@@ -5,7 +5,7 @@
     <image class="tree-banner-image" src="{{tree.image}}" mode="aspectFit" />
     <view class="tree-banner-body">
       <view class="tree-banner-title">{{tree.title}}</view>
-      <view wx:if="{{tree.beansText}}" class="tree-banner-beans">🫘 {{tree.beansText}}</view>
+      <view wx:if="{{tree.beansText}}" class="tree-banner-beans"><image class="bean-inline" src="/images/garden/ui/bean.png" mode="aspectFit" />{{tree.beansText}}</view>
       <view class="tree-banner-hint">{{tree.hint}}</view>
     </view>
   </view>

@@ -10,7 +10,7 @@
         <view class="tree-card-title">{{tree.title}}</view>
         <view class="tree-card-hint">{{tree.hintText}}</view>
         <view class="tree-card-streak">
-          <text wx:if="{{tree.beansText}}">🫘 {{tree.beansText}}</text>
+          <block wx:if="{{tree.beansText}}"><image class="bean-inline" src="/images/garden/ui/bean.png" mode="aspectFit" /><text>{{tree.beansText}}</text></block>
           <text wx:if="{{tree.beansText && tree.streakText}}">　</text>
           <text wx:if="{{tree.streakText}}">{{tree.streakText}}</text>
         </view>

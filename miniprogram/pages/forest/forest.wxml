@@ -8,7 +8,7 @@
     <view class="today-stats">
       <text wx:if="{{today.streakText}}" class="today-stat">{{today.streakText}}</text>
       <text class="today-stat">🌳 累计种了 {{view.totalTrees}} 棵</text>
-      <text wx:if="{{today.beansText}}" class="today-stat">🫘 {{today.beansText}}</text>
+      <view wx:if="{{today.beansText}}" class="today-stat"><image class="bean-inline" src="/images/garden/ui/bean.png" mode="aspectFit" />{{today.beansText}}</view>
     </view>
   </view>
 

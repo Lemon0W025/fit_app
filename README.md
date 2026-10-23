@@ -165,9 +165,10 @@ npm test
 
 ### 图片
 
-- `scripts/draw-images.py` 画 tab 图标、每日树、庭院地块（`images/garden/land-6.png`、`land-8.png`）；物件和扭蛋机等目前是 emoji 占位图，只在文件不存在时生成（`--force` 全部重画）
-- 正式美术按 `docs/art/garden-art-brief.md` 出图：物件放 `miniprogram/images/garden/items/<物件 id>.png`（透明底、底部对齐），界面图放 `images/garden/ui/`，文件名不变就不用改代码
-- 小程序主包上限 2MB，换图后看一眼 `du -sh miniprogram`
+- 美术原图在 `art/raw/`（Codex 生成的 8 张 3×3 整图，格子顺序见 `art/raw/中文物件索引.txt`）；`python3 scripts/slice-art.py` 把它们切成单张图，覆盖 `miniprogram/images/` 下的每日树、庭院物件和界面图（需要 Pillow 和 numpy）
+- 加新物件：在 `lib/shared/garden.js` 的 ITEMS 里加一项，按 `docs/art/garden-art-brief.md` 出图放进 `art/raw/`，在 `slice-art.py` 的 SHEETS 里写上格子对应的物件 id，再跑一遍
+- `scripts/draw-images.py` 画 tab 图标和庭院地块（`images/garden/land-6.png`、`land-8.png`）；还没有正式美术的物件，它会补一张 emoji 占位图（已有的不覆盖）
+- 小程序主包上限 2MB，现在约 1.6MB；加图后看一眼 `du -sh miniprogram`
 
 ## 第二期计划
 

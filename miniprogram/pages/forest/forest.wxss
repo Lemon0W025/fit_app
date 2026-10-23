@@ -23,11 +23,17 @@
 
 .today-stats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 32rpx;
+  gap: 8rpx 32rpx;
   margin-top: 16rpx;
   font-size: 28rpx;
   color: var(--muted);
+}
+
+/* 一条放不下就整条换行，别在字中间断开 */
+.today-stat {
+  white-space: nowrap;
 }
 
 .month-bar {

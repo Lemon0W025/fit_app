@@ -276,3 +276,11 @@ button.btn-plain[disabled] {
 .list-row:last-child {
   border-bottom: none;
 }
+
+/* 文字里的暖豆小图标 */
+.bean-inline {
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.25em;
+  margin-right: 4rpx;
+}

@@ -1,0 +1,66 @@
+[
+  {
+    "File": "01-界面元素.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 1456474
+  },
+  {
+    "File": "02-每天的树.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 952621
+  },
+  {
+    "File": "03-普通-花草.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 1774979
+  },
+  {
+    "File": "04-普通-田园.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 653989
+  },
+  {
+    "File": "05-稀有-树与摆件.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 1841674
+  },
+  {
+    "File": "06-稀有-小动物.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 701600
+  },
+  {
+    "File": "07-珍稀.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 1443117
+  },
+  {
+    "File": "08-传说与节气限定.png",
+    "Width": 1254,
+    "Height": 1254,
+    "PixelFormat": "Format32bppArgb",
+    "CornerAlpha": 0,
+    "Bytes": 1554071
+  }
+]
