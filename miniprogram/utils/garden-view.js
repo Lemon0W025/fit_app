@@ -60,7 +60,7 @@ function inventoryList(inventory) {
     .filter(Boolean)
 }
 
-// 摆放、移动时可以点的空地（移动时自己原来的位置也算空地；open 判断格子开没开垦）
+// 摆放、移动时可以点的空地（移动时自己原来的位置也算空地；open 判断这一格能不能摆）
 function hintTiles(placed, L, ignoreUid, open = () => true) {
   const taken = {}
   placed.forEach((p) => {

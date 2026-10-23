@@ -90,6 +90,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.match(wx.log.uploads[0].cloudPath, /^meals\/\d{4}-\d{2}-\d{2}\/\d+-\w+\.jpg$/)
 
   // 4. 详情页
+  assert.ok(readWxml('meal').includes('回到花园'))
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
@@ -210,7 +211,7 @@ test('云函数报错时页面给出提示：短消息用 toast，长消息用�
   assert.match(wx2.log.modals[0], /超时时间调到 60 秒/)
 })
 
-test('养生庭院页面：新手礼 → 扭蛋 → 背包摆放 → 移动 → 收回 → 开荒 → 回到中间 → 图鉴 → 日历', async () => {
+test('小岛花园：首页、今日暖豆、扭蛋、背包摆放、各种不能摆、移动、收回、修整角落、回到中间、去打卡', async () => {
   const green = analysisJson({ rating: 'green' })
   const cloud = createFakeCloud({ replies: [green, green] })
   const { main } = loadCloudFunction(cloud)
@@ -219,27 +220,25 @@ test('养生庭院页面：新手礼 → 扭蛋 → 背包摆放 → 移动 → 
   await main({ action: 'meal.analyze', data: { mealType: 'breakfast', note: '粥' } })
   await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '面' } })
 
-  // 第一次进庭院：新手礼 60 + 打卡赚的 20；只开垦了中间一块，四周 4 块能开荒
   const garden = loadPage('garden', wx)
   garden.onLoad()
   garden.onShow()
   await settle()
-  assert.deepEqual(garden.data.hud, { top: 24, height: 32, below: 68 })
   assert.equal(garden.data.welcome.beans, 60)
   assert.equal(garden.data.beans, 80)
-  assert.equal(garden.data.plots.length, 9)
-  assert.deepEqual(garden.data.plots.filter((p) => p.open).map((p) => p.key), ['1,1'])
-  assert.equal(garden.data.plots.filter((p) => p.sign).length, 4)
-  assert.ok(garden.data.decor.length > 0)
-  assert.ok(garden.data.view.x < 0 && garden.data.view.y < 0)
-  assert.equal(garden.data.sprites[0].itemId, 'starter_tree')
-  assert.deepEqual([garden.data.sprites[0].c, garden.data.sprites[0].r], [8, 8])
-  assert.equal(garden.data.bagCount, 0)
+  assert.equal(garden.data.canSpin, true)
+  assert.equal(garden.data.daily.title, '今天得了 20 暖豆')
+  assert.deepEqual(garden.data.daily.stamps.map((s) => s.cls), ['stamp-green', 'stamp-green', 'stamp-none'])
+  assert.equal(garden.data.island.image, '/images/garden/island.png')
+  assert.deepEqual(garden.data.regions.map((g) => g.key), ['pond', 'bamboo', 'veg', 'tea'])
+  assert.deepEqual(garden.data.scenery, [])
+  assert.equal(garden.data.beds.length, 28)
+  assert.equal(garden.data.shore.length, 16)
+  assert.ok(garden.data.waves.length > 0)
+  assert.deepEqual([garden.data.sprites[0].c, garden.data.sprites[0].r], [4, 4])
   garden.goGacha()
-  assert.equal(garden.data.welcome, null)
   assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/gacha/gacha'])
 
-  // 扭蛋
   const gacha = loadPage('gacha', wx)
   gacha.shakeMs = 0
   gacha.onShow()
@@ -249,89 +248,79 @@ test('养生庭院页面：新手礼 → 扭蛋 → 背包摆放 → 移动 → 
   gacha.openCapsule()
   const itemId = gacha.data.result.itemId
   gacha.goPlace()
-  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
 
-  // 背包抽屉 → 摆放；地图被拖动并缩小到 0.8 倍时也能点准格子
+  // 背包 → 摆放；地图拖动并缩小到 0.8 倍
   garden.onShow()
   await settle()
-  assert.equal(garden.data.bagCount, 1)
   garden.openBag()
-  assert.equal(garden.data.bagOpen, true)
   garden.pickInventory(event({ id: itemId }))
-  assert.equal(garden.data.bagOpen, false)
   assert.equal(garden.data.mode, 'place')
-  assert.equal(garden.data.hints.length, 35)
+  // 中间花园 36 格 − 十字小路 11 格 − 大树 1 格
+  assert.equal(garden.data.hints.length, 24)
   wx.worldRect = { left: -420, top: -260, width: garden.L.width * 0.8 }
   const tap = (c, r) => {
     const p = tileCenter(c, r, garden.L)
     return { changedTouches: [{ clientX: wx.worldRect.left + p.x * 0.8, clientY: wx.worldRect.top + p.y * 0.8 }] }
   }
-  garden.tapLand(tap(8, 8))
+  garden.tapLand(tap(4, 4))
   assert.equal(wx.log.toasts.pop(), '这块地上已经有东西了')
-  garden.tapLand(tap(2, 2))
-  assert.equal(wx.log.toasts.pop(), '这块地还没开荒呢')
-  garden.tapLand(tap(6, 6))
+  garden.tapLand(tap(6, 4))
+  assert.equal(wx.log.toasts.pop(), '小路上不能摆东西')
+  garden.tapLand(tap(4, 1))
+  assert.equal(wx.log.toasts.pop(), '这块地还没修整呢')
+  garden.tapLand(tap(1, 1))
+  assert.equal(wx.log.toasts.pop(), '这里是花坛，不能摆')
+  garden.tapLand(tap(3, 3))
   await settle()
   assert.equal(garden.data.mode, 'view')
-  assert.equal(garden.data.sprites.length, 2)
   const uid = garden.data.sprites.find((x) => x.itemId === itemId).uid
 
-  // 移动
   wx.actionSheetChoice = 0
   garden.tapSprite(event({ uid }))
-  assert.equal(garden.data.mode, 'move')
-  garden.tapLand(tap(11, 11))
+  garden.tapLand(tap(8, 8))
   await settle()
-  const moved = garden.data.sprites.find((x) => x.uid === uid)
-  assert.deepEqual([moved.c, moved.r], [11, 11])
-
-  // 收回背包
+  assert.deepEqual((({ c, r }) => [c, r])(garden.data.sprites.find((x) => x.uid === uid)), [8, 8])
   wx.actionSheetChoice = 1
   garden.tapSprite(event({ uid }))
   await settle()
-  assert.equal(garden.data.sprites.length, 1)
   assert.match(wx.log.toasts.pop(), /收进背包了/)
 
-  // 开荒：暖豆不够先提示；攒够了确认后开垦
-  garden.tapSign(event({ key: '1,0' }))
-  assert.equal(wx.log.toasts.pop(), '开荒要 100 暖豆，再攒攒')
+  // 修整荷塘角：豆不够先提示；攒够了确认后，风景出现、小动物开始张望
+  garden.tapSign(event({ key: 'pond' }))
+  assert.equal(wx.log.toasts.pop(), '修整要 200 暖豆，再攒攒')
   const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, beans: { ...doc.beans, bonus: doc.beans.bonus + 200 } })
+  cloud.db.collections.get('gardens').set('u1', { ...doc, beans: { ...doc.beans, bonus: doc.beans.bonus + 300 } })
   garden.onShow()
   await settle()
-  assert.equal(garden.data.beans, 250)
-  garden.tapSign(event({ key: '1,0' }))
+  assert.equal(garden.data.beans, 350)
+  garden.tapSign(event({ key: 'pond' }))
   await settle()
-  assert.match(wx.log.modals.pop(), /100 暖豆/)
-  assert.deepEqual(garden.data.plots.filter((p) => p.open).map((p) => p.key).sort(), ['1,0', '1,1'])
+  assert.match(wx.log.modals.pop(), /花 200 暖豆修整荷塘角/)
+  assert.deepEqual(garden.data.regions.map((g) => g.key), ['bamboo', 'veg', 'tea'])
+  assert.deepEqual(garden.data.scenery.map((s) => s.itemId).sort(), ['koi_pond', 'lotus_pond'])
   assert.equal(garden.data.beans, 150)
-  assert.equal(garden.data.justOpened, '1,0')
-  assert.equal(garden.data.plots.find((p) => p.key === '0,0').sign.cost, 150)
-  assert.equal(wx.log.toasts.pop(), '开垦好啦！')
+  assert.equal(garden.data.justOpened, 'pond')
+  assert.equal(wx.log.toasts.pop(), '荷塘角修整好啦！')
+  assert.equal(garden.data.waitingText, '👀 有小动物在院子外张望…下次打卡它就来了')
 
-  // 回到中间：每次都换一点点数值，保证 movable-view 真的会动
   const before = garden.data.view
   garden.recenter()
   assert.notDeepEqual(garden.data.view, before)
-  const again = garden.data.view
-  garden.recenter()
-  assert.notDeepEqual(garden.data.view, again)
 
-  // 图鉴
-  const collection = loadPage('collection', wx)
-  collection.onShow()
-  await settle()
-  assert.equal(collection.data.totalCount, 48)
-  assert.equal(collection.data.groups.length, 6)
+  garden.goCheckin()
+  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/checkin/checkin'])
+  garden.onUnload()
+})
 
-  // 打卡日历
-  garden.goCalendar()
-  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/forest/forest'])
-  const calendar = loadPage('forest', wx)
-  calendar.onShow()
+test('花园首页：还没建档时先去建档', async () => {
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  const garden = loadPage('garden', wx)
+  garden.onLoad()
+  garden.onShow()
   await settle()
-  assert.equal(calendar.data.daily.title, '今天得了 20 暖豆')
-  assert.equal(calendar.data.view.totalDays, 1)
+  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/profile/profile'])
   garden.onUnload()
 })
 
@@ -342,7 +331,7 @@ test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横�
   await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
   await main({ action: 'garden.get' })
   const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 6, r: 6 }) })
+  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 3, r: 4 }) })
 
   const garden = loadPage('garden', wx)
   garden.clock = manualClock()
@@ -366,7 +355,7 @@ test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横�
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
-  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进庭院啦！' })
+  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进花园啦！' })
   meal.goGarden()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
 

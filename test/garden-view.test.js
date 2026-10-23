@@ -87,7 +87,7 @@ test('collectionGroups：按稀有度分组（不含小动物），再加小动�
 
 test('arrivalCard：搬家横幅', () => {
   assert.deepEqual(arrivalCard({ id: 'panda', name: '大熊猫' }), {
-    id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进庭院啦！',
+    id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进花园啦！',
   })
   assert.equal(arrivalCard(null), null)
   assert.equal(arrivalCard(undefined), null)

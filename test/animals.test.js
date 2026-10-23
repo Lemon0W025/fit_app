@@ -19,7 +19,7 @@ test('每只动物都有脾气、台词和搬家的话', () => {
   }
   assert.equal(A.ANIMAL_INFO.panda.likesText, '喜欢：翠竹')
   assert.equal(A.ANIMAL_INFO.panda_family.likesText, '喜欢：大熊猫 + 3 丛翠竹')
-  assert.equal(A.ANIMAL_INFO.panda.arrive, '大熊猫闻着竹子香，搬进庭院啦！')
+  assert.equal(A.ANIMAL_INFO.panda.arrive, '大熊猫闻着竹子香，搬进花园啦！')
 })
 
 test('互动表里的物件和动物都存在，上面的物件有落脚点', () => {

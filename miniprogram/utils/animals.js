@@ -14,47 +14,47 @@ const SLEEP_LINE = '呼噜…再睡五分钟'
 const ANIMAL_INFO = {
   chick: {
     scale: 0.5, stepMs: 800, pauseMs: [1500, 3500], sleepy: 0.03, faces: 'right', top: 0.03,
-    likesText: '喜欢：青草丛', arrive: '小黄鸡跟着青草香，蹦蹦跳跳搬进庭院啦！', hello: '叽叽！我是小黄鸡，以后就住这儿啦！',
+    likesText: '喜欢：青草丛', arrive: '小黄鸡跟着青草香，蹦蹦跳跳搬进花园啦！', hello: '叽叽！我是小黄鸡，以后就住这儿啦！',
     lines: ['叽叽！早饭吃了没？', '多喝温水，叽！', '今天也要好好吃饭哦', '跟我一起蹦一蹦，活动活动！'],
   },
   rabbit: {
     scale: 0.55, stepMs: 800, pauseMs: [1500, 4000], sleepy: 0.08, faces: 'front', top: 0.03,
-    likesText: '喜欢：白萝卜', arrive: '小白兔闻到萝卜香，搬进庭院啦！', hello: '我是小白兔，以后就住这儿啦！',
+    likesText: '喜欢：白萝卜', arrive: '小白兔闻到萝卜香，搬进花园啦！', hello: '我是小白兔，以后就住这儿啦！',
     lines: ['蔬菜要多吃，眼睛亮亮的～', '慢慢吃，别噎着', '今天的菜绿不绿？', '蹦跶蹦跶，吃完饭走一走'],
   },
   duck: {
     scale: 0.5, stepMs: 1200, pauseMs: [2000, 4500], sleepy: 0.03, faces: 'right', top: 0.03,
-    likesText: '喜欢：锦鲤池', arrive: '小黄鸭看见锦鲤池，摇摇摆摆搬进庭院啦！', hello: '嘎嘎！我是小黄鸭，以后就住这儿啦！',
+    likesText: '喜欢：锦鲤池', arrive: '小黄鸭看见锦鲤池，摇摇摆摆搬进花园啦！', hello: '嘎嘎！我是小黄鸭，以后就住这儿啦！',
     lines: ['嘎嘎！喝水了吗？', '天凉了，多穿件衣服', '晚饭清淡一点，嘎', '摇摇摆摆，散散步'],
   },
   turtle: {
     scale: 0.5, stepMs: 2600, pauseMs: [3000, 6000], sleepy: 0.08, faces: 'right', top: 0.27,
-    likesText: '喜欢：鹅卵石', arrive: '小乌龟慢慢爬到鹅卵石边上，搬进庭院啦！', hello: '我…是…小乌龟，以后…就住这儿啦！',
+    likesText: '喜欢：鹅卵石', arrive: '小乌龟慢慢爬到鹅卵石边上，搬进花园啦！', hello: '我…是…小乌龟，以后…就住这儿啦！',
     lines: ['慢慢来，吃饭也要细嚼慢咽', '不急不急，坚持最重要', '早点睡，身体好', '我爬得慢，可我从不偷懒'],
   },
   tabby_cat: {
     scale: 0.6, stepMs: 1300, pauseMs: [2500, 5000], sleepy: 0.2, faces: 'front', top: 0.03,
-    likesText: '喜欢：小板凳', arrive: '小花猫相中了小板凳，搬进庭院啦！', hello: '喵～我是小花猫，以后就住这儿啦！',
+    likesText: '喜欢：小板凳', arrive: '小花猫相中了小板凳，搬进花园啦！', hello: '喵～我是小花猫，以后就住这儿啦！',
     lines: ['喵～今天吃得好吗？', '饭后别马上躺下哦', '喵，摸摸头', '水果当加餐，比零食好喵'],
   },
   ginger_cat: {
     scale: 0.7, stepMs: 2000, pauseMs: [6000, 12000], sleepy: 0.5, faces: 'left', top: 0.39,
-    likesText: '喜欢：茶桌', arrive: '胖橘猫闻着茶香，慢悠悠搬进庭院啦！', hello: '喵…我是胖橘猫，以后就在这儿晒太阳啦',
+    likesText: '喜欢：茶桌', arrive: '胖橘猫闻着茶香，慢悠悠搬进花园啦！', hello: '喵…我是胖橘猫，以后就在这儿晒太阳啦',
     lines: ['晒太阳好舒服，饭后也出来走走吧', '我胖，你可别学我', '喵…七分饱刚刚好', '少吃点甜的喵'],
   },
   panda: {
     scale: 0.8, stepMs: 1800, pauseMs: [3000, 6000], sleepy: 0.1, faces: 'front', top: 0.03,
-    likesText: '喜欢：翠竹', arrive: '大熊猫闻着竹子香，搬进庭院啦！', hello: '我是大熊猫，以后就住这儿啦！',
+    likesText: '喜欢：翠竹', arrive: '大熊猫闻着竹子香，搬进花园啦！', hello: '我是大熊猫，以后就住这儿啦！',
     lines: ['竹子要慢慢嚼，吃饭也一样～', '多吃蔬菜，像我一样', '吃饱了，打个滚', '今天也要开开心心的'],
   },
   crane: {
     scale: 0.8, stepMs: 2000, pauseMs: [3000, 6000], sleepy: 0, faces: 'right', top: 0.03,
-    likesText: '喜欢：荷花池', arrive: '仙鹤看中了荷花池，翩翩飞进庭院啦！', hello: '我是仙鹤，以后就住这儿啦',
+    likesText: '喜欢：荷花池', arrive: '仙鹤看中了荷花池，翩翩飞进花园啦！', hello: '我是仙鹤，以后就住这儿啦',
     lines: ['站直一点，腰背会舒服', '早睡早起，精神好', '心平气和，福寿安康', '饭后百步走'],
   },
   panda_family: {
     scale: 1.1, stepMs: 2200, pauseMs: [4000, 8000], sleepy: 0.1, faces: 'front', top: 0.22,
-    likesText: '喜欢：大熊猫 + 3 丛翠竹', arrive: '竹林长大了，熊猫一家都搬进庭院啦！', hello: '我们是熊猫一家，以后就住这儿啦！',
+    likesText: '喜欢：大熊猫 + 3 丛翠竹', arrive: '竹林长大了，熊猫一家都搬进花园啦！', hello: '我们是熊猫一家，以后就住这儿啦！',
     lines: ['一家人一起吃饭最香', '宝宝也要好好吃饭哦', '一起散步去～', '团团圆圆，平平安安'],
   },
 }

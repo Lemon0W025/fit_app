@@ -15,7 +15,7 @@
     <image class="arrival-image" src="{{arrival.image}}" mode="aspectFit" />
     <view class="arrival-body">
       <view class="arrival-title">{{arrival.text}}</view>
-      <view class="arrival-link">去庭院看看 ›</view>
+      <view class="arrival-link">去花园看看 ›</view>
     </view>
   </view>
 
@@ -82,5 +82,5 @@
     <text class="link link-danger" bindtap="remove">删除这条打卡</text>
   </view>
 
-  <button class="btn-plain" bindtap="backToToday">回到今日</button>
+  <button class="btn-plain" bindtap="goGarden">回到花园</button>
 </view>

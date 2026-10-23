@@ -10,7 +10,7 @@ page {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(180deg, #cfe6c4 0%, #e3efd6 45%, #f6f1e7 100%);
+  background: linear-gradient(180deg, #b9e3f2 0%, #a3d6ea 55%, #8fcbe2 100%);
 }
 
 .loading {
@@ -28,94 +28,7 @@ page {
   position: absolute;
 }
 
-.plot {
-  position: absolute;
-}
-
-.plot-new {
-  animation: plot-in 1s ease-out;
-}
-
-@keyframes plot-in {
-  0% {
-    opacity: 0.2;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.decor {
-  position: absolute;
-  pointer-events: none;
-}
-
-.decor-cloud {
-  opacity: 0.9;
-  animation: drift 24s ease-in-out infinite alternate;
-}
-
-@keyframes drift {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(40%);
-  }
-}
-
-/* 开荒时冒的一团尘土 */
-.dust {
-  position: absolute;
-  z-index: 9;
-  pointer-events: none;
-}
-
-.puff {
-  position: absolute;
-  width: 28%;
-  height: 40%;
-  border-radius: 50%;
-  background: rgba(214, 190, 150, 0.85);
-  opacity: 0;
-  animation: puff 1.2s ease-out forwards;
-}
-
-.puff-1 {
-  left: 20%;
-  top: 30%;
-}
-
-.puff-2 {
-  left: 50%;
-  top: 20%;
-  animation-delay: 0.1s;
-}
-
-.puff-3 {
-  left: 35%;
-  top: 50%;
-  animation-delay: 0.2s;
-}
-
-.puff-4 {
-  left: 60%;
-  top: 45%;
-  animation-delay: 0.15s;
-}
-
-@keyframes puff {
-  0% {
-    opacity: 0.9;
-    transform: scale(0.4);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.6) translateY(-30%);
-  }
-}
-
-/* 开荒木牌 */
+/* 修整角落的木牌 */
 .sign {
   position: absolute;
   z-index: 8;
@@ -158,18 +71,6 @@ page {
 
 /* ---------------------------------------------------------------- 浮在地图上的按钮 */
 
-.hud-beans {
-  position: absolute;
-  left: 24rpx;
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 40rpx;
-  padding: 0 24rpx 0 8rpx;
-  box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.12);
-}
-
 .hud-collect {
   position: absolute;
   right: 24rpx;
@@ -208,8 +109,8 @@ page {
 
 .recenter {
   position: absolute;
-  right: 24rpx;
-  bottom: 220rpx;
+  left: 24rpx;
+  bottom: 52rpx;
   z-index: 50;
   width: 88rpx;
   height: 88rpx;
@@ -224,42 +125,6 @@ page {
 .recenter-icon {
   width: 56rpx;
   height: 56rpx;
-}
-
-.dock {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 28rpx;
-  z-index: 50;
-  display: flex;
-  justify-content: center;
-  gap: 32rpx;
-}
-
-.dock-btn {
-  position: relative;
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.96);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 26rpx;
-  font-weight: 700;
-  box-shadow: 0 6rpx 16rpx rgba(60, 50, 30, 0.16);
-}
-
-.dock-main {
-  background: linear-gradient(180deg, #fff1e6 0%, #ffffff 100%);
-  color: #c0442f;
-}
-
-.dock-icon {
-  width: 88rpx;
-  height: 88rpx;
 }
 
 .badge {
@@ -337,24 +202,6 @@ page {
   font-size: 36rpx;
   color: var(--gray);
   padding: 0 8rpx;
-}
-
-.beans-icon {
-  width: 56rpx;
-  height: 56rpx;
-}
-
-.beans-num {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: #d97a1e;
-  margin-left: 8rpx;
-}
-
-.beans-unit {
-  font-size: 26rpx;
-  color: #b8763a;
-  margin-left: 6rpx;
 }
 
 .hint {
@@ -722,4 +569,198 @@ button.btn-small {
     transform: translate(-50%, -60rpx) scale(1.2);
     opacity: 0;
   }
+}
+
+/* ---------------------------------------------------------------- 小岛 */
+
+.island,
+.locked {
+  position: absolute;
+}
+
+.island {
+  z-index: 1;
+}
+
+.locked {
+  z-index: 3;
+}
+
+.plant {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* 修整好的角落：风景一个个蹦出来 */
+.scenery-new {
+  animation: pop-in 0.8s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes pop-in {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* 海上的浪花 */
+.wave {
+  position: absolute;
+  height: 16rpx;
+  border-top: 4rpx solid rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  animation: wave 4s ease-in-out infinite alternate;
+}
+
+@keyframes wave {
+  0% {
+    transform: translateX(-10%);
+    opacity: 0.5;
+  }
+  100% {
+    transform: translateX(10%);
+    opacity: 1;
+  }
+}
+
+/* 左上角：游戏风的暖豆资源条 + 今天的暖豆和印章 */
+.hud-res {
+  position: absolute;
+  left: 24rpx;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  min-width: 200rpx;
+  padding: 0 28rpx 0 6rpx;
+  box-sizing: border-box;
+  border: 4rpx solid #ffffff;
+  border-radius: 40rpx;
+  background: linear-gradient(180deg, #3577c0 0%, #1d4f8a 100%);
+  box-shadow: 0 6rpx 0 rgba(20, 50, 90, 0.35);
+}
+
+.res-icon {
+  width: 60rpx;
+  height: 60rpx;
+}
+
+.res-num {
+  flex: 1;
+  text-align: center;
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.hud-today {
+  position: absolute;
+  left: 24rpx;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.hud-today-text {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #b8763a;
+}
+
+.stamps-mini {
+  gap: 4rpx;
+  margin: 0;
+}
+
+.stamps-mini .stamp {
+  width: 36rpx;
+  height: 36rpx;
+  font-size: 20rpx;
+}
+
+/* 左右两列圆按钮 */
+.side {
+  position: absolute;
+  top: 36%;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.side-left {
+  left: 20rpx;
+}
+
+.side-right {
+  right: 20rpx;
+}
+
+.side-btn {
+  position: relative;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  border: 4rpx solid #ffffff;
+  background: linear-gradient(180deg, #fff8ec 0%, #ffe9c7 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6rpx 0 rgba(150, 100, 40, 0.25);
+}
+
+.side-icon {
+  width: 70rpx;
+  height: 70rpx;
+}
+
+.side-label {
+  font-size: 22rpx;
+  font-weight: 800;
+  color: #8a4f1a;
+  margin-top: -4rpx;
+}
+
+.dot {
+  position: absolute;
+  top: 4rpx;
+  right: 8rpx;
+  width: 22rpx;
+  height: 22rpx;
+  border-radius: 50%;
+  background: #e8553b;
+  border: 3rpx solid #ffffff;
+}
+
+/* 底部大打卡按钮 */
+.checkin-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 36rpx;
+  z-index: 50;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 26rpx 56rpx;
+  border-radius: 60rpx;
+  border: 5rpx solid #ffffff;
+  background: linear-gradient(180deg, #6fcf5a 0%, #3e9a3a 100%);
+  box-shadow: 0 8rpx 0 #2c6e2a;
+  color: #ffffff;
+  font-size: 40rpx;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.checkin-icon {
+  font-size: 44rpx;
 }

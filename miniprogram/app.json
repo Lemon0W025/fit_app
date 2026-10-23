@@ -1,7 +1,7 @@
 {
   "pages": [
-    "pages/today/today",
     "pages/garden/garden",
+    "pages/today/today",
     "pages/weight/weight",
     "pages/profile/profile",
     "pages/checkin/checkin",
@@ -24,16 +24,16 @@
     "borderStyle": "white",
     "list": [
       {
+        "pagePath": "pages/garden/garden",
+        "text": "花园",
+        "iconPath": "images/tab-forest.png",
+        "selectedIconPath": "images/tab-forest-on.png"
+      },
+      {
         "pagePath": "pages/today/today",
         "text": "今日",
         "iconPath": "images/tab-today.png",
         "selectedIconPath": "images/tab-today-on.png"
-      },
-      {
-        "pagePath": "pages/garden/garden",
-        "text": "庭院",
-        "iconPath": "images/tab-forest.png",
-        "selectedIconPath": "images/tab-forest-on.png"
       },
       {
         "pagePath": "pages/weight/weight",
