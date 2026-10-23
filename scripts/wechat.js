@@ -23,16 +23,22 @@ function fail(message) {
   process.exit(1)
 }
 
-// 环境变量里的换行可能被写成 \n 或整个丢掉，统一还原成标准 PEM 格式
+// 把各种粘贴方式还原成标准 PEM：换行被写成 \n、换行丢失、或者 BEGIN/END 两行整个没带上
+function normalizePrivateKey(raw) {
+  const text = String(raw || '').replace(/\\n/g, '\n').trim()
+  const header = text.match(/-----BEGIN ([A-Z ]+)-----/)
+  const body = text.replace(/-----(BEGIN|END) [A-Z ]+-----/g, '').replace(/\s+/g, '')
+  if (!body) return ''
+  // 没有标题行时按内容判断格式：PKCS#8 开头带 RSA 算法标识，否则按 PKCS#1
+  const isPkcs8 = body.slice(0, 48).indexOf('ADANBgkqhkiG9w0BAQEF') !== -1
+  const label = header ? header[1] : isPkcs8 ? 'PRIVATE KEY' : 'RSA PRIVATE KEY'
+  return [`-----BEGIN ${label}-----`, ...body.match(/.{1,64}/g), `-----END ${label}-----`].join('\n') + '\n'
+}
+
 function privateKey() {
-  const raw = process.env.WX_UPLOAD_KEY
-  if (!raw) fail('缺少环境变量 WX_UPLOAD_KEY（小程序后台「开发管理 → 开发设置 → 小程序代码上传」生成的密钥内容）')
-  let key = raw.replace(/\\n/g, '\n').trim()
-  if (key.indexOf('\n') === -1) {
-    const m = key.match(/^(-----BEGIN [A-Z ]+-----)(.+?)(-----END [A-Z ]+-----)$/)
-    if (m) key = [m[1], ...m[2].replace(/\s+/g, '').match(/.{1,64}/g), m[3]].join('\n')
-  }
-  return key + '\n'
+  const key = normalizePrivateKey(process.env.WX_UPLOAD_KEY)
+  if (!key) fail('缺少环境变量 WX_UPLOAD_KEY（小程序后台「开发管理 → 开发设置 → 小程序代码上传」生成的密钥内容）')
+  return key
 }
 
 function envId() {
@@ -115,4 +121,8 @@ async function main() {
   console.log('  第一次上传后，到小程序后台「版本管理」把它选为体验版')
 }
 
-main().catch((e) => fail((e && (e.message || e.errMsg)) || String(e)))
+if (require.main === module) {
+  main().catch((e) => fail((e && (e.message || e.errMsg)) || String(e)))
+}
+
+module.exports = { normalizePrivateKey }
