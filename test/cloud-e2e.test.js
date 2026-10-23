@@ -182,3 +182,27 @@ test('养生庭院：打卡赚豆 → 新手礼 → 扭蛋 → 摆放 → 移动
   assert.equal(stored.beans.spent, 60)
   assert.deepEqual(stored.beans.earned, { [dateKey()]: 20 })
 })
+
+test('庭院小动物：摆翠竹 → 打卡午餐 → 熊猫搬来 → 庭院看到一次', async () => {
+  const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  await main({ action: 'garden.get' })
+  const doc = cloud.db.collections.get('gardens').get('u1')
+  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 0, r: 0 }) })
+
+  const waiting = await main({ action: 'garden.get' })
+  assert.deepEqual(waiting.data.waiting, ['panda'])
+
+  const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭青菜' } })
+  assert.equal(meal.ok, true, meal.message)
+  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫' })
+
+  const first = await main({ action: 'garden.get', data: { markSeen: true } })
+  assert.deepEqual(first.data.residents, ['panda'])
+  assert.deepEqual(first.data.arrivals, ['panda'])
+  assert.deepEqual(first.data.waiting, [])
+  const second = await main({ action: 'garden.get', data: { markSeen: true } })
+  assert.deepEqual(second.data.arrivals, [])
+  assert.deepEqual(cloud.db.collections.get('gardens').get('u1').residents.map((r) => r.id), ['panda'])
+})

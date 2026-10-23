@@ -31,7 +31,7 @@ function treeChange(beforeMeals, afterMeals) {
   }
 }
 
-function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, log = () => {} }) {
+function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, garden, log = () => {} }) {
   async function requireProfile(openid) {
     const profile = await repo.getProfile(openid)
     if (!profile) throw new AppError(CODES.NO_PROFILE, '先完善一下个人档案吧')
@@ -113,13 +113,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       }
       const saved = { _id: await repo.addMeal(meal), ...meal }
 
-      // 只有正餐影响今天的树，加餐不算
+      // 只有正餐影响今天的树、引来小动物，加餐不算
       let tree = null
+      let arrival = null
       if (isMainMeal(src.mealType)) {
         await forest.syncDay(openid, date)
         tree = treeChange(meals, meals.concat(saved))
+        arrival = await garden.arrive(openid)
       }
-      return { ...saved, tree }
+      return { ...saved, tree, arrival }
     },
 
     async reanalyze(openid, input) {

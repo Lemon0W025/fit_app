@@ -2,11 +2,13 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createMealService } = require('../cloudfunctions/api/services/meal')
 const { createForestService } = require('../cloudfunctions/api/services/forest')
+const { createGardenService } = require('../cloudfunctions/api/services/garden')
 const { createFakeRepo, createFakeChat, PROFILE, NOW, TODAY, CONFIG, analysisJson } = require('./helpers/fake-repo')
 
-function setup({ results = [], config = CONFIG, withProfile = true, imageUrlError = null, deleteError = null } = {}) {
+function setup({ results = [], config = CONFIG, withProfile = true, imageUrlError = null, deleteError = null, garden: gardenDoc = null } = {}) {
   const repo = createFakeRepo()
   if (withProfile) repo.state.profiles.set('u1', { ...PROFILE })
+  if (gardenDoc) repo.state.gardens.set('u1', gardenDoc)
   const chat = createFakeChat(results)
   const deleted = []
   const logs = []
@@ -15,6 +17,7 @@ function setup({ results = [], config = CONFIG, withProfile = true, imageUrlErro
     chat,
     config,
     forest: createForestService({ repo, now: () => NOW }),
+    garden: createGardenService({ repo, now: () => NOW }),
     getImageUrl: async (fileID) => {
       if (imageUrlError) throw imageUrlError
       return `https://tmp/${fileID}`
@@ -50,7 +53,7 @@ test('analyze：有照片时调用视觉模型并保存', async () => {
   const content = chat.calls[0].messages[1].content
   assert.equal(content.find((c) => c.type === 'image_url').image_url.url, 'https://tmp/cloud://a.jpg')
   // tree 只在响应里给页面做反馈，不存库
-  const { tree, ...stored } = meal
+  const { tree, arrival, ...stored } = meal
   assert.equal(tree.after, 'sprout')
   assert.deepEqual(await repo.getMeal('u1', meal._id), stored)
 })
@@ -152,7 +155,7 @@ test('reanalyze：补充备注后重新分析失败的打卡', async () => {
   assert.equal(meal.note, '红烧肉盖饭')
   assert.equal(meal.error, '')
   assert.equal(chat.calls.length, 3)
-  const { tree, ...stored } = meal
+  const { tree, arrival, ...stored } = meal
   assert.deepEqual(await repo.getMeal('u1', failed._id), stored)
 })
 
@@ -255,4 +258,35 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   const garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, {})
   assert.deepEqual(garden.beans.earned, {})
+})
+
+const bambooGarden = () => ({ welcomed: true, placed: [{ uid: 'p1', itemId: 'bamboo', c: 0, r: 0 }] })
+
+test('analyze：正餐打卡后，摆着翠竹的庭院搬来熊猫', async () => {
+  const { repo, service } = setup({ results: [analysisJson()], garden: bambooGarden() })
+  const meal = await service.analyze('u1', { mealType: 'lunch', note: '米饭青菜' })
+  assert.deepEqual(meal.arrival, { id: 'panda', name: '大熊猫' })
+  assert.equal(repo.state.meals.find((m) => m._id === meal._id).arrival, undefined)
+  assert.deepEqual((await repo.getGarden('u1')).residents.map((r) => r.id), ['panda'])
+})
+
+test('analyze：加餐不搬家；AI 失败的正餐照样搬', async () => {
+  const snack = setup({ results: [analysisJson()], garden: bambooGarden() })
+  const s = await snack.service.analyze('u1', { mealType: 'snack', note: '苹果' })
+  assert.equal(s.arrival, null)
+  assert.equal((await snack.repo.getGarden('u1')).residents, undefined)
+
+  const failed = setup({ results: [new Error('down'), new Error('down')], garden: bambooGarden() })
+  const m = await failed.service.analyze('u1', { mealType: 'dinner', note: '面条' })
+  assert.equal(m.status, 'failed')
+  assert.deepEqual(m.arrival, { id: 'panda', name: '大熊猫' })
+})
+
+test('reanalyze 不触发搬家', async () => {
+  const { repo, service } = setup({ results: [analysisJson(), analysisJson()] })
+  const meal = await service.analyze('u1', { mealType: 'lunch', note: '米饭' })
+  repo.state.gardens.set('u1', bambooGarden())
+  const again = await service.reanalyze('u1', { mealId: meal._id, note: '米饭半碗' })
+  assert.equal(again.arrival, undefined)
+  assert.deepEqual((await repo.getGarden('u1')).residents || [], [])
 })

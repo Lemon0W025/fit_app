@@ -23,15 +23,16 @@ const repo = createRepo(cloud.database())
 const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
+const garden = createGardenService({ repo, now })
 
 const route = createRouter(
   {
     profile: createProfileService({ repo, now }),
-    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, log }),
+    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, garden, log }),
     day: createDayService({ repo, chat, config, now, forest, log }),
     weight: createWeightService({ repo, now }),
     forest,
-    garden: createGardenService({ repo, now }),
+    garden,
   },
   { log },
 )
