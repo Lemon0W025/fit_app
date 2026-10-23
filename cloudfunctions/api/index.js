@@ -14,6 +14,7 @@ const { createMealService } = require('./services/meal')
 const { createDayService } = require('./services/day')
 const { createWeightService } = require('./services/weight')
 const { createForestService } = require('./services/forest')
+const { createGardenService } = require('./services/garden')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -30,6 +31,7 @@ const route = createRouter(
     day: createDayService({ repo, chat, config, now, forest, log }),
     weight: createWeightService({ repo, now }),
     forest,
+    garden: createGardenService({ repo, now }),
   },
   { log },
 )

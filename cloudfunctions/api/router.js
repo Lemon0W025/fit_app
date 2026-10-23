@@ -13,6 +13,11 @@ const ROUTES = {
   'weight.save': ['weight', 'save'],
   'weight.list': ['weight', 'list'],
   'forest.get': ['forest', 'get'],
+  'garden.get': ['garden', 'get'],
+  'garden.spin': ['garden', 'spin'],
+  'garden.place': ['garden', 'place'],
+  'garden.move': ['garden', 'move'],
+  'garden.stash': ['garden', 'stash'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

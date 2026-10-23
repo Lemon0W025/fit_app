@@ -16,6 +16,8 @@ function normalizeGarden(doc) {
     collected: g.collected || [],
     gacha: { pulls: gacha.pulls || 0, sincePity: gacha.sincePity || 0 },
     welcomed: !!g.welcomed,
+    // 摆放物品的编号计数器
+    seq: g.seq || 0,
   }
 }
 

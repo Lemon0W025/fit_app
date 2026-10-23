@@ -142,3 +142,43 @@ test('养生森林：三顿全绿结果、暖豆入账、日历、删除后回�
   assert.deepEqual(after.beans.earned, {})
   assert.equal((await main({ action: 'forest.get' })).data.today.streak, 0)
 })
+
+test('养生庭院：打卡赚豆 → 新手礼 → 扭蛋 → 摆放 → 移动 → 收回', async () => {
+  const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' }), analysisJson({ rating: 'green' })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  await main({ action: 'meal.analyze', data: { mealType: 'breakfast', note: '粥' } })
+  await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '面' } })
+
+  const first = await main({ action: 'garden.get' })
+  assert.equal(first.ok, true, first.message)
+  assert.deepEqual(first.data.welcome, { beans: 60, itemId: 'starter_tree' })
+  assert.equal(first.data.beans, 80)
+
+  const spin = await main({ action: 'garden.spin' })
+  assert.equal(spin.ok, true, spin.message)
+  assert.equal(spin.data.beans, 50)
+  assert.equal(spin.data.isNew, true)
+  const itemId = spin.data.itemId
+
+  const placed = await main({ action: 'garden.place', data: { itemId, c: 0, r: 0 } })
+  assert.equal(placed.ok, true, placed.message)
+  const uid = placed.data.placed.find((p) => p.itemId === itemId).uid
+  assert.deepEqual(placed.data.inventory, [])
+
+  const blocked = await main({ action: 'garden.move', data: { uid, c: 2, r: 2 } })
+  assert.equal(blocked.code, 'BAD_REQUEST')
+  const moved = await main({ action: 'garden.move', data: { uid, c: 5, r: 5 } })
+  assert.deepEqual(moved.data.placed.find((p) => p.uid === uid), { uid, itemId, c: 5, r: 5 })
+
+  const stashed = await main({ action: 'garden.stash', data: { uid } })
+  assert.deepEqual(stashed.data.inventory, [{ itemId, count: 1 }])
+
+  await main({ action: 'garden.spin' })
+  const broke = await main({ action: 'garden.spin' })
+  assert.equal(broke.code, 'NO_BEANS')
+
+  const stored = cloud.db.collections.get('gardens').get('u1')
+  assert.equal(stored.beans.spent, 60)
+  assert.deepEqual(stored.beans.earned, { [dateKey()]: 20 })
+})
