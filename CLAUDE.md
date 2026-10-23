@@ -17,8 +17,8 @@
 ## 从云端部署（miniprogram-ci）
 
 前提（用户一次性配置）：
-- 环境变量 `WX_UPLOAD_KEY`：小程序后台生成的代码上传密钥内容（不要让用户把密钥贴在聊天里，也不要写进仓库）
-- 网络放行：`servicewechat.com`、`tcb.tencentcloudapi.com`、`scf.tencentcloudapi.com`、`flexdb.tencentcloudapi.com`
+- 环境变量 `WX_UPLOAD_KEY`：小程序后台生成的代码上传密钥内容，在环境变量里用双引号包住整段多行内容（不要让用户把密钥贴在聊天里，也不要写进仓库）。不能用 Network secrets：上传工具要在本地用密钥签名，代理注入的密钥读不到
+- 网络放行（Custom，勾选包含默认包管理器列表）：`servicewechat.com`、`*.servicewechat.com`、`*.tencentcloudapi.com`、`*.myqcloud.com`（腾讯云存储，云函数代码包可能经由它上传）
 - 小程序后台的上传 IP 白名单已关闭（云端出口 IP 不固定）
 - `miniprogram/config.js` 填好云开发环境 ID
 
