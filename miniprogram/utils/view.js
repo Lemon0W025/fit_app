@@ -88,13 +88,14 @@ function beansCard(daily) {
   }
 }
 
-// 打卡日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）
+// 打卡日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）；没打正餐的日子不画印章，月历看着清爽
 function buildCalendarCells(days, firstWeekday) {
   const blanks = (firstWeekday + 6) % 7
   const cells = []
   for (let i = 0; i < blanks; i++) cells.push({ key: `blank-${i}`, blank: true })
   days.forEach((d) => {
-    cells.push({ ...d, key: d.date, stamps: stampsView(d.stamps), beansText: d.beans > 0 ? `+${d.beans}` : '' })
+    const logged = d.beans > 0
+    cells.push({ ...d, key: d.date, stamps: logged ? stampsView(d.stamps) : [], beansText: logged ? `+${d.beans}` : '' })
   })
   return cells
 }

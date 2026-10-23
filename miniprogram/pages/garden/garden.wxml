@@ -6,16 +6,18 @@
       <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" bindtap="tapLand">
         <image wx:for="{{decor}}" wx:key="key" class="decor {{item.cloud ? 'decor-cloud' : ''}}" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
         <image wx:for="{{plots}}" wx:key="key" class="plot {{item.key === justOpened ? 'plot-new' : ''}}" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
-        <view wx:for="{{plots}}" wx:key="key" wx:if="{{item.key === justOpened}}" class="dust" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.width / 2}}px">
-          <view class="puff puff-1"></view>
-          <view class="puff puff-2"></view>
-          <view class="puff puff-3"></view>
-          <view class="puff puff-4"></view>
-        </view>
-        <view wx:for="{{plots}}" wx:key="key" wx:if="{{item.sign}}" class="sign" style="left: {{item.sign.left}}px; bottom: {{item.sign.bottom}}px; width: {{item.sign.width}}px" data-key="{{item.key}}" catchtap="tapSign">
-          <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />
-          <view class="sign-text">开荒<text class="sign-cost">{{item.sign.cost}} 暖豆</text></view>
-        </view>
+        <block wx:for="{{plots}}" wx:key="key">
+          <view wx:if="{{item.key === justOpened}}" class="dust" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.width / 2}}px">
+            <view class="puff puff-1"></view>
+            <view class="puff puff-2"></view>
+            <view class="puff puff-3"></view>
+            <view class="puff puff-4"></view>
+          </view>
+          <view wx:if="{{item.sign}}" class="sign" style="left: {{item.sign.left}}px; bottom: {{item.sign.bottom}}px; width: {{item.sign.width}}px" data-key="{{item.key}}" catchtap="tapSign">
+            <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />
+            <view class="sign-text">开荒<text class="sign-cost">{{item.sign.cost}} 暖豆</text></view>
+          </view>
+        </block>
         <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <image wx:for="{{sprites}}" wx:key="uid" class="sprite {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
         <view wx:for="{{animals}}" wx:key="id" class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
@@ -39,8 +41,8 @@
     </view>
     <view class="hud-collect" style="top: {{hud.below}}px" bindtap="goCollection">图鉴 {{collectedCount}}/{{totalCount}} ›</view>
     <view class="hud-notes" style="top: {{hud.below + 52}}px">
-      <view wx:if="{{termText}}" class="note">🍂 {{termText}}</view>
-      <view wx:if="{{waitingText}}" class="note note-green">{{waitingText}}</view>
+      <view wx:if="{{termText}}" class="hud-note">🍂 {{termText}}</view>
+      <view wx:if="{{waitingText}}" class="hud-note hud-note-green">{{waitingText}}</view>
     </view>
 
     <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">

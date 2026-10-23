@@ -191,7 +191,7 @@ page {
   pointer-events: none;
 }
 
-.note {
+.hud-note {
   display: inline-block;
   margin-bottom: 10rpx;
   padding: 10rpx 20rpx;
@@ -201,7 +201,7 @@ page {
   border-radius: 16rpx;
 }
 
-.note-green {
+.hud-note-green {
   color: var(--primary);
   background: rgba(238, 246, 234, 0.95);
 }

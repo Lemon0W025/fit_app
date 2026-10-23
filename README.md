@@ -10,27 +10,27 @@
 - **今日页**：已吃 / 剩余热量进度条，每餐卡片，一键生成「今日总结」
 - **估得不准**：补充描述后重新分析；可删除打卡
 - **体重**：每天记录，30 天折线图（接近目标时显示目标线）；记录当天体重会自动调整每日预算
-- **养生庭院**：每天的打卡种出一棵树、换来「暖豆」；暖豆拿去扭蛋，抽花草、果树、小动物、亭子，摆进自己的庭院（详见下文）
+- **养生庭院**：每天打卡换「暖豆」；暖豆拿去扭蛋抽花草、果树、亭子，摆进撑满屏幕的大地图庭院，摆对东西小动物会搬来，暖豆攒多了还能开荒扩建（详见下文）
 
 ## 养生庭院（打卡奖励）
 
 参考 Forest 和扭蛋机：每天都有一点进展，攒够了能抽到新东西、把院子布置得更好看，让人愿意每天回来打卡。
 
-### 每天一棵树 → 暖豆
+### 每天打卡 → 暖豆
 
-| 今天的正餐 | 今天的树 |
+| 今天的正餐 | 当天的暖豆 |
 |---|---|
-| 没打卡 | 空地（不会有枯树） |
-| 打卡 1 顿 | 🌱 树苗 |
-| 打卡 2 顿 | 🌿 小树 |
-| 三顿都打卡 | 🌳 大树 |
-| 三顿都打卡，其中两顿绿色评级 | 🌸 开花 |
-| 三顿都打卡，全是绿色 | 🍎 结果 |
+| 没打卡 | 0 |
+| 打卡 1 顿 | 10 |
+| 打卡 2 顿 | 20 |
+| 三顿都打卡 | 40 |
+| 三顿都打卡，其中两顿绿色评级 | 50 |
+| 三顿都打卡，全是绿色 | 60 |
 
-- 树长到 树苗 / 小树 / 大树 / 开花 / 结果，当天分别累计得 10 / 20 / 40 / 50 / 60 暖豆（删掉打卡会相应扣回）
-- 加餐照常点评但不影响树；吃得不好不扣分，免得不敢拍
-- 每次打卡后结果页告诉你树长成了什么样、得了多少暖豆；今日页顶部有今天的树和下一步怎么做
-- 「打卡日历」按月显示每天的树，点某天能看到吃了几顿、多少千卡；🔥 连续天数
+- 删掉打卡会相应扣回；加餐照常点评但不算暖豆；吃得不好不扣分，免得不敢拍
+- 早 / 午 / 晚三个印章：绿色吃得好、黄色一般、红色要注意、灰色打了卡但没分析出来、虚线没打卡
+- 每次打卡后结果页告诉你这次多得了多少暖豆、再打卡哪顿还能得多少；今日页顶部是「今天得了 X 暖豆」卡片
+- 「打卡日历」按月显示每天的印章和暖豆，点某天能看到吃了几顿、多少千卡；🔥 连续天数
 
 ### 扭蛋机 → 庭院 → 图鉴
 
@@ -38,8 +38,10 @@
 - 扭一次 30 暖豆；普通 65% · 稀有 25% · 珍稀 8% · 传说 2%；连续 9 次没出珍稀，第 10 次必出珍稀以上
 - 一共 48 种：扭蛋里 39 种（普通 15 · 稀有 10 · 珍稀 6 · 传说 3 · 节气限定 5，节气限定在霜降、立冬、小雪、大雪、冬至期间概率提高）+ 9 只小动物（见下文）
 - 抽到的东西进背包，点一下再点庭院里亮着的空地就摆上去；点已摆的东西可以移动或收回背包
-- 图鉴集齐 20 种，庭院从 6×6 扩大到 8×8
-- 规则细节见 `docs/superpowers/specs/2026-10-23-garden-gacha-design.md`（每日树的规则见 `2026-10-22-forest-reward-design.md`）
+- 庭院是撑满屏幕的大地图：一指拖动、双指缩放（0.5～1.5 倍），右下角「🏠」回到中间
+- 地图有 3×3 块地，每块 6×6 格；一开始只开垦中间一块，挨着已开垦土地的荒地上立着「开荒」木牌，点一下花暖豆开垦：100、150、200……每块贵 50，全部开完共 2200
+- 东西只能摆在开垦了的地上；底部的「背包」是从下往上滑出来的抽屉
+- 规则细节见 `docs/superpowers/specs/2026-10-23-garden-gacha-design.md`、`2026-10-23-big-garden-map-design.md`
 
 ### 小动物
 
@@ -72,14 +74,14 @@ miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
   pages/gacha|collection|forest  扭蛋机、图鉴、打卡日历
   utils/api.js               调用云函数、上传照片、错误提示
   utils/view.js, chart.js    页面展示整理、体重图
-  utils/iso.js, garden-view.js  庭院的等距网格换算、摆放与图鉴展示
+  utils/iso.js, world.js, garden-view.js  等距网格换算、大地图布局与点按换算、摆放与图鉴展示
   utils/animals.js, garden-life.js  小动物的脾气与台词、在庭院里走动玩耍的调度
-  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、每日树、庭院与扭蛋规则）
-  images/                    tabBar 图标、每日树、庭院地块和物件（见下文「图片」）
+  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、每日暖豆与印章、庭院 / 扭蛋 / 开荒规则）
+  images/                    tabBar 图标、庭院地块和物件（见下文「图片」）
   config.js                  云开发环境 ID
 cloudfunctions/api/          唯一的云函数，按 action 路由
   config.js                  ← AI 模型配置在这里
-  services/                  建档、打卡、今日/总结、体重、每日树与暖豆、庭院与扭蛋
+  services/                  建档、打卡、今日/总结、体重、每日暖豆、庭院 / 扭蛋 / 开荒
   lib/                       提示词、AI 输出解析、校验等纯逻辑
 scripts/draw-images.py      重新生成图片（需要 Pillow：pip install pillow）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
@@ -184,13 +186,14 @@ npm test
 - `cloudfunctions/api/lib/shared/` 和 `miniprogram/utils/shared/` 两份文件必须一模一样（测试会检查），改了一边记得复制到另一边
 - 云函数响应统一为 `{ ok: true, data }` 或 `{ ok: false, code, message }`，`message` 会直接展示给用户
 - 提示词在 `cloudfunctions/api/lib/prompts.js`，想调整小暖的说话风格改这里
-- 每日树的规则在 `cloudfunctions/api/lib/shared/forest.js`；暖豆、扭蛋概率、物件清单、节气在 `cloudfunctions/api/lib/shared/garden.js`
+- 每天的暖豆档位和印章在 `cloudfunctions/api/lib/shared/forest.js`；暖豆数额、扭蛋概率、物件清单、节气、地图与开荒价格在 `cloudfunctions/api/lib/shared/garden.js`
 
 ### 图片
 
-- 美术原图在 `art/raw/`（Codex 生成的 8 张 3×3 整图，格子顺序见 `art/raw/中文物件索引.txt`）；`python3 scripts/slice-art.py` 把它们切成单张图，覆盖 `miniprogram/images/` 下的每日树、庭院物件和界面图（需要 Pillow 和 numpy）
+- 美术原图在 `art/raw/`（Codex 生成的 8 张 3×3 整图，格子顺序见 `art/raw/中文物件索引.txt`）；`python3 scripts/slice-art.py` 把它们切成单张图，覆盖 `miniprogram/images/` 下的庭院物件、界面图和外围装饰树（需要 Pillow 和 numpy）
 - 加新物件：在 `lib/shared/garden.js` 的 ITEMS 里加一项，按 `docs/art/garden-art-brief.md` 出图放进 `art/raw/`，在 `slice-art.py` 的 SHEETS 里写上格子对应的物件 id，再跑一遍
-- `scripts/draw-images.py` 画 tab 图标和庭院地块（`images/garden/land-6.png`、`land-8.png`）；还没有正式美术的物件，它会补一张 emoji 占位图（已有的不覆盖）
+- `scripts/draw-images.py` 画 tab 图标、地块（`images/garden/plot-open.png` 草地、`plot-wild.png` 荒地）、开荒木牌、云朵；还没有正式美术的物件和图标，它会补一张 emoji 占位图（已有的不覆盖）
+- 大地图的正式美术按 `docs/art/garden-map-art-brief.md` 出图
 - 小程序主包上限 2MB，现在约 1.6MB；加图后看一眼 `du -sh miniprogram`
 
 ## 第二期计划

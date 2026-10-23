@@ -147,6 +147,7 @@ test('buildCalendarCells：周一开头的日历，每天印章和暖豆', () =>
   assert.equal(cells[3].beansText, '+20')
   assert.equal(cells[3].stamps[0].cls, 'stamp-green')
   assert.equal(cells[4].beansText, '')
+  assert.deepEqual(cells[4].stamps, [])
   assert.equal(cells[5].future, true)
   assert.ok(cells.every((c) => c.key))
   assert.equal(buildCalendarCells(days, 0).filter((c) => c.blank).length, 6)
