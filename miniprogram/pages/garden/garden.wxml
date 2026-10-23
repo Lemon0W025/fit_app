@@ -2,30 +2,40 @@
   <view wx:if="{{!loaded}}" class="loading">正在推开花园的门…</view>
 
   <movable-area wx:if="{{loaded}}" class="map-area">
-    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.5" scale-max="1.5" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
-      <view wx:for="{{waves}}" wx:key="key" class="wave" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px"></view>
+    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.5" scale-max="2" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
       <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" bindtap="tapLand">
-        <image class="island" src="{{island.image}}" style="left: {{island.left}}px; top: {{island.top}}px; width: {{island.width}}px; height: {{island.height}}px" />
-        <image wx:for="{{regions}}" wx:key="key" class="locked" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
-        <block wx:for="{{regions}}" wx:key="key">
-          <view class="sign" style="left: {{item.sign.left}}px; bottom: {{item.sign.bottom}}px; width: {{item.sign.width}}px" data-key="{{item.key}}" catchtap="tapSign">
-            <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />
-            <view class="sign-text">修整{{item.sign.name}}<text class="sign-cost">{{item.sign.cost}} 暖豆</text></view>
+        <image wx:for="{{art}}" wx:key="key" class="art" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+        <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+        <block wx:for="{{sprites}}" wx:key="uid">
+          <view class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>
+          <image class="sprite {{item.flip ? 'flip' : ''}} {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
+        </block>
+        <block wx:for="{{animals}}" wx:key="id">
+          <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}; transition-duration: {{item.duration}}ms"></view>
+          <view class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
+            <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
+            <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
+            <view wx:if="{{item.tapping}}" class="heart">❤️</view>
+            <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.bodyHeight < item.width ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
+              <image class="animal-img act-{{item.action}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+            </view>
+            <view wx:if="{{item.bodyHeight < item.width}}" class="ripple"></view>
           </view>
         </block>
-        <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
-        <image wx:for="{{beds}}" wx:key="key" class="plant" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
-        <image wx:for="{{shore}}" wx:key="key" class="plant" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
-        <image wx:for="{{scenery}}" wx:key="uid" class="sprite plant {{item.region === justOpened ? 'scenery-new' : ''}}" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
-        <image wx:for="{{sprites}}" wx:key="uid" class="sprite {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
-        <view wx:for="{{animals}}" wx:key="id" class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
-          <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
-          <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
-          <view wx:if="{{item.tapping}}" class="heart">❤️</view>
-          <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.action === 'swim' ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
-            <image class="animal-img act-{{item.action}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+        <block wx:for="{{signs}}" wx:key="key">
+          <view class="sign" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px" data-key="{{item.key}}" catchtap="tapSign">
+            <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />
+            <view class="sign-text">修整{{item.name}}<text class="sign-cost">{{item.cost}} 暖豆</text></view>
           </view>
-          <view wx:if="{{item.action === 'swim'}}" class="ripple"></view>
+        </block>
+        <image wx:for="{{clouds}}" wx:key="key" class="cloud" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; animation-delay: {{item.delay}}s" />
+        <view wx:if="{{burst}}" class="confetti" style="left: {{burst.left}}px; top: {{burst.top}}px">
+          <view class="confetti-bit b1"></view>
+          <view class="confetti-bit b2"></view>
+          <view class="confetti-bit b3"></view>
+          <view class="confetti-bit b4"></view>
+          <view class="confetti-bit b5"></view>
+          <view class="confetti-bit b6"></view>
         </view>
       </view>
     </movable-view>
@@ -69,6 +79,10 @@
         <text class="side-label">背包</text>
         <view wx:if="{{bagCount}}" class="badge">{{bagCount}}</view>
       </view>
+      <view class="side-btn" bindtap="openResidents">
+        <text class="side-emoji">🐾</text>
+        <text class="side-label">住户</text>
+      </view>
     </view>
 
     <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">
@@ -81,7 +95,10 @@
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
       <view class="placing-text">{{mode === 'place' ? '摆放' : '移动'}}「{{selectedName}}」：点一块亮着的空地</view>
-      <button class="btn-plain btn-small" bindtap="cancel">取消</button>
+      <view class="placing-btns">
+        <button class="btn-plain btn-small" bindtap="toggleFlip">↔ 换个方向</button>
+        <button class="btn-plain btn-small" bindtap="cancel">取消</button>
+      </view>
     </view>
 
     <view wx:if="{{bagOpen}}" class="drawer-mask" catchtap="closeBag"></view>
@@ -99,13 +116,32 @@
       </scroll-view>
       <view wx:else class="muted small">背包空空的，去扭蛋机试试手气吧～</view>
     </view>
+
+    <view wx:if="{{residentsOpen}}" class="drawer-mask" catchtap="closeResidents"></view>
+    <view class="drawer {{residentsOpen ? 'drawer-open' : ''}}">
+      <view class="drawer-head">
+        <text class="drawer-title">住户（点一下，带你去找它）</text>
+        <text class="drawer-close" catchtap="closeResidents">✕</text>
+      </view>
+      <view wx:if="{{residents.length}}" class="res-list">
+        <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
+          <image class="res-avatar" src="{{item.image}}" mode="aspectFit" />
+          <view class="res-body">
+            <view class="res-name">{{item.name}}</view>
+            <view class="res-text">{{item.text}}</view>
+          </view>
+          <text class="res-go">去看看 ›</text>
+        </view>
+      </view>
+      <view wx:else class="muted small">还没有小动物搬来。摆上它们喜欢的东西，下次打卡就会来～</view>
+    </view>
   </block>
 
   <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">
     <view class="welcome" catchtap="noop">
       <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
       <view class="welcome-title">欢迎来到你的养生花园！</view>
-      <view class="welcome-text">送你 {{welcome.beans}} 暖豆，还在花园里种了一棵大树。每天好好吃饭攒暖豆，扭蛋抽花草，摆对东西小动物会搬来；暖豆攒多了还能修整四个角落～</view>
+      <view class="welcome-text">送你 {{welcome.beans}} 暖豆，还在正院里种了一棵大树。每天好好吃饭攒暖豆，扭蛋抽花草家具布置院子，摆对东西小动物会搬来；暖豆攒多了还能一个个修整后面的院子～</view>
       <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
       <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
     </view>

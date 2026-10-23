@@ -1,8 +1,10 @@
 const api = require('../../utils/api')
 const W = require('../../utils/world')
-const { buildScene, inventoryList, hintTiles } = require('../../utils/garden-view')
+const A = require('../../utils/animals')
+const { buildScene, inventoryList } = require('../../utils/garden-view')
 const { beansCard } = require('../../utils/view')
-const { itemById, placeProblem } = require('../../utils/shared/garden')
+const { itemById } = require('../../utils/shared/garden')
+const { SPOTS, DOOR, areaById, tileInfo, walkable, placeProblem } = require('../../utils/shared/estate')
 const { createLife } = require('../../utils/garden-life')
 
 function windowInfo() {
@@ -18,6 +20,11 @@ function capsule() {
   }
 }
 
+function areaName(id) {
+  const a = areaById(id)
+  return a ? a.name : ''
+}
+
 Page({
   data: {
     loaded: false,
@@ -31,21 +38,22 @@ Page({
     hud: { top: 28, height: 32, below: 72 },
     world: null,
     view: { x: 0, y: 0, scale: 1 },
-    island: null,
-    waves: [],
-    beds: [],
-    shore: [],
-    regions: [],
-    scenery: [],
+    art: [],
+    clouds: [],
+    signs: [],
     sprites: [],
     animals: [],
     inventory: [],
     bagCount: 0,
     bagOpen: false,
+    residents: [],
+    residentsOpen: false,
     mode: 'view', // view 看 / place 从背包摆放 / move 移动已摆的
     selectedName: '',
+    placingFlip: false,
     hints: [],
     justOpened: '',
+    burst: null,
     welcome: null,
   },
 
@@ -67,6 +75,11 @@ Page({
     this.stopLife()
   },
 
+  win() {
+    const info = windowInfo()
+    return { width: info.windowWidth || 375, height: info.windowHeight || 667 }
+  },
+
   load() {
     return api.call('garden.get', { markSeen: true })
       .then((view) => {
@@ -75,18 +88,18 @@ Page({
           wx.switchTab({ url: '/pages/profile/profile' })
           return
         }
-        this.setData({ justOpened: '' })
+        this.setData({ justOpened: '', burst: null })
         this.render(view, true)
       })
       .catch((err) => api.showError(err))
   },
 
   render(view, fresh) {
-    const info = windowInfo()
-    if (!this.L) this.L = W.islandLayout(info.windowWidth || 375)
+    const win = this.win()
+    if (!this.L) this.L = W.estateLayout(win.width)
     const L = this.L
     this.garden = view
-    this.opened = view.regions.filter((g) => g.unlocked).map((g) => g.id)
+    this.opened = view.areas.filter((a) => a.unlocked).map((a) => a.id)
     const termItems = view.term && view.term.items.length ? view.term.items.map((id) => itemById(id).name).join('、') : ''
     const inventory = inventoryList(view.inventory)
     const patch = {
@@ -98,9 +111,9 @@ Page({
       termText: termItems ? `${view.term.name}限定「${termItems}」正在扭蛋机里` : '',
       waitingText: view.waiting && view.waiting.length ? '👀 有小动物在院子外张望…下次打卡它就来了' : '',
       world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
-      island: W.islandView(L),
-      regions: W.regionViews(view.regions, L),
-      scenery: W.sceneryViews(this.opened, L),
+      art: this.data.art.length ? this.data.art : W.artTiles(L),
+      clouds: W.cloudViews(view.areas, L),
+      signs: W.signViews(view.areas, this.opened, L),
       sprites: buildScene(view.placed, L),
       inventory,
       bagCount: inventory.reduce((sum, i) => sum + i.count, 0),
@@ -109,31 +122,27 @@ Page({
     }
     // 摆放、移动之后的结果里没有 daily，沿用上次的
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
-    // 花坛、岛边、海浪只算一次
-    if (!this.data.beds.length) {
-      patch.beds = W.flowerBeds(L)
-      patch.shore = W.shoreDecor(L)
-      patch.waves = W.waves(L)
-    }
-    // 第一次进来把小岛正中摆到屏幕正中；之后保留拖到的位置
+    // 第一次进来把正院摆到屏幕正中；之后保留拖到的位置
     if (!this.centered) {
-      patch.view = W.centerOffset(L, info.windowWidth || 375, info.windowHeight || 667)
+      patch.view = W.areaOffset('main', L, win)
       this.centered = true
     }
     this.setData(patch)
     this.syncLife(view, fresh)
     if (view.testGift) {
-      wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，修整角落、扭蛋随便试试`, showCancel: false, confirmText: '好的' })
+      wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，修整院子、扭蛋随便试试`, showCancel: false, confirmText: '好的' })
     }
   },
 
   // movable-view 只在 x / y / scale-value 的值变了才会动：每次换一点点不同的小数
-  recenter() {
-    const info = windowInfo()
-    const center = W.centerOffset(this.L, info.windowWidth || 375, info.windowHeight || 667)
+  nudgeView(offset) {
     this.nudge = !this.nudge
     const d = this.nudge ? 0.01 : 0
-    this.setData({ view: { x: center.x + d, y: center.y + d, scale: 1 + d / 100 } })
+    this.setData({ view: { x: offset.x + d, y: offset.y + d, scale: 1 + d / 100 } })
+  },
+
+  recenter() {
+    this.nudgeView(W.areaOffset('main', this.L, this.win()))
   },
 
   goCheckin() {
@@ -158,7 +167,8 @@ Page({
       bagOpen: false,
       mode: 'place',
       selectedName: item ? item.name : '',
-      hints: hintTiles(this.garden.placed, this.L, null, W.placeChecker(this.opened)),
+      placingFlip: false,
+      hints: W.hintViews(this.opened, this.garden.placed, id, null, this.L),
     })
     if (this.life) this.life.pause()
   },
@@ -172,14 +182,35 @@ Page({
       itemList: ['移动位置', '收回背包'],
       success: (res) => {
         if (res.tapIndex === 0) {
-          this.selected = { type: 'move', uid }
-          this.setData({ mode: 'move', selectedName: sprite.name, hints: hintTiles(this.garden.placed, this.L, uid, W.placeChecker(this.opened)) })
+          this.selected = { type: 'move', uid, itemId: sprite.itemId }
+          this.setData({
+            mode: 'move',
+            selectedName: sprite.name,
+            placingFlip: sprite.flip,
+            hints: W.hintViews(this.opened, this.garden.placed, sprite.itemId, uid, this.L),
+          })
           if (this.life) this.life.pause()
         } else if (res.tapIndex === 1) {
           this.save('garden.stash', { uid }, `${sprite.name}收进背包了`)
         }
       },
     })
+  },
+
+  // 换个方向：摆放时记在本地，摆下去一起存；移动时直接改
+  toggleFlip() {
+    const sel = this.selected
+    if (!sel) return
+    if (sel.type === 'place') {
+      this.setData({ placingFlip: !this.data.placingFlip })
+      return
+    }
+    api.call('garden.flip', { uid: sel.uid })
+      .then((view) => {
+        this.setData({ placingFlip: !this.data.placingFlip })
+        this.render(view)
+      })
+      .catch((err) => api.showError(err))
   },
 
   tapLand(e) {
@@ -196,12 +227,12 @@ Page({
         const tile = W.tileFromTouch(x, y, rect, this.L)
         if (!tile) return
         const sel = this.selected
-        const problem = placeProblem(this.opened, this.garden.placed, tile.c, tile.r, sel.type === 'move' ? sel.uid : undefined)
+        const problem = placeProblem(this.opened, this.garden.placed, sel.itemId, tile.c, tile.r, sel.type === 'move' ? sel.uid : undefined)
         if (problem) {
           wx.showToast({ title: problem, icon: 'none' })
           return
         }
-        if (sel.type === 'place') this.save('garden.place', { itemId: sel.itemId, c: tile.c, r: tile.r })
+        if (sel.type === 'place') this.save('garden.place', { itemId: sel.itemId, c: tile.c, r: tile.r, flip: this.data.placingFlip })
         else this.save('garden.move', { uid: sel.uid, c: tile.c, r: tile.r })
       })
   },
@@ -224,31 +255,33 @@ Page({
 
   cancel() {
     this.selected = null
-    this.setData({ mode: 'view', selectedName: '', hints: [] })
+    this.setData({ mode: 'view', selectedName: '', placingFlip: false, hints: [] })
     if (this.life) this.life.resume()
   },
 
-  // ---------------------------------------------------------------- 修整角落
+  // ---------------------------------------------------------------- 修整院子
 
   tapSign(e) {
     const { key } = e.currentTarget.dataset
-    const region = this.garden && this.garden.regions.find((g) => g.id === key)
-    if (this.data.mode !== 'view' || !region || region.unlocked) return
-    if (this.data.beans < region.cost) {
-      wx.showToast({ title: `修整要 ${region.cost} 暖豆，再攒攒`, icon: 'none' })
+    const area = this.garden && this.garden.areas.find((a) => a.id === key)
+    if (this.data.mode !== 'view' || !area || !area.unlockable) return
+    if (this.data.beans < area.cost) {
+      wx.showToast({ title: `修整要 ${area.cost} 暖豆，再攒攒`, icon: 'none' })
       return
     }
     wx.showModal({
-      title: '修整角落',
-      content: `花 ${region.cost} 暖豆修整${region.name}？`,
+      title: '修整院子',
+      content: `花 ${area.cost} 暖豆修整${area.name}？`,
       confirmText: '修整',
       success: (res) => {
         if (!res.confirm) return
-        api.call('garden.unlock', { region: key })
+        api.call('garden.unlock', { area: key })
           .then((view) => {
-            this.setData({ justOpened: key })
+            const box = W.areaBox(key, this.L)
+            this.setData({ justOpened: key, burst: { left: box.left + box.width / 2, top: box.top + box.height / 2 } })
             this.render(view, true)
-            wx.showToast({ title: `${region.name}修整好啦！`, icon: 'none' })
+            this.nudgeView(W.areaOffset(key, this.L, this.win()))
+            wx.showToast({ title: `${area.name}修整好啦！`, icon: 'none' })
           })
           .catch((err) => api.showError(err))
       },
@@ -257,20 +290,24 @@ Page({
 
   // ---------------------------------------------------------------- 小动物
 
-  // 刚进页面、修整角落之后重新安排；摆放、移动之后只告诉它们东西变了。角落里的风景也当作东西：挡路、能玩
+  // 刚进页面、修整院子之后重新安排；摆放、移动之后只告诉它们东西变了
   syncLife(view, fresh) {
-    const things = view.placed.concat(view.scenery || [])
     if (this.life && !fresh) {
-      this.life.updatePlaced(things)
+      this.life.updatePlaced(view.placed)
       return
     }
     this.stopLife()
+    const opened = this.opened
     this.life = createLife({
       L: this.L,
-      placed: things,
+      placed: view.placed,
       residents: view.residents || [],
       arrivals: view.arrivals || [],
-      open: W.openChecker(this.opened),
+      walk: (c, r, swims) => walkable(opened, c, r, swims),
+      areaOf: (c, r) => tileInfo(c, r).area,
+      spots: SPOTS.filter((s) => opened.indexOf(s.area) !== -1),
+      door: { c: DOOR[0][0], r: DOOR[0][1] },
+      hour: this.hour || undefined,
       clock: this.clock || undefined,
       onChange: (i, sprite) => this.setData({ [`animals[${i}]`]: sprite }),
     })
@@ -286,6 +323,25 @@ Page({
   tapAnimal(e) {
     if (this.data.mode !== 'view' || !this.life) return
     this.life.tap(e.currentTarget.dataset.index)
+  },
+
+  // ---------------------------------------------------------------- 找它
+
+  openResidents() {
+    const list = this.life ? this.life.whereIs() : []
+    const residents = list.map((w) => ({ ...w, text: A.describe(w.state, areaName(w.area), areaName(w.toArea)) }))
+    this.setData({ residents, residentsOpen: true })
+  },
+
+  closeResidents() {
+    this.setData({ residentsOpen: false })
+  },
+
+  findResident(e) {
+    const { index } = e.currentTarget.dataset
+    const at = this.life ? this.life.focus(index) : null
+    this.setData({ residentsOpen: false })
+    if (at) this.nudgeView(W.tileOffset(at.c, at.r, this.L, this.win()))
   },
 
   // ---------------------------------------------------------------- 跳转

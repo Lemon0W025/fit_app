@@ -10,7 +10,7 @@ page {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: linear-gradient(180deg, #b9e3f2 0%, #a3d6ea 55%, #8fcbe2 100%);
+  background: #e8e0cf;
 }
 
 .loading {
@@ -31,7 +31,7 @@ page {
 /* 修整角落的木牌 */
 .sign {
   position: absolute;
-  z-index: 8;
+  z-index: 45;
   transform-origin: 50% 100%;
   animation: sway 2.6s ease-in-out infinite;
 }
@@ -574,59 +574,8 @@ button.btn-small {
 /* ---------------------------------------------------------------- 小岛 */
 
 .island,
-.locked {
-  position: absolute;
-}
-
-.island {
-  z-index: 1;
-}
-
-.locked {
-  z-index: 3;
-}
-
-.plant {
-  position: absolute;
-  pointer-events: none;
-}
-
 /* 修整好的角落：风景一个个蹦出来 */
-.scenery-new {
-  animation: pop-in 0.8s cubic-bezier(0.3, 1.6, 0.5, 1);
-}
-
-@keyframes pop-in {
-  0% {
-    transform: scale(0.2);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 /* 海上的浪花 */
-.wave {
-  position: absolute;
-  height: 16rpx;
-  border-top: 4rpx solid rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  animation: wave 4s ease-in-out infinite alternate;
-}
-
-@keyframes wave {
-  0% {
-    transform: translateX(-10%);
-    opacity: 0.5;
-  }
-  100% {
-    transform: translateX(10%);
-    opacity: 1;
-  }
-}
-
 /* 左上角：游戏风的暖豆资源条 + 今天的暖豆和印章 */
 .hud-res {
   position: absolute;
@@ -763,4 +712,147 @@ button.btn-small {
 
 .checkin-icon {
   font-size: 44rpx;
+}
+
+/* ---------------------------------------------------------------- 宅院 */
+
+.art {
+  position: absolute;
+  z-index: 1;
+}
+
+/* 物件、小动物脚下的影子 */
+.shadow {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(30, 40, 20, 0.18);
+  pointer-events: none;
+  transition-property: left, bottom;
+  transition-timing-function: linear;
+}
+
+.sprite.flip {
+  transform: scaleX(-1);
+}
+
+/* 没修的院子上的云，慢慢飘 */
+.cloud {
+  position: absolute;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.96;
+  animation: drift 7s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(-4%, 0);
+  }
+  100% {
+    transform: translate(4%, -3%);
+  }
+}
+
+/* 修好院子时冒的一把彩带 */
+.confetti {
+  position: absolute;
+  z-index: 60;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.confetti-bit {
+  position: absolute;
+  width: 16rpx;
+  height: 24rpx;
+  border-radius: 4rpx;
+  animation: toss 1.1s ease-out forwards;
+}
+
+.b1 { background: #f4b740; --dx: -120rpx; --dy: -200rpx; }
+.b2 { background: #e8553b; --dx: 90rpx; --dy: -240rpx; animation-delay: 0.05s; }
+.b3 { background: #6fcf5a; --dx: -170rpx; --dy: -110rpx; animation-delay: 0.1s; }
+.b4 { background: #3577c0; --dx: 160rpx; --dy: -140rpx; animation-delay: 0.08s; }
+.b5 { background: #ff8ab8; --dx: -40rpx; --dy: -260rpx; animation-delay: 0.12s; }
+.b6 { background: #ffd34d; --dx: 50rpx; --dy: -90rpx; animation-delay: 0.15s; }
+
+@keyframes toss {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+/* 做小事：轻轻扭一扭；泡在水里：上下浮 */
+.act-trick {
+  animation: wiggle 0.8s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.act-soak {
+  animation: bob 2s ease-in-out infinite;
+}
+
+/* 摆放时的两个按钮 */
+.placing-btns {
+  display: flex;
+  gap: 12rpx;
+}
+
+.side-emoji {
+  font-size: 56rpx;
+  line-height: 1.1;
+}
+
+/* 住户列表 */
+.res-list {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.res-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 16rpx 8rpx;
+  border-bottom: 2rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.res-avatar {
+  width: 88rpx;
+  height: 88rpx;
+}
+
+.res-body {
+  flex: 1;
+}
+
+.res-name {
+  font-size: 32rpx;
+  font-weight: 700;
+}
+
+.res-text {
+  font-size: 26rpx;
+  color: var(--muted);
+  margin-top: 4rpx;
+}
+
+.res-go {
+  font-size: 28rpx;
+  color: var(--primary);
 }
