@@ -7,6 +7,8 @@ const { beansCard } = require('../../utils/view')
 const { itemById } = require('../../utils/shared/garden')
 const { SPOTS, DOOR, areaById, tileInfo, walkable, placeProblem } = require('../../utils/shared/estate')
 const { createLife } = require('../../utils/garden-life')
+const O = require('../../utils/occlusion')
+const SHEETS = require('../../utils/anim-sheets')
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -41,6 +43,8 @@ Page({
     view: { x: 0, y: 0, scale: 1 },
     art: [],
     artBase: config.estateArt || '',
+    animBase: config.animArt || '',
+    occluders: [],
     clouds: [],
     signs: [],
     sprites: [],
@@ -60,6 +64,9 @@ Page({
   },
 
   onLoad() {
+    this.badSheets = new Set()
+    this.animalOcc = []
+    this.occViews = {}
     const rect = capsule()
     if (rect && rect.height) this.setData({ hud: { top: rect.top, height: rect.height, below: rect.bottom + 12 } })
   },
@@ -130,7 +137,11 @@ Page({
       this.centered = true
     }
     this.setData(patch)
+    // 墙和建筑要挡住站在后面的东西：摆的物件算一次，小动物每动一下算它自己的
+    this.pieces = O.pieces(L)
+    this.staticOcc = O.occludersFor(this.pieces, patch.sprites.map((s) => O.rectOf(s, L)))
     this.syncLife(view, fresh)
+    this.syncOcc()
     if (view.testGift) {
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，修整院子、扭蛋随便试试`, showCancel: false, confirmText: '好的' })
     }
@@ -151,6 +162,40 @@ Page({
   onArtError() {
     if (!this.data.artBase) return
     this.setData({ artBase: '', art: W.artTiles(this.L, '') })
+    this.occViews = {}
+    this.occKey = ''
+    this.syncOcc()
+  },
+
+  // 小动物的动画拼图加载失败（没传、断网）：这只退回单张图
+  onAnimError(e) {
+    const { id } = e.currentTarget.dataset
+    if (!id || this.badSheets.has(id)) return
+    this.badSheets.add(id)
+    if (this.life) this.life.noSheet(id)
+  },
+
+  // 把摆的物件和每只小动物需要的遮挡块合在一起，变了才 setData
+  syncOcc() {
+    if (!this.pieces) return
+    const seen = {}
+    const list = []
+    ;[this.staticOcc || []].concat(this.animalOcc || []).forEach((arr) => {
+      ;(arr || []).forEach((p) => {
+        if (seen[p.key]) return
+        seen[p.key] = true
+        list.push(p)
+      })
+    })
+    const key = list.map((p) => p.key).sort().join(',')
+    if (key === this.occKey) return
+    this.occKey = key
+    const art = this.data.art
+    this.setData({ occluders: list.map((p) => this.occViews[p.key] || (this.occViews[p.key] = O.view(p, art))) })
+  },
+
+  occFor(sprite) {
+    return sprite.hidden ? [] : O.occludersFor(this.pieces, [O.rectOf(sprite, this.L)])
   },
 
   goCheckin() {
@@ -306,6 +351,7 @@ Page({
     }
     this.stopLife()
     const opened = this.opened
+    this.animalOcc = []
     this.life = createLife({
       L: this.L,
       placed: view.placed,
@@ -317,9 +363,18 @@ Page({
       door: { c: DOOR[0][0], r: DOOR[0][1] },
       hour: this.hour || undefined,
       clock: this.clock || undefined,
-      onChange: (i, sprite) => this.setData({ [`animals[${i}]`]: sprite }),
+      sheets: SHEETS,
+      animBase: this.data.animBase,
+      bad: this.badSheets,
+      onChange: (i, sprite) => {
+        this.setData({ [`animals[${i}]`]: sprite })
+        this.animalOcc[i] = this.occFor(sprite)
+        this.syncOcc()
+      },
     })
-    this.setData({ animals: this.life.sprites() })
+    const animals = this.life.sprites()
+    this.animalOcc = animals.map((s) => this.occFor(s))
+    this.setData({ animals })
     if (this.data.mode === 'view') this.life.start()
   },
 

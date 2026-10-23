@@ -17,11 +17,17 @@
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <view wx:if="{{item.tapping}}" class="heart">❤️</view>
             <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.bodyHeight < item.width ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
-              <image class="animal-img act-{{item.action}} {{item.action === 'walk' || item.action === 'fly' ? 'gait-' + item.gait : ''}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+              <view wx:if="{{item.sheet}}" class="anim-frame {{item.tapping ? 'tap' : ''}}" style="width: {{item.width}}px; height: {{item.width}}px">
+                <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: -{{item.anim.col * 100}}%; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms" />
+              </view>
+              <image wx:else class="animal-img act-{{item.action}} {{item.action === 'walk' || item.action === 'fly' ? 'gait-' + item.gait : ''}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
             </view>
             <view wx:if="{{item.bodyHeight < item.width}}" class="ripple"></view>
           </view>
         </block>
+        <view wx:for="{{occluders}}" wx:key="key" class="occ" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}">
+          <image wx:for="{{item.tiles}}" wx:key="key" wx:for-item="t" class="occ-img" src="{{t.image}}" style="left: {{t.left}}px; top: {{t.top}}px; width: {{t.width}}px; height: {{t.height}}px" />
+        </view>
         <block wx:for="{{signs}}" wx:key="key">
           <view class="sign" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px" data-key="{{item.key}}" catchtap="tapSign">
             <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />

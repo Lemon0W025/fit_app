@@ -9,7 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:art                 把 art/estate/ 的底图切块传到云存储 garden/estate/
+//   npm run wx:art                 把 art/estate/ 的底图切块、art/anim/ 的动画拼图传到云存储 garden/estate/、garden/anim/
 
 const fs = require('fs')
 const path = require('path')
@@ -86,22 +86,29 @@ async function main() {
 
   if (command === 'art') {
     const env = envId()
-    const dir = path.join(ROOT, 'art/estate')
-    if (!fs.existsSync(path.join(dir, 't00.jpg'))) fail('art/estate/ 里还没有切好的底图：先跑 python3 scripts/estate/cut_art.py <原画>')
-    console.log(`上传 art/estate → 云存储 ${env}:garden/estate/ …`)
-    await ci.cloud.uploadStorage({ project, env, path: dir, remotePath: 'garden/estate' })
-    let prefix = ''
+    // 宅院底图切块 art/estate/ → garden/estate/；小动物动画拼图 art/anim/ → garden/anim/。有哪个传哪个
+    const jobs = [
+      { dir: path.join(ROOT, 'art/estate'), check: 't00.jpg', remote: 'garden/estate', key: 'estateArt', hint: 'python3 scripts/estate/cut_art.py <原画>' },
+      { dir: path.join(ROOT, 'art/anim'), check: null, remote: 'garden/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
+    ].filter((j) => fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png)$/.test(f)))
+    if (!jobs.length) fail('art/estate/ 和 art/anim/ 里都没有切好的图：先跑 python3 scripts/estate/cut_art.py <原画> 或 python3 scripts/pack_anim.py')
+    let bucket = ''
     try {
       // 拼 fileID 要桶名，miniprogram-ci 没公开，从它内部的环境信息里拿；拿不到就让用户去控制台看
       const { initEnvironmentByProject } = require('miniprogram-ci/dist/ci/cloud/utils')
       const { currentEnv } = await initEnvironmentByProject(project, env)
-      const bucket = currentEnv && currentEnv.storages && currentEnv.storages[0] && currentEnv.storages[0].bucket
-      if (bucket) prefix = `cloud://${env}.${bucket}/garden/estate/`
+      bucket = (currentEnv && currentEnv.storages && currentEnv.storages[0] && currentEnv.storages[0].bucket) || ''
     } catch (e) {
-      prefix = ''
+      bucket = ''
     }
-    console.log('✓ 底图已上传到云存储')
-    console.log(prefix ? `  把 miniprogram/config.js 的 estateArt 填成 '${prefix}'，再 npm run wx:preview` : '  fileID 前缀到云开发控制台 → 存储里看（形如 cloud://环境ID.桶名/garden/estate/），填进 miniprogram/config.js 的 estateArt')
+    for (const job of jobs) {
+      console.log(`上传 ${path.relative(ROOT, job.dir)} → 云存储 ${env}:${job.remote}/ …`)
+      await ci.cloud.uploadStorage({ project, env, path: job.dir, remotePath: job.remote })
+      const prefix = bucket ? `cloud://${env}.${bucket}/${job.remote}/` : ''
+      console.log(`✓ 已上传 ${fs.readdirSync(job.dir).length} 个文件`)
+      console.log(prefix ? `  把 miniprogram/config.js 的 ${job.key} 填成 '${prefix}'` : `  fileID 前缀到云开发控制台 → 存储里看（形如 cloud://环境ID.桶名/${job.remote}/），填进 miniprogram/config.js 的 ${job.key}`)
+    }
+    console.log('  然后 npm run wx:preview')
     return
   }
 

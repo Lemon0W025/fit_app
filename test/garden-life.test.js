@@ -398,3 +398,56 @@ test('新来的小鸟从大门飞进来，先说你好；whereIs 说它在树上
   assert.ok(sprites[0].bubble)
   life.stop()
 })
+
+test('有动画拼图时：往下走正面、往上走背面，往左走镜像；发呆睡觉各取各的格；拼图坏了退回单张图', () => {
+  const sheets = { panda: { special: 'eat', top: 0.1 } }
+  const { clock, life, sprites } = setup({ placed: [], residents: ['panda'], random: lcg(21), sheets, animBase: 'cloud://a/' })
+  assert.equal(sprites[0].sheet, 'cloud://a/panda.png')
+  assert.deepEqual(sprites[0].anim, { row: 2, col: 0, frames: 2, ms: 1200, cols: 6, rows: 4 })
+  assert.equal(sprites[0].flip, false, '拼图朝右，一开始不镜像')
+  life.start()
+  let prev = tileOf(sprites[0])
+  const seen = { front: 0, back: 0, left: 0, right: 0 }
+  for (let t = 0; t < 5 * 60 * 1000; t += 100) {
+    clock.advance(100)
+    const s = sprites[0]
+    const now = tileOf(s)
+    if (s.action === 'walk' && now && prev && (now.c !== prev.c || now.r !== prev.r)) {
+      const down = now.c + now.r > prev.c + prev.r
+      assert.equal(s.anim.row, down ? 0 : 1, `往${down ? '下' : '上'}走该用第 ${down ? 1 : 2} 行`)
+      assert.equal(s.anim.frames, 6)
+      const right = now.c - now.r > prev.c - prev.r
+      assert.equal(s.flip, !right)
+      seen[down ? 'front' : 'back'] += 1
+      seen[right ? 'right' : 'left'] += 1
+    } else if (s.action === 'sleep') {
+      assert.deepEqual([s.anim.row, s.anim.col], [2, 2])
+    }
+    if (now) prev = now
+  }
+  assert.ok(seen.front && seen.back && seen.left && seen.right, JSON.stringify(seen))
+  life.noSheet('panda')
+  assert.equal(sprites[0].sheet, '')
+  assert.equal(sprites[0].anim, null)
+  life.stop()
+})
+
+test('没有拼图前缀就都用单张图；猫趴板凳是睡觉帧（除非它的专属动作就是趴着）、小黄鸡啄米是专属帧、被点到是第 4 行开头', () => {
+  const sheets = { chick: { special: 'peck', top: 0.1 }, tabby_cat: { special: 'soak', top: 0.1 } }
+  const plain = setup({ placed: [], residents: ['chick'], random: lcg(3), sheets })
+  assert.equal(plain.sprites[0].sheet, '')
+  const placed = [{ uid: 'g', itemId: 'grass', c: 3, r: 3 }, { uid: 's', itemId: 'stool', c: 1, r: 3 }]
+  const { clock, life, sprites } = setup({ placed, residents: ['chick', 'tabby_cat'], random: lcg(9), sheets, animBase: 'cloud://a/' })
+  life.start()
+  const frames = { peck: null, perch: null }
+  for (let t = 0; t < 10 * 60 * 1000 && !(frames.peck && frames.perch); t += 200) {
+    clock.advance(200)
+    if (sprites[0].action === 'peck') frames.peck = sprites[0].anim
+    if (sprites[1].action === 'perch') frames.perch = sprites[1].anim
+  }
+  assert.deepEqual([frames.peck.row, frames.peck.col, frames.peck.frames], [2, 4, 2])
+  assert.deepEqual([frames.perch.row, frames.perch.col], [2, 2])
+  life.tap(0)
+  assert.deepEqual([sprites[0].anim.row, sprites[0].anim.col, sprites[0].anim.frames], [3, 0, 2])
+  life.stop()
+})

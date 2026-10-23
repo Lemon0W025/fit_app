@@ -6,6 +6,7 @@ const { footprint } = require('./shared/estate')
 const { tileCenter } = require('./iso')
 const { itemImage, itemAnchor, shadowOf } = require('./garden-view')
 const A = require('./animals')
+const { COLS, ROWS, frameFor, facingFor, facingForPixels } = require('./anim')
 
 const PLAY_MS = [5000, 8000]
 const TRICK_MS = [6000, 10000]
@@ -33,9 +34,11 @@ const same = (a, b) => a.c === b.c && a.r === b.r
 const dist = (a, b) => Math.abs(a.c - b.c) + Math.abs(a.r - b.r)
 
 // walk(c, r, swims)：这一格能不能走（水鸟传 swims）；areaOf(c, r)：在哪个院子；spots：已修院子里的活动点；door：新住户进来的那格（网格外也行）
+// sheets：有逐帧动画拼图的动物（utils/anim-sheets）；animBase：拼图在云存储的前缀，空就都用单张图；bad：加载失败的拼图（页面传进来，共用）
 function createLife({
   L, placed, residents, arrivals = [], walk = () => true, areaOf = () => '', spots = [], door = null,
   hour = realHour, random = Math.random, clock = realClock, onChange = () => {},
+  sheets = {}, animBase = '', bad = new Set(),
 }) {
   const bounds = { cols: L.cols || L.size, rows: L.rows || L.size }
   let items = placed
@@ -48,7 +51,7 @@ function createLife({
     .filter((id) => A.ANIMAL_INFO[id])
     .map((id, index) => ({
       index, id, info: A.ANIMAL_INFO[id],
-      c: -1, r: -1, flip: false, action: 'idle', goal: null, path: [], afloat: false,
+      c: -1, r: -1, flip: false, face: 'front', right: true, action: 'idle', goal: null, path: [], afloat: false,
       px: 0, py: 0, perchKey: '', hidden: false, arriving: false,
       bubble: '', tapping: false, duration: 0,
       timer: null, bubbleTimer: null, tapTimer: null,
@@ -100,8 +103,22 @@ function createLife({
     flyer: a.info.fly ? a.id : '',
   })
 
+  // 这只用逐帧拼图还是单张图：拼图 = { sheet 图片地址, anim 选哪几格, top 头顶空白 }
+  function sheetOf(a) {
+    const s = sheets[a.id]
+    if (!s || !animBase || bad.has(a.id)) return null
+    return {
+      sheet: `${animBase}${a.id}.png`,
+      anim: { ...frameFor(a.action, { face: a.face, gait: a.info.gait, fly: !!a.info.fly, special: s.special, tapping: a.tapping }), cols: COLS, rows: ROWS },
+      top: s.top,
+    }
+  }
+
   function sprite(a) {
     const width = L.tileW * a.info.scale
+    const sh = sheetOf(a)
+    // 拼图里的动物都朝右，往左走就镜像；单张图按它本来朝哪边算
+    const flip = sh ? !a.right : a.flip
     if (a.info.fly) {
       const bubbleWidth = Math.min(L.tileW * BUBBLE_TILES, L.width)
       const bubbleX = Math.min(Math.max(a.px - bubbleWidth / 2, 0), L.width - bubbleWidth)
@@ -109,7 +126,8 @@ function createLife({
         id: a.id, image: itemImage(a.id), width, bodyHeight: width,
         left: a.px - width / 2, bottom: L.height - a.py,
         z: Math.round(((a.py - L.top) / L.tileH) * 20) + 60,
-        flip: a.flip, gait: a.info.gait, action: a.action, duration: a.duration, hidden: a.hidden,
+        flip, gait: a.info.gait, action: a.action, duration: a.duration, hidden: a.hidden,
+        sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
         bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (a.px - width / 2), bubbleBottom: width + 4,
         emoji: '', tapping: a.tapping, shadow: null,
       }
@@ -130,7 +148,7 @@ function createLife({
       z = (a.c + a.r) * 10 + a.c + 5
     }
     // 下水时水面在身子的 62% 处，没有影子；气泡贴着头顶，别出花园左右边
-    const headroom = width * a.info.top
+    const headroom = width * (sh ? sh.top : a.info.top)
     const bodyHeight = inWater(a) ? headroom + (width - headroom) * WATER_LINE : width
     const bubbleWidth = Math.min(L.tileW * BUBBLE_TILES, L.width)
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
@@ -146,11 +164,13 @@ function createLife({
       left: x - width / 2,
       bottom: L.height - y,
       z,
-      flip: a.flip,
+      flip,
       hidden: false,
       gait: a.info.gait,
       action: a.action,
       duration: a.duration,
+      sheet: sh ? sh.sheet : '',
+      anim: sh ? sh.anim : null,
       bubble: a.bubble,
       bubbleWidth,
       bubbleLeft: bubbleX - (x - width / 2),
@@ -184,6 +204,7 @@ function createLife({
 
   function moveTo(a, t) {
     a.flip = A.flipFor(a.info.faces, a, t, a.flip)
+    Object.assign(a, facingFor(a, t, a))
     a.c = t.c
     a.r = t.r
     a.afloat = isWater(t)
@@ -243,6 +264,7 @@ function createLife({
     const f = A.FLYERS[a.id]
     const d = Math.hypot(dest.x - a.px, dest.y - a.py)
     a.flip = A.flipFor(a.info.faces, { c: a.px, r: 0 }, { c: dest.x, r: 0 }, a.flip)
+    Object.assign(a, facingForPixels(dest.x - a.px, dest.y - a.py, a))
     a.duration = Math.max(400, Math.round((d / f.speed) * 1000))
     land(a, dest)
     a.action = 'fly'
@@ -550,6 +572,14 @@ function createLife({
       if (!a) return
       say(a, A.lineFor(a.id, stateOf(a), random), BUBBLE_MS)
       heart(a)
+    },
+
+    // 这只的拼图加载失败：退回单张图
+    noSheet(id) {
+      bad.add(id)
+      animals.forEach((a) => {
+        if (a.id === id) emit(a)
+      })
     },
   }
 }

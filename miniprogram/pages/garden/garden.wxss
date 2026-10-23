@@ -31,7 +31,8 @@ page {
 /* 修整角落的木牌 */
 .sign {
   position: absolute;
-  z-index: 45;
+  /* 木牌、云朵、彩带都压在物件、小动物和遮挡块（z 几百）上面 */
+  z-index: 2100;
   transform-origin: 50% 100%;
   animation: sway 2.6s ease-in-out infinite;
 }
@@ -371,6 +372,55 @@ button.btn-small {
   width: 100%;
   transform-origin: 50% 100%;
   filter: drop-shadow(0 4rpx 3rpx rgba(60, 50, 30, 0.25));
+}
+
+/* 逐帧动画：一张 6×4 的拼图，外框只露一格，里面的长条按帧数一格一格跳（steps），行、起始列用 margin 挪 */
+.anim-frame {
+  position: relative;
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4rpx 3rpx rgba(60, 50, 30, 0.25));
+}
+
+.anim-strip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: block;
+  animation-iteration-count: infinite;
+}
+
+.anim-f6 {
+  animation-name: strip6;
+  animation-timing-function: steps(6);
+}
+
+.anim-f4 {
+  animation-name: strip4;
+  animation-timing-function: steps(4);
+}
+
+.anim-f2 {
+  animation-name: strip2;
+  animation-timing-function: steps(2);
+}
+
+@keyframes strip6 {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes strip4 {
+  to {
+    transform: translateX(-66.6667%);
+  }
+}
+
+@keyframes strip2 {
+  to {
+    transform: translateX(-33.3333%);
+  }
 }
 
 /* 走路的步态：四条腿的左右踱步，不蹦；鸭子小鸡摇摇摆摆；兔子蹦；乌龟慢慢爬；仙鹤迈大步 */
@@ -805,6 +855,18 @@ button.btn-small {
 }
 
 /* 物件、小动物脚下的影子 */
+/* 遮挡块：从底图上抠下来的墙 / 门 / 建筑，盖在站在它后面的东西上；点击穿透 */
+.occ {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.occ-img {
+  position: absolute;
+  display: block;
+}
+
 .shadow {
   position: absolute;
   border-radius: 50%;
@@ -821,7 +883,7 @@ button.btn-small {
 /* 没修的院子上的云，慢慢飘 */
 .cloud {
   position: absolute;
-  z-index: 40;
+  z-index: 2000;
   pointer-events: none;
   opacity: 0.96;
   animation: drift 7s ease-in-out infinite alternate;
@@ -839,7 +901,7 @@ button.btn-small {
 /* 修好院子时冒的一把彩带 */
 .confetti {
   position: absolute;
-  z-index: 60;
+  z-index: 2200;
   width: 0;
   height: 0;
   pointer-events: none;
