@@ -14,12 +14,12 @@ function lcg(seed) {
 }
 
 // sprite 站在哪一格（站在物件上面时返回 null）
-function tileOf(s) {
+function tileOf(s, layout = L) {
   const x = s.left + s.width / 2
-  for (let c = -1; c <= L.size; c++) {
-    for (let r = 0; r < L.size; r++) {
-      const center = tileCenter(c, r, L)
-      if (Math.abs(center.x - x) < 0.01 && Math.abs(L.height - (center.y + L.tileH * 0.18) - s.bottom) < 0.01) return { c, r }
+  for (let c = -1; c <= layout.size; c++) {
+    for (let r = -1; r <= layout.size; r++) {
+      const center = tileCenter(c, r, layout)
+      if (Math.abs(center.x - x) < 0.01 && Math.abs(layout.height - (center.y + layout.tileH * 0.18) - s.bottom) < 0.01) return { c, r }
     }
   }
   return null
@@ -134,12 +134,13 @@ test('小乌龟下水：按它本身的高度算水面，不算图里头顶的�
 
 test('新住户从院子边上走进来，头上说自我介绍', () => {
   const { clock, life, sprites } = setup({ placed: [], residents: ['panda'], arrivals: ['panda'], random: lcg(3) })
-  assert.equal(tileOf(sprites[0]).c, L.size)
+  const start = tileOf(sprites[0])
+  assert.ok(start.c < 0 || start.r < 0 || start.c >= L.size || start.r >= L.size, JSON.stringify(start))
   assert.equal(sprites[0].bubble, A.ANIMAL_INFO.panda.hello)
   life.start()
   clock.advance(5000)
   const t = tileOf(sprites[0])
-  assert.ok(t && t.c < L.size)
+  assert.ok(t && t.c >= 0 && t.r >= 0 && t.c < L.size && t.r < L.size)
   assert.equal(sprites[0].bubble, '')
 })
 
@@ -188,4 +189,43 @@ test('东西摆到动物脚下，它跳到旁边的空格', () => {
   const now = tileOf(sprites[0])
   assert.ok(now && !(now.c === t.c && now.r === t.r))
   assert.equal(sprites[0].action, 'walk')
+})
+
+const L12 = isoLayout(12, 480)
+const openMiddle = (c, r) => c >= 3 && c < 9 && r >= 3 && r < 9
+
+test('只在开垦的地上走：荒地和地图外都不去', () => {
+  const clock = manualClock()
+  const current = {}
+  const life = createLife({
+    L: L12, placed: [{ uid: 'p1', itemId: 'bamboo', c: 5, r: 5 }], residents: ['chick', 'rabbit', 'panda'], random: lcg(11), clock, open: openMiddle,
+    onChange: (i, s) => {
+      current[i] = s
+      const t = tileOf(s, L12)
+      if (t && s.action !== 'eat') assert.ok(openMiddle(t.c, t.r), `走到了荒地 ${t.c},${t.r}`)
+    },
+  })
+  life.sprites().forEach((s, i) => {
+    current[i] = s
+    const t = tileOf(s, L12)
+    assert.ok(openMiddle(t.c, t.r))
+  })
+  life.start()
+  clock.advance(5 * 60 * 1000)
+  life.stop()
+})
+
+test('新住户从荒地那边走进开垦的地', () => {
+  const clock = manualClock()
+  const sprites = {}
+  const life = createLife({ L: L12, placed: [], residents: ['duck'], arrivals: ['duck'], random: lcg(5), clock, open: openMiddle, onChange: (i, s) => { sprites[i] = s } })
+  life.sprites().forEach((s, i) => { sprites[i] = s })
+  const start = tileOf(sprites[0], L12)
+  assert.equal(openMiddle(start.c, start.r), false)
+  life.start()
+  clock.advance(3000)
+  const t = tileOf(sprites[0], L12)
+  assert.equal(openMiddle(t.c, t.r), true)
+  assert.equal(Math.abs(t.c - start.c) + Math.abs(t.r - start.r), 1)
+  life.stop()
 })

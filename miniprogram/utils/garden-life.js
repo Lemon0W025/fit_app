@@ -26,7 +26,7 @@ const key = (t) => `${t.c},${t.r}`
 const same = (a, b) => a.c === b.c && a.r === b.r
 const inside = (t, size) => t.c >= 0 && t.r >= 0 && t.c < size && t.r < size
 
-function createLife({ L, placed, residents, arrivals = [], random = Math.random, clock = realClock, onChange = () => {} }) {
+function createLife({ L, placed, residents, arrivals = [], open = () => true, random = Math.random, clock = realClock, onChange = () => {} }) {
   let items = placed
   let running = false
   const cooldown = {}
@@ -40,9 +40,16 @@ function createLife({ L, placed, residents, arrivals = [], random = Math.random,
       timer: null, bubbleTimer: null, tapTimer: null,
     }))
 
+  // 没开垦的格子：和摆了东西的格子一样走不进去
+  const closed = new Set()
+  for (let c = 0; c < L.size; c++) {
+    for (let r = 0; r < L.size; r++) if (!open(c, r)) closed.add(key({ c, r }))
+  }
+
   // 有物件或别的动物的格子
   function blockedFor(self) {
-    const set = new Set(items.map(key))
+    const set = new Set(closed)
+    items.forEach((p) => set.add(key(p)))
     animals.forEach((a) => {
       if (a !== self && inside(a, L.size)) set.add(key(a))
     })
@@ -224,17 +231,23 @@ function createLife({ L, placed, residents, arrivals = [], random = Math.random,
     a.r = t.r
   }
 
-  // 新住户：从院子右前方的边上走进来
+  // 新住户：从开垦土地的边上走进来——起点是边上那格外面的荒地或地图外
   function walkIn(a) {
     const blocked = blockedFor(a)
-    const r = Math.min(L.size - 1, Math.floor(random() * L.size))
-    const start = { c: L.size, r }
-    const target = nearestFree({ c: L.size - 1, r }, blocked)
-    a.c = start.c
-    a.r = start.r
-    a.path = (target && A.pathTo(start, target, L.size, blocked)) || []
+    const doors = []
+    freeTiles(blocked).forEach((t) => {
+      const outside = [{ c: t.c + 1, r: t.r }, { c: t.c, r: t.r + 1 }, { c: t.c - 1, r: t.r }, { c: t.c, r: t.r - 1 }]
+        .find((n) => !inside(n, L.size) || closed.has(key(n)))
+      if (outside) doors.push({ from: outside, to: t })
+    })
+    if (!doors.length) return settleIn(a)
+    const door = doors[Math.min(doors.length - 1, Math.floor(random() * doors.length))]
+    a.c = door.from.c
+    a.r = door.from.r
+    a.path = [door.to]
     say(a, a.info.hello, HELLO_MS)
   }
+
 
   const arriving = new Set(arrivals)
   animals.forEach((a) => (arriving.has(a.id) ? walkIn(a) : settleIn(a)))
