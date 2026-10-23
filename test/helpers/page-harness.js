@@ -70,6 +70,8 @@ function createWx(main) {
     previewImage() {},
     // 庭院容器 #garden 在屏幕上的位置；其他节点（如体重图 canvas）在测试里拿不到
     gardenRect: { left: 16, top: 100 },
+    // 大地图 #world 在屏幕上的位置和宽度，测试里按拖动、缩放设置
+    worldRect: null,
     createSelectorQuery() {
       let selector = ''
       const q = {
@@ -79,11 +81,12 @@ function createWx(main) {
         },
         fields: () => q,
         boundingClientRect: () => q,
-        exec: (cb) => cb([selector === '#garden' ? wx.gardenRect : null]),
+        exec: (cb) => cb([selector === '#world' ? wx.worldRect : selector === '#garden' ? wx.gardenRect : null]),
       }
       return q
     },
-    getWindowInfo: () => ({ pixelRatio: 2, windowWidth: 375 }),
+    getWindowInfo: () => ({ pixelRatio: 2, windowWidth: 375, windowHeight: 700, statusBarHeight: 20 }),
+    getMenuButtonBoundingClientRect: () => ({ top: 24, bottom: 56, height: 32, left: 281, right: 368, width: 87 }),
     // 弹出的操作菜单默认选第 actionSheetChoice 项
     actionSheetChoice: 0,
     showActionSheet(o) {
