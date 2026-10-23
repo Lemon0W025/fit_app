@@ -16,16 +16,17 @@ function rarityOf(id) {
   return { id: r.id, label: r.label, color: r.color }
 }
 
-// 庭院里摆的东西：按前后排序（后排先画），图片底边对准格子中心稍靠下的位置
+// 花园里摆的东西（和角落里的风景）：按前后排序（后排先画），图片底边对准格子中心稍靠下的位置；scale 可以单独放大
 function buildScene(placed, L) {
   return placed
     .map((p) => ({ p, item: itemById(p.itemId) }))
     .filter((x) => x.item)
     .map(({ p, item }) => {
-      const width = L.tileW * SIZE_SCALE[item.size]
+      const width = L.tileW * (p.scale || SIZE_SCALE[item.size])
       const center = tileCenter(p.c, p.r, L)
       return {
         uid: p.uid,
+        region: p.region || '',
         itemId: p.itemId,
         c: p.c,
         r: p.r,

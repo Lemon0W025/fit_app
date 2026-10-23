@@ -229,3 +229,20 @@ test('新住户从荒地那边走进开垦的地', () => {
   assert.equal(Math.abs(t.c - start.c) + Math.abs(t.r - start.r), 1)
   life.stop()
 })
+
+test('站到放大的物件上：落脚点按 scale 算', () => {
+  const placed = [{ uid: 's1', itemId: 'lotus_pond', c: 3, r: 3, scale: 1.5 }]
+  const { clock, life, sprites } = setup({ placed, residents: ['crane'], random: () => 0.2 })
+  life.start()
+  let swim = null
+  for (let i = 0; i < 120 && !swim; i++) {
+    clock.advance(500)
+    if (sprites[0].action === 'swim') swim = { ...sprites[0] }
+  }
+  assert.ok(swim, '没下水')
+  const iw = L.tileW * 1.5
+  const center = tileCenter(3, 3, L)
+  assert.ok(Math.abs(swim.left + swim.width / 2 - (center.x - iw / 2 + A.PLAYS.lotus_pond.spot.x * iw)) < 0.01)
+  assert.ok(Math.abs(swim.bottom - (L.height - (center.y + L.tileH * 0.18) + A.PLAYS.lotus_pond.spot.y * iw)) < 0.01)
+  life.stop()
+})

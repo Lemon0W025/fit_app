@@ -84,7 +84,7 @@ function createLife({ L, placed, residents, arrivals = [], open = () => true, ra
     let bottom
     let z
     if (item) {
-      const iw = L.tileW * SIZE_SCALE[itemById(item.itemId).size]
+      const iw = L.tileW * (item.scale || SIZE_SCALE[itemById(item.itemId).size])
       const center = tileCenter(item.c, item.r, L)
       x = center.x - iw / 2 + a.play.play.spot.x * iw
       bottom = L.height - (center.y + L.tileH * 0.18) + a.play.play.spot.y * iw
