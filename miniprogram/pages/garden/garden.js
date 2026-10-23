@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const { isoLayout, tileAt } = require('../../utils/iso')
 const { buildScene, inventoryList, hintTiles } = require('../../utils/garden-view')
 const { itemById } = require('../../utils/shared/garden')
+const { createLife } = require('../../utils/garden-life')
 
 // 页面左右各留 32rpx（≈ 屏幕宽的 1/23.4），庭院占满中间
 const SIDE_PADDING_RATIO = 64 / 750
@@ -27,6 +28,8 @@ Page({
     selectedName: '',
     hints: [],
     welcome: null,
+    animals: [],
+    waitingText: '',
   },
 
   onShow() {
@@ -34,13 +37,21 @@ Page({
     this.load()
   },
 
+  onHide() {
+    this.stopLife()
+  },
+
+  onUnload() {
+    this.stopLife()
+  },
+
   load() {
-    return api.call('garden.get')
-      .then((view) => this.render(view))
+    return api.call('garden.get', { markSeen: true })
+      .then((view) => this.render(view, true))
       .catch((err) => api.showError(err))
   },
 
-  render(view) {
+  render(view, fresh) {
     const width = windowWidth() * (1 - SIDE_PADDING_RATIO)
     const L = isoLayout(view.size, width)
     this.garden = view
@@ -53,6 +64,7 @@ Page({
       totalCount: view.totalCount,
       term: view.term,
       termText: termItems ? `${view.term.name}限定「${termItems}」正在扭蛋机里` : '',
+      waitingText: view.waiting && view.waiting.length ? '👀 有小动物在院子外张望…下次打卡它就来了' : '',
       layout: { width: L.width, height: L.height, top: L.top, landHeight: L.landHeight },
       landImage: `/images/garden/land-${view.size}.png`,
       sprites: buildScene(view.placed, L),
@@ -60,6 +72,39 @@ Page({
       welcome: view.welcome || this.data.welcome,
       hints: this.data.mode === 'view' ? [] : this.data.hints,
     })
+    this.syncLife(view, fresh)
+  },
+
+  // ---------------------------------------------------------------- 小动物
+
+  // 刚进页面或庭院变大了就重新安排；摆放、移动之后只告诉它们物件变了
+  syncLife(view, fresh) {
+    if (this.life && !fresh && this.lifeSize === view.size) {
+      this.life.updatePlaced(view.placed)
+      return
+    }
+    this.stopLife()
+    this.lifeSize = view.size
+    this.life = createLife({
+      L: this.L,
+      placed: view.placed,
+      residents: view.residents || [],
+      arrivals: view.arrivals || [],
+      clock: this.clock || undefined,
+      onChange: (i, sprite) => this.setData({ [`animals[${i}]`]: sprite }),
+    })
+    this.setData({ animals: this.life.sprites() })
+    if (this.data.mode === 'view') this.life.start()
+  },
+
+  stopLife() {
+    if (this.life) this.life.stop()
+    this.life = null
+  },
+
+  tapAnimal(e) {
+    if (this.data.mode !== 'view' || !this.life) return
+    this.life.tap(e.currentTarget.dataset.index)
   },
 
   // ---------------------------------------------------------------- 摆放
@@ -69,6 +114,7 @@ Page({
     const item = itemById(id)
     this.selected = { type: 'place', itemId: id }
     this.setData({ mode: 'place', selectedName: item ? item.name : '', hints: hintTiles(this.garden.placed, this.L) })
+    if (this.life) this.life.pause()
   },
 
   tapSprite(e) {
@@ -82,6 +128,7 @@ Page({
         if (res.tapIndex === 0) {
           this.selected = { type: 'move', uid }
           this.setData({ mode: 'move', selectedName: sprite.name, hints: hintTiles(this.garden.placed, this.L, uid) })
+          if (this.life) this.life.pause()
         } else if (res.tapIndex === 1) {
           this.save('garden.stash', { uid }, `${sprite.name}收进背包了`)
         }
@@ -131,6 +178,7 @@ Page({
   cancel() {
     this.selected = null
     this.setData({ mode: 'view', selectedName: '', hints: [] })
+    if (this.life) this.life.resume()
   },
 
   // ---------------------------------------------------------------- 跳转

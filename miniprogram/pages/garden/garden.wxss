@@ -230,3 +230,246 @@ button.btn-small {
   display: block;
   margin-top: 4rpx;
 }
+
+.waiting {
+  font-size: 26rpx;
+  color: var(--primary);
+  background: #eef6ea;
+  border-radius: 16rpx;
+  padding: 12rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+
+/* ---------------------------------------------------------------- 小动物 */
+
+.animal {
+  position: absolute;
+  transition-property: left, bottom;
+  transition-timing-function: linear;
+}
+
+.animal-ghost {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.animal-body {
+  position: relative;
+}
+
+/* 镜像放在外层，里面的图片还能做自己的动画 */
+.flip {
+  transform: scaleX(-1);
+}
+
+/* 下水：只露出上半身 */
+.in-water {
+  overflow: hidden;
+}
+
+.animal-img {
+  display: block;
+  width: 100%;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 4rpx 3rpx rgba(60, 50, 30, 0.25));
+}
+
+.act-walk {
+  animation: hop 0.4s ease-in-out infinite;
+}
+
+.act-idle,
+.act-bask,
+.act-warm {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+.act-sleep,
+.act-perch {
+  animation: breathe 3.6s ease-in-out infinite;
+}
+
+.act-eat {
+  animation: chomp 0.5s ease-in-out infinite;
+}
+
+.act-peck {
+  animation: peck 0.3s ease-in-out infinite;
+}
+
+.act-swim {
+  animation: bob 1.6s ease-in-out infinite;
+}
+
+.act-swing {
+  transform-origin: 50% -40%;
+  animation: swing 1.8s ease-in-out infinite;
+}
+
+/* 小黄鸭在池子里来回划水 */
+.paddle {
+  animation: paddle 4s ease-in-out infinite;
+}
+
+@keyframes paddle {
+  0%,
+  100% {
+    transform: translateX(-18%) translateY(0);
+  }
+  50% {
+    transform: translateX(18%) translateY(4%);
+  }
+}
+
+/* 放在各种动作后面：点一下的跳跃优先 */
+.tap {
+  animation: jump 0.6s ease-out;
+}
+
+@keyframes hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12%);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  50% {
+    transform: scale(1.02, 0.97);
+  }
+}
+
+@keyframes chomp {
+  0%,
+  100% {
+    transform: rotate(0) translateY(0);
+  }
+  50% {
+    transform: rotate(-6deg) translateY(4%);
+  }
+}
+
+@keyframes peck {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  50% {
+    transform: rotate(18deg) translateY(6%);
+  }
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5%);
+  }
+}
+
+@keyframes swing {
+  0%,
+  100% {
+    transform: rotate(-14deg);
+  }
+  50% {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes jump {
+  0%,
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  30% {
+    transform: translateY(-30%) scale(1.05, 0.95);
+  }
+  60% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+}
+
+.ripple {
+  position: absolute;
+  left: 10%;
+  bottom: -8%;
+  width: 80%;
+  height: 24%;
+  border: 3rpx solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  animation: ripple 1.8s ease-out infinite;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+.bubble {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 8rpx;
+  padding: 8rpx 16rpx;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.4;
+  color: #4a3f35;
+  text-align: center;
+  box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.18);
+  z-index: 2;
+}
+
+.act-emoji {
+  position: absolute;
+  right: -10%;
+  top: -10%;
+  font-size: 30rpx;
+  animation: float 1.6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8rpx);
+  }
+}
+
+.heart {
+  position: absolute;
+  left: 50%;
+  top: -20%;
+  font-size: 32rpx;
+  animation: rise 0.9s ease-out forwards;
+}
+
+@keyframes rise {
+  0% {
+    transform: translate(-50%, 0) scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -60rpx) scale(1.2);
+    opacity: 0;
+  }
+}

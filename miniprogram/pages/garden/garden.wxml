@@ -11,11 +11,21 @@
   </view>
 
   <view wx:if="{{termText}}" class="term">🍂 {{termText}}</view>
+  <view wx:if="{{waitingText}}" class="waiting">{{waitingText}}</view>
 
   <view id="garden" class="garden" style="height: {{layout.height}}px" bindtap="tapLand">
     <image class="land" src="{{landImage}}" style="top: {{layout.top}}px; width: {{layout.width}}px; height: {{layout.landHeight}}px" />
     <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
     <image wx:for="{{sprites}}" wx:key="uid" class="sprite {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
+    <view wx:for="{{animals}}" wx:key="id" class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
+      <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px">{{item.bubble}}</view>
+      <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
+      <view wx:if="{{item.tapping}}" class="heart">❤️</view>
+      <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.action === 'swim' ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
+        <image class="animal-img act-{{item.action}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+      </view>
+      <view wx:if="{{item.action === 'swim'}}" class="ripple"></view>
+    </view>
   </view>
 
   <view wx:if="{{mode !== 'view'}}" class="card placing">

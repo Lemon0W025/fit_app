@@ -5,6 +5,7 @@ const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
 const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
 const { tileCenter } = require('../miniprogram/utils/iso')
+const { manualClock } = require('./helpers/manual-clock')
 
 const PAGES = ['today', 'garden', 'gacha', 'collection', 'forest', 'checkin', 'meal', 'weight', 'profile']
 
@@ -314,4 +315,62 @@ test('养生庭院页面：新手礼 → 扭蛋 → 摆放 → 移动 → 收回
   await settle()
   assert.equal(calendar.data.today.title, '今天的树：小树')
   assert.equal(calendar.data.today.beansText, '今天已得 20 暖豆')
+})
+
+test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横幅 → 走进庭院、点一下说话 → 离开页面停下', async () => {
+  const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  await main({ action: 'garden.get' })
+  const doc = cloud.db.collections.get('gardens').get('u1')
+  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 0, r: 0 }) })
+
+  const garden = loadPage('garden', wx)
+  garden.clock = manualClock()
+  garden.onShow()
+  await settle()
+  assert.equal(garden.data.waitingText, '👀 有小动物在院子外张望…下次打卡它就来了')
+  assert.deepEqual(garden.data.animals, [])
+  garden.onHide()
+
+  // 打卡午餐
+  const checkin = loadPage('checkin', wx)
+  checkin.onLoad()
+  checkin.pickMealType(event({ value: 'lunch' }))
+  checkin.onNote(event({}, { value: '米饭青菜' }))
+  checkin.submit()
+  await settle()
+  const mealId = wx.log.nav.pop()[1].split('id=')[1]
+  assert.deepEqual(wx.app.globalData.lastTree.arrival, { id: 'panda', name: '大熊猫' })
+
+  const meal = loadPage('meal', wx)
+  meal.onLoad({ id: mealId })
+  await settle()
+  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进庭院啦！' })
+  meal.goGarden()
+  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
+
+  // 回到庭院：熊猫从边上走进来
+  garden.onShow()
+  await settle()
+  assert.equal(garden.data.waitingText, '')
+  assert.equal(garden.data.animals.length, 1)
+  assert.equal(garden.data.animals[0].id, 'panda')
+  assert.equal(garden.data.animals[0].bubble, '我是大熊猫，以后就住这儿啦！')
+  garden.clock.advance(20000)
+  assert.ok(Number.isFinite(garden.data.animals[0].left) && Number.isFinite(garden.data.animals[0].bottom))
+  garden.tapAnimal(event({ index: 0 }))
+  assert.ok(garden.data.animals[0].bubble)
+  assert.equal(garden.data.animals[0].tapping, true)
+
+  garden.onHide()
+  assert.equal(garden.clock.count(), 0)
+
+  // 再进来不会重复走进来
+  garden.onShow()
+  await settle()
+  assert.notEqual(garden.data.animals[0].bubble, '我是大熊猫，以后就住这儿啦！')
+  garden.onUnload()
+  assert.equal(garden.clock.count(), 0)
 })
