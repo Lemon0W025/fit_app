@@ -1,0 +1,23 @@
+{
+  "_": "Codex 出图清单（docs/art/codex-art-pack.md）；scripts/art/check_art.py 按这里检查。cells 是从第 1 格起连续占用的格数",
+  "sheets": [
+    { "file": "art/raw/estate/estate.png", "kind": "painting", "aspect": 1.5, "minWidth": 1500 },
+    { "file": "art/raw/estate/clouds.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 9 },
+    { "file": "art/raw/ui/icons.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 9 },
+    { "file": "art/raw/ui/fx.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 9 },
+    { "file": "art/raw/09-水生与小摆件.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 9 },
+    { "file": "art/raw/10-院子家具.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 9 },
+    { "file": "art/raw/11-会飞的.png", "kind": "grid", "cols": 3, "rows": 3, "cells": 2 },
+    { "file": "art/raw/anim/chick.png", "kind": "anim" },
+    { "file": "art/raw/anim/rabbit.png", "kind": "anim" },
+    { "file": "art/raw/anim/duck.png", "kind": "anim" },
+    { "file": "art/raw/anim/turtle.png", "kind": "anim" },
+    { "file": "art/raw/anim/tabby_cat.png", "kind": "anim" },
+    { "file": "art/raw/anim/ginger_cat.png", "kind": "anim" },
+    { "file": "art/raw/anim/panda.png", "kind": "anim" },
+    { "file": "art/raw/anim/crane.png", "kind": "anim" },
+    { "file": "art/raw/anim/panda_family.png", "kind": "anim" },
+    { "file": "art/raw/anim/bird.png", "kind": "anim" },
+    { "file": "art/raw/anim/butterfly.png", "kind": "anim" }
+  ]
+}

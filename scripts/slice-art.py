@@ -25,7 +25,10 @@ NOISE_PX = 120    # 比这还小的孤立碎点当噪点丢掉
 
 ITEM_PX = 240     # 庭院物件：正方形画布，物体贴底居中（庭院里底边对齐格子）
 UI_PX = {'bean': 120, 'gacha': 420, 'gift': 280, 'book': 240, 'shovel': 200,
-         'capsule-common': 300, 'capsule-rare': 300, 'capsule-epic': 300, 'capsule-legendary': 300}
+         'capsule-common': 300, 'capsule-rare': 300, 'capsule-epic': 300, 'capsule-legendary': 300,
+         'basket': 160, 'calendar': 160, 'home': 160, 'paw': 160, 'camera': 160, 'tools': 160, 'finder': 160, 'confetti': 240}
+FX_PX = 96        # 动物头上的表情 / 特效
+CLOUD_PX = 360    # 云朵（宽）
 
 # (文件名, 种类, 九个格子的输出名)；None 是空格或不用的格子
 SHEETS = [
@@ -44,6 +47,15 @@ SHEETS = [
     ('08-传说与节气限定.png', 'item', ['teahouse', 'zigzag_bridge', 'panda_family', 'golden_ginkgo',
                                  'dried_persimmon', 'sweet_potato_stove', 'snowman', 'wintersweet',
                                  'dumpling_steamer']),
+    # 第四步（docs/art/codex-art-pack.md）：新物件、小鸟蝴蝶的单张图、界面图标、表情特效、云朵
+    ('09-水生与小摆件.png', 'item', ['lotus_clump', 'water_lily', 'reeds', 'stepping_stones', 'koi_school', 'plank_bridge',
+                                 'bamboo_blind', 'straw_nest', 'feed_trough']),
+    ('10-院子家具.png', 'item', ['haystack', 'scarecrow', 'ladder', 'fruit_basket', 'tea_stove', 'bath_tub', 'flower_rack',
+                             'bench', 'bird_feeder']),
+    ('11-会飞的.png', 'item', ['bird', 'butterfly', None, None, None, None, None, None, None]),
+    ('ui/icons.png', 'ui', ['sign', 'basket', 'calendar', 'home', 'paw', 'camera', 'tools', 'finder', 'confetti']),
+    ('ui/fx.png', 'fx', ['zzz', 'heart', 'note', 'sparkle', 'drop', 'steam', 'sun', 'bang', 'grain']),
+    ('estate/clouds.png', 'cloud', ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9']),
 ]
 
 # 院子中间送的那棵大树，用每日树里的「大树」
@@ -142,9 +154,19 @@ def main():
         elif kind == 'item':
             for out, o in objs.items():
                 total += save(fit(o, ITEM_PX), 'garden', 'items', f'{out}.png')
+        elif kind == 'fx':
+            for out, o in objs.items():
+                total += save(fit(o, FX_PX, margin=2, anchor='center'), 'garden', 'fx', f'{out}.png')
+        elif kind == 'cloud':
+            for out, o in objs.items():
+                total += save(fit(o, CLOUD_PX, margin=2, anchor='center'), 'garden', 'clouds', f'{out}.png')
         else:
             for out, o in objs.items():
-                total += save(fit(o, UI_PX[out], margin=2, anchor='center'), 'garden', 'ui', f'{out}.png')
+                # 修整木牌单独放在 garden/ 下（页面路径 /images/garden/sign.png）
+                if out == 'sign':
+                    total += save(fit(o, 240, margin=2, anchor='center'), 'garden', 'sign.png')
+                else:
+                    total += save(fit(o, UI_PX[out], margin=2, anchor='center'), 'garden', 'ui', f'{out}.png')
         print(f'{name}: {"、".join(objs)}')
     for item_id, (sheet, piece) in EXTRA_ITEMS.items():
         if sheet in cut:

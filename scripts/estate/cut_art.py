@@ -1,8 +1,9 @@
 """把画好的宅院原画对齐到游戏的世界框，切成 4×4 块
 
-    python3 scripts/estate/cut_art.py art/raw/estate.png [--width 3120] [--scale 1.0] [--dx 0] [--dy 0] [--local]
+    python3 scripts/estate/cut_art.py art/raw/estate/estate.png [--pad32] [--width 3120] [--scale 1.0] [--dx 0] [--dy 0] [--local]
 
-世界框的比例和 utils/iso.js 的 gridLayout 一致（和白模 art/guide/estate-blockout.jpg 一样）。原画先按宽度缩放到 --width，
+世界框的比例和 utils/iso.js 的 gridLayout 一致（和白模 art/guide/estate-blockout.jpg 一样）。
+--pad32：原画是按 3:2 补了上下留白的白模底稿（estate-blockout-3x2.jpg）画的，先裁掉留白。原画先按宽度缩放到 --width，
 再按 --scale 微调大小、--dx / --dy 微调位置（输出像素，右、下为正），超出的裁掉，不够的用原画边缘的平均色补。
 输出到 art/estate/t00.jpg … t33.jpg（传云存储用）；加 --local 则写到 miniprogram/images/garden/estate/（替换白模占位，注意包大小）。
 """
@@ -24,6 +25,13 @@ def world_ratio():
     return (n / 2) / (1.3 + n / 4 + 0.2)
 
 
+def unpad32(img, ratio):
+    """裁掉 blockout.py pad32 补的上下留白：世界框宽度占满、垂直居中"""
+    h = round(img.width / ratio)
+    top = max(0, (img.height - h) // 2)
+    return img.crop((0, top, img.width, min(img.height, top + h)))
+
+
 def edge_color(img):
     small = img.resize((32, 32))
     px = [small.getpixel((x, y)) for x in range(32) for y in (0, 31)] + [small.getpixel((x, y)) for y in range(32) for x in (0, 31)]
@@ -38,8 +46,11 @@ def main():
     ap.add_argument('--dx', type=int, default=0)
     ap.add_argument('--dy', type=int, default=0)
     ap.add_argument('--local', action='store_true')
+    ap.add_argument('--pad32', action='store_true')
     a = ap.parse_args()
     src = Image.open(a.image).convert('RGB')
+    if a.pad32:
+        src = unpad32(src, world_ratio())
     W = a.width
     H = round(W / world_ratio())
     s = W / src.width * a.scale

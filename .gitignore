@@ -5,3 +5,6 @@ project.private.config.json
 .wechat/
 # 原画切块，传云存储用，不进仓库
 art/estate/
+art/anim/
+art/anim-demo/
+__pycache__/

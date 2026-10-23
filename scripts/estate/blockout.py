@@ -3,7 +3,8 @@
     python3 scripts/estate/blockout.py
 
 输出：miniprogram/images/garden/estate/t00.jpg … t33.jpg（底图切块）、miniprogram/images/garden/cloud.png（云朵）、
-     art/guide/estate-blockout.jpg（整图，给即梦）、art/guide/estate-blockout-labels.jpg（带院子名字，给人看）
+     art/guide/estate-blockout.jpg（整图）、art/guide/estate-blockout-3x2.jpg（上下补成 3:2，给 Codex 当重绘底稿）、
+     art/guide/estate-blockout-labels.jpg（带院子名字，给人看）
 需要 Pillow。布局数据直接从 estate.js 读（用 node 跑一下），改布局只改 JS 这一处。
 """
 import json
@@ -197,24 +198,31 @@ def standing():
         for c in range(COLS):
             if KINDS[r][c] == 'wall':
                 add(c + r, lambda d, c=c, r=r: (box(d, c, r, c + 1, r + 1, WALL_H, WALL), d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)))
-    # 月亮门：两格中间一个圆洞
+    # 月亮门：两格墙中间开一个圆洞（洞里露出对面的地）
     for g in LAYOUT['gates']:
         (c0, r0), (c1, r1) = g['tiles']
         x, y = top((c0 + c1 + 1) / 2, (r0 + r1 + 1) / 2)
         rr = TH * 0.9
 
-        def gate(d, x=x, y=y, rr=rr):
-            d.ellipse([x - rr, y - WALL_H * 0.55 - rr, x + rr, y - WALL_H * 0.55 + rr], fill=(150, 196, 110), outline=WALL_TOP, width=3)
+        def gate(d, tiles=g['tiles'], x=x, y=y, rr=rr):
+            for c, r in tiles:
+                box(d, c, r, c + 1, r + 1, WALL_H, WALL)
+                d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)
+            d.ellipse([x - rr, y - WALL_H * 0.55 - rr, x + rr, y - WALL_H * 0.55 + rr], fill=COLORS['lawn'], outline=WALL_TOP, width=3)
         add(max(c0 + r0, c1 + r1) + 0.1, gate)
-    # 大门：红门
+    # 大门：比墙高一点的门楼，朱红双开门
     (c0, r0), (c1, r1) = LAYOUT['door']
     x, y = top((c0 + c1 + 1) / 2, (r0 + r1 + 1) / 2)
 
-    def door(d, x=x, y=y):
-        d.rectangle([x - TW * 0.45, y - WALL_H * 0.95, x + TW * 0.45, y - WALL_H * 0.1], fill=(176, 52, 40), outline=WALL_TOP, width=3)
-        d.line([(x, y - WALL_H * 0.95), (x, y - WALL_H * 0.1)], fill=WALL_TOP, width=2)
+    def door(d, x=x, y=y, tiles=LAYOUT['door']):
+        h = WALL_H * 1.3
+        for c, r in tiles:
+            box(d, c, r, c + 1, r + 1, h, WALL)
+        roof(d, tiles[0][0], tiles[0][1], tiles[1][0] + 1, tiles[1][1] + 1, h, TH * 0.6, WALL_TOP, over=0.2)
+        d.rectangle([x - TW * 0.45, y - h * 0.85, x + TW * 0.45, y - h * 0.05], fill=(176, 52, 40), outline=WALL_TOP, width=3)
+        d.line([(x, y - h * 0.85), (x, y - h * 0.05)], fill=WALL_TOP, width=2)
         for dx in (-TW * 0.2, TW * 0.2):
-            d.ellipse([x + dx - 4, y - WALL_H * 0.55 - 4, x + dx + 4, y - WALL_H * 0.55 + 4], fill=(230, 190, 80))
+            d.ellipse([x + dx - 4, y - h * 0.5 - 4, x + dx + 4, y - h * 0.5 + 4], fill=(230, 190, 80))
     add(max(c0 + r0, c1 + r1) + 0.1, door)
 
     for s in LAYOUT['shell']:
@@ -285,6 +293,15 @@ def draw_estate():
     return img
 
 
+def pad32(img):
+    """上下补成 3:2（图像模型常见的横图比例），世界框居中、宽度占满；cut_art.py --pad32 按同样的比例裁回来"""
+    w = img.width
+    h = round(w / 1.5)
+    out = Image.new('RGB', (w, h), PAPER)
+    out.paste(img, (0, (h - img.height) // 2))
+    return out
+
+
 def draw_labels(img):
     out = img.copy()
     d = ImageDraw.Draw(out)
@@ -328,9 +345,10 @@ def main():
             tile.save(path, quality=JPEG_QUALITY, optimize=True)
             total += os.path.getsize(path)
     img.save(os.path.join(GUIDE, 'estate-blockout.jpg'), quality=88, optimize=True)
+    pad32(img).save(os.path.join(GUIDE, 'estate-blockout-3x2.jpg'), quality=88, optimize=True)
     draw_labels(img).save(os.path.join(GUIDE, 'estate-blockout-labels.jpg'), quality=88, optimize=True)
     draw_cloud()
-    print(f'底图 {W}×{H}，16 块共 {total // 1024} KB；云朵和草图已写入')
+    print(f'底图 {W}×{H}，16 块共 {total // 1024} KB；云朵、整图、3:2 底稿和标注图已写入')
 
 
 if __name__ == '__main__':
