@@ -15,6 +15,7 @@ const {
   pickItem,
   currentTerm,
   gardenSize,
+  waitingAnimals,
 } = require('../lib/shared/garden')
 
 const HIGH_RARITIES = ['epic', 'legendary']
@@ -43,6 +44,9 @@ function createGardenService({ repo, now, random = Math.random }) {
       pityLeft: PITY - garden.gacha.sincePity,
       rates: RARITIES.map(({ id, label, weight }) => ({ id, label, weight })),
       term: termInfo(),
+      residents: garden.residents.map((r) => r.id),
+      arrivals: garden.arrivals,
+      waiting: waitingAnimals(garden.placed, garden.residents.map((r) => r.id)),
       welcome,
     }
   }
@@ -69,17 +73,22 @@ function createGardenService({ repo, now, random = Math.random }) {
   }
 
   return {
-    // 第一次进庭院：送暖豆，并在中间种一棵大树
-    async get(openid) {
+    // 第一次进庭院：送暖豆，并在中间种一棵大树。庭院页带 markSeen：新住户看过了
+    async get(openid, input) {
       const garden = await load(openid)
-      if (garden.welcomed) return view(garden)
-
-      const center = Math.floor((gardenSize(garden.collected.length) - 1) / 2)
-      garden.welcomed = true
-      garden.beans = { ...garden.beans, bonus: garden.beans.bonus + WELCOME_BEANS }
-      garden.placed = garden.placed.concat({ uid: newUid(garden), itemId: STARTER_ITEM, c: center, r: center })
-      await repo.saveGarden(openid, garden)
-      return view(garden, { beans: WELCOME_BEANS, itemId: STARTER_ITEM })
+      let welcome = null
+      if (!garden.welcomed) {
+        const center = Math.floor((gardenSize(garden.collected.length) - 1) / 2)
+        garden.welcomed = true
+        garden.beans = { ...garden.beans, bonus: garden.beans.bonus + WELCOME_BEANS }
+        garden.placed = garden.placed.concat({ uid: newUid(garden), itemId: STARTER_ITEM, c: center, r: center })
+        welcome = { beans: WELCOME_BEANS, itemId: STARTER_ITEM }
+      }
+      const result = view(garden, welcome)
+      const seen = !!(input && input.markSeen) && garden.arrivals.length > 0
+      if (seen) garden.arrivals = []
+      if (welcome || seen) await repo.saveGarden(openid, garden)
+      return result
     },
 
     async spin(openid) {
@@ -149,6 +158,18 @@ function createGardenService({ repo, now, random = Math.random }) {
       garden.inventory = { ...garden.inventory, [placed.itemId]: (garden.inventory[placed.itemId] || 0) + 1 }
       await repo.saveGarden(openid, garden)
       return view(garden)
+    },
+
+    // 正餐打卡后调用：有在等的小动物就搬来一只
+    async arrive(openid) {
+      const garden = await load(openid)
+      const next = waitingAnimals(garden.placed, garden.residents.map((r) => r.id))[0]
+      if (!next) return null
+      garden.residents = garden.residents.concat({ id: next, since: dateKey(now()) })
+      garden.arrivals = garden.arrivals.concat(next)
+      if (garden.collected.indexOf(next) === -1) garden.collected = garden.collected.concat(next)
+      await repo.saveGarden(openid, garden)
+      return { id: next, name: itemById(next).name }
     },
   }
 }

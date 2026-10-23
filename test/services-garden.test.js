@@ -139,8 +139,8 @@ test('place：从背包摆到空地上', async () => {
 })
 
 test('place：背包里没有、出界、格子被占都不行', async () => {
-  const { service } = setup({ garden: richGarden({ inventory: { daisy: 1 }, placed: [{ uid: 'a', itemId: 'panda', c: 1, r: 1 }] }) })
-  await assert.rejects(service.place('u1', { itemId: 'panda', c: 0, r: 0 }), { code: 'BAD_REQUEST' })
+  const { service } = setup({ garden: richGarden({ inventory: { daisy: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 1, r: 1 }] }) })
+  await assert.rejects(service.place('u1', { itemId: 'pavilion', c: 0, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: 6, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: -1, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: 1.5, r: 0 }), { code: 'BAD_REQUEST' })
@@ -151,26 +151,87 @@ test('place：背包里没有、出界、格子被占都不行', async () => {
 })
 
 test('move：换到空地，可以原地不动，不能压在别的东西上', async () => {
-  const placed = [{ uid: 'a', itemId: 'panda', c: 1, r: 1 }, { uid: 'b', itemId: 'daisy', c: 2, r: 2 }]
+  const placed = [{ uid: 'a', itemId: 'pavilion', c: 1, r: 1 }, { uid: 'b', itemId: 'daisy', c: 2, r: 2 }]
   const { service } = setup({ garden: richGarden({ placed }) })
   const view = await service.move('u1', { uid: 'a', c: 3, r: 4 })
-  assert.deepEqual(view.placed.find((p) => p.uid === 'a'), { uid: 'a', itemId: 'panda', c: 3, r: 4 })
+  assert.deepEqual(view.placed.find((p) => p.uid === 'a'), { uid: 'a', itemId: 'pavilion', c: 3, r: 4 })
   await service.move('u1', { uid: 'a', c: 3, r: 4 })
   await assert.rejects(service.move('u1', { uid: 'a', c: 2, r: 2 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.move('u1', { uid: 'zzz', c: 0, r: 0 }), { code: 'NOT_FOUND' })
 })
 
 test('stash：收回背包', async () => {
-  const { repo, service } = setup({ garden: richGarden({ inventory: { panda: 1 }, placed: [{ uid: 'a', itemId: 'panda', c: 1, r: 1 }] }) })
+  const { repo, service } = setup({ garden: richGarden({ inventory: { pavilion: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 1, r: 1 }] }) })
   const view = await service.stash('u1', { uid: 'a' })
   assert.equal(view.placed.length, 0)
-  assert.deepEqual(view.inventory, [{ itemId: 'panda', count: 2 }])
-  assert.deepEqual((await repo.getGarden('u1')).inventory, { panda: 2 })
+  assert.deepEqual(view.inventory, [{ itemId: 'pavilion', count: 2 }])
+  assert.deepEqual((await repo.getGarden('u1')).inventory, { pavilion: 2 })
   await assert.rejects(service.stash('u1', { uid: 'a' }), { code: 'NOT_FOUND' })
 })
 
 test('背包按物品表顺序排列', async () => {
-  const { service } = setup({ garden: richGarden({ inventory: { panda: 1, daisy: 3, zero: 0 } }) })
+  const { service } = setup({ garden: richGarden({ inventory: { pavilion: 1, daisy: 3, zero: 0 } }) })
   const view = await service.get('u1')
-  assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 3 }, { itemId: 'panda', count: 1 }])
+  assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 3 }, { itemId: 'pavilion', count: 1 }])
+})
+
+test('view：住户、新住户、在等的小动物', async () => {
+  const { service } = setup({
+    garden: richGarden({
+      placed: [{ uid: 'p1', itemId: 'bamboo', c: 0, r: 0 }, { uid: 'p2', itemId: 'grass', c: 1, r: 0 }],
+      residents: [{ id: 'chick', since: '2026-10-20' }],
+      arrivals: ['chick'],
+    }),
+  })
+  const view = await service.get('u1')
+  assert.deepEqual(view.residents, ['chick'])
+  assert.deepEqual(view.arrivals, ['chick'])
+  assert.deepEqual(view.waiting, ['panda'])
+})
+
+test('arrive：摆了翠竹，熊猫搬来，一次只来一只', async () => {
+  const { repo, service } = setup({
+    garden: richGarden({ placed: [{ uid: 'p2', itemId: 'grass', c: 1, r: 0 }, { uid: 'p1', itemId: 'bamboo', c: 0, r: 0 }] }),
+  })
+  assert.deepEqual(await service.arrive('u1'), { id: 'panda', name: '大熊猫' })
+  let stored = await repo.getGarden('u1')
+  assert.deepEqual(stored.residents, [{ id: 'panda', since: TODAY }])
+  assert.deepEqual(stored.arrivals, ['panda'])
+  assert.ok(stored.collected.indexOf('panda') !== -1)
+
+  assert.deepEqual(await service.arrive('u1'), { id: 'chick', name: '小黄鸡' })
+  assert.equal(await service.arrive('u1'), null)
+  stored = await repo.getGarden('u1')
+  assert.deepEqual(stored.residents.map((r) => r.id), ['panda', 'chick'])
+  assert.deepEqual(stored.arrivals, ['panda', 'chick'])
+})
+
+test('arrive：没有在等的动物时不写数据库', async () => {
+  const { repo, service } = setup()
+  assert.equal(await service.arrive('u1'), null)
+  assert.equal(await repo.getGarden('u1'), null)
+})
+
+test('get：庭院页带 markSeen 才把新住户标成看过', async () => {
+  const { repo, service } = setup({ garden: richGarden({ residents: [{ id: 'panda', since: TODAY }], arrivals: ['panda'] }) })
+  assert.deepEqual((await service.get('u1')).arrivals, ['panda'])
+  assert.deepEqual((await repo.getGarden('u1')).arrivals, ['panda'])
+  assert.deepEqual((await service.get('u1', { markSeen: true })).arrivals, ['panda'])
+  assert.deepEqual((await repo.getGarden('u1')).arrivals, [])
+  assert.deepEqual((await service.get('u1', { markSeen: true })).arrivals, [])
+})
+
+test('旧数据：扭蛋抽到的小动物变成住户，不放进新住户', async () => {
+  const { service } = setup({
+    garden: richGarden({
+      inventory: { panda: 1, daisy: 2 },
+      placed: [{ uid: 'p1', itemId: 'crane', c: 0, r: 0 }, { uid: 'p2', itemId: 'daisy', c: 1, r: 0 }],
+      collected: ['panda', 'crane', 'daisy'],
+    }),
+  })
+  const view = await service.get('u1')
+  assert.deepEqual(view.residents.sort(), ['crane', 'panda'])
+  assert.deepEqual(view.arrivals, [])
+  assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 2 }])
+  assert.deepEqual(view.placed.map((p) => p.itemId), ['daisy'])
 })
