@@ -36,14 +36,15 @@ function tileOffset(c, r, L, win) {
   return offsetFor(tilePoint(c, r, L), L, win)
 }
 
-// 底图：一整张切成 4×4 块，正好铺满 #world
-function artTiles(L) {
+// 底图：一整张切成 4×4 块，正好铺满 #world。base 是云存储的 fileID 前缀（以 / 结尾），空就用包里的白模切块
+function artTiles(L, base = '') {
   const w = L.width / ART_SPLIT
   const h = L.height / ART_SPLIT
   const tiles = []
   for (let row = 0; row < ART_SPLIT; row++) {
     for (let col = 0; col < ART_SPLIT; col++) {
-      tiles.push({ key: `art-${row}-${col}`, image: `/images/garden/estate/t${row}${col}.jpg`, left: col * w, top: row * h, width: w, height: h })
+      const name = `t${row}${col}.jpg`
+      tiles.push({ key: `art-${row}-${col}`, image: base ? `${base}${name}` : `/images/garden/estate/${name}`, left: col * w, top: row * h, width: w, height: h })
     }
   }
   return tiles

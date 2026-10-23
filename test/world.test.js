@@ -39,6 +39,10 @@ test('artTiles：16 块正好拼满整个 #world', () => {
   assert.ok(Math.abs(tiles[15].top + tiles[15].height - L.height) < 1e-9)
   assert.deepEqual([tiles[1].left, tiles[1].top], [L.width / 4, 0])
   assert.deepEqual([tiles[4].left, tiles[4].top], [0, L.height / 4])
+  const remote = W.artTiles(L, 'cloud://env.bucket/garden/estate/')
+  assert.equal(remote[0].image, 'cloud://env.bucket/garden/estate/t00.jpg')
+  assert.equal(remote[15].image, 'cloud://env.bucket/garden/estate/t33.jpg')
+  assert.deepEqual([remote[5].left, remote[5].top], [tiles[5].left, tiles[5].top])
 })
 
 test('cloudViews：只有没修的院子有云，每个 6～9 朵，位置固定在院子里', () => {

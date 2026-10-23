@@ -9,6 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
+//   npm run wx:art                 把 art/estate/ 的底图切块传到云存储 garden/estate/
 
 const fs = require('fs')
 const path = require('path')
@@ -65,8 +66,8 @@ function loadCi() {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2)
-  if (!['function', 'preview', 'upload'].includes(command)) {
-    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述]')
+  if (!['function', 'preview', 'upload', 'art'].includes(command)) {
+    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述] | art')
   }
 
   const ci = loadCi()
@@ -82,6 +83,27 @@ async function main() {
     privateKey: privateKey(),
     ignores: ['node_modules/**/*', 'test/**/*', 'docs/**/*', 'scripts/**/*', '.wechat/**/*'],
   })
+
+  if (command === 'art') {
+    const env = envId()
+    const dir = path.join(ROOT, 'art/estate')
+    if (!fs.existsSync(path.join(dir, 't00.jpg'))) fail('art/estate/ 里还没有切好的底图：先跑 python3 scripts/estate/cut_art.py <原画>')
+    console.log(`上传 art/estate → 云存储 ${env}:garden/estate/ …`)
+    await ci.cloud.uploadStorage({ project, env, path: dir, remotePath: 'garden/estate' })
+    let prefix = ''
+    try {
+      // 拼 fileID 要桶名，miniprogram-ci 没公开，从它内部的环境信息里拿；拿不到就让用户去控制台看
+      const { initEnvironmentByProject } = require('miniprogram-ci/dist/ci/cloud/utils')
+      const { currentEnv } = await initEnvironmentByProject(project, env)
+      const bucket = currentEnv && currentEnv.storages && currentEnv.storages[0] && currentEnv.storages[0].bucket
+      if (bucket) prefix = `cloud://${env}.${bucket}/garden/estate/`
+    } catch (e) {
+      prefix = ''
+    }
+    console.log('✓ 底图已上传到云存储')
+    console.log(prefix ? `  把 miniprogram/config.js 的 estateArt 填成 '${prefix}'，再 npm run wx:preview` : '  fileID 前缀到云开发控制台 → 存储里看（形如 cloud://环境ID.桶名/garden/estate/），填进 miniprogram/config.js 的 estateArt')
+    return
+  }
 
   if (command === 'function') {
     const env = envId()

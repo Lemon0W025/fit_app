@@ -4,7 +4,7 @@
   <movable-area wx:if="{{loaded}}" class="map-area">
     <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.5" scale-max="2" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
       <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" bindtap="tapLand">
-        <image wx:for="{{art}}" wx:key="key" class="art" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+        <image wx:for="{{art}}" wx:key="key" class="art" src="{{item.image}}" binderror="onArtError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <block wx:for="{{sprites}}" wx:key="uid">
           <view class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>

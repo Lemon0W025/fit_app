@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const config = require('../../config')
 const W = require('../../utils/world')
 const A = require('../../utils/animals')
 const { buildScene, inventoryList } = require('../../utils/garden-view')
@@ -39,6 +40,7 @@ Page({
     world: null,
     view: { x: 0, y: 0, scale: 1 },
     art: [],
+    artBase: config.estateArt || '',
     clouds: [],
     signs: [],
     sprites: [],
@@ -111,7 +113,7 @@ Page({
       termText: termItems ? `${view.term.name}限定「${termItems}」正在扭蛋机里` : '',
       waitingText: view.waiting && view.waiting.length ? '👀 有小动物在院子外张望…下次打卡它就来了' : '',
       world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
-      art: this.data.art.length ? this.data.art : W.artTiles(L),
+      art: this.data.art.length ? this.data.art : W.artTiles(L, this.data.artBase),
       clouds: W.cloudViews(view.areas, L),
       signs: W.signViews(view.areas, this.opened, L),
       sprites: buildScene(view.placed, L),
@@ -143,6 +145,12 @@ Page({
 
   recenter() {
     this.nudgeView(W.areaOffset('main', this.L, this.win()))
+  },
+
+  // 云存储的底图加载失败（没传、没权限、断网）：退回包里的白模
+  onArtError() {
+    if (!this.data.artBase) return
+    this.setData({ artBase: '', art: W.artTiles(this.L, '') })
   },
 
   goCheckin() {

@@ -3,3 +3,5 @@ miniprogram_npm/
 project.private.config.json
 .DS_Store
 .wechat/
+# 原画切块，传云存储用，不进仓库
+art/estate/
