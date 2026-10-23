@@ -573,9 +573,6 @@ button.btn-small {
 
 /* ---------------------------------------------------------------- 小岛 */
 
-.island,
-/* 修整好的角落：风景一个个蹦出来 */
-/* 海上的浪花 */
 /* 左上角：游戏风的暖豆资源条 + 今天的暖豆和印章 */
 .hud-res {
   position: absolute;
@@ -811,6 +808,13 @@ button.btn-small {
 .placing-btns {
   display: flex;
   gap: 12rpx;
+}
+
+.placing-btns .btn-small {
+  width: auto !important;
+  margin: 0;
+  padding: 8rpx 20rpx;
+  white-space: nowrap;
 }
 
 .side-emoji {

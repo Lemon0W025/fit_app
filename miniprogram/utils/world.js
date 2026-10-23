@@ -64,7 +64,7 @@ function noise(n) {
   return x - Math.floor(x)
 }
 
-// 没修的院子：铺 6～9 朵云，慢慢飘
+// 没修的院子：铺 6～9 朵云（都落在院子里面，别飘到隔壁），慢慢飘
 function cloudViews(areas, L) {
   const out = []
   areas.forEach((a, ai) => {
@@ -72,11 +72,11 @@ function cloudViews(areas, L) {
     const [c0, r0, c1, r1] = areaById(a.id).rect
     const n = 6 + Math.floor(noise(ai + 1) * 4)
     for (let i = 0; i < n; i++) {
-      const u = 0.1 + 0.8 * noise(ai * 100 + i * 3 + 1)
-      const v = 0.1 + 0.8 * noise(ai * 100 + i * 3 + 2)
+      const u = 0.18 + 0.64 * noise(ai * 100 + i * 3 + 1)
+      const v = 0.18 + 0.64 * noise(ai * 100 + i * 3 + 2)
       const p = tileTop(c0 + u * (c1 - c0), r0 + v * (r1 - r0), L)
-      const width = L.tileW * (2.4 + 1.6 * noise(ai * 100 + i * 3 + 3))
-      out.push({ key: `${a.id}-${i}`, area: a.id, image: CLOUD_IMAGE, left: p.x - width / 2, top: p.y - width * 0.25, width, delay: Math.round(i * 7) / 10 })
+      const width = L.tileW * (1.5 + 1.0 * noise(ai * 100 + i * 3 + 3))
+      out.push({ key: `${a.id}-${i}`, area: a.id, image: CLOUD_IMAGE, left: p.x - width / 2, top: p.y - width * 0.3, width, delay: Math.round(i * 7) / 10 })
     }
   })
   return out
