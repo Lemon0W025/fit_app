@@ -1,6 +1,5 @@
 const api = require('../../utils/api')
-const { treeImage, treeCard, buildForestCells } = require('../../utils/view')
-const { celebrateUnlocks } = require('../../utils/celebrate')
+const { treeCard, buildForestCells } = require('../../utils/view')
 const { STAGE_LABELS } = require('../../utils/shared/forest')
 
 Page({
@@ -10,9 +9,7 @@ Page({
     view: null,
     today: null,
     cells: [],
-    species: [],
     weekdays: ['一', '二', '三', '四', '五', '六', '日'],
-    switching: false,
   },
 
   onShow() {
@@ -31,18 +28,10 @@ Page({
             nextMonth: view.nextMonth,
             stats: view.stats,
             totalTrees: view.totalTrees,
-            nextUnlock: view.nextUnlock,
           },
           today: treeCard(view.today),
           cells: buildForestCells(view.days, view.firstWeekday),
-          species: view.species.map((s) => ({
-            ...s,
-            image: treeImage('fruit', s.id),
-            current: s.id === view.currentSpecies,
-            lockText: s.unlocked ? '' : `种满 ${s.unlockAt} 棵`,
-          })),
         })
-        celebrateUnlocks(view.today.newlyUnlocked)
       })
       .catch((err) => api.showError(err))
   },
@@ -53,26 +42,6 @@ Page({
 
   nextMonth() {
     if (this.data.view && this.data.view.nextMonth) this.load(this.data.view.nextMonth)
-  },
-
-  pickSpecies(e) {
-    const s = this.data.species.find((x) => x.id === e.currentTarget.dataset.id)
-    if (!s || s.current || this.data.switching) return
-    if (!s.unlocked) {
-      wx.showToast({ title: `再种 ${s.unlockAt - this.data.view.totalTrees} 棵树就能解锁${s.name}`, icon: 'none' })
-      return
-    }
-    this.setData({ switching: true })
-    api.call('forest.setSpecies', { species: s.id })
-      .then(() => {
-        this.setData({ switching: false })
-        wx.showToast({ title: `换成${s.name}啦`, icon: 'none' })
-        return this.load(this.data.month)
-      })
-      .catch((err) => {
-        this.setData({ switching: false })
-        api.showError(err)
-      })
   },
 
   openDay(e) {

@@ -211,9 +211,11 @@ test('analyze 正餐：返回今天的树变化，并记下今天种的树', asy
     grew: true,
     stageLabel: '树苗',
     hint: '再打卡午餐就能长成小树',
-    species: 'apple',
+    beans: 10,
   })
-  assert.deepEqual((await repo.getGarden('u1')).days, { [TODAY]: 'apple' })
+  const garden = await repo.getGarden('u1')
+  assert.deepEqual(garden.days, { [TODAY]: true })
+  assert.deepEqual(garden.beans.earned, { [TODAY]: 10 })
 })
 
 test('analyze 加餐：不影响树，也不记种树', async () => {
@@ -241,6 +243,8 @@ test('reanalyze：评级变绿后今天的树开花变结果', async () => {
   assert.equal(meal.tree.before, 'bloom')
   assert.equal(meal.tree.after, 'fruit')
   assert.equal(meal.tree.grew, true)
+  assert.equal(meal.tree.beans, 10)
+  assert.deepEqual((await repo.getGarden('u1')).beans.earned, { [TODAY]: 60 })
 })
 
 test('remove：删掉当天唯一的正餐后，这天不再算种了树', async () => {
@@ -248,5 +252,7 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   const lunch = await service.analyze('u1', { mealType: 'lunch', note: '面' })
   await service.analyze('u1', { mealType: 'snack', note: '苹果' })
   await service.remove('u1', { mealId: lunch._id })
-  assert.deepEqual((await repo.getGarden('u1')).days, {})
+  const garden = await repo.getGarden('u1')
+  assert.deepEqual(garden.days, {})
+  assert.deepEqual(garden.beans.earned, {})
 })

@@ -102,5 +102,6 @@ test('get：带上今天的树', async () => {
   const day = await service.get('u1', {})
   assert.equal(day.tree.stage, 'small')
   assert.equal(day.tree.hint, '再打卡晚餐就能长成大树')
-  assert.equal(day.tree.species, 'apple')
+  assert.equal(day.tree.beansToday, 20)
+  assert.equal(day.tree.nextGain, 20)
 })

@@ -3,14 +3,9 @@ const assert = require('node:assert/strict')
 const {
   STAGES,
   STAGE_LABELS,
-  SPECIES,
-  DEFAULT_SPECIES,
   dayTree,
   treeHint,
   streakFrom,
-  unlockedFor,
-  nextUnlock,
-  speciesName,
 } = require('../cloudfunctions/api/lib/shared/forest')
 
 let seq = 0
@@ -25,13 +20,9 @@ function meal(mealType, rating = 'yellow', overrides = {}) {
   }
 }
 
-test('阶段与树种常量', () => {
+test('阶段常量', () => {
   assert.deepEqual(STAGES, ['empty', 'sprout', 'small', 'big', 'bloom', 'fruit'])
   assert.equal(STAGE_LABELS.bloom, '开花')
-  assert.deepEqual(SPECIES.map((s) => [s.id, s.unlockAt]), [
-    ['apple', 0], ['orange', 7], ['peach', 15], ['pomegranate', 30], ['persimmon', 50], ['cherry', 80],
-  ])
-  assert.equal(DEFAULT_SPECIES, 'apple')
 })
 
 test('dayTree：按正餐数量长大', () => {
@@ -109,19 +100,4 @@ test('streakFrom：中间断档、跨月、没有记录', () => {
   assert.equal(streakFrom({ '2026-10-19': 'apple' }, '2026-10-22'), 0)
   assert.equal(streakFrom({}, '2026-10-22'), 0)
   assert.equal(streakFrom(undefined, '2026-10-22'), 0)
-})
-
-test('unlockedFor 与 nextUnlock', () => {
-  assert.deepEqual(unlockedFor(0), ['apple'])
-  assert.deepEqual(unlockedFor(6), ['apple'])
-  assert.deepEqual(unlockedFor(7), ['apple', 'orange'])
-  assert.equal(unlockedFor(80).length, 6)
-  assert.deepEqual(nextUnlock(0), { id: 'orange', name: '橘子树', remaining: 7 })
-  assert.deepEqual(nextUnlock(10), { id: 'peach', name: '桃树', remaining: 5 })
-  assert.equal(nextUnlock(80), null)
-})
-
-test('speciesName', () => {
-  assert.equal(speciesName('cherry'), '樱桃树')
-  assert.equal(speciesName('nope'), '苹果树')
 })

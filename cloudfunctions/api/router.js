@@ -13,7 +13,6 @@ const ROUTES = {
   'weight.save': ['weight', 'save'],
   'weight.list': ['weight', 'list'],
   'forest.get': ['forest', 'get'],
-  'forest.setSpecies': ['forest', 'setSpecies'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

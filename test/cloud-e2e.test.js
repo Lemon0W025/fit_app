@@ -97,7 +97,7 @@ test('没有 openid 与未知 action', async () => {
   assert.equal((await main({ action: 'nope' })).code, 'UNKNOWN_ACTION')
 })
 
-test('养生森林：三顿全绿结果、森林月视图、切换未解锁树种、删除后回退', async () => {
+test('养生森林：三顿全绿结果、暖豆入账、日历、删除后回退', async () => {
   const green = analysisJson({ rating: 'green' })
   const cloud = createFakeCloud({ replies: [green, green, green] })
   const { main } = loadCloudFunction(cloud)
@@ -105,33 +105,40 @@ test('养生森林：三顿全绿结果、森林月视图、切换未解锁树�
   await main({ action: 'profile.save', data: profileInput })
 
   const stages = []
+  const beans = []
   const ids = []
   for (const mealType of ['breakfast', 'lunch', 'dinner']) {
     const res = await main({ action: 'meal.analyze', data: { mealType, note: '家常菜' } })
     assert.equal(res.ok, true, res.message)
     stages.push(res.data.tree.after)
+    beans.push(res.data.tree.beans)
     ids.push(res.data._id)
   }
   assert.deepEqual(stages, ['sprout', 'small', 'fruit'])
+  assert.deepEqual(beans, [10, 10, 40])
 
   const garden = cloud.db.collections.get('gardens').get('u1')
   assert.equal(garden._openid, 'u1')
-  assert.deepEqual(garden.days, { [today]: 'apple' })
+  assert.deepEqual(garden.days, { [today]: true })
+  assert.deepEqual(garden.beans.earned, { [today]: 60 })
 
   const forest = await main({ action: 'forest.get' })
   assert.equal(forest.ok, true, forest.message)
   assert.equal(forest.data.today.stage, 'fruit')
   assert.equal(forest.data.today.streak, 1)
+  assert.equal(forest.data.today.beans, 60)
   assert.equal(forest.data.days.find((d) => d.date === today).stage, 'fruit')
   assert.deepEqual(forest.data.stats, { trees: 1, fruits: 1 })
 
   const day = await main({ action: 'day.get' })
   assert.equal(day.data.tree.stage, 'fruit')
+  assert.equal(day.data.tree.beansToday, 60)
 
-  const locked = await main({ action: 'forest.setSpecies', data: { species: 'peach' } })
-  assert.equal(locked.code, 'BAD_REQUEST')
+  assert.equal((await main({ action: 'forest.setSpecies', data: { species: 'peach' } })).code, 'UNKNOWN_ACTION')
 
   for (const mealId of ids) await main({ action: 'meal.delete', data: { mealId } })
-  assert.deepEqual(cloud.db.collections.get('gardens').get('u1').days, {})
+  const after = cloud.db.collections.get('gardens').get('u1')
+  assert.deepEqual(after.days, {})
+  assert.deepEqual(after.beans.earned, {})
   assert.equal((await main({ action: 'forest.get' })).data.today.streak, 0)
 })

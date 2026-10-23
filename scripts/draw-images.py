@@ -84,15 +84,8 @@ def draw_tabs():
 
 TILE = 240
 
-SPECIES = {
-    # 树冠颜色、花的颜色、果子颜色、果子大小
-    'apple': ((95, 163, 90), (250, 222, 232), (226, 72, 61), 10),
-    'orange': ((63, 143, 78), (255, 255, 250), (243, 154, 43), 10),
-    'peach': ((120, 181, 86), (244, 154, 193), (247, 163, 142), 11),
-    'pomegranate': ((78, 154, 74), (232, 85, 59), (184, 40, 46), 11),
-    'persimmon': ((110, 158, 62), (243, 231, 168), (240, 127, 31), 11),
-    'cherry': ((93, 170, 98), (248, 198, 212), (192, 24, 47), 6),
-}
+# 每天的树（苹果树）：树冠颜色、花的颜色、果子颜色、果子大小
+TREE = ((95, 163, 90), (250, 222, 232), (226, 72, 61), 10)
 
 GRASS = (165, 209, 122)
 GRASS_DARK = (134, 184, 94)
@@ -223,15 +216,15 @@ def draw_tiles():
         fn(img, d)
         save(img, TILE, 'forest', f'{name}.png')
 
-    for i, (species, (canopy, flower, fruit, fruit_r)) in enumerate(SPECIES.items()):
-        for stage in ('big', 'bloom', 'fruit'):
-            img, d = tile_canvas()
-            draw_big(img, d, canopy)
-            if stage == 'bloom':
-                draw_flowers(d, flower, 10 + i)
-            if stage == 'fruit':
-                draw_fruits(d, fruit, fruit_r, 30 + i)
-            save(img, TILE, 'forest', f'{stage}-{species}.png')
+    canopy, flower, fruit, fruit_r = TREE
+    for stage in ('big', 'bloom', 'fruit'):
+        img, d = tile_canvas()
+        draw_big(img, d, canopy)
+        if stage == 'bloom':
+            draw_flowers(d, flower, 10)
+        if stage == 'fruit':
+            draw_fruits(d, fruit, fruit_r, 30)
+        save(img, TILE, 'forest', f'{stage}.png')
 
 
 if __name__ == '__main__':

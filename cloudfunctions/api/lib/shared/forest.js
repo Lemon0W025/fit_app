@@ -18,18 +18,6 @@ const STAGE_LABELS = {
 // 加餐照常打卡点评，但不影响树：既不因零食受罚，也不会为了树多吃一顿
 const MAIN_MEALS = ['breakfast', 'lunch', 'dinner']
 
-// unlockAt：累计种了多少棵树后解锁
-const SPECIES = [
-  { id: 'apple', name: '苹果树', unlockAt: 0 },
-  { id: 'orange', name: '橘子树', unlockAt: 7 },
-  { id: 'peach', name: '桃树', unlockAt: 15 },
-  { id: 'pomegranate', name: '石榴树', unlockAt: 30 },
-  { id: 'persimmon', name: '柿子树', unlockAt: 50 },
-  { id: 'cherry', name: '樱桃树', unlockAt: 80 },
-]
-
-const DEFAULT_SPECIES = 'apple'
-
 function dayTree(meals) {
   // 每种正餐取最新的一条（重拍、重新打卡以最后一次为准）
   const latest = {}
@@ -77,7 +65,7 @@ function treeHint(tree) {
   }
 }
 
-// days：{ 'YYYY-MM-DD': 树种 }，有记录的日子就是有树的日子
+// days：{ 'YYYY-MM-DD': true }，有记录的日子就是有树的日子
 // 今天还没打卡时算到昨天为止，今天还有机会续上
 function streakFrom(days, today) {
   const has = (d) => !!(days && days[d])
@@ -90,30 +78,11 @@ function streakFrom(days, today) {
   return count
 }
 
-function unlockedFor(total) {
-  return SPECIES.filter((s) => total >= s.unlockAt).map((s) => s.id)
-}
-
-function nextUnlock(total) {
-  const next = SPECIES.find((s) => total < s.unlockAt)
-  return next ? { id: next.id, name: next.name, remaining: next.unlockAt - total } : null
-}
-
-function speciesName(id) {
-  const s = SPECIES.find((x) => x.id === id)
-  return (s || SPECIES[0]).name
-}
-
 module.exports = {
   STAGES,
   STAGE_LABELS,
   MAIN_MEALS,
-  SPECIES,
-  DEFAULT_SPECIES,
   dayTree,
   treeHint,
   streakFrom,
-  unlockedFor,
-  nextUnlock,
-  speciesName,
 }

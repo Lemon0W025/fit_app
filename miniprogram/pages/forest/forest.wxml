@@ -4,23 +4,12 @@
   <view class="card today-tree">
     <view class="today-title">{{today.title}}</view>
     <image class="today-image" src="{{today.image}}" mode="aspectFit" />
-    <view class="today-hint">{{today.hint}}</view>
+    <view class="today-hint">{{today.hintText}}</view>
     <view class="today-stats">
       <text wx:if="{{today.streakText}}" class="today-stat">{{today.streakText}}</text>
       <text class="today-stat">🌳 累计种了 {{view.totalTrees}} 棵</text>
+      <text wx:if="{{today.beansText}}" class="today-stat">🫘 {{today.beansText}}</text>
     </view>
-  </view>
-
-  <view class="card">
-    <view class="card-title">今天种哪种树</view>
-    <view class="species-list">
-      <view wx:for="{{species}}" wx:key="id" class="species {{item.current ? 'species-on' : ''}} {{item.unlocked ? '' : 'species-locked'}}" data-id="{{item.id}}" bindtap="pickSpecies">
-        <image class="species-image" src="{{item.image}}" mode="aspectFit" />
-        <view class="species-name">{{item.name}}</view>
-        <view wx:if="{{!item.unlocked}}" class="species-lock">🔒 {{item.lockText}}</view>
-      </view>
-    </view>
-    <view wx:if="{{view.nextUnlock}}" class="muted small unlock-tip">再种 {{view.nextUnlock.remaining}} 棵树，就能解锁{{view.nextUnlock.name}}</view>
   </view>
 
   <view class="card">

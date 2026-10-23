@@ -8,8 +8,12 @@
       <image class="tree-card-image" src="{{tree.image}}" mode="aspectFit" />
       <view class="tree-card-body">
         <view class="tree-card-title">{{tree.title}}</view>
-        <view class="tree-card-hint">{{tree.hint}}</view>
-        <view wx:if="{{tree.streakText}}" class="tree-card-streak">{{tree.streakText}}</view>
+        <view class="tree-card-hint">{{tree.hintText}}</view>
+        <view class="tree-card-streak">
+          <text wx:if="{{tree.beansText}}">🫘 {{tree.beansText}}</text>
+          <text wx:if="{{tree.beansText && tree.streakText}}">　</text>
+          <text wx:if="{{tree.streakText}}">{{tree.streakText}}</text>
+        </view>
       </view>
       <text class="tree-card-arrow">›</text>
     </view>

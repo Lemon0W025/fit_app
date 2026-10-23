@@ -22,6 +22,13 @@
   color: var(--primary);
 }
 
+.tree-banner-beans {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #d97a1e;
+  margin-top: 4rpx;
+}
+
 .tree-banner-hint {
   font-size: 28rpx;
   margin-top: 4rpx;

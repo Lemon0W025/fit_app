@@ -70,20 +70,19 @@ const GREW_TITLES = {
   fruit: '🍎 今天的树结果了！',
 }
 
-// 树苗、小树各树种通用；大树、开花、结果每个树种一张
-function treeImage(stage, species) {
+function treeImage(stage) {
   if (!stage || stage === 'future') return ''
-  if (stage === 'empty' || stage === 'sprout' || stage === 'small') return `/images/forest/${stage}.png`
-  return `/images/forest/${stage}-${species || 'apple'}.png`
+  return `/images/forest/${stage}.png`
 }
 
-// 打卡结果页：这次打卡让今天的树发生了什么
+// 打卡结果页：这次打卡让今天的树发生了什么、得了多少暖豆
 function decorateTree(tree) {
   if (!tree) return null
   return {
     ...tree,
-    image: treeImage(tree.after, tree.species),
+    image: treeImage(tree.after),
     title: tree.grew && GREW_TITLES[tree.after] ? GREW_TITLES[tree.after] : `今天的树：${tree.stageLabel}`,
+    beansText: tree.beans > 0 ? `+${tree.beans} 暖豆` : '',
   }
 }
 
@@ -92,9 +91,11 @@ function treeCard(tree) {
   if (!tree) return null
   return {
     ...tree,
-    image: treeImage(tree.stage, tree.species),
-    title: tree.stage === 'empty' ? '今天还没种树' : `今天的${tree.speciesName}：${tree.stageLabel}`,
+    image: treeImage(tree.stage),
+    title: tree.stage === 'empty' ? '今天还没种树' : `今天的树：${tree.stageLabel}`,
     streakText: tree.streak > 0 ? `🔥 已连续 ${tree.streak} 天` : '',
+    beansText: tree.beansToday > 0 ? `今天已得 ${tree.beansToday} 暖豆` : '',
+    hintText: tree.nextGain > 0 ? `${tree.hint}，再得 ${tree.nextGain} 暖豆` : tree.hint,
   }
 }
 
@@ -108,7 +109,7 @@ function buildForestCells(days, firstWeekday) {
       ...d,
       key: d.date,
       future: d.stage === 'future',
-      image: treeImage(d.stage, d.species),
+      image: treeImage(d.stage),
     })
   })
   return cells

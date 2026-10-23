@@ -30,58 +30,6 @@
   color: var(--muted);
 }
 
-.species-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
-}
-
-.species {
-  width: calc((100% - 32rpx) / 3);
-  box-sizing: border-box;
-  text-align: center;
-  padding: 12rpx 8rpx 16rpx;
-  border-radius: 20rpx;
-  border: 3rpx solid transparent;
-  background: var(--gray-soft);
-}
-
-.species-on {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-}
-
-.species-image {
-  width: 120rpx;
-  height: 120rpx;
-  display: block;
-  margin: 0 auto;
-}
-
-.species-name {
-  font-size: 28rpx;
-  font-weight: 600;
-}
-
-.species-locked .species-image {
-  filter: grayscale(1);
-  opacity: 0.4;
-}
-
-.species-locked .species-name {
-  color: var(--gray);
-}
-
-.species-lock {
-  font-size: 22rpx;
-  color: var(--gray);
-}
-
-.unlock-tip {
-  margin-top: 20rpx;
-  text-align: center;
-}
-
 .month-bar {
   display: flex;
   align-items: center;

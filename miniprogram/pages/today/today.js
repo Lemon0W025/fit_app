@@ -1,6 +1,5 @@
 const api = require('../../utils/api')
 const { buildDayView, greetingText, treeCard } = require('../../utils/view')
-const { celebrateUnlocks } = require('../../utils/celebrate')
 const { localHour } = require('../../utils/shared/date')
 
 Page({
@@ -34,7 +33,6 @@ Page({
           tree: treeCard(day.tree),
           greeting: greetingText(localHour(), day.profile.nickname),
         })
-        if (day.tree) celebrateUnlocks(day.tree.newlyUnlocked, () => this.goForest())
       })
       .catch((err) => {
         this.setData({ loading: false })
