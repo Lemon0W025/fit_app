@@ -1,4 +1,4 @@
-"""生成小程序里用到的图片：tabBar 图标、小岛底图和没修整角落的遮罩、庭院物品和界面图的占位图，以及给 Codex 的小岛布局草图。
+"""生成小程序里用到的图片：tabBar 图标、修整木牌、亮格，以及庭院物品和界面图的占位图。
 
 用法（需要 Pillow）：
     python3 scripts/draw-images.py            # 占位图只补缺的，不覆盖已有的正式美术
@@ -15,7 +15,7 @@ import random
 import subprocess
 import sys
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'miniprogram', 'images')
 K = 4
@@ -145,11 +145,6 @@ def save_small(img, *parts, quantize=True):
     img.save(path, optimize=True)
 
 
-WILD = (126, 160, 92)
-WEED = ((92, 140, 66), (120, 166, 82), (150, 170, 90))
-STONE = ((168, 162, 150), (140, 134, 124))
-
-
 def draw_sign():
     """开荒木牌：一根木桩 + 上面一块空白木板（价格由页面写上去）"""
     S = 480
@@ -164,119 +159,6 @@ def draw_sign():
         d.line([(70, y), (S - 70, y)], fill=shade(board, 0.9), width=4)
     d.ellipse([S / 2 - 12, 58, S / 2 + 12, 82], fill=wood)
     save_small(img.resize((240, 240), Image.LANCZOS), 'garden', 'sign.png')
-
-
-ISLAND = 12
-SAND = (240, 224, 184)
-SAND_DARK = (222, 200, 152)
-PATH_STONE = (230, 218, 194)
-PATH_EDGE = (198, 184, 158)
-BED_SOIL = (118, 160, 86)
-BED_EDGE = (176, 150, 112)
-
-
-def draw_island():
-    """整座小岛的底图：草地、十字石板路、四个花坛的底色、沙滩边、悬崖土边。和 utils/world.js 的 islandView 对齐"""
-    W = 1440 * 2
-    tw = W / ISLAND
-    th = tw / 2
-    depth = th * 0.4
-    H = int(ISLAND * th + depth) + 2
-    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    top = lambda c, r: (W / 2 + (c - r) * tw / 2, (c + r) * th / 2)
-    quad = lambda c0, r0, c1, r1: [top(c0, r0), top(c1, r0), top(c1, r1), top(c0, r1)]
-    left, bottom, right = top(0, ISLAND), top(ISLAND, ISLAND), top(ISLAND, 0)
-    # 悬崖土边，上面一圈沙滩
-    d.polygon([left, bottom, (bottom[0], bottom[1] + depth), (left[0], left[1] + depth)], fill=SOIL_LEFT)
-    d.polygon([bottom, right, (right[0], right[1] + depth), (bottom[0], bottom[1] + depth)], fill=SOIL_RIGHT)
-    rim = depth * 0.45
-    d.polygon([left, bottom, (bottom[0], bottom[1] + rim), (left[0], left[1] + rim)], fill=SAND)
-    d.polygon([bottom, right, (right[0], right[1] + rim), (bottom[0], bottom[1] + rim)], fill=SAND_DARK)
-    # 草地：一整片，深浅斑驳，不画格子
-    d.polygon(quad(0, 0, ISLAND, ISLAND), fill=GRASS)
-    layer = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(layer)
-    rnd = random.Random(12)
-    for _ in range(320):
-        c, r = rnd.uniform(0.3, ISLAND - 0.3), rnd.uniform(0.3, ISLAND - 0.3)
-        x, y = top(c, r)
-        rx = rnd.uniform(0.3, 0.9) * tw
-        color = shade(GRASS, 0.93) if rnd.random() < 0.5 else tint(GRASS, 0.12)
-        ld.ellipse([x - rx, y - rx / 2, x + rx, y + rx / 2], fill=color + (70,))
-    # 只留小岛上的部分，别洇到海上
-    land = Image.new('L', (W, H), 0)
-    ImageDraw.Draw(land).polygon(quad(0, 0, ISLAND, ISLAND), fill=255)
-    layer.putalpha(Image.composite(layer.getchannel('A'), land, land))
-    img.alpha_composite(layer)
-    d = ImageDraw.Draw(img)
-    # 四个花坛：深一点的土色，围一圈浅边
-    for c0, r0 in ((0, 0), (9, 0), (0, 9), (9, 9)):
-        d.polygon(quad(c0 + 0.2, r0 + 0.2, c0 + 2.8, r0 + 2.8), fill=BED_SOIL, outline=BED_EDGE, width=10)
-    # 十字石板路：c = 6 一列、r = 6 一行（花坛里没有）
-    path_tiles = {(6, i) for i in range(ISLAND)} | {(i, 6) for i in range(ISLAND)}
-    for c, r in sorted(path_tiles):
-        d.polygon(quad(c + 0.04, r + 0.04, c + 0.96, r + 0.96), fill=PATH_STONE)
-        for _ in range(3):
-            sc, sr = c + rnd.uniform(0.25, 0.75), r + rnd.uniform(0.25, 0.75)
-            x, y = top(sc, sr)
-            rx = rnd.uniform(0.12, 0.2) * tw
-            d.ellipse([x - rx, y - rx / 2, x + rx, y + rx / 2], fill=tint(PATH_STONE, 0.3), outline=PATH_EDGE, width=5)
-    # 草的小笔触
-    for _ in range(ISLAND * ISLAND * 3):
-        c, r = rnd.uniform(0.2, ISLAND - 0.2), rnd.uniform(0.2, ISLAND - 0.2)
-        if (int(c), int(r)) in path_tiles:
-            continue
-        x, y = top(c, r)
-        d.line([(x, y), (x + 3, y - 12)], fill=GRASS_DARK, width=5)
-    img = img.resize((W // 2, H // 2), Image.LANCZOS)
-    save_small(img, 'garden', 'island.png')
-
-
-def draw_locked():
-    """没修整的角落遮罩：杂草地 + 一圈篱笆。横着的（c 方向 6 格、r 方向 3 格）画一张，竖着的是它的镜像"""
-    w, h = 6, 3
-    tw = 480
-    th = tw / 2
-    up = tw * 0.6
-    W = int((w + h) * tw / 2)
-    H = int((w + h) * th / 2 + up) + 2
-    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    x0 = h * tw / 2
-    top = lambda c, r: (x0 + (c - r) * tw / 2, up + (c + r) * th / 2)
-    rnd = random.Random(21)
-    post_h = th * 0.9
-
-    def fence(a, b):
-        (ca, ra), (cb, rb) = a, b
-        n = int(max(abs(cb - ca), abs(rb - ra)) / 0.75) + 1
-        points = [top(ca + (cb - ca) * k / n, ra + (rb - ra) * k / n) for k in range(n + 1)]
-        for frac in (0.35, 0.72):
-            d.line([(x, y - post_h * frac) for x, y in points], fill=(150, 108, 66), width=14)
-        for x, y in points:
-            d.rounded_rectangle([x - 12, y - post_h, x + 12, y + 6], radius=8, fill=(126, 88, 52))
-
-    d.polygon([top(0, 0), top(w, 0), top(w, h), top(0, h)], fill=WILD)
-    fence((0, 0), (w, 0))
-    fence((0, 0), (0, h))
-    for _ in range(26):
-        c, r = rnd.uniform(0.3, w - 0.3), rnd.uniform(0.3, h - 0.3)
-        x, y = top(c, r)
-        rx = rnd.uniform(14, 28)
-        d.ellipse([x - rx, y - rx / 2, x + rx, y + rx / 2], fill=rnd.choice(STONE))
-    for _ in range(320):
-        c, r = rnd.uniform(0.1, w - 0.1), rnd.uniform(0.1, h - 0.1)
-        x, y = top(c, r)
-        color = rnd.choice(WEED)
-        hgt = rnd.uniform(26, 56)
-        for dx in (-10, 0, 10):
-            d.line([(x, y), (x + dx * 1.6 + rnd.uniform(-6, 6), y - hgt)], fill=color, width=7)
-    fence((w, 0), (w, h))
-    fence((0, h), (w, h))
-    img = img.resize((W // 2, H // 2), Image.LANCZOS)
-    save_small(img, 'garden', 'locked-wide.png')
-    save_small(img.transpose(Image.FLIP_LEFT_RIGHT), 'garden', 'locked-tall.png')
 
 
 def draw_hint():
@@ -326,74 +208,7 @@ def draw_gacha_machine():
     return img.resize((320, 320), Image.LANCZOS)
 
 
-GUIDE_FONT = '/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc'
-GUIDE_COLORS = {
-    'center': (196, 228, 160), 'pond': (176, 214, 236), 'bamboo': (170, 214, 150),
-    'veg': (232, 214, 150), 'tea': (230, 196, 196),
-}
-
-
-def draw_guide():
-    """art/guide/island-layout.png：小岛布局草图（分区、小路、花坛、风景位置），交给 Codex 照着画精致底图"""
-    regions = json.loads(subprocess.check_output(
-        ['node', '-e', "const g=require('./cloudfunctions/api/lib/shared/garden');"
-         "console.log(JSON.stringify({regions:g.REGIONS,scenery:g.SCENERY.map((s)=>({...s,name:g.itemById(s.itemId).name}))}))"],
-        cwd=REPO))
-    W = 1600
-    tw = W / ISLAND
-    th = tw / 2
-    H = int(ISLAND * th) + 420
-    img = Image.new('RGB', (W, H), (150, 200, 230))
-    d = ImageDraw.Draw(img)
-    top = lambda c, r: (W / 2 + (c - r) * tw / 2, 100 + (c + r) * th / 2)
-    quad = lambda c0, r0, c1, r1: [top(c0, r0), top(c1, r0), top(c1, r1), top(c0, r1)]
-    try:
-        font = ImageFont.truetype(GUIDE_FONT, 22)
-        big = ImageFont.truetype(GUIDE_FONT, 30)
-    except OSError:
-        font = big = ImageFont.load_default()
-
-    def label(x, y, text, f):
-        box = d.textbbox((x, y), text, font=f, anchor='mm')
-        d.rounded_rectangle([box[0] - 8, box[1] - 4, box[2] + 8, box[3] + 4], radius=8, fill=(255, 255, 255))
-        d.text((x, y), text, fill=(40, 40, 40), font=f, anchor='mm')
-
-    d.polygon(quad(0, 0, ISLAND, ISLAND), fill=(120, 170, 90))
-    for g in regions['regions']:
-        c0, r0, c1, r1 = g['rect']
-        d.polygon(quad(c0, r0, c1, r1), fill=GUIDE_COLORS[g['id']], outline=(80, 80, 80), width=3)
-    for i in range(ISLAND):
-        for c, r in ((6, i), (i, 6)):
-            d.polygon(quad(c + 0.1, r + 0.1, c + 0.9, r + 0.9), fill=(235, 225, 200))
-    for c0, r0 in ((0, 0), (9, 0), (0, 9), (9, 9)):
-        label(*top(c0 + 1.5, r0 + 1.5), 'flower bed 花坛', font)
-    for g in regions['regions']:
-        c0, r0, c1, r1 = g['rect']
-        cost = f" · {g['cost']}" if g['cost'] else ''
-        # 中间花园的名字往后挪一点，别压在十字路口上
-        c, r = ((c0 + c1) / 2, (r0 + r1) / 2) if g['id'] != 'center' else (4.5, 4.5)
-        label(*top(c, r), f"{g['id'].upper()} {g['name']}{cost}", big)
-    # 风景：格子上画编号，下面列图例
-    for i, s in enumerate(regions['scenery'], 1):
-        x, y = top(s['c'] + 0.5, s['r'] + 0.5)
-        d.ellipse([x - 20, y - 20, x + 20, y + 20], fill=(200, 60, 60), outline=(255, 255, 255), width=3)
-        d.text((x, y), str(i), fill=(255, 255, 255), font=font, anchor='mm')
-    legend_top = int(ISLAND * th) + 200
-    d.text((40, legend_top), 'Scenery 风景（每件占一格；红圈编号 = 位置）', fill=(30, 30, 30), font=font)
-    for i, s in enumerate(regions['scenery'], 1):
-        col, row = (i - 1) % 3, (i - 1) // 3
-        x, y = 40 + col * 520, legend_top + 44 + row * 40
-        d.ellipse([x, y, x + 30, y + 30], fill=(200, 60, 60))
-        d.text((x + 15, y + 15), str(i), fill=(255, 255, 255), font=font, anchor='mm')
-        d.text((x + 42, y + 15), f"{s['itemId']} {s['name']}  ({s['region']}, c{s['c']} r{s['r']})", fill=(30, 30, 30), font=font, anchor='lm')
-    path = os.path.join(REPO, 'art', 'guide', 'island-layout.png')
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    img.save(path, optimize=True)
-
-
 def draw_garden(force=False):
-    draw_island()
-    draw_locked()
     draw_hint()
     draw_sign()
     # 物品与界面的占位图：已经有正式美术就不覆盖
@@ -425,5 +240,4 @@ def draw_garden(force=False):
 if __name__ == '__main__':
     draw_tabs()
     draw_garden(force='--force' in sys.argv)
-    draw_guide()
     print('images written to', os.path.normpath(ROOT))
