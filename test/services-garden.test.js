@@ -36,7 +36,7 @@ test('get：第一次进来送 60 暖豆和一棵大树，只送一次', async (
   assert.deepEqual([first.placed[0].c, first.placed[0].r], [11, 16])
   assert.ok(first.placed[0].uid)
   assert.equal(first.collectedCount, 0)
-  assert.equal(first.totalCount, 66)
+  assert.equal(first.totalCount, 68)
   assert.equal(first.spinCost, 30)
   assert.equal(first.pityLeft, PITY)
   assert.deepEqual(first.rates.map((r) => r.weight), [65, 25, 8, 2])

@@ -49,6 +49,7 @@ function createLife({
     .map((id, index) => ({
       index, id, info: A.ANIMAL_INFO[id],
       c: -1, r: -1, flip: false, action: 'idle', goal: null, path: [], afloat: false,
+      px: 0, py: 0, perchKey: '', hidden: false, arriving: false,
       bubble: '', tapping: false, duration: 0,
       timer: null, bubbleTimer: null, tapTimer: null,
     }))
@@ -68,7 +69,7 @@ function createLife({
     const set = new Set(swims(self) ? closed.water : closed.land)
     items.forEach((p) => footprint(p.itemId, p.c, p.r).forEach((t) => set.add(key(t))))
     animals.forEach((a) => {
-      if (a !== self && inside(a)) set.add(key(a))
+      if (a !== self && !a.info.fly && inside(a)) set.add(key(a))
     })
     return set
   }
@@ -96,10 +97,23 @@ function createLife({
     action: a.action,
     play: a.goal && a.goal.type === 'play' ? a.goal.play : null,
     trick: a.goal && a.goal.type === 'trick' ? a.goal.trick : null,
+    flyer: a.info.fly ? a.id : '',
   })
 
   function sprite(a) {
     const width = L.tileW * a.info.scale
+    if (a.info.fly) {
+      const bubbleWidth = Math.min(L.tileW * BUBBLE_TILES, L.width)
+      const bubbleX = Math.min(Math.max(a.px - bubbleWidth / 2, 0), L.width - bubbleWidth)
+      return {
+        id: a.id, image: itemImage(a.id), width, bodyHeight: width,
+        left: a.px - width / 2, bottom: L.height - a.py,
+        z: Math.round(((a.py - L.top) / L.tileH) * 20) + 60,
+        flip: a.flip, gait: a.info.gait, action: a.action, duration: a.duration, hidden: a.hidden,
+        bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (a.px - width / 2), bubbleBottom: width + 4,
+        emoji: '', tapping: a.tapping, shadow: null,
+      }
+    }
     const item = playing(a) && a.goal.play.play.at === 'on' ? itemOf(a.goal.play.uid) : null
     let x
     let y
@@ -133,6 +147,7 @@ function createLife({
       bottom: L.height - y,
       z,
       flip: a.flip,
+      hidden: false,
       gait: a.info.gait,
       action: a.action,
       duration: a.duration,
@@ -189,6 +204,83 @@ function createLife({
       a.bubble = ''
       emit(a)
     }, ms)
+  }
+
+  // ---------------------------------------------------------------- 会飞的
+
+  // 能停的地方：摆着的树 / 花 / 喂鸟台 / 花架，和壳里的活动点；都没有就在网格正中上空盘旋
+  function perchesFor(a) {
+    const f = A.FLYERS[a.id]
+    const out = []
+    items.forEach((p) => {
+      if (f.perches.indexOf(p.itemId) === -1) return
+      const anchor = itemAnchor(p, L)
+      out.push({ key: `item:${p.uid}`, c: p.c, r: p.r, x: anchor.x, y: anchor.y - anchor.width * f.perchY })
+    })
+    spots.forEach((s) => {
+      if (f.spotPerches.indexOf(s.id) === -1) return
+      const center = tileCenter(s.c, s.r, L)
+      out.push({ key: `spot:${s.id}`, c: s.c, r: s.r, x: center.x, y: center.y - L.tileW * 1.2 })
+    })
+    if (!out.length) {
+      const c = Math.floor(bounds.cols / 2)
+      const r = Math.floor(bounds.rows / 2)
+      const center = tileCenter(c, r, L)
+      out.push({ key: 'sky', c, r, x: center.x, y: center.y - L.tileW * 1.5 })
+    }
+    return out
+  }
+
+  function land(a, dest) {
+    a.px = dest.x
+    a.py = dest.y
+    a.c = dest.c
+    a.r = dest.r
+    a.perchKey = dest.key
+  }
+
+  function flyTo(a, dest) {
+    const f = A.FLYERS[a.id]
+    const d = Math.hypot(dest.x - a.px, dest.y - a.py)
+    a.flip = A.flipFor(a.info.faces, { c: a.px, r: 0 }, { c: dest.x, r: 0 }, a.flip)
+    a.duration = Math.max(400, Math.round((d / f.speed) * 1000))
+    land(a, dest)
+    a.action = 'fly'
+    a.hidden = false
+    emit(a)
+    schedule(a, a.duration)
+  }
+
+  function flyerTurn(a) {
+    const f = A.FLYERS[a.id]
+    if (a.arriving) {
+      a.arriving = false
+      return flyTo(a, perchesFor(a)[0])
+    }
+    const h = hour()
+    const away = f.hours ? h < f.hours[0] || h >= f.hours[1] : A.periodOf(h) === 'night'
+    if (away) {
+      a.hidden = true
+      a.action = f.hours ? 'away' : 'sleep'
+      emit(a)
+      return schedule(a, between(NIGHT_MS))
+    }
+    if (a.action === 'fly') {
+      a.action = 'perch'
+      emit(a)
+      return schedule(a, between(f.restMs))
+    }
+    // 歇够了、刚醒：换个地方停
+    const all = perchesFor(a)
+    const others = all.filter((p) => p.key !== a.perchKey)
+    const dest = others.length ? others[Math.min(others.length - 1, Math.floor(random() * others.length))] : all[0]
+    if (!dest || dest.key === a.perchKey) {
+      a.action = 'perch'
+      a.hidden = false
+      emit(a)
+      return schedule(a, between(f.restMs))
+    }
+    flyTo(a, dest)
   }
 
   // 走到了目的地：开始玩 / 做小事 / 睡觉
@@ -263,6 +355,7 @@ function createLife({
 
   function turn(a) {
     a.timer = null
+    if (a.info.fly) return flyerTurn(a)
     if (playing(a) || tricking(a)) return endGoal(a)
     if (a.path.length) return followPath(a)
     const period = A.periodOf(hour())
@@ -306,6 +399,12 @@ function createLife({
 
   // 住户：站在家附近的空格；没有家就在前院、正院随便站
   function settleIn(a) {
+    if (a.info.fly) {
+      const all = perchesFor(a)
+      land(a, all[Math.min(all.length - 1, Math.floor(random() * all.length))])
+      a.action = 'perch'
+      return
+    }
     const free = freeTiles(blockedFor(a))
     if (!free.length) return
     const home = A.homeOf(a.id, items)
@@ -320,6 +419,18 @@ function createLife({
   // 新住户：从大门走进来，一路走到家旁边（没有家就走到最近的空格）
   function walkIn(a) {
     if (!door) return settleIn(a)
+    if (a.info.fly) {
+      // 先停在大门口，第一次轮到它时再飞到树上（这样第一帧在门口，飞进来的过程看得见）
+      const from = tileCenter(door.c, door.r, L)
+      a.px = from.x
+      a.py = from.y
+      a.c = door.c
+      a.r = door.r
+      a.action = 'fly'
+      a.arriving = true
+      say(a, a.info.hello, HELLO_MS)
+      return
+    }
     const blocked = blockedFor(a)
     const home = A.homeOf(a.id, items)
     const free = freeTiles(blocked)
@@ -383,6 +494,12 @@ function createLife({
     updatePlaced(next) {
       items = next
       animals.forEach((a) => {
+        if (a.info.fly) {
+          // 停的那件东西没了：换个地方
+          if (a.perchKey.indexOf('item:') === 0 && !itemOf(a.perchKey.slice(5))) flyTo(a, perchesFor(a)[0])
+          else emit(a)
+          return
+        }
         if (a.goal && a.goal.type === 'play') {
           const item = itemOf(a.goal.play.uid)
           if (!item || !same(item, a.goal.play.item)) {

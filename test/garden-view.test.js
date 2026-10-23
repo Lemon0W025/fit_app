@@ -63,7 +63,7 @@ test('inventoryList：带上名称、图片和稀有度颜色', () => {
 test('collectionGroups：按稀有度分组（不含小动物），再加小动物和节气限定', () => {
   const groups = collectionGroups(['daisy', 'panda', 'snowman', 'osmanthus'])
   assert.deepEqual(groups.map((g) => [g.label, g.items.length]), [
-    ['普通', 26], ['稀有', 17], ['珍稀', 6], ['传说', 3], ['小动物', 9], ['节气限定', 5],
+    ['普通', 26], ['稀有', 17], ['珍稀', 6], ['传说', 3], ['小动物', 11], ['节气限定', 5],
   ])
   const daisy = groups[0].items.find((i) => i.id === 'daisy')
   assert.equal(daisy.collected, true)

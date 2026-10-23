@@ -25,6 +25,14 @@ test('每只动物都有脾气、台词和搬家的话', () => {
   assert.deepEqual(A.SWIMMERS, ['duck', 'turtle', 'crane'])
   assert.deepEqual([A.ANIMAL_INFO.panda.gait, A.ANIMAL_INFO.tabby_cat.gait, A.ANIMAL_INFO.rabbit.gait, A.ANIMAL_INFO.duck.gait, A.ANIMAL_INFO.turtle.gait, A.ANIMAL_INFO.crane.gait],
     ['pad', 'pad', 'hop', 'waddle', 'crawl', 'stride'])
+  assert.deepEqual([A.ANIMAL_INFO.bird.gait, A.ANIMAL_INFO.butterfly.gait, A.ANIMAL_INFO.bird.fly, A.ANIMAL_INFO.panda.fly], ['fly', 'flutter', true, undefined])
+  assert.deepEqual(Object.keys(A.FLYERS).sort(), ['bird', 'butterfly'])
+  for (const f of Object.values(A.FLYERS)) {
+    f.perches.forEach((id) => assert.ok(itemById(id) && itemById(id).kind !== 'animal', id))
+    assert.ok(f.perchY > 0 && f.perchY < 1 && f.speed > 0 && f.restMs[0] <= f.restMs[1])
+  }
+  assert.deepEqual(A.FLYERS.butterfly.hours, [8, 18])
+  assert.deepEqual(A.FLYERS.bird.spotPerches, ['rockery'])
 })
 
 test('互动表里的物件和动物都存在，上面的物件有落脚点', () => {
@@ -151,7 +159,8 @@ test('小事表：动物、活动点都对得上，每只至少两件', () => {
     if (t.spot) assert.ok(spotIds.indexOf(t.spot) !== -1, `${t.id} 的活动点 ${t.spot}`)
     assert.ok(t.emoji && t.doing && t.line, t.id)
   }
-  for (const id of ANIMALS) assert.ok(A.TRICKS.filter((t) => t.animals.indexOf(id) !== -1).length >= 2, id)
+  // 会飞的不做地上的小事
+  for (const id of ANIMALS) if (!A.ANIMAL_INFO[id].fly) assert.ok(A.TRICKS.filter((t) => t.animals.indexOf(id) !== -1).length >= 2, id)
   for (const [id, spot] of Object.entries(A.SLEEP_SPOTS)) assert.ok(ANIMALS.indexOf(id) !== -1 && spotIds.indexOf(spot) !== -1, id)
 })
 
@@ -209,6 +218,11 @@ test('describe：告诉你它在哪在干嘛', () => {
   assert.equal(A.describe({ action: 'walk', play: null, trick: null }, '正院', ''), '正往那边走')
   assert.equal(A.describe({ action: 'idle', play: null, trick: null }, '前院', ''), '在前院溜达')
   assert.equal(A.describe({ action: 'idle', play: null, trick: null }, '', ''), '溜达')
+  assert.equal(A.describe({ action: 'perch', play: null, trick: null, flyer: 'bird' }, '果园', ''), '在果园的树上歇着')
+  assert.equal(A.describe({ action: 'perch', play: null, trick: null, flyer: 'butterfly' }, '花圃院', ''), '在花圃院的花上停着')
+  assert.equal(A.describe({ action: 'fly', play: null, trick: null, flyer: 'bird' }, '正院', ''), '在正院飞来飞去')
+  assert.equal(A.describe({ action: 'sleep', play: null, trick: null, flyer: 'bird' }, '正院', ''), '在树里睡觉')
+  assert.equal(A.describe({ action: 'away', play: null, trick: null, flyer: 'butterfly' }, '', ''), '天凉了，明早再来')
 })
 
 test('strollTarget：一次走 2～4 格的小段路，只走允许的格子，离家远了往家走', () => {

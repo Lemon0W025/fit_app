@@ -230,7 +230,7 @@ test('whereIs / focus：告诉你每只在哪在干嘛，找它时冒爱心', ()
   assert.equal(list.length, 2)
   assert.deepEqual([list[0].index, list[0].id, list[0].name, list[0].image], [0, 'tabby_cat', '小花猫', '/images/garden/items/tabby_cat.png'])
   assert.ok(['main', 'pond'].indexOf(list[0].area) !== -1)
-  assert.deepEqual(list[0].state, { action: 'idle', play: null, trick: null })
+  assert.deepEqual(list[0].state, { action: 'idle', play: null, trick: null, flyer: '' })
   assert.deepEqual({ c: list[0].c, r: list[0].r }, tileOf(sprites[0]))
   const where = life.focus(0)
   assert.deepEqual(where, { c: list[0].c, r: list[0].r })
@@ -306,5 +306,95 @@ test('走路带步态，而且一次走一小段，不是一格一停', () => {
   assert.equal(gait, 'pad')
   // 熊猫一步 1800ms：连续走 2 格以上就是 ≥ 36 个 100ms 采样
   assert.ok(longest >= 36, `最长连续走 ${longest}`)
+  life.stop()
+})
+
+// 会飞的停在哪：身子底边在物件落点上方 perchY 个图宽
+function perchPoints(placed, id) {
+  return placed.filter((p) => A.FLYERS[id].perches.indexOf(p.itemId) !== -1).map((p) => {
+    const a = itemAnchor(p, L)
+    return { x: a.x, bottom: L.height - (a.y - a.width * A.FLYERS[id].perchY) }
+  })
+}
+const onPerch = (s, points) => points.some((p) => Math.abs(s.left + s.width / 2 - p.x) < 0.01 && Math.abs(s.bottom - p.bottom) < 0.01)
+
+test('小鸟在树和喂鸟台之间飞、停在树冠上，不占格；晚上藏在树里，早上再出来', () => {
+  const placed = [{ uid: 't1', itemId: 'osmanthus', c: 1, r: 1 }, { uid: 't2', itemId: 'orange_tree', c: 3, r: 4 }, { uid: 'f1', itemId: 'bird_feeder', c: 8, r: 4 }]
+  let hour = 10
+  const { clock, life, sprites } = setup({ placed, residents: ['bird', 'chick'], random: lcg(4), hour: () => hour })
+  const points = perchPoints(placed, 'bird')
+  const bird = sprites[0]
+  assert.deepEqual([bird.id, bird.gait, bird.shadow, bird.hidden, bird.action], ['bird', 'fly', null, false, 'perch'])
+  assert.ok(onPerch(bird, points), '一开始没停在树上')
+  life.start()
+  const seen = new Set()
+  let flew = false
+  for (let t = 0; t < 5 * 60 * 1000; t += 200) {
+    clock.advance(200)
+    const s = sprites[0]
+    if (s.action === 'fly') flew = true
+    if (s.action === 'perch') {
+      assert.ok(onPerch(s, points), `停错地方 ${s.left},${s.bottom}`)
+      points.forEach((p, i) => { if (Math.abs(s.left + s.width / 2 - p.x) < 0.01) seen.add(i) })
+    }
+  }
+  assert.ok(flew, '没飞过')
+  assert.ok(seen.size >= 2, '只停过一个地方')
+  // 小鸡照样能走到树下那格（小鸟不占格）
+  assert.ok(sprites[1].action !== undefined)
+  hour = 21
+  clock.advance(60 * 1000)
+  assert.deepEqual([sprites[0].hidden, sprites[0].action], [true, 'sleep'])
+  hour = 9
+  clock.advance(120 * 1000)
+  assert.equal(sprites[0].hidden, false)
+  life.stop()
+})
+
+test('蝴蝶只在 8～18 点出现，停在花上；没有花就在院子上空盘旋', () => {
+  const placed = [{ uid: 'f1', itemId: 'daisy', c: 2, r: 2 }, { uid: 'f2', itemId: 'sunflower', c: 7, r: 3 }]
+  let hour = 20
+  const { clock, life, sprites } = setup({ placed, residents: ['butterfly'], random: lcg(6), hour: () => hour })
+  life.start()
+  clock.advance(5000)
+  assert.deepEqual([sprites[0].hidden, sprites[0].action, sprites[0].gait], [true, 'away', 'flutter'])
+  hour = 10
+  clock.advance(120 * 1000)
+  assert.equal(sprites[0].hidden, false)
+  const points = perchPoints(placed, 'butterfly')
+  let perched = false
+  for (let t = 0; t < 2 * 60 * 1000 && !perched; t += 200) {
+    clock.advance(200)
+    if (sprites[0].action === 'perch') perched = onPerch(sprites[0], points)
+  }
+  assert.ok(perched, '没停到花上')
+  life.stop()
+
+  const bare = setup({ placed: [], residents: ['butterfly'], random: lcg(6), hour: () => 10 })
+  bare.life.start()
+  bare.clock.advance(30000)
+  assert.equal(bare.sprites[0].hidden, false)
+  assert.ok(Number.isFinite(bare.sprites[0].left) && Number.isFinite(bare.sprites[0].bottom))
+  bare.life.stop()
+})
+
+test('新来的小鸟从大门飞进来，先说你好；whereIs 说它在树上', () => {
+  const placed = [{ uid: 't1', itemId: 'osmanthus', c: 1, r: 1 }]
+  const { clock, life, sprites } = setup({ placed, residents: ['bird'], arrivals: ['bird'], door: DOOR, random: lcg(3) })
+  const doorCenter = tileCenter(DOOR.c, DOOR.r, L)
+  assert.ok(Math.abs(sprites[0].left + sprites[0].width / 2 - doorCenter.x) < 0.01)
+  assert.equal(sprites[0].bubble, A.ANIMAL_INFO.bird.hello)
+  assert.equal(sprites[0].action, 'fly')
+  life.start()
+  clock.advance(10000)
+  assert.ok(onPerch(sprites[0], perchPoints(placed, 'bird')))
+  const w = life.whereIs()[0]
+  assert.deepEqual([w.c, w.r, w.area, w.state.flyer], [1, 1, 'main', 'bird'])
+  assert.equal(A.describe(w.state, '正院', ''), '在正院的树上歇着')
+  // 树收走了：换个地方（没别的地方就在上空盘旋）
+  life.updatePlaced([])
+  assert.equal(sprites[0].hidden, false)
+  life.tap(0)
+  assert.ok(sprites[0].bubble)
   life.stop()
 })

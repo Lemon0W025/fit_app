@@ -12,12 +12,12 @@
         </block>
         <block wx:for="{{animals}}" wx:key="id">
           <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}; transition-duration: {{item.duration}}ms"></view>
-          <view class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
+          <view wx:if="{{!item.hidden}}" class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
             <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <view wx:if="{{item.tapping}}" class="heart">❤️</view>
             <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.bodyHeight < item.width ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
-              <image class="animal-img act-{{item.action}} {{item.action === 'walk' ? 'gait-' + item.gait : ''}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+              <image class="animal-img act-{{item.action}} {{item.action === 'walk' || item.action === 'fly' ? 'gait-' + item.gait : ''}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
             </view>
             <view wx:if="{{item.bodyHeight < item.width}}" class="ripple"></view>
           </view>

@@ -65,6 +65,16 @@ const ANIMAL_INFO = {
     likesText: '喜欢：大熊猫 + 3 丛翠竹', arrive: '竹林长大了，熊猫一家都搬进花园啦！', hello: '我们是熊猫一家，以后就住这儿啦！',
     lines: ['一家人一起吃饭最香', '宝宝也要好好吃饭哦', '一起散步去～', '团团圆圆，平平安安'],
   },
+  bird: {
+    scale: 0.4, stepMs: 600, pauseMs: [3000, 8000], sleepy: 0, faces: 'left', top: 0.05, gait: 'fly', fly: true,
+    likesText: '喜欢：满 3 棵树，或喂鸟台', arrive: '树多了，小鸟扑棱棱飞进花园啦！', hello: '啾啾！我是小鸟，以后就在树上住啦',
+    lines: ['啾啾～早起的鸟儿有虫吃', '多晒太阳，骨头好', '饭后走一走，啾', '今天天气真好呀'],
+  },
+  butterfly: {
+    scale: 0.32, stepMs: 600, pauseMs: [2000, 6000], sleepy: 0, faces: 'right', top: 0.05, gait: 'flutter', fly: true,
+    likesText: '喜欢：满 3 丛花，或花架', arrive: '花开了，蝴蝶翩翩飞进花园啦！', hello: '我是小蝴蝶，花开的时候就来看你',
+    lines: ['花香真好闻～', '慢慢来，别着急', '心情好，身体就好', '陪你在花园里转转'],
+  },
 }
 
 // 能一起玩的物件。at：beside 站到旁边的空格；on 到物件上面，spot 是落脚点在物件图里的位置（x 从左、y 从下，按图宽的比例）
@@ -111,6 +121,19 @@ const SLEEP_SPOTS = {
 }
 // 早上往这些院子凑
 const MORNING_AREAS = ['front', 'main']
+
+// 会飞的：在停靠点之间飞，不占格。perches 能停的物件、spotPerches 能停的壳里活动点；perchY 停在物件图多高处（按图宽的比例，从落点往上）；
+// speed 像素 / 秒；restMs 停多久；hours 出现的钟点段（没有就白天都在、19 点后睡）
+const FLYERS = {
+  bird: {
+    perches: ['osmanthus', 'orange_tree', 'persimmon_tree', 'plum_tree', 'golden_ginkgo', 'swing_tree', 'starter_tree', 'bird_feeder'],
+    spotPerches: ['rockery'], perchY: 0.78, speed: 220, restMs: [8000, 20000],
+  },
+  butterfly: {
+    perches: ['daisy', 'chrysanthemum', 'orchid', 'sunflower', 'dandelion', 'wintersweet', 'lotus_clump', 'water_lily', 'flower_rack'],
+    spotPerches: [], perchY: 0.7, speed: 90, restMs: [4000, 10000], hours: [8, 18],
+  },
+}
 
 // 一天的时段：morning 6～9 往前院正院凑、noon 11～14 爱打盹、night 19 点后回窝睡、其他 day
 function periodOf(hour) {
@@ -332,6 +355,12 @@ function lineFor(animalId, state, rand) {
 // 「找它」列表里的一句话：在哪、在干嘛
 function describe(state, areaName, toAreaName) {
   const at = areaName ? `在${areaName}` : ''
+  if (state.flyer) {
+    if (state.action === 'sleep') return '在树里睡觉'
+    if (state.action === 'away') return '天凉了，明早再来'
+    if (state.action === 'fly') return `${at}飞来飞去`
+    return state.flyer === 'bird' ? `${at}的树上歇着` : `${at}的花上停着`
+  }
   if (state.action === 'sleep') return `${at}睡觉`
   if (state.trick && (state.action === 'trick' || state.action === 'soak')) return `${at}${state.trick.doing}`
   if (state.play && state.action === state.play.play.action) return `${at}${PLAY_DOING[state.action] || '玩'}`
@@ -346,6 +375,7 @@ module.exports = {
   SWIMMERS,
   SLEEP_SPOTS,
   MORNING_AREAS,
+  FLYERS,
   PLAY_CHANCE,
   PLAY_RANGE,
   HOME_RANGE,

@@ -36,7 +36,7 @@ test('物品表：id 唯一，各稀有度数量，节气限定都能对上节�
   assert.equal(new Set(ids).size, ids.length)
   const pool = ITEMS.filter((i) => !i.starter && !i.term)
   const count = (rarity) => pool.filter((i) => i.rarity === rarity).length
-  assert.deepEqual([count('common'), count('rare'), count('epic'), count('legendary')], [26, 22, 9, 4])
+  assert.deepEqual([count('common'), count('rare'), count('epic'), count('legendary')], [27, 23, 9, 4])
   const seasonal = ITEMS.filter((i) => i.term)
   assert.equal(seasonal.length, 5)
   const termKeys = new Set(SOLAR_TERMS.map((t) => t.key))
@@ -50,7 +50,7 @@ test('物品表：id 唯一，各稀有度数量，节气限定都能对上节�
     assert.ok(RARITIES.some((r) => r.id === i.rarity), i.id)
   })
   assert.equal(itemById(STARTER_ITEM).starter, true)
-  assert.equal(collectibleCount(), 66)
+  assert.equal(collectibleCount(), 68)
 })
 
 test('itemById', () => {
@@ -145,8 +145,8 @@ test('物件的地面和占格', () => {
   assert.equal(itemById('reeds').rarity, 'common')
 })
 
-test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
-  assert.deepEqual(ANIMALS, ['chick', 'rabbit', 'duck', 'turtle', 'tabby_cat', 'panda', 'ginger_cat', 'crane', 'panda_family'])
+test('小动物：11 只，各有喜欢的物件，扭蛋里抽不到', () => {
+  assert.deepEqual(ANIMALS, ['butterfly', 'chick', 'rabbit', 'duck', 'turtle', 'tabby_cat', 'bird', 'panda', 'ginger_cat', 'crane', 'panda_family'])
   for (const id of ANIMALS) {
     const animal = itemById(id)
     assert.equal(animal.kind, 'animal')
@@ -165,6 +165,12 @@ test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
       assert.equal(ANIMALS.indexOf(id), -1, `${rarity} ${id}`)
     }
   }
+  assert.equal(itemById('bird').fly, true)
+  assert.equal(itemById('bird').likesCount, 3)
+  assert.deepEqual(itemById('bird').likesAny, ['bird_feeder'])
+  assert.ok(itemById('bird').likes.indexOf('starter_tree') !== -1)
+  assert.deepEqual(itemById('butterfly').likesAny, ['flower_rack'])
+  assert.equal(itemById('panda').fly, undefined)
 })
 
 test('placedOrder：摆放编号转成数字', () => {
@@ -199,14 +205,25 @@ test('waitingAnimals：likesAny 摆一件就够，和 likes 的数量条件二�
   const ITEMS_BACKUP = ITEMS.slice()
   ITEMS.push({ id: 'tester', name: '测试鸟', rarity: 'rare', size: 's', emoji: '🐦', kind: 'animal', likes: ['osmanthus', 'orange_tree'], likesCount: 2, likesAny: ['bird_feeder'] })
   try {
-    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'bird_feeder', c: 10, r: 15 }], []), ['tester'])
-    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }], []), [])
-    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }, { uid: 'p2', itemId: 'orange_tree', c: 12, r: 15 }], []), ['tester'])
+    // 真的小鸟也喜欢喂鸟台，先把它排除
+    const notBird = (list) => list.filter((id) => id !== 'bird')
+    assert.deepEqual(notBird(waitingAnimals([{ uid: 'p1', itemId: 'bird_feeder', c: 10, r: 15 }], [])), ['tester'])
+    assert.deepEqual(notBird(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }], [])), [])
+    assert.deepEqual(notBird(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }, { uid: 'p2', itemId: 'orange_tree', c: 12, r: 15 }], [])), ['tester'])
     // 排队按最早满足条件的那件算：喂鸟台 p1 比第二棵树 p3 早
     const placed = [{ uid: 'p3', itemId: 'orange_tree', c: 12, r: 15 }, { uid: 'p2', itemId: 'grass', c: 10, r: 16 }, { uid: 'p1', itemId: 'bird_feeder', c: 10, r: 15 }, { uid: 'p4', itemId: 'osmanthus', c: 15, r: 15 }]
-    assert.deepEqual(waitingAnimals(placed, []), ['tester', 'chick'])
+    assert.deepEqual(notBird(waitingAnimals(placed, [])), ['tester', 'chick'])
   } finally {
     ITEMS.length = 0
     ITEMS_BACKUP.forEach((i) => ITEMS.push(i))
   }
+})
+
+test('waitingAnimals：树满 3 棵来小鸟，花满 3 丛来蝴蝶', () => {
+  const trees = [{ uid: 'p1', itemId: 'osmanthus', c: 1, r: 19 }, { uid: 'p2', itemId: 'starter_tree', c: 11, r: 16 }, { uid: 'p3', itemId: 'plum_tree', c: 3, r: 21 }]
+  assert.deepEqual(waitingAnimals(trees, []), ['bird'])
+  assert.deepEqual(waitingAnimals(trees.slice(0, 2), []), [])
+  const flowers = [{ uid: 'p1', itemId: 'daisy', c: 19, r: 22 }, { uid: 'p2', itemId: 'sunflower', c: 20, r: 22 }, { uid: 'p3', itemId: 'water_lily', c: 22, r: 13 }]
+  assert.deepEqual(waitingAnimals(flowers, []), ['butterfly'])
+  assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'flower_rack', c: 10, r: 15 }], []), ['butterfly'])
 })

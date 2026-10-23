@@ -40,6 +40,8 @@ const ITEMS = [
   { id: 'scarecrow', name: '稻草人', rarity: 'common', size: 'm', emoji: '🧍' },
   { id: 'ladder', name: '木梯', rarity: 'common', size: 'm', emoji: '🪜' },
   { id: 'fruit_basket', name: '果篮', rarity: 'common', size: 's', emoji: '🧺' },
+  { id: 'butterfly', name: '蝴蝶', rarity: 'common', size: 's', emoji: '🦋', kind: 'animal', fly: true, likesCount: 3, likesAny: ['flower_rack'],
+    likes: ['daisy', 'chrysanthemum', 'orchid', 'sunflower', 'dandelion', 'wintersweet', 'lotus_clump', 'water_lily'] },
 
   { id: 'osmanthus', name: '桂花树', rarity: 'rare', size: 'l', emoji: '🌳' },
   { id: 'orange_tree', name: '橘子树', rarity: 'rare', size: 'l', emoji: '🍊' },
@@ -63,6 +65,8 @@ const ITEMS = [
   { id: 'koi_pond', name: '锦鲤池', rarity: 'rare', size: 'm', emoji: '🐟' },
   { id: 'turtle', name: '小乌龟', rarity: 'rare', size: 's', emoji: '🐢', kind: 'animal', likes: ['pebbles', 'stepping_stones'] },
   { id: 'tabby_cat', name: '小花猫', rarity: 'rare', size: 's', emoji: '🐈', kind: 'animal', likes: ['stool', 'bench'] },
+  { id: 'bird', name: '小鸟', rarity: 'rare', size: 's', emoji: '🐦', kind: 'animal', fly: true, likesCount: 3, likesAny: ['bird_feeder'],
+    likes: ['osmanthus', 'orange_tree', 'persimmon_tree', 'plum_tree', 'golden_ginkgo', 'swing_tree', 'starter_tree'] },
 
   { id: 'panda', name: '大熊猫', rarity: 'epic', size: 'm', emoji: '🐼', kind: 'animal', likes: ['bamboo'] },
   { id: 'ginger_cat', name: '晒太阳的橘猫', rarity: 'epic', size: 'm', emoji: '😺', kind: 'animal', likes: ['tea_table', 'tea_stove'] },

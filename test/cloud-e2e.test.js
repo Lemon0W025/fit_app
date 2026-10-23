@@ -156,7 +156,10 @@ test('养生庭院：打卡赚豆 → 新手礼 → 扭蛋 → 摆放 → 移动
   assert.equal(spin.ok, true, spin.message)
   assert.equal(spin.data.beans, 50)
   assert.equal(spin.data.isNew, true)
-  const itemId = spin.data.itemId
+  // 抽到什么是随机的（水里的东西开局没地方放），摆放那段固定用一丛雏菊
+  const itemId = 'daisy'
+  const spun = cloud.db.collections.get('gardens').get('u1')
+  cloud.db.collections.get('gardens').set('u1', { ...spun, inventory: { daisy: 1 } })
 
   const placed = await main({ action: 'garden.place', data: { itemId, c: 10, r: 15 } })
   assert.equal(placed.ok, true, placed.message)
