@@ -18,7 +18,7 @@
 - 1 倍缩放：`tileW = windowWidth × 0.96 / 9`；新手大树 `(11, 16)`；大门 `(13, 27)`、`(14, 27)`
 - 不能摆的原因（原文）：「放不到这里哦」「这个院子还没修整呢」「小路上不能摆东西」「这是水里，放不了它」「它得放到水里」「土里只能种花种菜」「石板地上种不了，换块草地」「这里放不下它」「这块地上已经有东西了」
 - 修整文案：「没有这个院子」「这个院子已经修整好了」「要先修好旁边的院子」「暖豆不够啦，修整要 X 暖豆，再攒攒」
-- 和设计文档的两处小出入（已和实现方式对齐）：① 格子表不是脚本生成的文件，而是 `estate.js` 在加载时按布局数据算出来（少一步生成、测试直接跑）；② 摆放模式对 2×2 物件只亮「能当左前角的格子」，点下去占 4 格（4 格都亮会叠成一片看不清）。首次进来缩放 1 倍（`tileW` 已按一个院子占满屏宽算），不是 1.2 倍：`movable-view` 带缩放时 x / y 的含义不稳
+- 和设计文档的两处小出入（已和实现方式对齐）：① 格子表不是脚本生成的文件，而是 `estate.js` 在加载时按布局数据算出来（少一步生成、测试直接跑）；② 摆放模式对 2×2 物件只亮「能当左前角的格子」，点下去占 4 格（4 格都亮会叠成一片看不清）。首次进来缩放 1 倍（`tileW` 已按一个院子占满屏宽算），不是 1.2 倍：`movable-view` 带缩放时 x / y 的含义不稳。③ 修好院子时云朵直接消失、院子中间冒一把彩带（不做 0.8 秒的淡出：被移除的节点做不了动画，加定时器又会让页面测试变慢）
 
 ---
 
@@ -751,7 +751,7 @@ test('unlock：没有这个院子、已经修好、不挨着、暖豆不够都�
 })
 
 test('place / move：按地面规矩和占格校验', async () => {
-  const { service } = setup({ garden: richGarden({ opened: ['front', 'main', 'pond', 'flower'], inventory: { daisy: 3, stool: 1, pavilion: 1 }, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }] }) })
+  const { service } = setup({ garden: richGarden({ opened: ['front', 'main', 'pond', 'flower'], seq: 1, inventory: { daisy: 3, stool: 1, pavilion: 1 }, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }] }) })
   const reject = (itemId, c, r, message) => assert.rejects(service.place('u1', { itemId, c, r }), { code: 'BAD_REQUEST', message })
   await reject('daisy', 0, 0, '放不到这里哦')
   await reject('daisy', 3, 22, '这个院子还没修整呢')
@@ -995,6 +995,15 @@ const { AREAS, STARTER_TILE, canUnlock, unlockProblem, placeProblem } = require(
 ```
 
 9. `arrive` 里 `waitingAnimals(likedThings(garden), …)` 改回 `waitingAnimals(garden.placed, …)`。
+9b. `get` 开头的 `const garden = await load(openid)` 换成三行——旧数据迁移完要存回去，不然每次进来都重新迁：
+
+```js
+      const doc = await repo.getGarden(openid)
+      const garden = normalizeGarden(doc)
+      const migrated = !(doc && doc.estate)
+```
+
+`if (welcome || seen || testGift) await repo.saveGarden(openid, garden)` 改成 `if (welcome || seen || testGift || migrated) await repo.saveGarden(openid, garden)`。
 10. `unlock` 整个替换为：
 
 ```js
@@ -2947,7 +2956,7 @@ if __name__ == '__main__':
 
 - [ ] **Step 2: `draw-images.py` 删掉小岛**
 
-1. 删除 `draw_island`、`draw_locked`、`draw_guide` 三个函数，以及常量 `ISLAND`、`SAND`、`SAND_DARK`、`PATH_STONE`、`PATH_EDGE`、`BED_SOIL`、`BED_EDGE`、`GUIDE_FONT`、`GUIDE_COLORS`、`WILD`、`WILD_DARK`、`WEED`、`STONE`（后四个只有 `draw_locked` 用）。
+1. 删除 `draw_island`、`draw_locked`、`draw_guide` 三个函数，以及常量 `ISLAND`、`SAND`、`SAND_DARK`、`PATH_STONE`、`PATH_EDGE`、`BED_SOIL`、`BED_EDGE`、`GUIDE_FONT`、`GUIDE_COLORS`、`WILD`、`WEED`、`STONE`（后三个只有 `draw_locked` 用；`WILD_DARK` 之前已经删了，还在的话一起删）。
 2. `draw_garden` 开头的 `draw_island()`、`draw_locked()` 两行删掉（保留 `draw_hint()`、`draw_sign()`）；`__main__` 里的 `draw_guide()` 删掉。
 3. `from PIL import Image, ImageDraw, ImageFont` 改回 `from PIL import Image, ImageDraw`（确认文件里没有别的 `ImageFont` 用法：`grep -n ImageFont scripts/draw-images.py` 应无输出）。
 4. 文件开头的 docstring 第一行改成 `"""生成小程序里用到的图片：tabBar 图标、修整木牌、亮格，以及庭院物品和界面图的占位图。`。
@@ -3082,8 +3091,9 @@ test('园林大宅院首页：今日暖豆、底图云朵木牌、扭蛋、背�
   // 修整荷塘院：豆不够先提示；攒够了确认后云散开、木牌换位置、屏幕滑过去
   garden.tapSign(event({ key: 'pond' }))
   assert.equal(wx.log.toasts.pop(), '修整要 200 暖豆，再攒攒')
+  const toastCount = wx.log.toasts.length
   garden.tapSign(event({ key: 'spring' }))
-  assert.equal(wx.log.toasts.length, 0)
+  assert.equal(wx.log.toasts.length, toastCount)
   const doc = cloud.db.collections.get('gardens').get('u1')
   cloud.db.collections.get('gardens').set('u1', { ...doc, beans: { ...doc.beans, bonus: doc.beans.bonus + 300 } })
   garden.onShow()
