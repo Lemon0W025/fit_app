@@ -1,21 +1,34 @@
 // gardens 文档的完整形状：老数据或新用户缺的字段补上默认值，去掉已经废弃的树种字段
 
-const { ANIMALS, PLOT_SIZE, CENTER_PLOT, plotOf } = require('./shared/garden')
+const { ANIMALS, tilePlaceable } = require('./shared/garden')
 
 const LEGACY_FIELDS = ['currentSpecies', 'unlocked', 'unseen']
 
 const isAnimal = (id) => ANIMALS.indexOf(id) !== -1
 
-// 以前庭院只有一小块（坐标从 0 开始）：整体挪进大地图中间那块，物件落到的地块直接算开垦
-function adoptWorld(garden, plots) {
-  if (plots) return { ...garden, plots }
-  const placed = garden.placed.map((p) => ({ ...p, c: p.c + PLOT_SIZE, r: p.r + PLOT_SIZE }))
-  const opened = [CENTER_PLOT]
-  placed.forEach((p) => {
-    const key = plotOf(p.c, p.r)
-    if (opened.indexOf(key) === -1) opened.push(key)
+// 旧数据换算成小岛：
+//  - 大地图（有 plots，坐标 0～17）：中间那块（6～11）各减 3 落进中间花园；落到小路上、别的块里的收回背包；开荒花的暖豆退回
+//  - 更早的小庭院（坐标 0～5）：各加 3
+function adoptIsland(garden, doc) {
+  const { plots, ...rest } = garden
+  if (doc.opened) return { ...rest, opened: doc.opened }
+  const opened = ['center']
+  let shift = 3
+  let refund = 0
+  if (doc.plots) {
+    shift = -3
+    // 当年开荒的价格：100、150、200……
+    for (let k = 1; k < doc.plots.length; k++) refund += 100 + 50 * (k - 1)
+  }
+  const placed = []
+  const inventory = { ...garden.inventory }
+  garden.placed.forEach((p) => {
+    const c = p.c + shift
+    const r = p.r + shift
+    if (tilePlaceable(opened, c, r) && !placed.some((q) => q.c === c && q.r === r)) placed.push({ ...p, c, r })
+    else inventory[p.itemId] = (inventory[p.itemId] || 0) + 1
   })
-  return { ...garden, placed, plots: opened }
+  return { ...rest, placed, inventory, opened, beans: { ...garden.beans, bonus: garden.beans.bonus + refund } }
 }
 
 // 以前小动物是扭蛋抽的：背包里、庭院里的直接变成住户（不算新住户，免得一次走进来一群）
@@ -39,8 +52,8 @@ function normalizeGarden(doc) {
   LEGACY_FIELDS.forEach((k) => delete g[k])
   const beans = g.beans || {}
   const gacha = g.gacha || {}
-  // 开垦了哪些地块（plots）由 adoptWorld 给：旧数据挪坐标，新用户只开中间一块
-  return adoptAnimals(adoptWorld({
+  // 修整了哪些分区（opened）由 adoptIsland 给：旧数据换算坐标，新用户只有中间花园
+  return adoptAnimals(adoptIsland({
     ...g,
     days: g.days || {},
     beans: { earned: beans.earned || {}, bonus: beans.bonus || 0, spent: beans.spent || 0 },
@@ -51,12 +64,12 @@ function normalizeGarden(doc) {
     welcomed: !!g.welcomed,
     // 摆放物品的编号计数器
     seq: g.seq || 0,
-    // 住进来的小动物 [{ id, since }]，和还没在庭院里看到的新住户
+    // 住进来的小动物 [{ id, since }]，和还没在花园里看到的新住户
     residents: g.residents || [],
     arrivals: g.arrivals || [],
     // 已经领过的测试福利 id
     grants: g.grants || [],
-  }, g.plots))
+  }, g))
 }
 
 module.exports = { normalizeGarden }

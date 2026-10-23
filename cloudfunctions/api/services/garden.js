@@ -14,21 +14,20 @@ const {
   rollRarity,
   pickItem,
   currentTerm,
-  PLOT_SIZE,
-  PLOT_GRID,
-  CENTER_PLOT,
-  parsePlot,
-  canExpand,
-  expandCost,
-  inWorld,
-  tileOpen,
+  REGIONS,
+  regionById,
+  sceneryIn,
+  placeProblem,
   waitingAnimals,
 } = require('../lib/shared/garden')
 
 const HIGH_RARITIES = ['epic', 'legendary']
+// 新手大树：中间花园里、小路交叉口的后方
+const STARTER_TILE = { c: 4, r: 4 }
 
 // getGrant：返回当前的测试福利（见 config.testGrant），没有就是 null
-function createGardenService({ repo, now, random = Math.random, getGrant = () => null }) {
+// forest：用来在 get 里带上今天的暖豆和印章
+function createGardenService({ repo, now, random = Math.random, getGrant = () => null, forest = null }) {
   async function load(openid) {
     return normalizeGarden(await repo.getGarden(openid))
   }
@@ -42,9 +41,8 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
   function view(garden, welcome = null, testGift = 0) {
     return {
       beans: Math.max(0, beanBalance(garden)),
-      world: { plotSize: PLOT_SIZE, grid: PLOT_GRID },
-      plots: garden.plots,
-      expandCost: garden.plots.length >= PLOT_GRID * PLOT_GRID ? null : expandCost(garden.plots.length),
+      regions: REGIONS.map(({ id, name, cost }) => ({ id, name, cost, unlocked: garden.opened.indexOf(id) !== -1 })),
+      scenery: sceneryIn(garden.opened),
       placed: garden.placed,
       inventory: ITEMS.filter((i) => garden.inventory[i.id] > 0).map((i) => ({ itemId: i.id, count: garden.inventory[i.id] })),
       collected: garden.collected,
@@ -56,20 +54,16 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
       term: termInfo(),
       residents: garden.residents.map((r) => r.id),
       arrivals: garden.arrivals,
-      waiting: waitingAnimals(garden.placed, garden.residents.map((r) => r.id)),
+      waiting: waitingAnimals(likedThings(garden), garden.residents.map((r) => r.id)),
       welcome,
       testGift,
     }
   }
 
   function checkTile(garden, c, r, ignoreUid) {
-    if (!inWorld(c, r)) throw new AppError(CODES.BAD_REQUEST, '放不到庭院外面哦')
-    if (!tileOpen(garden.plots, c, r)) throw new AppError(CODES.BAD_REQUEST, '这块地还没开荒呢')
-    if (garden.placed.some((p) => p.c === c && p.r === r && p.uid !== ignoreUid)) {
-      throw new AppError(CODES.BAD_REQUEST, '这块地上已经有东西了')
-    }
+    const problem = placeProblem(garden.opened, garden.placed, c, r, ignoreUid)
+    if (problem) throw new AppError(CODES.BAD_REQUEST, problem)
   }
-
 
   function findPlaced(garden, uid) {
     const placed = garden.placed.find((p) => p.uid === uid)
@@ -82,18 +76,20 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
     return `p${garden.seq}`
   }
 
+  // 小动物喜欢的东西：自己摆的，加上修整好的角落里自带的风景
+  function likedThings(garden) {
+    return garden.placed.concat(sceneryIn(garden.opened))
+  }
+
   return {
-    // 第一次进庭院：送暖豆，并在中间种一棵大树。庭院页带 markSeen：新住户看过了
+    // 第一次进花园：送暖豆，并种一棵大树。花园页带 markSeen：新住户看过了
     async get(openid, input) {
       const garden = await load(openid)
       let welcome = null
       if (!garden.welcomed) {
-        // 地图正中：中间那块地的中心
-        const [pc, pr] = CENTER_PLOT.split(',').map(Number)
-        const center = { c: pc * PLOT_SIZE + Math.floor((PLOT_SIZE - 1) / 2), r: pr * PLOT_SIZE + Math.floor((PLOT_SIZE - 1) / 2) }
         garden.welcomed = true
         garden.beans = { ...garden.beans, bonus: garden.beans.bonus + WELCOME_BEANS }
-        garden.placed = garden.placed.concat({ uid: newUid(garden), itemId: STARTER_ITEM, c: center.c, r: center.r })
+        garden.placed = garden.placed.concat({ uid: newUid(garden), itemId: STARTER_ITEM, c: STARTER_TILE.c, r: STARTER_TILE.r })
         welcome = { beans: WELCOME_BEANS, itemId: STARTER_ITEM }
       }
       // 测试福利：期限内每个 id 只送一次
@@ -108,6 +104,13 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
       const seen = !!(input && input.markSeen) && garden.arrivals.length > 0
       if (seen) garden.arrivals = []
       if (welcome || seen || testGift) await repo.saveGarden(openid, garden)
+      // 首页要用：没建档就去建档；左上角显示今天的暖豆和印章
+      result.hasProfile = !!(await repo.getProfile(openid))
+      result.daily = null
+      if (forest) {
+        const today = dateKey(now())
+        result.daily = await forest.today(openid, today, await repo.listMeals(openid, today))
+      }
       return result
     },
 
@@ -179,7 +182,7 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
     // 正餐打卡后调用：有在等的小动物就搬来一只
     async arrive(openid) {
       const garden = await load(openid)
-      const next = waitingAnimals(garden.placed, garden.residents.map((r) => r.id))[0]
+      const next = waitingAnimals(likedThings(garden), garden.residents.map((r) => r.id))[0]
       if (!next) return null
       garden.residents = garden.residents.concat({ id: next, since: dateKey(now()) })
       garden.arrivals = garden.arrivals.concat(next)
@@ -188,17 +191,16 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
       return { id: next, name: itemById(next).name }
     },
 
-    // 开荒：花暖豆开垦一块挨着已开垦土地的荒地
-    async expand(openid, input) {
-      const key = (input || {}).plot
+    // 修整角落：花暖豆，角落里自带的风景出现
+    async unlock(openid, input) {
+      const id = (input || {}).region
+      const region = regionById(id)
+      if (!region) throw new AppError(CODES.BAD_REQUEST, '没有这个角落')
       const garden = await load(openid)
-      if (!parsePlot(key)) throw new AppError(CODES.BAD_REQUEST, '这块地不在庭院里')
-      if (garden.plots.indexOf(key) !== -1) throw new AppError(CODES.BAD_REQUEST, '这块地已经开垦过了')
-      if (!canExpand(garden.plots, key)) throw new AppError(CODES.BAD_REQUEST, '要挨着已经开垦的地才能开荒')
-      const cost = expandCost(garden.plots.length)
-      if (beanBalance(garden) < cost) throw new AppError(CODES.NO_BEANS, `暖豆不够啦，开荒要 ${cost} 暖豆，再攒攒`)
-      garden.beans = { ...garden.beans, spent: garden.beans.spent + cost }
-      garden.plots = garden.plots.concat(key)
+      if (garden.opened.indexOf(id) !== -1) throw new AppError(CODES.BAD_REQUEST, '这个角落已经修整好了')
+      if (beanBalance(garden) < region.cost) throw new AppError(CODES.NO_BEANS, `暖豆不够啦，修整要 ${region.cost} 暖豆，再攒攒`)
+      garden.beans = { ...garden.beans, spent: garden.beans.spent + region.cost }
+      garden.opened = garden.opened.concat(id)
       await repo.saveGarden(openid, garden)
       return view(garden)
     },

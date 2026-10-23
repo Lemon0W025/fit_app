@@ -18,7 +18,7 @@ const ROUTES = {
   'garden.place': ['garden', 'place'],
   'garden.move': ['garden', 'move'],
   'garden.stash': ['garden', 'stash'],
-  'garden.expand': ['garden', 'expand'],
+  'garden.unlock': ['garden', 'unlock'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

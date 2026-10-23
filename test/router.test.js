@@ -15,7 +15,7 @@ function setup(overrides = {}) {
     day: { get: record('day.get'), summarize: record('day.summarize') },
     weight: { save: record('weight.save'), list: record('weight.list') },
     forest: { get: record('forest.get') },
-    garden: { get: record('garden.get'), spin: record('garden.spin'), place: record('garden.place'), move: record('garden.move'), stash: record('garden.stash'), expand: record('garden.expand') },
+    garden: { get: record('garden.get'), spin: record('garden.spin'), place: record('garden.place'), move: record('garden.move'), stash: record('garden.stash'), unlock: record('garden.unlock') },
     ...overrides,
   }
   const logs = []
@@ -42,7 +42,7 @@ test('把 action 分发到对应 service，并传入 openid 和 data', async () 
     ['garden.place', 'garden.place'],
     ['garden.move', 'garden.move'],
     ['garden.stash', 'garden.stash'],
-    ['garden.expand', 'garden.expand'],
+    ['garden.unlock', 'garden.unlock'],
   ]
   for (const [action, target] of pairs) {
     const res = await route({ action, data: { x: 1 } }, 'u1')

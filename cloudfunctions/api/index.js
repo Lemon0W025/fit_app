@@ -23,7 +23,7 @@ const repo = createRepo(cloud.database())
 const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
-const garden = createGardenService({ repo, now, getGrant: () => config.testGrant })
+const garden = createGardenService({ repo, now, forest, getGrant: () => config.testGrant })
 
 const route = createRouter(
   {

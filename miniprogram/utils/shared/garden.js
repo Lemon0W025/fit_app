@@ -82,13 +82,33 @@ const WELCOME_BEANS = 60
 const PITY = 10
 const SEASONAL_WEIGHT = 4
 
-// 庭院地图：PLOT_GRID × PLOT_GRID 块地，每块 PLOT_SIZE × PLOT_SIZE 格；一开始只开垦中间一块，其余花暖豆开荒
-const PLOT_SIZE = 6
-const PLOT_GRID = 3
-const WORLD_SIZE = PLOT_SIZE * PLOT_GRID
-const CENTER_PLOT = '1,1'
-const EXPAND_BASE = 100
-const EXPAND_STEP = 50
+// 小岛后花园：12×12 格的等距菱形。中间花园一开始就有；四个角落花暖豆修整；四个 3×3 的角是花坛，只是景色
+const ISLAND_SIZE = 12
+// c = 6 那一列、r = 6 那一行是十字小路：不能摆东西，小动物能走
+const PATH_LINE = 6
+// rect：[c 起, r 起, c 止, r 止)，左闭右开
+const REGIONS = [
+  { id: 'center', name: '中间花园', cost: 0, rect: [3, 3, 9, 9] },
+  { id: 'pond', name: '荷塘角', cost: 200, rect: [3, 0, 9, 3] },
+  { id: 'bamboo', name: '竹林角', cost: 300, rect: [0, 3, 3, 9] },
+  { id: 'veg', name: '菜园角', cost: 400, rect: [9, 3, 12, 9] },
+  { id: 'tea', name: '茶亭角', cost: 500, rect: [3, 9, 9, 12] },
+]
+// 修整好的角落里自带的风景：每件占一格，挡摆放也挡小动物；也算小动物喜欢的东西
+// 竹林角只放 2 丛翠竹：熊猫一家要 3 丛，第三丛得自己摆
+const SCENERY = [
+  { uid: 's1', region: 'pond', itemId: 'lotus_pond', c: 4, r: 1, scale: 1.5 },
+  { uid: 's2', region: 'pond', itemId: 'koi_pond', c: 8, r: 1, scale: 1.1 },
+  { uid: 's3', region: 'bamboo', itemId: 'bamboo', c: 1, r: 4 },
+  { uid: 's4', region: 'bamboo', itemId: 'bamboo', c: 0, r: 8 },
+  { uid: 's5', region: 'bamboo', itemId: 'lantern', c: 2, r: 7 },
+  { uid: 's6', region: 'veg', itemId: 'cabbage', c: 10, r: 4 },
+  { uid: 's7', region: 'veg', itemId: 'radish', c: 11, r: 4 },
+  { uid: 's8', region: 'veg', itemId: 'pumpkin', c: 10, r: 8 },
+  { uid: 's9', region: 'veg', itemId: 'fence', c: 9, r: 8 },
+  { uid: 's10', region: 'tea', itemId: 'pavilion', c: 4, r: 10, scale: 1.4 },
+  { uid: 's11', region: 'tea', itemId: 'stone_table', c: 8, r: 10 },
+]
 
 // 节气起始日（北京时间），由天文算法算出；key 用于每年循环的节气限定
 const SOLAR_TERMS = [
@@ -179,43 +199,47 @@ function currentTerm(dateKey) {
   return found
 }
 
-function plotOf(c, r) {
-  return `${Math.floor(c / PLOT_SIZE)},${Math.floor(r / PLOT_SIZE)}`
+function regionById(id) {
+  return REGIONS.find((g) => g.id === id) || null
 }
 
-function parsePlot(key) {
-  const m = /^(\d+),(\d+)$/.exec(String(key))
-  if (!m) return null
-  const pc = Number(m[1])
-  const pr = Number(m[2])
-  return pc < PLOT_GRID && pr < PLOT_GRID ? { pc, pr } : null
+function onIsland(c, r) {
+  return Number.isInteger(c) && Number.isInteger(r) && c >= 0 && r >= 0 && c < ISLAND_SIZE && r < ISLAND_SIZE
 }
 
-// 上下左右相邻的地块
-function plotNeighbors(key) {
-  const p = parsePlot(key)
-  if (!p) return []
-  return [[1, 0], [-1, 0], [0, 1], [0, -1]]
-    .map(([dc, dr]) => ({ pc: p.pc + dc, pr: p.pr + dr }))
-    .filter((n) => n.pc >= 0 && n.pr >= 0 && n.pc < PLOT_GRID && n.pr < PLOT_GRID)
-    .map((n) => `${n.pc},${n.pr}`)
+// 格子在哪个分区；花坛返回 null
+function regionOf(c, r) {
+  const g = REGIONS.find(({ rect }) => c >= rect[0] && r >= rect[1] && c < rect[2] && r < rect[3])
+  return g ? g.id : null
 }
 
-function canExpand(plots, key) {
-  return !!parsePlot(key) && plots.indexOf(key) === -1 && plotNeighbors(key).some((n) => plots.indexOf(n) !== -1)
+function isPath(c, r) {
+  return c === PATH_LINE || r === PATH_LINE
 }
 
-// 已开垦 openedCount 块时再开一块要多少暖豆：100、150、200……
-function expandCost(openedCount) {
-  return EXPAND_BASE + EXPAND_STEP * (openedCount - 1)
+function sceneryIn(opened) {
+  return SCENERY.filter((s) => opened.indexOf(s.region) !== -1)
 }
 
-function inWorld(c, r) {
-  return Number.isInteger(c) && Number.isInteger(r) && c >= 0 && r >= 0 && c < WORLD_SIZE && r < WORLD_SIZE
+// 已修整分区里的格子（小路也算：小动物能走）
+function tileOpen(opened, c, r) {
+  return onIsland(c, r) && opened.indexOf(regionOf(c, r)) !== -1
 }
 
-function tileOpen(plots, c, r) {
-  return inWorld(c, r) && plots.indexOf(plotOf(c, r)) !== -1
+// 这一格为什么不能摆（能摆返回 ''）：云函数校验和页面提示用同一套话
+function placeProblem(opened, placed, c, r, ignoreUid) {
+  if (!onIsland(c, r)) return '放不到花园外面哦'
+  const region = regionOf(c, r)
+  if (!region) return '这里是花坛，不能摆'
+  if (opened.indexOf(region) === -1) return '这块地还没修整呢'
+  if (isPath(c, r)) return '小路上不能摆东西'
+  if (SCENERY.some((s) => s.c === c && s.r === r)) return '这里已经有风景了'
+  if (placed.some((p) => p.c === c && p.r === r && p.uid !== ignoreUid)) return '这块地上已经有东西了'
+  return ''
+}
+
+function tilePlaceable(opened, c, r) {
+  return !placeProblem(opened, [], c, r)
 }
 
 // 摆放编号 p12 → 12，越小越早摆
@@ -256,17 +280,18 @@ module.exports = {
   rollRarity,
   pickItem,
   currentTerm,
-  PLOT_SIZE,
-  PLOT_GRID,
-  WORLD_SIZE,
-  CENTER_PLOT,
-  plotOf,
-  parsePlot,
-  plotNeighbors,
-  canExpand,
-  expandCost,
-  inWorld,
+  ISLAND_SIZE,
+  PATH_LINE,
+  REGIONS,
+  SCENERY,
+  regionById,
+  onIsland,
+  regionOf,
+  isPath,
+  sceneryIn,
   tileOpen,
+  placeProblem,
+  tilePlaceable,
   placedOrder,
   waitingAnimals,
 }
