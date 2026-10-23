@@ -94,65 +94,61 @@ test('greetingText 按时段问候', () => {
   assert.equal(greetingText(22, ''), '晚上好')
 })
 
-const { treeImage, decorateTree, treeCard, buildForestCells } = require('../miniprogram/utils/view')
+const { stampsView, decorateGain, beansCard, buildCalendarCells } = require('../miniprogram/utils/view')
 
-test('treeImage：按阶段取图片', () => {
-  assert.equal(treeImage('empty'), '/images/forest/empty.png')
-  assert.equal(treeImage('sprout'), '/images/forest/sprout.png')
-  assert.equal(treeImage('bloom'), '/images/forest/bloom.png')
-  assert.equal(treeImage('fruit'), '/images/forest/fruit.png')
-  assert.equal(treeImage('future'), '')
-  assert.equal(treeImage(undefined), '')
+const STAMPS = [
+  { mealType: 'breakfast', label: '早', state: 'green' },
+  { mealType: 'lunch', label: '午', state: 'done' },
+  { mealType: 'dinner', label: '晚', state: 'none' },
+]
+
+test('stampsView：印章的样式', () => {
+  assert.deepEqual(stampsView(STAMPS), [
+    { key: 'breakfast', label: '早', cls: 'stamp-green' },
+    { key: 'lunch', label: '午', cls: 'stamp-done' },
+    { key: 'dinner', label: '晚', cls: 'stamp-none' },
+  ])
+  assert.deepEqual(stampsView(undefined), [])
 })
 
-test('decorateTree：长大了用庆祝的标题，并显示暖豆', () => {
-  const grew = decorateTree({ before: 'sprout', after: 'small', grew: true, stageLabel: '小树', hint: '再打卡晚餐就能长成大树', beans: 10 })
-  assert.equal(grew.title, '🎉 今天的树长成小树了')
-  assert.equal(grew.image, '/images/forest/small.png')
-  assert.equal(grew.beansText, '+10 暖豆')
-  assert.equal(decorateTree({ after: 'sprout', grew: true, stageLabel: '树苗', beans: 10 }).title, '🌱 种下了今天的树苗')
-  assert.equal(decorateTree({ after: 'bloom', grew: true, stageLabel: '开花', beans: 10 }).title, '🌸 今天的树开花了')
-  assert.equal(decorateTree({ after: 'fruit', grew: true, stageLabel: '结果', beans: 10 }).title, '🍎 今天的树结果了！')
-  const same = decorateTree({ after: 'big', grew: false, stageLabel: '大树', beans: 0 })
-  assert.equal(same.title, '今天的树：大树')
-  assert.equal(same.beansText, '')
-  assert.equal(decorateTree({ after: 'bloom', grew: false, stageLabel: '开花', beans: -10 }).beansText, '')
-  assert.equal(decorateTree(null), null)
+test('decorateGain：这次多得了暖豆就庆祝，没多得就说记下了', () => {
+  const gain = decorateGain({ beans: 10, beansToday: 20, hint: '再打卡晚餐还能得 20 暖豆', stamps: STAMPS })
+  assert.equal(gain.title, '+10 暖豆')
+  assert.equal(gain.hint, '再打卡晚餐还能得 20 暖豆')
+  assert.equal(gain.stamps.length, 3)
+  assert.equal(decorateGain({ beans: 0, beansToday: 20, hint: 'x', stamps: STAMPS }).title, '这顿记下啦')
+  assert.equal(decorateGain({ beans: -10, beansToday: 10, hint: 'x', stamps: STAMPS }).title, '这顿记下啦')
+  assert.equal(decorateGain(null), null)
 })
 
-test('treeCard：今日页的小树卡片', () => {
-  const card = treeCard({ stage: 'small', stageLabel: '小树', hint: '再打卡晚餐就能长成大树', streak: 3, beansToday: 20, nextGain: 20, beans: 85 })
-  assert.equal(card.image, '/images/forest/small.png')
-  assert.equal(card.title, '今天的树：小树')
+test('beansCard：今天的暖豆卡片', () => {
+  const card = beansCard({ stamps: STAMPS, beansToday: 20, nextGain: 20, hint: '再打卡晚餐还能得 20 暖豆', streak: 3, beans: 85 })
+  assert.equal(card.title, '今天得了 20 暖豆')
+  assert.equal(card.hint, '再打卡晚餐还能得 20 暖豆')
   assert.equal(card.streakText, '🔥 已连续 3 天')
-  assert.equal(card.beansText, '今天已得 20 暖豆')
-  assert.equal(card.hintText, '再打卡晚餐就能长成大树，再得 20 暖豆')
-  const empty = treeCard({ stage: 'empty', stageLabel: '空地', hint: '打卡一顿正餐，种下今天的树', streak: 0, beansToday: 0, nextGain: 10, beans: 0 })
-  assert.equal(empty.title, '今天还没种树')
+  assert.equal(card.stamps[0].cls, 'stamp-green')
+  const empty = beansCard({ stamps: [], beansToday: 0, nextGain: 10, hint: '打卡一顿正餐就能得 10 暖豆', streak: 0, beans: 0 })
+  assert.equal(empty.title, '今天还没打卡')
   assert.equal(empty.streakText, '')
-  assert.equal(empty.beansText, '')
-  assert.equal(empty.hintText, '打卡一顿正餐，种下今天的树，再得 10 暖豆')
-  assert.equal(treeCard({ stage: 'fruit', stageLabel: '结果', hint: '完美', streak: 1, beansToday: 60, nextGain: 0, beans: 60 }).hintText, '完美')
-  assert.equal(treeCard(null), null)
+  assert.equal(beansCard(null), null)
 })
 
-test('buildForestCells：周一开头的日历，前面补空格', () => {
+test('buildCalendarCells：周一开头的日历，每天印章和暖豆', () => {
   const days = [
-    { date: '2026-10-01', day: 1, stage: 'fruit', mealsCount: 3, kcal: 1200 },
-    { date: '2026-10-02', day: 2, stage: 'empty', mealsCount: 0, kcal: 0 },
-    { date: '2026-10-03', day: 3, stage: 'future', mealsCount: 0, kcal: 0 },
+    { date: '2026-10-01', day: 1, future: false, stamps: STAMPS, beans: 20, mealsCount: 2, kcal: 900 },
+    { date: '2026-10-02', day: 2, future: false, stamps: [], beans: 0, mealsCount: 0, kcal: 0 },
+    { date: '2026-10-03', day: 3, future: true, stamps: [], beans: 0, mealsCount: 0, kcal: 0 },
   ]
   // 2026-10-01 是周四（firstWeekday = 4），周一开头前面补 3 个空格
-  const cells = buildForestCells(days, 4)
+  const cells = buildCalendarCells(days, 4)
   assert.equal(cells.length, 6)
   assert.deepEqual(cells.slice(0, 3).map((c) => c.blank), [true, true, true])
-  assert.equal(cells[3].image, '/images/forest/fruit.png')
   assert.equal(cells[3].day, 1)
-  assert.equal(cells[4].image, '/images/forest/empty.png')
+  assert.equal(cells[3].beansText, '+20')
+  assert.equal(cells[3].stamps[0].cls, 'stamp-green')
+  assert.equal(cells[4].beansText, '')
   assert.equal(cells[5].future, true)
-  assert.equal(cells[5].image, '')
   assert.ok(cells.every((c) => c.key))
-  // 周日开头的月份补 6 个
-  assert.equal(buildForestCells(days, 0).filter((c) => c.blank).length, 6)
-  assert.equal(buildForestCells(days, 1).filter((c) => c.blank).length, 0)
+  assert.equal(buildCalendarCells(days, 0).filter((c) => c.blank).length, 6)
+  assert.equal(buildCalendarCells(days, 1).filter((c) => c.blank).length, 0)
 })

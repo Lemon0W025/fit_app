@@ -97,24 +97,21 @@ test('没有 openid 与未知 action', async () => {
   assert.equal((await main({ action: 'nope' })).code, 'UNKNOWN_ACTION')
 })
 
-test('养生森林：三顿全绿结果、暖豆入账、日历、删除后回退', async () => {
+test('每日暖豆：三顿全绿拿满、日历印章、删除后回退', async () => {
   const green = analysisJson({ rating: 'green' })
   const cloud = createFakeCloud({ replies: [green, green, green] })
   const { main } = loadCloudFunction(cloud)
   const today = dateKey()
   await main({ action: 'profile.save', data: profileInput })
 
-  const stages = []
   const beans = []
   const ids = []
   for (const mealType of ['breakfast', 'lunch', 'dinner']) {
     const res = await main({ action: 'meal.analyze', data: { mealType, note: '家常菜' } })
     assert.equal(res.ok, true, res.message)
-    stages.push(res.data.tree.after)
-    beans.push(res.data.tree.beans)
+    beans.push(res.data.gain.beans)
     ids.push(res.data._id)
   }
-  assert.deepEqual(stages, ['sprout', 'small', 'fruit'])
   assert.deepEqual(beans, [10, 10, 40])
 
   const garden = cloud.db.collections.get('gardens').get('u1')
@@ -124,15 +121,15 @@ test('养生森林：三顿全绿结果、暖豆入账、日历、删除后回�
 
   const forest = await main({ action: 'forest.get' })
   assert.equal(forest.ok, true, forest.message)
-  assert.equal(forest.data.today.stage, 'fruit')
+  assert.equal(forest.data.today.beansToday, 60)
   assert.equal(forest.data.today.streak, 1)
   assert.equal(forest.data.today.beans, 60)
-  assert.equal(forest.data.days.find((d) => d.date === today).stage, 'fruit')
-  assert.deepEqual(forest.data.stats, { trees: 1, fruits: 1 })
+  assert.equal(forest.data.days.find((d) => d.date === today).beans, 60)
+  assert.deepEqual(forest.data.stats, { days: 1, beans: 60 })
 
   const day = await main({ action: 'day.get' })
-  assert.equal(day.data.tree.stage, 'fruit')
-  assert.equal(day.data.tree.beansToday, 60)
+  assert.equal(day.data.daily.beansToday, 60)
+  assert.deepEqual(day.data.daily.stamps.map((s) => s.state), ['green', 'green', 'green'])
 
   assert.equal((await main({ action: 'forest.setSpecies', data: { species: 'peach' } })).code, 'UNKNOWN_ACTION')
 

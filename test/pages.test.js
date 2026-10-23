@@ -96,10 +96,9 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(meal.data.meal.kcalText, '约 520 千卡')
   assert.equal(meal.data.meal.label, '午餐')
   assert.equal(meal.data.note, '米饭吃了一半')
-  assert.equal(meal.data.tree.title, '🌱 种下了今天的树苗')
-  assert.equal(meal.data.tree.image, '/images/forest/sprout.png')
-  assert.equal(meal.data.tree.beansText, '+10 暖豆')
-  assert.equal(wx.app.globalData.lastTree, null)
+  assert.equal(meal.data.gain.title, '+10 暖豆')
+  assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green')
+  assert.equal(wx.app.globalData.lastGain, null)
 
   // 5. 估得不准 → 补充描述重新分析
   meal.startEdit()
@@ -108,16 +107,16 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   await settle()
   assert.equal(meal.data.meal.kcalText, '约 300 千卡')
   assert.equal(meal.data.editing, false)
-  assert.equal(meal.data.tree.title, '今天的树：树苗')
+  assert.equal(meal.data.gain.title, '这顿记下啦')
 
   // 6. 今日页展示
   today.onShow()
   await settle()
   assert.equal(today.data.view.totals.kcal, 300)
   assert.equal(today.data.view.meals.length, 1)
-  assert.equal(today.data.tree.title, '今天的树：树苗')
-  assert.equal(today.data.tree.beansText, '今天已得 10 暖豆')
-  assert.equal(today.data.tree.streakText, '🔥 已连续 1 天')
+  assert.equal(today.data.daily.title, '今天得了 10 暖豆')
+  assert.equal(today.data.daily.hint, '再打卡晚餐还能得 10 暖豆')
+  assert.equal(today.data.daily.streakText, '🔥 已连续 1 天')
   today.goGarden()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
   assert.match(today.data.greeting, /妈妈/)
@@ -148,21 +147,22 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   await settle()
   assert.equal(today.data.view.meals.length, 1)
 
-  // 9. 森林页：午餐删掉了，只剩晚餐 → 树苗
+  // 9. 打卡日历：午餐删掉了，只剩晚餐 → 一个印章、10 暖豆
   const forest = loadPage('forest', wx)
   forest.onShow()
   await settle()
   assert.equal(forest.data.loaded, true)
-  assert.equal(forest.data.today.title, '今天的树：树苗')
-  assert.equal(forest.data.view.totalTrees, 1)
+  assert.equal(forest.data.daily.title, '今天得了 10 暖豆')
+  assert.equal(forest.data.view.totalDays, 1)
   const todayCell = forest.data.cells.find((c) => c.date === today.data.view.date)
-  assert.equal(todayCell.image, '/images/forest/sprout.png')
+  assert.equal(todayCell.beansText, '+10')
+  assert.deepEqual(todayCell.stamps.map((s) => s.cls), ['stamp-none', 'stamp-none', 'stamp-green'])
   forest.openDay(event({ key: todayCell.key }))
-  assert.match(wx.log.modals.pop(), /树苗 · 打卡 1 顿/)
+  assert.match(wx.log.modals.pop(), /打卡 1 顿 · 约 \d+ 千卡 · 得了 10 暖豆/)
   forest.prevMonth()
   await settle()
   assert.ok(forest.data.month < todayCell.date.slice(0, 7))
-  assert.ok(forest.data.cells.every((c) => c.blank || c.image === '/images/forest/empty.png'))
+  assert.ok(forest.data.cells.every((c) => c.blank || c.beansText === ''))
 
   // 10. 体重：建档时已记 70，今天更新为 69.5
   const weight = loadPage('weight', wx)
@@ -314,8 +314,10 @@ test('养生庭院页面：新手礼 → 扭蛋 → 摆放 → 移动 → 收回
   const calendar = loadPage('forest', wx)
   calendar.onShow()
   await settle()
-  assert.equal(calendar.data.today.title, '今天的树：小树')
-  assert.equal(calendar.data.today.beansText, '今天已得 20 暖豆')
+  assert.equal(calendar.data.daily.title, '今天得了 20 暖豆')
+  assert.equal(calendar.data.view.totalDays, 1)
+  assert.equal(calendar.data.view.stats.beans, 20)
+  assert.ok(calendar.data.cells.find((c) => c.beansText === '+20'))
 })
 
 test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横幅 → 走进庭院、点一下说话 → 离开页面停下', async () => {
@@ -343,7 +345,7 @@ test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横�
   checkin.submit()
   await settle()
   const mealId = wx.log.nav.pop()[1].split('id=')[1]
-  assert.deepEqual(wx.app.globalData.lastTree.arrival, { id: 'panda', name: '大熊猫' })
+  assert.deepEqual(wx.app.globalData.lastGain.arrival, { id: 'panda', name: '大熊猫' })
 
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })

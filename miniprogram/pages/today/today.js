@@ -1,12 +1,12 @@
 const api = require('../../utils/api')
-const { buildDayView, greetingText, treeCard } = require('../../utils/view')
+const { buildDayView, greetingText, beansCard } = require('../../utils/view')
 const { localHour } = require('../../utils/shared/date')
 
 Page({
   data: {
     loading: true,
     view: null,
-    tree: null,
+    daily: null,
     greeting: '',
     summarizing: false,
   },
@@ -30,7 +30,7 @@ Page({
         this.setData({
           loading: false,
           view: buildDayView(day),
-          tree: treeCard(day.tree),
+          daily: beansCard(day.daily),
           greeting: greetingText(localHour(), day.profile.nickname),
         })
       })

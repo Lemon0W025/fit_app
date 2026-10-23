@@ -64,7 +64,7 @@ test('syncDay：保留花园里其他字段，去掉旧的树种字段', async (
   assert.equal(garden.unlocked, undefined)
 })
 
-test('today：今天的树、提示、暖豆和连续天数', async () => {
+test('today：今天的印章、暖豆、提示和连续天数', async () => {
   const { repo, forest } = setup()
   for (let i = 3; i >= 1; i--) {
     const d = addDays(TODAY, -i)
@@ -75,27 +75,27 @@ test('today：今天的树、提示、暖豆和连续天数', async () => {
   await addMeal(repo, TODAY, 'lunch', 'green')
   await forest.syncDay('u1', TODAY)
   const view = await forest.today('u1', TODAY, await repo.listMeals('u1', TODAY))
-  assert.equal(view.stage, 'small')
-  assert.equal(view.stageLabel, '小树')
-  assert.equal(view.hint, '再打卡晚餐就能长成大树')
+  assert.deepEqual(view.stamps.map((s) => s.state), ['green', 'green', 'none'])
+  assert.equal(view.hint, '再打卡晚餐还能得 20 暖豆')
   assert.equal(view.beansToday, 20)
   assert.equal(view.nextGain, 20)
   assert.equal(view.streak, 4)
-  assert.equal(view.totalTrees, 4)
   assert.equal(view.beans, 50)
+  assert.equal(view.stage, undefined)
 })
 
 test('today：还没有花园时也能返回，余额不显示负数', async () => {
   const { repo, forest } = setup()
   const empty = await forest.today('u1', TODAY, [])
-  assert.equal(empty.stage, 'empty')
+  assert.equal(empty.beansToday, 0)
+  assert.deepEqual(empty.stamps.map((s) => s.state), ['none', 'none', 'none'])
   assert.equal(empty.streak, 0)
   assert.equal(empty.beans, 0)
   await repo.saveGarden('u1', { beans: { earned: {}, bonus: 0, spent: 30 } })
   assert.equal((await forest.today('u1', TODAY, [])).beans, 0)
 })
 
-test('get：本月日历，未来日期为 future，统计种树和结果数', async () => {
+test('get：本月日历，每天的印章和暖豆，未来日期标 future', async () => {
   const { repo, forest } = setup()
   for (const t of ['breakfast', 'lunch', 'dinner']) await addMeal(repo, '2026-10-20', t, 'green', 400)
   await addMeal(repo, '2026-10-21', 'lunch')
@@ -110,18 +110,33 @@ test('get：本月日历，未来日期为 future，统计种树和结果数', a
   assert.equal(view.monthLabel, '2026年10月')
   assert.equal(view.firstWeekday, 4)
   assert.equal(view.days.length, 31)
-  assert.deepEqual(view.days[19], { date: '2026-10-20', day: 20, stage: 'fruit', mealsCount: 3, kcal: 1200 })
-  assert.equal(view.days[20].stage, 'sprout')
+  assert.deepEqual(view.days[19], {
+    date: '2026-10-20',
+    day: 20,
+    future: false,
+    stamps: [
+      { mealType: 'breakfast', label: '早', state: 'green' },
+      { mealType: 'lunch', label: '午', state: 'green' },
+      { mealType: 'dinner', label: '晚', state: 'green' },
+    ],
+    beans: 60,
+    mealsCount: 3,
+    kcal: 1200,
+  })
+  assert.deepEqual(view.days[20].stamps.map((s) => s.state), ['none', 'yellow', 'none'])
+  assert.equal(view.days[20].beans, 10)
   assert.equal(view.days[20].mealsCount, 2)
-  assert.equal(view.days[21].stage, 'small')
-  assert.equal(view.days[0].stage, 'empty')
-  assert.equal(view.days[22].stage, 'future')
-  assert.deepEqual(view.stats, { trees: 3, fruits: 1 })
+  assert.equal(view.days[21].beans, 20)
+  assert.equal(view.days[0].beans, 0)
+  assert.equal(view.days[0].future, false)
+  assert.equal(view.days[22].future, true)
+  assert.deepEqual(view.days[22].stamps, [])
+  assert.deepEqual(view.stats, { days: 3, beans: 90 })
   assert.equal(view.prevMonth, '2026-09')
   assert.equal(view.nextMonth, null)
-  assert.equal(view.today.stage, 'small')
+  assert.equal(view.today.beansToday, 20)
   assert.equal(view.today.streak, 3)
-  assert.equal(view.totalTrees, 3)
+  assert.equal(view.totalDays, 3)
 })
 
 test('get：查看过去的月份', async () => {
@@ -130,7 +145,7 @@ test('get：查看过去的月份', async () => {
   await forest.syncDay('u1', '2026-09-30')
   const view = await forest.get('u1', { month: '2026-09' })
   assert.equal(view.days.length, 30)
-  assert.equal(view.days[29].stage, 'sprout')
+  assert.equal(view.days[29].beans, 10)
   assert.equal(view.firstWeekday, 2)
   assert.equal(view.nextMonth, '2026-10')
   assert.equal(view.today.date, TODAY)

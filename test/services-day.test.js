@@ -96,12 +96,13 @@ test('summarize：AI 失败或返回空时 AI_FAILED', async () => {
   await assert.rejects(b.service.summarize('u1', {}), { code: 'AI_FAILED' })
 })
 
-test('get：带上今天的树', async () => {
+test('get：带上今天的暖豆和印章', async () => {
   const { repo, service } = setup()
   await seedMeals(repo)
   const day = await service.get('u1', {})
-  assert.equal(day.tree.stage, 'small')
-  assert.equal(day.tree.hint, '再打卡晚餐就能长成大树')
-  assert.equal(day.tree.beansToday, 20)
-  assert.equal(day.tree.nextGain, 20)
+  assert.equal(day.tree, undefined)
+  assert.deepEqual(day.daily.stamps.map((s) => s.state), ['green', 'yellow', 'none'])
+  assert.equal(day.daily.hint, '再打卡晚餐还能得 20 暖豆')
+  assert.equal(day.daily.beansToday, 20)
+  assert.equal(day.daily.nextGain, 20)
 })

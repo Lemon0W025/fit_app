@@ -4,7 +4,7 @@ const { buildMealMessages } = require('../lib/prompts')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
-const { MAIN_MEALS, STAGES, STAGE_LABELS, dayTree, treeHint } = require('../lib/shared/forest')
+const { MAIN_MEALS, dayTree, mealStamps, beansHint } = require('../lib/shared/forest')
 const { STAGE_BEANS } = require('../lib/shared/garden')
 
 const NOTE_MAX = 200
@@ -17,17 +17,15 @@ function isMainMeal(mealType) {
   return MAIN_MEALS.indexOf(mealType) !== -1
 }
 
-// 这次打卡前后，今天的树长成了什么样、暖豆变了多少，给打卡结果页做即时反馈
-function treeChange(beforeMeals, afterMeals) {
+// 这次打卡前后今天的暖豆变了多少，给打卡结果页做即时反馈
+function beansChange(beforeMeals, afterMeals) {
   const before = dayTree(beforeMeals)
   const after = dayTree(afterMeals)
   return {
-    before: before.stage,
-    after: after.stage,
-    grew: STAGES.indexOf(after.stage) > STAGES.indexOf(before.stage),
-    stageLabel: STAGE_LABELS[after.stage],
-    hint: treeHint(after),
     beans: STAGE_BEANS[after.stage] - STAGE_BEANS[before.stage],
+    beansToday: STAGE_BEANS[after.stage],
+    hint: beansHint(after),
+    stamps: mealStamps(afterMeals),
   }
 }
 
@@ -113,15 +111,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       }
       const saved = { _id: await repo.addMeal(meal), ...meal }
 
-      // 只有正餐影响今天的树、引来小动物，加餐不算
-      let tree = null
+      // 只有正餐算暖豆、引来小动物，加餐不算
+      let gain = null
       let arrival = null
       if (isMainMeal(src.mealType)) {
         await forest.syncDay(openid, date)
-        tree = treeChange(meals, meals.concat(saved))
+        gain = beansChange(meals, meals.concat(saved))
         arrival = await garden.arrive(openid)
       }
-      return { ...saved, tree, arrival }
+      return { ...saved, gain, arrival }
     },
 
     async reanalyze(openid, input) {
@@ -148,12 +146,12 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       await repo.updateMeal(meal._id, patch)
       const updated = { ...meal, ...patch }
 
-      let tree = null
+      let gain = null
       if (isMainMeal(meal.mealType)) {
         await forest.syncDay(openid, meal.date)
-        tree = treeChange(meals, meals.map((m) => (m._id === meal._id ? updated : m)))
+        gain = beansChange(meals, meals.map((m) => (m._id === meal._id ? updated : m)))
       }
-      return { ...updated, tree }
+      return { ...updated, gain }
     },
 
     async get(openid, input) {

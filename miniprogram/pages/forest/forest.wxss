@@ -1,19 +1,17 @@
-.today-tree {
+.today-card {
   text-align: center;
-  background: linear-gradient(180deg, #e9f3e3 0%, #ffffff 70%);
+  background: linear-gradient(180deg, #fff4e0 0%, #ffffff 70%);
+}
+
+.today-stamps {
+  justify-content: center;
+  margin: 16rpx 0;
 }
 
 .today-title {
   font-size: 36rpx;
   font-weight: 700;
   color: var(--primary);
-}
-
-.today-image {
-  width: 360rpx;
-  height: 360rpx;
-  display: block;
-  margin: 8rpx auto 0;
 }
 
 .today-hint {
@@ -78,23 +76,21 @@
   margin-top: 8rpx;
 }
 
-.cell-image {
-  width: 88rpx;
-  height: 88rpx;
-  display: block;
-  margin: 0 auto;
+.cell-day {
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .cell-future {
-  border-radius: 50%;
-  background: var(--gray-soft);
-  transform: scale(0.5);
+  opacity: 0.35;
 }
 
-.cell-day {
-  font-size: 22rpx;
-  color: var(--muted);
-  line-height: 1.2;
+.cell-beans {
+  font-size: 20rpx;
+  color: #d97a1e;
+  min-height: 28rpx;
+  line-height: 28rpx;
 }
 
 .month-stats {

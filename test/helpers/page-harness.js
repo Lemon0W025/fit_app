@@ -24,7 +24,7 @@ function createWx(main) {
   const log = { toasts: [], modals: [], nav: [], uploads: [] }
   const wx = {
     log,
-    app: { globalData: { lastTree: null } },
+    app: { globalData: { lastGain: null } },
     cloud: {
       callFunction({ name, data, success, fail }) {
         Promise.resolve()

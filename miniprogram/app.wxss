@@ -284,3 +284,58 @@ button.btn-plain[disabled] {
   vertical-align: -0.25em;
   margin-right: 4rpx;
 }
+
+/* 早 / 午 / 晚打卡印章 */
+.stamps {
+  display: flex;
+  gap: 12rpx;
+  margin: 10rpx 0;
+}
+
+.stamp {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 700;
+  box-sizing: border-box;
+  color: #fff;
+}
+
+.stamp-green {
+  background: var(--green);
+}
+
+.stamp-yellow {
+  background: var(--yellow);
+}
+
+.stamp-red {
+  background: var(--red);
+}
+
+.stamp-done {
+  background: var(--gray);
+}
+
+.stamp-none {
+  border: 3rpx dashed var(--gray);
+  color: var(--gray);
+}
+
+/* 日历格子里的小印章：只要颜色 */
+.stamps-small {
+  gap: 4rpx;
+  justify-content: center;
+  margin: 4rpx 0 0;
+}
+
+.stamps-small .stamp {
+  width: 20rpx;
+  height: 20rpx;
+  font-size: 0;
+  border-width: 2rpx;
+}

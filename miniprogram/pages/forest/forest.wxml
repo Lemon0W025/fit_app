@@ -1,35 +1,38 @@
-<view wx:if="{{!loaded}}" class="empty">正在走进森林…</view>
+<view wx:if="{{!loaded}}" class="empty">正在翻打卡日历…</view>
 
 <view class="page" wx:if="{{loaded}}">
-  <view class="card today-tree">
-    <view class="today-title">{{today.title}}</view>
-    <image class="today-image" src="{{today.image}}" mode="aspectFit" />
-    <view class="today-hint">{{today.hintText}}</view>
+  <view class="card today-card">
+    <view class="today-title">{{daily.title}}</view>
+    <view class="stamps today-stamps">
+      <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
+    </view>
+    <view class="today-hint">{{daily.hint}}</view>
     <view class="today-stats">
-      <text wx:if="{{today.streakText}}" class="today-stat">{{today.streakText}}</text>
-      <text class="today-stat">🌳 累计种了 {{view.totalTrees}} 棵</text>
-      <view wx:if="{{today.beansText}}" class="today-stat"><image class="bean-inline" src="/images/garden/ui/bean.png" mode="aspectFit" />{{today.beansText}}</view>
+      <text wx:if="{{daily.streakText}}" class="today-stat">{{daily.streakText}}</text>
+      <text class="today-stat">📅 累计打卡 {{view.totalDays}} 天</text>
     </view>
   </view>
 
   <view class="card">
     <view class="month-bar">
       <text class="month-arrow" bindtap="prevMonth">‹</text>
-      <text class="month-label">{{view.monthLabel}}的森林</text>
+      <text class="month-label">{{view.monthLabel}}</text>
       <text class="month-arrow {{view.nextMonth ? '' : 'month-arrow-off'}}" bindtap="nextMonth">›</text>
     </view>
     <view class="weekdays">
       <text wx:for="{{weekdays}}" wx:key="*this" class="weekday">{{item}}</text>
     </view>
     <view class="grid">
-      <view wx:for="{{cells}}" wx:key="key" class="cell" data-key="{{item.key}}" bindtap="openDay">
+      <view wx:for="{{cells}}" wx:key="key" class="cell {{item.future ? 'cell-future' : ''}}" data-key="{{item.key}}" bindtap="openDay">
         <block wx:if="{{!item.blank}}">
-          <image wx:if="{{item.image}}" class="cell-image" src="{{item.image}}" mode="aspectFit" />
-          <view wx:else class="cell-image cell-future"></view>
           <view class="cell-day">{{item.day}}</view>
+          <view class="stamps stamps-small">
+            <view wx:for="{{item.stamps}}" wx:for-item="stamp" wx:key="key" class="stamp {{stamp.cls}}"></view>
+          </view>
+          <view class="cell-beans">{{item.beansText}}</view>
         </block>
       </view>
     </view>
-    <view class="month-stats">这个月种了 {{view.stats.trees}} 棵树，其中 {{view.stats.fruits}} 棵结了果</view>
+    <view class="month-stats">这个月打卡 {{view.stats.days}} 天，得了 {{view.stats.beans}} 暖豆</view>
   </view>
 </view>

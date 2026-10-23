@@ -43,7 +43,7 @@
       <text>图鉴</text>
     </view>
     <view class="action" bindtap="goCalendar">
-      <image class="action-icon" src="/images/forest/fruit.png" mode="aspectFit" />
+      <image class="action-icon" src="/images/garden/ui/calendar.png" mode="aspectFit" />
       <text>打卡日历</text>
     </view>
   </view>

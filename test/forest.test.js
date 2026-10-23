@@ -2,9 +2,9 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const {
   STAGES,
-  STAGE_LABELS,
   dayTree,
-  treeHint,
+  mealStamps,
+  beansHint,
   streakFrom,
 } = require('../cloudfunctions/api/lib/shared/forest')
 
@@ -22,7 +22,6 @@ function meal(mealType, rating = 'yellow', overrides = {}) {
 
 test('阶段常量', () => {
   assert.deepEqual(STAGES, ['empty', 'sprout', 'small', 'big', 'bloom', 'fruit'])
-  assert.equal(STAGE_LABELS.bloom, '开花')
 })
 
 test('dayTree：按正餐数量长大', () => {
@@ -69,19 +68,35 @@ test('dayTree：返回已打和没打的正餐', () => {
   assert.deepEqual(tree.missing, ['breakfast', 'dinner'])
 })
 
-test('treeHint：每个阶段告诉下一步做什么', () => {
-  assert.equal(treeHint(dayTree([])), '打卡一顿正餐，种下今天的树')
-  assert.equal(treeHint(dayTree([meal('breakfast')])), '再打卡午餐就能长成小树')
-  assert.equal(treeHint(dayTree([meal('breakfast'), meal('lunch')])), '再打卡晚餐就能长成大树')
-  assert.match(treeHint(dayTree([meal('breakfast'), meal('lunch'), meal('dinner')])), /开花/)
-  assert.match(treeHint(dayTree([meal('breakfast', 'green'), meal('lunch', 'green'), meal('dinner')])), /结果/)
-  assert.match(treeHint(dayTree([meal('breakfast', 'green'), meal('lunch', 'green'), meal('dinner', 'green')])), /完美/)
+test('beansHint：每一档告诉下一步能得多少暖豆', () => {
+  assert.equal(beansHint(dayTree([])), '打卡一顿正餐就能得 10 暖豆')
+  assert.equal(beansHint(dayTree([meal('breakfast')])), '再打卡午餐还能得 10 暖豆')
+  assert.equal(beansHint(dayTree([meal('breakfast'), meal('lunch')])), '再打卡晚餐还能得 20 暖豆')
+  assert.equal(beansHint(dayTree([meal('breakfast'), meal('lunch'), meal('dinner')])), '三顿都打卡啦！明天多吃绿色的，暖豆更多')
+  assert.equal(beansHint(dayTree([meal('breakfast', 'green'), meal('lunch', 'green'), meal('dinner')])), '真棒！明天三顿都吃成绿色，能拿满 60 暖豆')
+  assert.equal(beansHint(dayTree([meal('breakfast', 'green'), meal('lunch', 'green'), meal('dinner', 'green')])), '三顿都吃得好，今天的暖豆拿满啦！')
 })
 
-test('treeHint：优先提示还没到的下一顿', () => {
-  assert.equal(treeHint(dayTree([meal('lunch')])), '再打卡晚餐就能长成小树')
-  assert.equal(treeHint(dayTree([meal('dinner')])), '再打卡早餐就能长成小树')
-  assert.equal(treeHint(dayTree([meal('breakfast'), meal('dinner')])), '再打卡午餐就能长成大树')
+test('beansHint：优先提示还没到的下一顿', () => {
+  assert.equal(beansHint(dayTree([meal('lunch')])), '再打卡晚餐还能得 10 暖豆')
+  assert.equal(beansHint(dayTree([meal('dinner')])), '再打卡早餐还能得 10 暖豆')
+  assert.equal(beansHint(dayTree([meal('breakfast'), meal('dinner')])), '再打卡午餐还能得 20 暖豆')
+})
+
+test('mealStamps：早午晚三个印章，取每餐最新一次', () => {
+  assert.deepEqual(mealStamps([]).map((s) => [s.label, s.state]), [['早', 'none'], ['午', 'none'], ['晚', 'none']])
+  assert.deepEqual(mealStamps(undefined).length, 3)
+  const stamps = mealStamps([
+    meal('breakfast', 'red'),
+    meal('breakfast', 'green'),
+    meal('lunch', 'yellow', { status: 'failed', analysis: null }),
+    meal('snack', 'red'),
+  ])
+  assert.deepEqual(stamps, [
+    { mealType: 'breakfast', label: '早', state: 'green' },
+    { mealType: 'lunch', label: '午', state: 'done' },
+    { mealType: 'dinner', label: '晚', state: 'none' },
+  ])
 })
 
 test('streakFrom：今天有树时从今天往前数', () => {

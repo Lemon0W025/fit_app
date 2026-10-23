@@ -60,57 +60,41 @@ function buildDayView(day) {
   }
 }
 
-// ---------------------------------------------------------------- 养生森林
+// ---------------------------------------------------------------- 每日暖豆
 
-const GREW_TITLES = {
-  sprout: '🌱 种下了今天的树苗',
-  small: '🎉 今天的树长成小树了',
-  big: '🎉 今天的树长成大树了',
-  bloom: '🌸 今天的树开花了',
-  fruit: '🍎 今天的树结果了！',
+// 早 / 午 / 晚三个印章：cls 对应 app.wxss 里的颜色
+function stampsView(stamps) {
+  return (stamps || []).map((s) => ({ key: s.mealType, label: s.label, cls: `stamp-${s.state}` }))
 }
 
-function treeImage(stage) {
-  if (!stage || stage === 'future') return ''
-  return `/images/forest/${stage}.png`
-}
-
-// 打卡结果页：这次打卡让今天的树发生了什么、得了多少暖豆
-function decorateTree(tree) {
-  if (!tree) return null
+// 打卡结果页：这次打卡多得了多少暖豆
+function decorateGain(gain) {
+  if (!gain) return null
   return {
-    ...tree,
-    image: treeImage(tree.after),
-    title: tree.grew && GREW_TITLES[tree.after] ? GREW_TITLES[tree.after] : `今天的树：${tree.stageLabel}`,
-    beansText: tree.beans > 0 ? `+${tree.beans} 暖豆` : '',
+    title: gain.beans > 0 ? `+${gain.beans} 暖豆` : '这顿记下啦',
+    hint: gain.hint,
+    stamps: stampsView(gain.stamps),
   }
 }
 
-// 今日页顶部的小树卡片
-function treeCard(tree) {
-  if (!tree) return null
+// 今日页、打卡日历顶部的「今天的暖豆」卡片
+function beansCard(daily) {
+  if (!daily) return null
   return {
-    ...tree,
-    image: treeImage(tree.stage),
-    title: tree.stage === 'empty' ? '今天还没种树' : `今天的树：${tree.stageLabel}`,
-    streakText: tree.streak > 0 ? `🔥 已连续 ${tree.streak} 天` : '',
-    beansText: tree.beansToday > 0 ? `今天已得 ${tree.beansToday} 暖豆` : '',
-    hintText: tree.nextGain > 0 ? `${tree.hint}，再得 ${tree.nextGain} 暖豆` : tree.hint,
+    title: daily.beansToday > 0 ? `今天得了 ${daily.beansToday} 暖豆` : '今天还没打卡',
+    hint: daily.hint,
+    stamps: stampsView(daily.stamps),
+    streakText: daily.streak > 0 ? `🔥 已连续 ${daily.streak} 天` : '',
   }
 }
 
-// 森林日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）
-function buildForestCells(days, firstWeekday) {
+// 打卡日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）
+function buildCalendarCells(days, firstWeekday) {
   const blanks = (firstWeekday + 6) % 7
   const cells = []
   for (let i = 0; i < blanks; i++) cells.push({ key: `blank-${i}`, blank: true })
   days.forEach((d) => {
-    cells.push({
-      ...d,
-      key: d.date,
-      future: d.stage === 'future',
-      image: treeImage(d.stage),
-    })
+    cells.push({ ...d, key: d.date, stamps: stampsView(d.stamps), beansText: d.beans > 0 ? `+${d.beans}` : '' })
   })
   return cells
 }
@@ -127,8 +111,8 @@ module.exports = {
   decorateMeal,
   buildDayView,
   greetingText,
-  treeImage,
-  decorateTree,
-  treeCard,
-  buildForestCells,
+  stampsView,
+  decorateGain,
+  beansCard,
+  buildCalendarCells,
 }

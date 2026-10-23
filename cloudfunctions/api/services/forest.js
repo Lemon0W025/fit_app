@@ -2,7 +2,7 @@ const { AppError, CODES } = require('../lib/errors')
 const { normalizeGarden } = require('../lib/garden-state')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey, addDays } = require('../lib/shared/date')
-const { STAGE_LABELS, dayTree, treeHint, streakFrom } = require('../lib/shared/forest')
+const { dayTree, mealStamps, beansHint, streakFrom } = require('../lib/shared/forest')
 const { STAGE_BEANS, beanBalance, nextStageGain } = require('../lib/shared/garden')
 
 function daysInMonth(month) {
@@ -25,19 +25,17 @@ function createForestService({ repo, now }) {
     const tree = dayTree(meals)
     return {
       date,
-      stage: tree.stage,
-      stageLabel: STAGE_LABELS[tree.stage],
-      hint: treeHint(tree),
+      stamps: mealStamps(meals),
       beansToday: STAGE_BEANS[tree.stage],
       nextGain: nextStageGain(tree.stage),
+      hint: beansHint(tree),
       streak: streakFrom(garden.days, dateKey(now())),
-      totalTrees: Object.keys(garden.days).length,
       beans: Math.max(0, beanBalance(garden)),
     }
   }
 
   return {
-    // 打卡新增、重新分析、删除之后调用：按这一天的正餐重算种树和当天的暖豆，重复调用结果不变
+    // 打卡新增、重新分析、删除之后调用：按这一天的正餐重算当天的暖豆，重复调用结果不变
     async syncDay(openid, date) {
       const stage = dayTree(await repo.listMeals(openid, date)).stage
       const beans = STAGE_BEANS[stage]
@@ -59,7 +57,7 @@ function createForestService({ repo, now }) {
       return todayView(openid, date, meals, await load(openid))
     },
 
-    // 打卡日历：按月显示每天的树
+    // 打卡日历：按月显示每天的印章和暖豆
     async get(openid, input) {
       const today = dateKey(now())
       const currentMonth = today.slice(0, 7)
@@ -79,10 +77,13 @@ function createForestService({ repo, now }) {
       const days = []
       for (let date = start; date <= end; date = addDays(date, 1)) {
         const meals = byDate[date] || []
+        const future = date > today
         days.push({
           date,
           day: Number(date.slice(8)),
-          stage: date > today ? 'future' : dayTree(meals).stage,
+          future,
+          stamps: future ? [] : mealStamps(meals),
+          beans: future ? 0 : STAGE_BEANS[dayTree(meals).stage],
           mealsCount: meals.length,
           kcal: sumMeals(meals).kcal,
         })
@@ -98,11 +99,11 @@ function createForestService({ repo, now }) {
         firstWeekday: new Date(Date.UTC(y, m - 1, 1)).getUTCDay(),
         days,
         stats: {
-          trees: days.filter((d) => d.stage !== 'empty' && d.stage !== 'future').length,
-          fruits: days.filter((d) => d.stage === 'fruit').length,
+          days: days.filter((d) => d.beans > 0).length,
+          beans: days.reduce((sum, d) => sum + d.beans, 0),
         },
         today: await todayView(openid, today, todayMeals, garden),
-        totalTrees: Object.keys(garden.days).length,
+        totalDays: Object.keys(garden.days).length,
       }
     },
   }

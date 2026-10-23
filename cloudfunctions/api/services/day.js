@@ -30,7 +30,7 @@ function createDayService({ repo, chat, config, now, forest, log = () => {} }) {
         totals,
         remainingKcal: dailyKcal == null ? null : dailyKcal - totals.kcal,
         summary,
-        tree: await forest.today(openid, date, meals),
+        daily: await forest.today(openid, date, meals),
       }
     },
 

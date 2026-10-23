@@ -24,7 +24,6 @@ ALPHA_MIN = 4     # 低于这个透明度算背景
 NOISE_PX = 120    # 比这还小的孤立碎点当噪点丢掉
 
 ITEM_PX = 240     # 庭院物件：正方形画布，物体贴底居中（庭院里底边对齐格子）
-TREE_PX = 240     # 每日的树：几个阶段用同一个缩放比例，才看得出越长越大
 UI_PX = {'bean': 120, 'gacha': 420, 'gift': 280, 'book': 240, 'shovel': 200,
          'capsule-common': 300, 'capsule-rare': 300, 'capsule-epic': 300, 'capsule-legendary': 300}
 
@@ -32,8 +31,8 @@ UI_PX = {'bean': 120, 'gacha': 420, 'gift': 280, 'book': 240, 'shovel': 200,
 SHEETS = [
     ('01-界面元素.png', 'ui', ['bean', 'gacha', 'capsule-common', 'capsule-rare', 'capsule-epic',
                            'capsule-legendary', 'gift', 'book', 'shovel']),
-    # 第 3 格「小树苗」不用：树只有 空地/树苗/小树/大树/开花/结果 六个阶段
-    ('02-每天的树.png', 'tree', ['empty', 'sprout', None, 'small', 'big', 'bloom', 'fruit', None, None]),
+    # 每天的树已经不用了；这张图只取「大树」给院子中间的新手大树（见 EXTRA_ITEMS）
+    ('02-每天的树.png', 'source', [None, None, None, 'small', 'big', None, None, None, None]),
     ('03-普通-花草.png', 'item', ['daisy', 'chrysanthemum', 'orchid', 'pothos', 'sunflower', 'bamboo',
                               'dandelion', 'grass', 'mushroom']),
     ('04-普通-田园.png', 'item', ['cabbage', 'radish', 'pumpkin', 'pebbles', 'fence', 'stool', None, None, None]),
@@ -103,10 +102,9 @@ def split_cells(img):
     return pieces
 
 
-def fit(obj, size, scale=None, margin=6, anchor='bottom'):
-    """放进正方形画布：默认等比缩放到正好放下；给了 scale 就按固定比例（每日树用）"""
-    if scale is None:
-        scale = (size - 2 * margin) / max(obj.size)
+def fit(obj, size, margin=6, anchor='bottom'):
+    """等比缩放到正好放进正方形画布"""
+    scale = (size - 2 * margin) / max(obj.size)
     w, h = max(1, round(obj.width * scale)), max(1, round(obj.height * scale))
     obj = obj.resize((w, h), Image.LANCZOS)
     canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
@@ -135,14 +133,12 @@ def main():
         for i, (out, piece) in enumerate(zip(names, pieces)):
             if out and piece is None:
                 sys.exit(f'{name} 第 {i + 1} 格是空的，但 SHEETS 里写的是 {out}')
-            if not out and piece is not None and kind != 'tree':
+            if not out and piece is not None and kind != 'source':
                 print(f'  注意：{name} 第 {i + 1} 格有图，没用上')
         objs = {out: piece for out, piece in zip(names, pieces) if out}
         cut[name] = objs
-        if kind == 'tree':
-            scale = (TREE_PX - 12) / max(max(o.size) for o in objs.values())
-            for out, o in objs.items():
-                total += save(fit(o, TREE_PX, scale=scale), 'forest', f'{out}.png')
+        if kind == 'source':
+            pass
         elif kind == 'item':
             for out, o in objs.items():
                 total += save(fit(o, ITEM_PX), 'garden', 'items', f'{out}.png')

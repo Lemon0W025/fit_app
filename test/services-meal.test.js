@@ -52,9 +52,9 @@ test('analyze：有照片时调用视觉模型并保存', async () => {
   assert.equal(chat.calls[0].model, 'vision-model')
   const content = chat.calls[0].messages[1].content
   assert.equal(content.find((c) => c.type === 'image_url').image_url.url, 'https://tmp/cloud://a.jpg')
-  // tree 只在响应里给页面做反馈，不存库
-  const { tree, arrival, ...stored } = meal
-  assert.equal(tree.after, 'sprout')
+  // gain 只在响应里给页面做反馈，不存库
+  const { gain, arrival, ...stored } = meal
+  assert.equal(gain.beans, 10)
   assert.deepEqual(await repo.getMeal('u1', meal._id), stored)
 })
 
@@ -155,7 +155,7 @@ test('reanalyze：补充备注后重新分析失败的打卡', async () => {
   assert.equal(meal.note, '红烧肉盖饭')
   assert.equal(meal.error, '')
   assert.equal(chat.calls.length, 3)
-  const { tree, arrival, ...stored } = meal
+  const { gain, arrival, ...stored } = meal
   assert.deepEqual(await repo.getMeal('u1', failed._id), stored)
 })
 
@@ -205,48 +205,51 @@ test('remove：没有图片时不调用删图', async () => {
   assert.deepEqual(deleted, [])
 })
 
-test('analyze 正餐：返回今天的树变化，并记下今天种的树', async () => {
+test('analyze 正餐：返回这次多得的暖豆和今天的印章，并记下当天暖豆', async () => {
   const { repo, service } = setup({ results: [analysisJson()] })
   const meal = await service.analyze('u1', { mealType: 'breakfast', note: '小米粥' })
-  assert.deepEqual(meal.tree, {
-    before: 'empty',
-    after: 'sprout',
-    grew: true,
-    stageLabel: '树苗',
-    hint: '再打卡午餐就能长成小树',
+  assert.deepEqual(meal.gain, {
     beans: 10,
+    beansToday: 10,
+    hint: '再打卡午餐还能得 10 暖豆',
+    stamps: [
+      { mealType: 'breakfast', label: '早', state: 'green' },
+      { mealType: 'lunch', label: '午', state: 'none' },
+      { mealType: 'dinner', label: '晚', state: 'none' },
+    ],
   })
   const garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, { [TODAY]: true })
   assert.deepEqual(garden.beans.earned, { [TODAY]: 10 })
 })
 
-test('analyze 加餐：不影响树，也不记种树', async () => {
+test('analyze 加餐：不算暖豆', async () => {
   const { repo, service } = setup({ results: [analysisJson()] })
   const meal = await service.analyze('u1', { mealType: 'snack', note: '一个苹果' })
-  assert.equal(meal.tree, null)
+  assert.equal(meal.gain, null)
   assert.equal(await repo.getGarden('u1'), null)
 })
 
-test('analyze：失败的打卡也让树长大', async () => {
+test('analyze：失败的打卡也算打卡，印章是灰的', async () => {
   const { service } = setup({ results: [new Error('down')] })
   const meal = await service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'lunch' })
   assert.equal(meal.status, 'failed')
-  assert.equal(meal.tree.after, 'sprout')
+  assert.equal(meal.gain.beans, 10)
+  assert.equal(meal.gain.stamps[1].state, 'done')
 })
 
-test('reanalyze：评级变绿后今天的树开花变结果', async () => {
+test('reanalyze：评级变绿后暖豆拿满', async () => {
   const { repo, service } = setup({ results: [new Error('down'), analysisJson({ rating: 'green' })] })
   await repo.addMeal({ _openid: 'u1', date: TODAY, mealType: 'breakfast', status: 'done', analysis: { rating: 'green', totalKcal: 200 }, createdAt: 1 })
   await repo.addMeal({ _openid: 'u1', date: TODAY, mealType: 'lunch', status: 'done', analysis: { rating: 'green', totalKcal: 500 }, createdAt: 2 })
   const failed = await service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'dinner' })
-  assert.deepEqual([failed.tree.before, failed.tree.after], ['small', 'bloom'])
+  assert.equal(failed.gain.beans, 30)
+  assert.equal(failed.gain.beansToday, 50)
 
   const meal = await service.reanalyze('u1', { mealId: failed._id, note: '清蒸鱼和青菜' })
-  assert.equal(meal.tree.before, 'bloom')
-  assert.equal(meal.tree.after, 'fruit')
-  assert.equal(meal.tree.grew, true)
-  assert.equal(meal.tree.beans, 10)
+  assert.equal(meal.gain.beans, 10)
+  assert.equal(meal.gain.beansToday, 60)
+  assert.equal(meal.gain.hint, '三顿都吃得好，今天的暖豆拿满啦！')
   assert.deepEqual((await repo.getGarden('u1')).beans.earned, { [TODAY]: 60 })
 })
 

@@ -4,43 +4,42 @@
   margin: 8rpx 8rpx 24rpx;
 }
 
-.tree-card {
+.beans-card {
   display: flex;
   align-items: center;
   padding: 20rpx 24rpx;
-  background: linear-gradient(90deg, #e9f3e3 0%, #ffffff 80%);
+  background: linear-gradient(90deg, #fff4e0 0%, #ffffff 80%);
 }
 
-.tree-card-image {
-  width: 150rpx;
-  height: 150rpx;
+.beans-card-icon {
+  width: 110rpx;
+  height: 110rpx;
   flex-shrink: 0;
 }
 
-.tree-card-body {
+.beans-card-body {
   flex: 1;
   margin-left: 16rpx;
   min-width: 0;
 }
 
-.tree-card-title {
-  font-size: 32rpx;
+.beans-card-title {
+  font-size: 34rpx;
   font-weight: 700;
-  color: var(--primary);
+  color: #b8763a;
 }
 
-.tree-card-hint {
+.beans-card-hint {
   font-size: 28rpx;
-  margin-top: 4rpx;
 }
 
-.tree-card-streak {
+.beans-card-streak {
   font-size: 26rpx;
   color: var(--muted);
   margin-top: 4rpx;
 }
 
-.tree-card-arrow {
+.beans-card-arrow {
   font-size: 44rpx;
   color: var(--gray);
   margin-left: 8rpx;

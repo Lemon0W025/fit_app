@@ -3,7 +3,7 @@ const config = require('./config')
 App({
   globalData: {
     // 打卡页把"这次打卡让今天的树怎么变了"交给结果页展示
-    lastTree: null,
+    lastGain: null,
   },
 
   onLaunch() {

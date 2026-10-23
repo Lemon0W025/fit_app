@@ -1,12 +1,14 @@
 <view wx:if="{{loading}}" class="empty">加载中…</view>
 
 <view class="page" wx:if="{{meal}}">
-  <view wx:if="{{tree}}" class="card tree-banner" bindtap="goGarden">
-    <image class="tree-banner-image" src="{{tree.image}}" mode="aspectFit" />
-    <view class="tree-banner-body">
-      <view class="tree-banner-title">{{tree.title}}</view>
-      <view wx:if="{{tree.beansText}}" class="tree-banner-beans"><image class="bean-inline" src="/images/garden/ui/bean.png" mode="aspectFit" />{{tree.beansText}}</view>
-      <view class="tree-banner-hint">{{tree.hint}}</view>
+  <view wx:if="{{gain}}" class="card gain-banner" bindtap="goGarden">
+    <image class="gain-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
+    <view class="gain-body">
+      <view class="gain-title">{{gain.title}}</view>
+      <view class="stamps">
+        <view wx:for="{{gain.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
+      </view>
+      <view class="gain-hint">{{gain.hint}}</view>
     </view>
   </view>
   <view wx:if="{{arrival}}" class="card arrival-banner" bindtap="goGarden">

@@ -1,12 +1,12 @@
 const api = require('../../utils/api')
-const { decorateMeal, decorateTree } = require('../../utils/view')
+const { decorateMeal, decorateGain } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/garden-view')
 
 Page({
   data: {
     loading: true,
     meal: null,
-    tree: null,
+    gain: null,
     arrival: null,
     note: '',
     editing: false,
@@ -15,12 +15,12 @@ Page({
 
   onLoad(options) {
     this.mealId = options.id
-    // 刚打完卡跳过来时，展示这次打卡让今天的树长成了什么样
+    // 刚打完卡跳过来时，告诉妈妈这次得了多少暖豆、有没有小动物搬来
     const app = getApp()
-    const last = app.globalData.lastTree
+    const last = app.globalData.lastGain
     if (last && last.mealId === options.id) {
-      this.setData({ tree: decorateTree(last.tree), arrival: arrivalCard(last.arrival) })
-      app.globalData.lastTree = null
+      this.setData({ gain: decorateGain(last.gain), arrival: arrivalCard(last.arrival) })
+      app.globalData.lastGain = null
     }
     api.call('meal.get', { mealId: this.mealId })
       .then((meal) => this.showMeal(meal))
@@ -53,7 +53,7 @@ Page({
     api.call('meal.reanalyze', { mealId: this.mealId, note: this.data.note })
       .then((meal) => {
         wx.hideLoading()
-        this.setData({ working: false, editing: false, tree: decorateTree(meal.tree) })
+        this.setData({ working: false, editing: false, gain: decorateGain(meal.gain) })
         this.showMeal(meal)
         if (meal.status === 'failed') api.showError(new Error(meal.error))
       })
