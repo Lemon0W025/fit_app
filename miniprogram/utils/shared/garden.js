@@ -29,6 +29,17 @@ const ITEMS = [
   { id: 'pebbles', name: '鹅卵石', rarity: 'common', size: 's', emoji: '🪨' },
   { id: 'fence', name: '木篱笆', rarity: 'common', size: 's', emoji: '🪵' },
   { id: 'stool', name: '小板凳', rarity: 'common', size: 's', emoji: '🪑' },
+  { id: 'lotus_clump', name: '荷花丛', rarity: 'common', size: 'm', emoji: '🪷' },
+  { id: 'water_lily', name: '睡莲', rarity: 'common', size: 's', emoji: '🌺' },
+  { id: 'reeds', name: '芦苇', rarity: 'common', size: 'm', emoji: '🌾' },
+  { id: 'stepping_stones', name: '汀步石', rarity: 'common', size: 's', emoji: '🪨' },
+  { id: 'bamboo_blind', name: '竹帘', rarity: 'common', size: 'm', emoji: '🪟' },
+  { id: 'straw_nest', name: '草窝', rarity: 'common', size: 's', emoji: '🪺' },
+  { id: 'feed_trough', name: '食槽', rarity: 'common', size: 's', emoji: '🥣' },
+  { id: 'haystack', name: '草垛', rarity: 'common', size: 'm', emoji: '🌾' },
+  { id: 'scarecrow', name: '稻草人', rarity: 'common', size: 'm', emoji: '🧍' },
+  { id: 'ladder', name: '木梯', rarity: 'common', size: 'm', emoji: '🪜' },
+  { id: 'fruit_basket', name: '果篮', rarity: 'common', size: 's', emoji: '🧺' },
 
   { id: 'osmanthus', name: '桂花树', rarity: 'rare', size: 'l', emoji: '🌳' },
   { id: 'orange_tree', name: '橘子树', rarity: 'rare', size: 'l', emoji: '🍊' },
@@ -39,20 +50,27 @@ const ITEMS = [
   { id: 'wood_bridge', name: '小木桥', rarity: 'rare', size: 'm', emoji: '🛶' },
   { id: 'lantern', name: '灯笼柱', rarity: 'rare', size: 'm', emoji: '🏮' },
   { id: 'stone_table', name: '石桌石凳', rarity: 'rare', size: 'm', emoji: '🍵' },
-  { id: 'chick', name: '小黄鸡', rarity: 'rare', size: 's', emoji: '🐤', kind: 'animal', likes: ['grass'] },
-  { id: 'rabbit', name: '小白兔', rarity: 'rare', size: 's', emoji: '🐇', kind: 'animal', likes: ['radish'] },
-  { id: 'duck', name: '小黄鸭', rarity: 'rare', size: 's', emoji: '🦆', kind: 'animal', likes: ['koi_pond'] },
+  { id: 'koi_school', name: '锦鲤群', rarity: 'rare', size: 's', emoji: '🐠' },
+  { id: 'plank_bridge', name: '小木栈桥', rarity: 'rare', size: 'm', emoji: '🛤️' },
+  { id: 'tea_stove', name: '茶炉', rarity: 'rare', size: 's', emoji: '🔥' },
+  { id: 'bath_tub', name: '泡汤木桶', rarity: 'rare', size: 'm', emoji: '🛁' },
+  { id: 'flower_rack', name: '花架', rarity: 'rare', size: 'l', emoji: '💐' },
+  { id: 'bench', name: '长椅', rarity: 'rare', size: 'm', emoji: '🛋️' },
+  { id: 'bird_feeder', name: '喂鸟台', rarity: 'rare', size: 'm', emoji: '🐦' },
+  { id: 'chick', name: '小黄鸡', rarity: 'rare', size: 's', emoji: '🐤', kind: 'animal', likes: ['grass', 'feed_trough'] },
+  { id: 'rabbit', name: '小白兔', rarity: 'rare', size: 's', emoji: '🐇', kind: 'animal', likes: ['radish', 'straw_nest'] },
+  { id: 'duck', name: '小黄鸭', rarity: 'rare', size: 's', emoji: '🦆', kind: 'animal', likes: ['koi_pond', 'koi_school'] },
   { id: 'koi_pond', name: '锦鲤池', rarity: 'rare', size: 'm', emoji: '🐟' },
-  { id: 'turtle', name: '小乌龟', rarity: 'rare', size: 's', emoji: '🐢', kind: 'animal', likes: ['pebbles'] },
-  { id: 'tabby_cat', name: '小花猫', rarity: 'rare', size: 's', emoji: '🐈', kind: 'animal', likes: ['stool'] },
+  { id: 'turtle', name: '小乌龟', rarity: 'rare', size: 's', emoji: '🐢', kind: 'animal', likes: ['pebbles', 'stepping_stones'] },
+  { id: 'tabby_cat', name: '小花猫', rarity: 'rare', size: 's', emoji: '🐈', kind: 'animal', likes: ['stool', 'bench'] },
 
   { id: 'panda', name: '大熊猫', rarity: 'epic', size: 'm', emoji: '🐼', kind: 'animal', likes: ['bamboo'] },
-  { id: 'ginger_cat', name: '晒太阳的橘猫', rarity: 'epic', size: 'm', emoji: '😺', kind: 'animal', likes: ['tea_table'] },
+  { id: 'ginger_cat', name: '晒太阳的橘猫', rarity: 'epic', size: 'm', emoji: '😺', kind: 'animal', likes: ['tea_table', 'tea_stove'] },
   { id: 'plum_tree', name: '梅花树', rarity: 'epic', size: 'l', emoji: '🌸' },
   { id: 'lotus_pond', name: '荷花池', rarity: 'epic', size: 'm', emoji: '🪷' },
   { id: 'pavilion', name: '六角凉亭', rarity: 'epic', size: 'l', emoji: '🛖' },
   { id: 'arch_bridge', name: '石拱桥', rarity: 'epic', size: 'm', emoji: '🌉' },
-  { id: 'crane', name: '仙鹤', rarity: 'epic', size: 'm', emoji: '🦢', kind: 'animal', likes: ['lotus_pond'] },
+  { id: 'crane', name: '仙鹤', rarity: 'epic', size: 'm', emoji: '🦢', kind: 'animal', likes: ['lotus_pond', 'lotus_clump'] },
   { id: 'swing_tree', name: '秋千树', rarity: 'epic', size: 'l', emoji: '🌲' },
   { id: 'waterwheel', name: '小水车', rarity: 'epic', size: 'm', emoji: '🎡' },
 
@@ -77,15 +95,18 @@ const GROUNDS = {
   furniture: ['lawn', 'pave'],
   // 自带石头池边的水景，摆草地上
   scape: ['lawn'],
+  water: ['water'],
 }
 const ITEM_CLASS = {
   veg: ['cabbage', 'radish', 'pumpkin'],
+  water: ['lotus_clump', 'water_lily', 'reeds', 'stepping_stones', 'koi_school', 'plank_bridge'],
   furniture: ['pebbles', 'fence', 'stool', 'gourd_rack', 'goji_tray', 'tea_table', 'wood_bridge', 'lantern', 'stone_table',
-    'pavilion', 'teahouse', 'dried_persimmon', 'sweet_potato_stove', 'snowman', 'dumpling_steamer'],
+    'pavilion', 'teahouse', 'dried_persimmon', 'sweet_potato_stove', 'snowman', 'dumpling_steamer',
+    'bamboo_blind', 'straw_nest', 'feed_trough', 'haystack', 'ladder', 'fruit_basket', 'tea_stove', 'bath_tub', 'flower_rack', 'bench', 'bird_feeder'],
   scape: ['koi_pond', 'lotus_pond', 'arch_bridge', 'waterwheel', 'zigzag_bridge'],
 }
 // 占 2×2 格的大件
-const FOOT2 = ['pavilion', 'teahouse', 'zigzag_bridge', 'lotus_pond', 'koi_pond', 'arch_bridge', 'waterwheel', 'swing_tree', 'gourd_rack']
+const FOOT2 = ['pavilion', 'teahouse', 'zigzag_bridge', 'lotus_pond', 'koi_pond', 'arch_bridge', 'waterwheel', 'swing_tree', 'gourd_rack', 'flower_rack']
 ITEMS.forEach((item) => {
   if (item.kind === 'animal') return
   const cls = Object.keys(ITEM_CLASS).find((k) => ITEM_CLASS[k].indexOf(item.id) !== -1) || 'plant'
@@ -198,18 +219,23 @@ function placedOrder(uid) {
   return Number(String(uid).replace(/\D/g, '')) || 0
 }
 
-// 条件满足、还没住进来的动物，按「最后一件需要的物件」摆进庭院的先后排队
+// 条件满足、还没住进来的动物，按「最后一件需要的物件」摆进花园的先后排队
+// likes + likesCount：喜欢的东西够数；likesAny：摆了其中任一件就够。两条路都算，谁早按谁
 function waitingAnimals(placed, residentIds) {
   const waiting = []
   ITEMS.forEach((animal) => {
     if (animal.kind !== 'animal' || residentIds.indexOf(animal.id) !== -1) return
     if (animal.needs && residentIds.indexOf(animal.needs) === -1) return
+    const orderOf = (ids) => placed.filter((p) => ids.indexOf(p.itemId) !== -1).map((p) => placedOrder(p.uid)).sort((a, b) => a - b)
     const need = animal.likesCount || 1
-    const orders = placed
-      .filter((p) => animal.likes.indexOf(p.itemId) !== -1)
-      .map((p) => placedOrder(p.uid))
-      .sort((a, b) => a - b)
-    if (orders.length >= need) waiting.push({ id: animal.id, order: orders[need - 1] })
+    const orders = orderOf(animal.likes || [])
+    const candidates = []
+    if (orders.length >= need) candidates.push(orders[need - 1])
+    if (animal.likesAny) {
+      const any = orderOf(animal.likesAny)
+      if (any.length) candidates.push(any[0])
+    }
+    if (candidates.length) waiting.push({ id: animal.id, order: Math.min(...candidates) })
   })
   return waiting.sort((a, b) => a.order - b.order).map((w) => w.id)
 }

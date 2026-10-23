@@ -22,32 +22,32 @@ const GAITS = ['pad', 'waddle', 'hop', 'crawl', 'stride', 'fly', 'flutter']
 const ANIMAL_INFO = {
   chick: {
     scale: 0.5, stepMs: 800, pauseMs: [1500, 3500], sleepy: 0.03, faces: 'right', top: 0.03, gait: 'waddle',
-    likesText: '喜欢：青草丛', arrive: '小黄鸡跟着青草香，蹦蹦跳跳搬进花园啦！', hello: '叽叽！我是小黄鸡，以后就住这儿啦！',
+    likesText: '喜欢：青草丛、食槽', arrive: '小黄鸡跟着青草香，蹦蹦跳跳搬进花园啦！', hello: '叽叽！我是小黄鸡，以后就住这儿啦！',
     lines: ['叽叽！早饭吃了没？', '多喝温水，叽！', '今天也要好好吃饭哦', '跟我一起蹦一蹦，活动活动！'],
   },
   rabbit: {
     scale: 0.55, stepMs: 800, pauseMs: [1500, 4000], sleepy: 0.08, faces: 'front', top: 0.03, gait: 'hop',
-    likesText: '喜欢：白萝卜', arrive: '小白兔闻到萝卜香，搬进花园啦！', hello: '我是小白兔，以后就住这儿啦！',
+    likesText: '喜欢：白萝卜、草窝', arrive: '小白兔闻到萝卜香，搬进花园啦！', hello: '我是小白兔，以后就住这儿啦！',
     lines: ['蔬菜要多吃，眼睛亮亮的～', '慢慢吃，别噎着', '今天的菜绿不绿？', '蹦跶蹦跶，吃完饭走一走'],
   },
   duck: {
     scale: 0.5, stepMs: 1200, pauseMs: [2000, 4500], sleepy: 0.03, faces: 'right', top: 0.03, gait: 'waddle',
-    likesText: '喜欢：锦鲤池', arrive: '小黄鸭看见锦鲤池，摇摇摆摆搬进花园啦！', hello: '嘎嘎！我是小黄鸭，以后就住这儿啦！',
+    likesText: '喜欢：锦鲤池、锦鲤群', arrive: '小黄鸭看见锦鲤池，摇摇摆摆搬进花园啦！', hello: '嘎嘎！我是小黄鸭，以后就住这儿啦！',
     lines: ['嘎嘎！喝水了吗？', '天凉了，多穿件衣服', '晚饭清淡一点，嘎', '摇摇摆摆，散散步'],
   },
   turtle: {
     scale: 0.5, stepMs: 2600, pauseMs: [3000, 6000], sleepy: 0.08, faces: 'right', top: 0.27, gait: 'crawl',
-    likesText: '喜欢：鹅卵石', arrive: '小乌龟慢慢爬到鹅卵石边上，搬进花园啦！', hello: '我…是…小乌龟，以后…就住这儿啦！',
+    likesText: '喜欢：鹅卵石、汀步石', arrive: '小乌龟慢慢爬到鹅卵石边上，搬进花园啦！', hello: '我…是…小乌龟，以后…就住这儿啦！',
     lines: ['慢慢来，吃饭也要细嚼慢咽', '不急不急，坚持最重要', '早点睡，身体好', '我爬得慢，可我从不偷懒'],
   },
   tabby_cat: {
     scale: 0.6, stepMs: 1300, pauseMs: [2500, 5000], sleepy: 0.2, faces: 'front', top: 0.03, gait: 'pad',
-    likesText: '喜欢：小板凳', arrive: '小花猫相中了小板凳，搬进花园啦！', hello: '喵～我是小花猫，以后就住这儿啦！',
+    likesText: '喜欢：小板凳、长椅', arrive: '小花猫相中了小板凳，搬进花园啦！', hello: '喵～我是小花猫，以后就住这儿啦！',
     lines: ['喵～今天吃得好吗？', '饭后别马上躺下哦', '喵，摸摸头', '水果当加餐，比零食好喵'],
   },
   ginger_cat: {
     scale: 0.7, stepMs: 2000, pauseMs: [6000, 12000], sleepy: 0.5, faces: 'left', top: 0.39, gait: 'pad',
-    likesText: '喜欢：茶桌', arrive: '胖橘猫闻着茶香，慢悠悠搬进花园啦！', hello: '喵…我是胖橘猫，以后就在这儿晒太阳啦',
+    likesText: '喜欢：茶桌、茶炉', arrive: '胖橘猫闻着茶香，慢悠悠搬进花园啦！', hello: '喵…我是胖橘猫，以后就在这儿晒太阳啦',
     lines: ['晒太阳好舒服，饭后也出来走走吧', '我胖，你可别学我', '喵…七分饱刚刚好', '少吃点甜的喵'],
   },
   panda: {
@@ -57,7 +57,7 @@ const ANIMAL_INFO = {
   },
   crane: {
     scale: 0.8, stepMs: 2000, pauseMs: [3000, 6000], sleepy: 0, faces: 'right', top: 0.03, gait: 'stride',
-    likesText: '喜欢：荷花池', arrive: '仙鹤看中了荷花池，翩翩飞进花园啦！', hello: '我是仙鹤，以后就住这儿啦',
+    likesText: '喜欢：荷花池、荷花丛', arrive: '仙鹤看中了荷花池，翩翩飞进花园啦！', hello: '我是仙鹤，以后就住这儿啦',
     lines: ['站直一点，腰背会舒服', '早睡早起，精神好', '心平气和，福寿安康', '饭后百步走'],
   },
   panda_family: {
@@ -84,10 +84,21 @@ const PLAYS = {
   stone_table: { action: 'perch', animals: CATS, at: 'on', spot: { x: 0.5, y: 0.6 }, emoji: '💤', line: '石桌凉凉的，舒服' },
   swing_tree: { action: 'swing', animals: ['panda'].concat(CATS), at: 'on', spot: { x: 0.66, y: 0.2 }, emoji: '🎵', line: '荡呀荡～真开心' },
   pebbles: { action: 'bask', animals: ['turtle'], at: 'on', spot: { x: 0.5, y: 0.4 }, emoji: '☀️', line: '晒晒背，暖洋洋' },
+  koi_school: { action: 'swim', animals: POND, at: 'on', spot: { x: 0.5, y: 0.3 }, emoji: '🐟', line: '和锦鲤一起游' },
+  lotus_clump: { action: 'swim', animals: POND, at: 'on', spot: { x: 0.5, y: 0.25 }, emoji: '🪷', line: '躲在荷叶底下' },
+  plank_bridge: { action: 'swim', animals: POND, at: 'on', spot: { x: 0.5, y: 0.3 }, emoji: '💧', line: '从桥底下钻过去' },
+  stepping_stones: { action: 'bask', animals: ['turtle'], at: 'on', spot: { x: 0.5, y: 0.45 }, emoji: '☀️', line: '石头晒得热乎乎' },
+  bench: { action: 'perch', animals: CATS, at: 'on', spot: { x: 0.5, y: 0.6 }, emoji: '💤', line: '长椅上眯一会儿' },
+  straw_nest: { action: 'perch', animals: ['rabbit'], at: 'on', spot: { x: 0.5, y: 0.5 }, emoji: '💤', line: '窝里软软的' },
+  feed_trough: { action: 'peck', animals: ['chick'], at: 'beside', emoji: '🌾', line: '开饭啦开饭啦' },
+  haystack: { action: 'peck', animals: ['chick'], at: 'beside', emoji: '🌾', line: '草垛里有谷粒' },
+  bath_tub: { action: 'soak', animals: CATS.concat(['panda']), at: 'on', spot: { x: 0.5, y: 0.55 }, emoji: '♨️', line: '泡个热水澡，舒坦' },
+  tea_stove: { action: 'warm', animals: ['ginger_cat'], at: 'beside', emoji: '🍵', line: '茶炉边最暖和' },
+  scarecrow: { action: 'perch', animals: ['chick'], at: 'on', spot: { x: 0.5, y: 0.85 }, emoji: '👀', line: '站得高看得远' },
   sweet_potato_stove: { action: 'warm', animals: 'all', at: 'beside', emoji: '♨️', line: '烤红薯真香，暖暖的' },
 }
 // 「找它」列表里玩的时候怎么说
-const PLAY_DOING = { eat: '吃东西', peck: '啄米', swim: '玩水', perch: '打盹', swing: '荡秋千', bask: '晒太阳', warm: '烤火' }
+const PLAY_DOING = { eat: '吃东西', peck: '啄米', swim: '玩水', perch: '打盹', swing: '荡秋千', bask: '晒太阳', warm: '烤火', soak: '泡澡' }
 
 // 会下水的
 const SWIMMERS = POND

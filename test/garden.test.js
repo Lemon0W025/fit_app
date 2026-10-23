@@ -36,7 +36,7 @@ test('物品表：id 唯一，各稀有度数量，节气限定都能对上节�
   assert.equal(new Set(ids).size, ids.length)
   const pool = ITEMS.filter((i) => !i.starter && !i.term)
   const count = (rarity) => pool.filter((i) => i.rarity === rarity).length
-  assert.deepEqual([count('common'), count('rare'), count('epic'), count('legendary')], [15, 15, 9, 4])
+  assert.deepEqual([count('common'), count('rare'), count('epic'), count('legendary')], [26, 22, 9, 4])
   const seasonal = ITEMS.filter((i) => i.term)
   assert.equal(seasonal.length, 5)
   const termKeys = new Set(SOLAR_TERMS.map((t) => t.key))
@@ -50,7 +50,7 @@ test('物品表：id 唯一，各稀有度数量，节气限定都能对上节�
     assert.ok(RARITIES.some((r) => r.id === i.rarity), i.id)
   })
   assert.equal(itemById(STARTER_ITEM).starter, true)
-  assert.equal(collectibleCount(), 48)
+  assert.equal(collectibleCount(), 66)
 })
 
 test('itemById', () => {
@@ -136,6 +136,13 @@ test('物件的地面和占格', () => {
   assert.equal(itemById('daisy').foot, 1)
   assert.equal(itemById('panda').ground, undefined)
   ITEMS.filter((i) => i.kind !== 'animal').forEach((i) => assert.ok(i.ground.length && (i.foot === 1 || i.foot === 2), i.id))
+  assert.deepEqual(itemById('lotus_clump').ground, ['water'])
+  assert.deepEqual(itemById('koi_school').ground, ['water'])
+  assert.deepEqual(itemById('bench').ground, ['lawn', 'pave'])
+  assert.deepEqual(itemById('scarecrow').ground, ['lawn', 'soil'])
+  assert.equal(itemById('flower_rack').foot, 2)
+  assert.equal(itemById('bird_feeder').rarity, 'rare')
+  assert.equal(itemById('reeds').rarity, 'common')
 })
 
 test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
@@ -147,6 +154,9 @@ test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
     animal.likes.forEach((like) => assert.ok(itemById(like) && itemById(like).kind !== 'animal', like))
   }
   assert.deepEqual(itemById('panda').likes, ['bamboo'])
+  assert.deepEqual(itemById('duck').likes, ['koi_pond', 'koi_school'])
+  assert.deepEqual(itemById('crane').likes, ['lotus_pond', 'lotus_clump'])
+  assert.deepEqual(itemById('chick').likes, ['grass', 'feed_trough'])
   assert.equal(itemById('panda_family').likesCount, 3)
   assert.equal(itemById('panda_family').needs, 'panda')
   for (const rarity of ['common', 'rare', 'epic', 'legendary']) {
@@ -183,4 +193,20 @@ test('waitingAnimals：熊猫一家要大熊猫住进来，且摆着 3 丛翠竹
   // 按第 3 丛翠竹的编号排队：p3 比 p4 的青草丛早
   const placed = bamboo(3).concat({ uid: 'p4', itemId: 'grass', c: 5, r: 5 })
   assert.deepEqual(waitingAnimals(placed, ['panda']), ['panda_family', 'chick'])
+})
+
+test('waitingAnimals：likesAny 摆一件就够，和 likes 的数量条件二选一', () => {
+  const ITEMS_BACKUP = ITEMS.slice()
+  ITEMS.push({ id: 'tester', name: '测试鸟', rarity: 'rare', size: 's', emoji: '🐦', kind: 'animal', likes: ['osmanthus', 'orange_tree'], likesCount: 2, likesAny: ['bird_feeder'] })
+  try {
+    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'bird_feeder', c: 10, r: 15 }], []), ['tester'])
+    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }], []), [])
+    assert.deepEqual(waitingAnimals([{ uid: 'p1', itemId: 'osmanthus', c: 10, r: 15 }, { uid: 'p2', itemId: 'orange_tree', c: 12, r: 15 }], []), ['tester'])
+    // 排队按最早满足条件的那件算：喂鸟台 p1 比第二棵树 p3 早
+    const placed = [{ uid: 'p3', itemId: 'orange_tree', c: 12, r: 15 }, { uid: 'p2', itemId: 'grass', c: 10, r: 16 }, { uid: 'p1', itemId: 'bird_feeder', c: 10, r: 15 }, { uid: 'p4', itemId: 'osmanthus', c: 15, r: 15 }]
+    assert.deepEqual(waitingAnimals(placed, []), ['tester', 'chick'])
+  } finally {
+    ITEMS.length = 0
+    ITEMS_BACKUP.forEach((i) => ITEMS.push(i))
+  }
 })
