@@ -1,13 +1,17 @@
-"""生成小程序里用到的图片：tabBar 图标与养生森林的树块。
+"""生成小程序里用到的图片：tabBar 图标、每天的树、庭院地块，以及庭院物品的占位图。
 
 用法（需要 Pillow）：
-    python3 scripts/draw-images.py
+    python3 scripts/draw-images.py            # 物品占位图只补缺的，不覆盖已有的正式美术
+    python3 scripts/draw-images.py --force    # 连物品占位图一起重画
 
 输出到 miniprogram/images/。所有图先按 4 倍尺寸画，再缩小，边缘更平滑。
 """
+import json
 import math
 import os
 import random
+import subprocess
+import sys
 
 from PIL import Image, ImageDraw
 
@@ -227,7 +231,151 @@ def draw_tiles():
         save(img, TILE, 'forest', f'{stage}.png')
 
 
+# ---------------------------------------------------------------- 养生庭院
+
+REPO = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+EMOJI_FONT = '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf'
+LAND_WIDTH = 1080  # 与 utils/iso.js 的 isoLayout 比例一致：格宽 = 宽/格数，格高 = 格宽/2，侧面厚 = 格高 × 0.4
+ITEM_SIZE = 160
+
+
+def load_items():
+    out = subprocess.check_output(
+        ['node', '-e', "console.log(JSON.stringify(require('./cloudfunctions/api/lib/shared/garden').ITEMS))"], cwd=REPO)
+    return json.loads(out)
+
+
+def emoji_image(ch, box):
+    from PIL import ImageFont
+    font = ImageFont.truetype(EMOJI_FONT, 109)
+    im = Image.new('RGBA', (180, 180), (0, 0, 0, 0))
+    ImageDraw.Draw(im).text((10, 10), ch, font=font, embedded_color=True)
+    im = im.crop(im.getbbox())
+    scale = box / max(im.size)
+    return im.resize((max(1, int(im.width * scale)), max(1, int(im.height * scale))), Image.LANCZOS)
+
+
+def bottom_anchored(obj, size=ITEM_SIZE, margin=4):
+    """物品图统一成正方形，物体贴底居中，这样在庭院里底边对齐格子"""
+    canvas = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    canvas.alpha_composite(obj, ((size - obj.width) // 2, size - margin - obj.height))
+    return canvas
+
+
+def save_small(img, *parts, quantize=True):
+    """量化成 256 色调色板（保留透明度），体积小很多，肉眼看不出区别"""
+    path = os.path.join(ROOT, *parts)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    if quantize:
+        img = img.quantize(colors=256, method=Image.Quantize.FASTOCTREE)
+    img.save(path, optimize=True)
+
+
+def draw_land(size):
+    W = LAND_WIDTH * 2
+    tw = W / size
+    th = tw / 2
+    depth = th * 0.4
+    H = int(size * th + depth) + 2
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    top = lambda c, r: (W / 2 + (c - r) * tw / 2, (c + r) * th / 2)
+    left, bottom, right = (0, size * th / 2), (W / 2, size * th), (W, size * th / 2)
+    d.polygon([left, bottom, (bottom[0], bottom[1] + depth), (left[0], left[1] + depth)], fill=SOIL_LEFT)
+    d.polygon([bottom, right, (right[0], right[1] + depth), (bottom[0], bottom[1] + depth)], fill=SOIL_RIGHT)
+    rim = depth * 0.35
+    d.polygon([left, bottom, (bottom[0], bottom[1] + rim), (left[0], left[1] + rim)], fill=GRASS_DARK)
+    d.polygon([bottom, right, (right[0], right[1] + rim), (bottom[0], bottom[1] + rim)], fill=shade(GRASS_DARK, 0.92))
+    for c in range(size):
+        for r in range(size):
+            x, y = top(c, r)
+            color = GRASS if (c + r) % 2 == 0 else shade(GRASS, 0.95)
+            d.polygon([(x, y), (x + tw / 2, y + th / 2), (x, y + th), (x - tw / 2, y + th / 2)], fill=color)
+    rnd = random.Random(size)
+    for _ in range(size * size * 2):
+        x, y = rnd.uniform(0.15, 0.85) * W, rnd.uniform(0.1, 0.9) * size * th
+        if abs(x - W / 2) / (W / 2) + abs(y - size * th / 2) / (size * th / 2) < 0.92:
+            d.line([(x, y), (x + 3, y - 10)], fill=GRASS_DARK, width=4)
+    img = img.resize((LAND_WIDTH, int(H / 2)), Image.LANCZOS)
+    save_small(img, 'garden', f'land-{size}.png')
+
+
+def draw_hint():
+    W, H = 360, 180
+    img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    pts = [(W / 2, 6), (W - 6, H / 2), (W / 2, H - 6), (6, H / 2)]
+    d.polygon(pts, fill=(255, 250, 220, 120), outline=(255, 214, 102, 255), width=8)
+    save_small(img.resize((180, 90), Image.LANCZOS), 'garden', 'tile-hint.png')
+
+
+def draw_capsule(top_color, glow=None):
+    S = 640
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    if glow:
+        for i in range(12, 0, -1):
+            a = int(10 * (13 - i))
+            d.ellipse([S / 2 - 250 - i * 6, S / 2 - 250 - i * 6, S / 2 + 250 + i * 6, S / 2 + 250 + i * 6], fill=glow + (a // 4,))
+    box = [S / 2 - 240, S / 2 - 240, S / 2 + 240, S / 2 + 240]
+    d.ellipse(box, fill=(246, 244, 240))
+    d.pieslice(box, 180, 360, fill=top_color)
+    d.rectangle([box[0], S / 2 - 18, box[2], S / 2 + 18], fill=(255, 255, 255))
+    d.ellipse([S / 2 - 150, S / 2 - 190, S / 2 - 60, S / 2 - 120], fill=(255, 255, 255, 170))
+    return img.resize((160, 160), Image.LANCZOS)
+
+
+def draw_gacha_machine():
+    S = 800
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([200, 470, 600, 760], radius=60, fill=(214, 64, 52))
+    d.rounded_rectangle([170, 440, 630, 500], radius=30, fill=(232, 182, 60))
+    d.ellipse([170, 80, 630, 520], fill=(220, 238, 246), outline=(255, 255, 255), width=10)
+    rnd = random.Random(3)
+    colors = [(246, 244, 240), (90, 160, 230), (170, 110, 220), (240, 196, 60), (230, 90, 80)]
+    for _ in range(16):
+        x, y = rnd.uniform(250, 550), rnd.uniform(260, 430)
+        c = rnd.choice(colors)
+        d.ellipse([x - 48, y - 48, x + 48, y + 48], fill=c, outline=(255, 255, 255), width=6)
+    d.ellipse([280, 120, 360, 180], fill=(255, 255, 255, 180))
+    d.rounded_rectangle([340, 40, 460, 100], radius=30, fill=(214, 64, 52))
+    d.ellipse([370, 10, 430, 70], fill=(232, 182, 60))
+    d.ellipse([350, 560, 450, 660], fill=(232, 182, 60))
+    d.rectangle([390, 575, 410, 645], fill=(190, 140, 40))
+    d.rounded_rectangle([470, 640, 560, 720], radius=20, fill=(120, 40, 34))
+    return img.resize((320, 320), Image.LANCZOS)
+
+
+def draw_garden(force=False):
+    draw_land(6)
+    draw_land(8)
+    draw_hint()
+    # 物品与界面的占位图：已经有正式美术就不覆盖
+    def missing(*parts):
+        return force or not os.path.exists(os.path.join(ROOT, *parts))
+    for item in load_items():
+        if missing('garden', 'items', item['id'] + '.png'):
+            box = {'s': 110, 'm': 130, 'l': 150}[item['size']]
+            save_small(bottom_anchored(emoji_image(item['emoji'], box)), 'garden', 'items', item['id'] + '.png')
+    ui = {
+        'bean.png': lambda: bottom_anchored(emoji_image('🫘', 120), margin=20),
+        'gift.png': lambda: bottom_anchored(emoji_image('🎁', 130)),
+        'book.png': lambda: bottom_anchored(emoji_image('📗', 130)),
+        'shovel.png': lambda: bottom_anchored(emoji_image('⛏️', 130)),
+        'gacha.png': draw_gacha_machine,
+        'capsule-common.png': lambda: draw_capsule((214, 210, 204)),
+        'capsule-rare.png': lambda: draw_capsule((84, 160, 232)),
+        'capsule-epic.png': lambda: draw_capsule((168, 104, 224), glow=(190, 130, 255)),
+        'capsule-legendary.png': lambda: draw_capsule((240, 192, 48), glow=(255, 214, 90)),
+    }
+    for name, fn in ui.items():
+        if missing('garden', 'ui', name):
+            save_small(fn(), 'garden', 'ui', name)
+
+
 if __name__ == '__main__':
     draw_tabs()
     draw_tiles()
+    draw_garden(force='--force' in sys.argv)
     print('images written to', os.path.normpath(ROOT))
