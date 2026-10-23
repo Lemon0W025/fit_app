@@ -1,0 +1,62 @@
+<view wx:if="{{!loaded}}" class="empty">正在推开庭院的门…</view>
+
+<view class="page" wx:if="{{loaded}}">
+  <view class="topbar">
+    <view class="beans">
+      <image class="beans-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
+      <text class="beans-num">{{beans}}</text>
+      <text class="beans-unit">暖豆</text>
+    </view>
+    <view class="collect" bindtap="goCollection">图鉴 {{collectedCount}}/{{totalCount}} ›</view>
+  </view>
+
+  <view wx:if="{{termText}}" class="term">🍂 {{termText}}</view>
+
+  <view id="garden" class="garden" style="height: {{layout.height}}px" bindtap="tapLand">
+    <image class="land" src="{{landImage}}" style="top: {{layout.top}}px; width: {{layout.width}}px; height: {{layout.landHeight}}px" />
+    <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+    <image wx:for="{{sprites}}" wx:key="uid" class="sprite {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
+  </view>
+
+  <view wx:if="{{mode !== 'view'}}" class="card placing">
+    <view class="placing-text">{{mode === 'place' ? '摆放' : '移动'}}「{{selectedName}}」：点一块亮着的空地</view>
+    <button class="btn-plain btn-small" bindtap="cancel">取消</button>
+  </view>
+
+  <view class="actions">
+    <view class="action action-main" bindtap="goGacha">
+      <image class="action-icon" src="/images/garden/ui/gacha.png" mode="aspectFit" />
+      <text>扭蛋机</text>
+    </view>
+    <view class="action" bindtap="goCollection">
+      <image class="action-icon" src="/images/garden/ui/book.png" mode="aspectFit" />
+      <text>图鉴</text>
+    </view>
+    <view class="action" bindtap="goCalendar">
+      <image class="action-icon" src="/images/forest/fruit.png" mode="aspectFit" />
+      <text>打卡日历</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">背包（点一下，摆进庭院）</view>
+    <scroll-view wx:if="{{inventory.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{inventory}}" wx:key="itemId" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.itemId}}" bindtap="pickInventory">
+        <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
+        <view class="bag-name">{{item.name}}</view>
+        <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
+      </view>
+    </scroll-view>
+    <view wx:else class="muted small">背包空空的，去扭蛋机试试手气吧～</view>
+  </view>
+
+  <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">
+    <view class="welcome" catchtap="noop">
+      <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
+      <view class="welcome-title">欢迎来到你的养生庭院！</view>
+      <view class="welcome-text">送你 {{welcome.beans}} 暖豆，还在院子中间种了一棵大树。每天好好吃饭攒暖豆，扭蛋抽花草和小动物，把庭院布置得越来越好看吧～</view>
+      <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
+      <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
+    </view>
+  </view>
+</view>

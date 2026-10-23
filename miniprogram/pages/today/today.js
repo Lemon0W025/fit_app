@@ -40,8 +40,8 @@ Page({
       })
   },
 
-  goForest() {
-    wx.switchTab({ url: '/pages/forest/forest' })
+  goGarden() {
+    wx.switchTab({ url: '/pages/garden/garden' })
   },
 
   goCheckin() {

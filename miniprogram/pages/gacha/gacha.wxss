@@ -1,0 +1,211 @@
+.beans {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8rpx 0 16rpx;
+}
+
+.beans-icon {
+  width: 64rpx;
+  height: 64rpx;
+}
+
+.beans-num {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #d97a1e;
+  margin-left: 8rpx;
+}
+
+.beans-unit {
+  font-size: 28rpx;
+  color: #b8763a;
+  margin-left: 8rpx;
+}
+
+.term {
+  font-size: 26rpx;
+  color: #b8763a;
+  background: #fff4e0;
+  border-radius: 16rpx;
+  padding: 12rpx 20rpx;
+  text-align: center;
+}
+
+.machine-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 24rpx 0 8rpx;
+}
+
+.machine {
+  width: 460rpx;
+  height: 460rpx;
+}
+
+.machine-shake {
+  animation: shake 0.3s ease-in-out infinite;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: rotate(0) translateY(0);
+  }
+  25% {
+    transform: rotate(-5deg) translateY(-6rpx);
+  }
+  75% {
+    transform: rotate(5deg) translateY(-6rpx);
+  }
+}
+
+.info-line {
+  margin: 6rpx 0;
+}
+
+.strong {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(30, 26, 22, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.capsule-box {
+  text-align: center;
+}
+
+.capsule {
+  width: 300rpx;
+  height: 300rpx;
+  animation: drop 0.7s cubic-bezier(0.3, 1.4, 0.5, 1), wobble 1.2s ease-in-out 0.7s infinite;
+}
+
+@keyframes drop {
+  0% {
+    transform: translateY(-600rpx) scale(0.6);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wobble {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(8deg);
+  }
+}
+
+.capsule-tip {
+  color: #fff;
+  font-size: 32rpx;
+  margin-top: 24rpx;
+}
+
+.reveal {
+  position: relative;
+  width: 80%;
+  background: var(--card);
+  border-radius: 32rpx;
+  padding: 40rpx 32rpx 24rpx;
+  text-align: center;
+  overflow: hidden;
+}
+
+.rays {
+  position: absolute;
+  left: 50%;
+  top: 40rpx;
+  width: 600rpx;
+  height: 600rpx;
+  margin-left: -300rpx;
+  margin-top: -120rpx;
+  border-radius: 50%;
+  animation: spin-rays 6s linear infinite;
+}
+
+@keyframes spin-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.new-badge {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  background: #e8553b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 28rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 24rpx;
+  z-index: 2;
+}
+
+.reveal-image {
+  position: relative;
+  width: 320rpx;
+  height: 320rpx;
+  animation: pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(0.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.reveal-name {
+  position: relative;
+  font-size: 40rpx;
+  font-weight: 700;
+  margin-top: 8rpx;
+}
+
+.rarity-pill {
+  display: inline-block;
+  color: #fff;
+  font-size: 26rpx;
+  padding: 4rpx 20rpx;
+  border-radius: 20rpx;
+  margin-top: 8rpx;
+}
+
+.grew {
+  margin-top: 16rpx;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.reveal-actions {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+button.reveal-btn {
+  flex: 1;
+  margin: 0;
+}

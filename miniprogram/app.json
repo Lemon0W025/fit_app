@@ -1,11 +1,14 @@
 {
   "pages": [
     "pages/today/today",
-    "pages/forest/forest",
+    "pages/garden/garden",
     "pages/weight/weight",
     "pages/profile/profile",
     "pages/checkin/checkin",
-    "pages/meal/meal"
+    "pages/meal/meal",
+    "pages/gacha/gacha",
+    "pages/collection/collection",
+    "pages/forest/forest"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F6F1E7",
@@ -27,8 +30,8 @@
         "selectedIconPath": "images/tab-today-on.png"
       },
       {
-        "pagePath": "pages/forest/forest",
-        "text": "森林",
+        "pagePath": "pages/garden/garden",
+        "text": "庭院",
         "iconPath": "images/tab-forest.png",
         "selectedIconPath": "images/tab-forest-on.png"
       },

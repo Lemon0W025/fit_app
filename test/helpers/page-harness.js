@@ -67,15 +67,28 @@ function createWx(main) {
     },
     stopPullDownRefresh() {},
     previewImage() {},
+    // 庭院容器 #garden 在屏幕上的位置；其他节点（如体重图 canvas）在测试里拿不到
+    gardenRect: { left: 16, top: 100 },
     createSelectorQuery() {
+      let selector = ''
       const q = {
-        select: () => q,
+        select: (sel) => {
+          selector = sel
+          return q
+        },
         fields: () => q,
-        exec: (cb) => cb([null]),
+        boundingClientRect: () => q,
+        exec: (cb) => cb([selector === '#garden' ? wx.gardenRect : null]),
       }
       return q
     },
-    getWindowInfo: () => ({ pixelRatio: 2 }),
+    getWindowInfo: () => ({ pixelRatio: 2, windowWidth: 375 }),
+    // 弹出的操作菜单默认选第 actionSheetChoice 项
+    actionSheetChoice: 0,
+    showActionSheet(o) {
+      log.actionSheets = (log.actionSheets || []).concat([o.itemList])
+      if (o.success) o.success({ tapIndex: wx.actionSheetChoice })
+    },
   }
   return wx
 }
@@ -99,6 +112,9 @@ function loadPage(name, wx) {
 }
 
 async function settle() {
+  for (let i = 0; i < 30; i++) await new Promise((r) => setImmediate(r))
+  // 让 setTimeout(0) 之类的定时器也跑完
+  await new Promise((r) => setTimeout(r, 5))
   for (let i = 0; i < 30; i++) await new Promise((r) => setImmediate(r))
 }
 
@@ -135,14 +151,15 @@ function boundHandlers(wxml) {
   return [...wxml.matchAll(/\b(?:bind|catch)\w+="(\w+)"/g)].map((m) => m[1])
 }
 
-// 取出 {{ }} 里作为表达式开头的变量名（不含 a.b 里的 b）
+// 取出 {{ }} 里作为表达式开头的变量名（不含 a.b 里的 b）；wx:for-item 声明的名字除外
 function referencedRoots(wxml) {
   const roots = new Set()
+  const loopNames = new Set([...wxml.matchAll(/wx:for-(?:item|index)="(\w+)"/g)].map((m) => m[1]))
   const keywords = new Set(['true', 'false', 'null', 'undefined'])
   for (const m of wxml.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
     const expr = m[1].replace(/'[^']*'|"[^"]*"/g, '')
     for (const id of expr.matchAll(/(^|[^.\w$])([A-Za-z_$][\w$]*)/g)) {
-      if (!keywords.has(id[2])) roots.add(id[2])
+      if (!keywords.has(id[2]) && !loopNames.has(id[2])) roots.add(id[2])
     }
   }
   return [...roots]

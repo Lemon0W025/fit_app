@@ -1,7 +1,7 @@
 <view wx:if="{{loading}}" class="empty">加载中…</view>
 
 <view class="page" wx:if="{{meal}}">
-  <view wx:if="{{tree}}" class="card tree-banner" bindtap="goForest">
+  <view wx:if="{{tree}}" class="card tree-banner" bindtap="goGarden">
     <image class="tree-banner-image" src="{{tree.image}}" mode="aspectFit" />
     <view class="tree-banner-body">
       <view class="tree-banner-title">{{tree.title}}</view>

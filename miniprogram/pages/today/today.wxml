@@ -4,7 +4,7 @@
   <block wx:if="{{view}}">
     <view class="greeting">{{greeting}}</view>
 
-    <view wx:if="{{tree}}" class="card tree-card" bindtap="goForest">
+    <view wx:if="{{tree}}" class="card tree-card" bindtap="goGarden">
       <image class="tree-card-image" src="{{tree.image}}" mode="aspectFit" />
       <view class="tree-card-body">
         <view class="tree-card-title">{{tree.title}}</view>
