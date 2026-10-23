@@ -38,7 +38,9 @@
 - AppID：`wx6cab54d48dba1be5`（已写入 `project.config.json`）
 - 云开发环境 ID：`cloud1-d0gc0a24t697e8d8b`（已写入 `miniprogram/config.js`）
 - 云端环境：网络已放行并验证能连上 servicewechat.com / tencentcloudapi.com；`WX_UPLOAD_KEY` 用户已保存（新会话里先确认读得到，只看长度，别打印内容）
-- 小程序后台上传 IP 白名单：已提醒用户关闭，未确认
+- 小程序后台上传 IP 白名单：已关闭（已验证能通过）
+- `WX_UPLOAD_KEY` 存的是不带 BEGIN/END 行的密钥正文，`scripts/wechat.js` 会自动补齐
+- miniprogram-ci 2.1.31 不能创建新云函数（函数不存在时直接报 ResourceNotFound.Function，且它的创建逻辑用 Node 8.9）：`api` 第一次必须在开发者工具里「上传并部署：云端安装依赖」创建，之后命令行更新
 - 小程序成长计划：用户已报名
 - AI 模型（按用户控制台截图）：生文模型列表里有 `hy3`（标注小程序成长计划）、`hy-vision-2.0-instruct`（图生文）、`hunyuan-t1-vision-20250916` 等；开关「套餐抵扣」默认全关。config 已改为 provider `cloudbase` + 备用 `hunyuan-exp`，vision `hy-vision-2.0-instruct`，text `hy3`。分组名未验证：ai.js 会自动试备用分组，看云函数日志里的 `AI 分组 … 失败` 确认哪个分组调通，再把 `provider` 定下来。也可以试 miniprogram-ci 内部的 `dist/ci/cloud/cloudapi` 的 `boundTransactRequest` 调 tcb `DescribeAIModels` 直接查（未验证）
 - 用户电脑上已用开发者工具导入项目（从 GitHub ZIP），能跑起来

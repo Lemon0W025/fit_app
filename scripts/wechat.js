@@ -86,13 +86,23 @@ async function main() {
   if (command === 'function') {
     const env = envId()
     console.log(`上传云函数 api → 环境 ${env}（云端安装依赖）…`)
-    const res = await ci.cloud.uploadFunction({
-      project,
-      env,
-      name: 'api',
-      path: path.join(ROOT, 'cloudfunctions/api'),
-      remoteNpmInstall: true,
-    })
+    let res
+    try {
+      res = await ci.cloud.uploadFunction({
+        project,
+        env,
+        name: 'api',
+        path: path.join(ROOT, 'cloudfunctions/api'),
+        remoteNpmInstall: true,
+      })
+    } catch (e) {
+      // miniprogram-ci 在函数不存在时会直接报错，而且它自带的创建逻辑用的是 Node 8.9 运行时，
+      // 所以第一次要在开发者工具里创建，之后才能用命令行更新
+      if (/ResourceNotFound\.Function/.test(String(e && (e.message || e.code)))) {
+        fail('云函数 api 还没创建：第一次请在微信开发者工具里右键 cloudfunctions/api →「上传并部署：云端安装依赖」，之后就能用命令行更新')
+      }
+      throw e
+    }
     console.log(`✓ 云函数已部署：${res.filesCount} 个文件，${res.packSize} 字节`)
     return
   }
