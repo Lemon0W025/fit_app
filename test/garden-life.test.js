@@ -286,3 +286,25 @@ test('东西摆到动物脚下（含 2×2 盖住的格子），它跳到旁边�
   assert.ok(now && !(now.c === t.c && now.r === t.r))
   assert.equal(sprites[0].action, 'walk')
 })
+
+test('走路带步态，而且一次走一小段，不是一格一停', () => {
+  const { clock, life, sprites } = setup({ placed: [], residents: ['panda'], random: lcg(17) })
+  life.start()
+  let longest = 0
+  let run = 0
+  let gait = ''
+  for (let t = 0; t < 3 * 60 * 1000; t += 100) {
+    clock.advance(100)
+    if (sprites[0].action === 'walk') {
+      gait = sprites[0].gait
+      run += 1
+      longest = Math.max(longest, run)
+    } else {
+      run = 0
+    }
+  }
+  assert.equal(gait, 'pad')
+  // 熊猫一步 1800ms：连续走 2 格以上就是 ≥ 36 个 100ms 采样
+  assert.ok(longest >= 36, `最长连续走 ${longest}`)
+  life.stop()
+})

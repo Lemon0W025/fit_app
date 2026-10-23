@@ -15,12 +15,15 @@ test('每只动物都有脾气、台词和搬家的话', () => {
     assert.ok(['left', 'right', 'front'].indexOf(info.faces) !== -1, id)
     assert.ok(info.top >= 0 && info.top < 0.5, id)
     assert.ok(info.lines.length >= 4, id)
+    assert.ok(A.GAITS.indexOf(info.gait) !== -1, id)
     assert.ok(info.arrive && info.hello && info.likesText.startsWith('喜欢：'), id)
   }
   assert.equal(A.ANIMAL_INFO.panda.likesText, '喜欢：翠竹')
   assert.equal(A.ANIMAL_INFO.panda_family.likesText, '喜欢：大熊猫 + 3 丛翠竹')
   assert.equal(A.ANIMAL_INFO.panda.arrive, '大熊猫闻着竹子香，搬进花园啦！')
   assert.deepEqual(A.SWIMMERS, ['duck', 'turtle', 'crane'])
+  assert.deepEqual([A.ANIMAL_INFO.panda.gait, A.ANIMAL_INFO.tabby_cat.gait, A.ANIMAL_INFO.rabbit.gait, A.ANIMAL_INFO.duck.gait, A.ANIMAL_INFO.turtle.gait, A.ANIMAL_INFO.crane.gait],
+    ['pad', 'pad', 'hop', 'waddle', 'crawl', 'stride'])
 })
 
 test('互动表里的物件和动物都存在，上面的物件有落脚点', () => {
@@ -200,4 +203,25 @@ test('describe：告诉你它在哪在干嘛', () => {
   assert.equal(A.describe({ action: 'walk', play: null, trick: null }, '正院', ''), '正往那边走')
   assert.equal(A.describe({ action: 'idle', play: null, trick: null }, '前院', ''), '在前院溜达')
   assert.equal(A.describe({ action: 'idle', play: null, trick: null }, '', ''), '溜达')
+})
+
+test('strollTarget：一次走 2～4 格的小段路，只走允许的格子，离家远了往家走', () => {
+  const free = []
+  for (let c = 0; c < 8; c++) for (let r = 0; r < 8; r++) free.push({ c, r })
+  const ctx = { size: 8, blocked: blocked(), free, home: null, allow: null }
+  for (const v of [0.1, 0.5, 0.9]) {
+    const s = A.strollTarget({ c: 3, r: 3 }, ctx, always(v))
+    assert.ok(s && s.path.length >= 2 && s.path.length <= 4, JSON.stringify(s))
+    assert.deepEqual(s.path[s.path.length - 1], s.target)
+  }
+  const left = A.strollTarget({ c: 3, r: 3 }, { ...ctx, allow: (t) => t.c <= 3 }, always(0.3))
+  assert.ok(left.target.c <= 3 && left.path.every((t) => t.c <= 3))
+  // 离家远：目标比现在离家近
+  const home = { c: 0, r: 0 }
+  for (const v of [0.1, 0.5, 0.9]) {
+    const s = A.strollTarget({ c: 6, r: 6 }, { ...ctx, home }, always(v))
+    assert.ok(Math.abs(s.target.c) + Math.abs(s.target.r) < 12, JSON.stringify(s.target))
+  }
+  // 被围住：null
+  assert.equal(A.strollTarget({ c: 0, r: 0 }, { ...ctx, blocked: blocked([1, 0], [0, 1]) }, always(0.5)), null)
 })

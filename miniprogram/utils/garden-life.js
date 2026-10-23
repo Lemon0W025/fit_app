@@ -133,6 +133,7 @@ function createLife({
       bottom: L.height - y,
       z,
       flip: a.flip,
+      gait: a.info.gait,
       action: a.action,
       duration: a.duration,
       bubble: a.bubble,
@@ -295,7 +296,10 @@ function createLife({
       }
     }
     const allow = period === 'morning' ? (t) => A.MORNING_AREAS.indexOf(areaOf(t.c, t.r)) !== -1 : null
-    const next = A.chooseStep(a, { size: bounds, blocked, home: A.homeOf(a.id, items), allow }, random)
+    const home = A.homeOf(a.id, items)
+    const stroll = A.strollTarget(a, { size: bounds, blocked, free: freeTiles(blocked), home, allow }, random)
+    if (stroll) return go(a, 'wander', stroll)
+    const next = A.chooseStep(a, { size: bounds, blocked, home, allow }, random)
     if (!next) return schedule(a, between(a.info.pauseMs))
     step(a, next)
   }

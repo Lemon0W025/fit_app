@@ -17,7 +17,7 @@
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <view wx:if="{{item.tapping}}" class="heart">❤️</view>
             <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.bodyHeight < item.width ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
-              <image class="animal-img act-{{item.action}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
+              <image class="animal-img act-{{item.action}} {{item.action === 'walk' ? 'gait-' + item.gait : ''}} {{item.id === 'duck' && item.action === 'swim' ? 'paddle' : ''}} {{item.tapping ? 'tap' : ''}}" src="{{item.image}}" mode="widthFix" />
             </view>
             <view wx:if="{{item.bodyHeight < item.width}}" class="ripple"></view>
           </view>

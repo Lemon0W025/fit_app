@@ -373,8 +373,94 @@ button.btn-small {
   filter: drop-shadow(0 4rpx 3rpx rgba(60, 50, 30, 0.25));
 }
 
-.act-walk {
-  animation: hop 0.4s ease-in-out infinite;
+/* 走路的步态：四条腿的左右踱步，不蹦；鸭子小鸡摇摇摆摆；兔子蹦；乌龟慢慢爬；仙鹤迈大步 */
+.gait-pad {
+  animation: pad 0.56s ease-in-out infinite;
+}
+
+.gait-waddle {
+  animation: waddle 0.36s ease-in-out infinite;
+}
+
+.gait-hop {
+  animation: hop 0.45s ease-in-out infinite;
+}
+
+.gait-crawl {
+  animation: crawl 1.4s ease-in-out infinite;
+}
+
+.gait-stride {
+  animation: stride 0.9s ease-in-out infinite;
+}
+
+/* 会飞的：上下起伏地飞；蝴蝶扑棱翅膀 */
+.gait-fly {
+  animation: fly 0.8s ease-in-out infinite;
+}
+
+.gait-flutter {
+  animation: flutter 0.24s ease-in-out infinite;
+}
+
+@keyframes pad {
+  0%,
+  100% {
+    transform: rotate(-3deg) scale(1, 0.985);
+  }
+  50% {
+    transform: rotate(3deg) scale(1, 1);
+  }
+}
+
+@keyframes waddle {
+  0%,
+  100% {
+    transform: rotate(-7deg);
+  }
+  50% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes crawl {
+  0%,
+  100% {
+    transform: scale(1, 1) rotate(-1.5deg);
+  }
+  50% {
+    transform: scale(1.04, 0.97) rotate(1.5deg);
+  }
+}
+
+@keyframes stride {
+  0%,
+  100% {
+    transform: rotate(-2deg) translateY(0);
+  }
+  50% {
+    transform: rotate(2deg) translateY(-2%);
+  }
+}
+
+@keyframes fly {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-14%) rotate(3deg);
+  }
+}
+
+@keyframes flutter {
+  0%,
+  100% {
+    transform: scale(1, 1) translateY(0);
+  }
+  50% {
+    transform: scale(0.55, 1.05) translateY(-6%);
+  }
 }
 
 .act-idle,

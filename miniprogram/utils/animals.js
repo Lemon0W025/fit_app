@@ -13,52 +13,55 @@ const WANDER_RANGE = 12
 const PATH_CAP = 40
 const SLEEP_LINE = '呼噜…再睡五分钟'
 
-// scale：相对格子宽度；stepMs：走一格多久；pauseMs：停多久再走；sleepy：每次停下时打盹的概率
+// 步态：pad 四条腿踱步 / waddle 摇摇摆摆 / hop 蹦 / crawl 爬 / stride 迈大步 / fly 飞 / flutter 扑棱（后两种给会飞的）
+const GAITS = ['pad', 'waddle', 'hop', 'crawl', 'stride', 'fly', 'flutter']
+
+// scale：相对格子宽度；stepMs：走一格多久；pauseMs：停多久再走；sleepy：每次停下时打盹的概率；gait：走路的样子，页面按它挂不同的动画
 // faces：图里的动物朝哪边（left / right / front），决定往哪边走时要不要镜像
 // top：图里动物头顶上面空着的比例（按 images/garden/items 里的图量的，换图要重量），用来定水面和气泡的高度
 const ANIMAL_INFO = {
   chick: {
-    scale: 0.5, stepMs: 800, pauseMs: [1500, 3500], sleepy: 0.03, faces: 'right', top: 0.03,
+    scale: 0.5, stepMs: 800, pauseMs: [1500, 3500], sleepy: 0.03, faces: 'right', top: 0.03, gait: 'waddle',
     likesText: '喜欢：青草丛', arrive: '小黄鸡跟着青草香，蹦蹦跳跳搬进花园啦！', hello: '叽叽！我是小黄鸡，以后就住这儿啦！',
     lines: ['叽叽！早饭吃了没？', '多喝温水，叽！', '今天也要好好吃饭哦', '跟我一起蹦一蹦，活动活动！'],
   },
   rabbit: {
-    scale: 0.55, stepMs: 800, pauseMs: [1500, 4000], sleepy: 0.08, faces: 'front', top: 0.03,
+    scale: 0.55, stepMs: 800, pauseMs: [1500, 4000], sleepy: 0.08, faces: 'front', top: 0.03, gait: 'hop',
     likesText: '喜欢：白萝卜', arrive: '小白兔闻到萝卜香，搬进花园啦！', hello: '我是小白兔，以后就住这儿啦！',
     lines: ['蔬菜要多吃，眼睛亮亮的～', '慢慢吃，别噎着', '今天的菜绿不绿？', '蹦跶蹦跶，吃完饭走一走'],
   },
   duck: {
-    scale: 0.5, stepMs: 1200, pauseMs: [2000, 4500], sleepy: 0.03, faces: 'right', top: 0.03,
+    scale: 0.5, stepMs: 1200, pauseMs: [2000, 4500], sleepy: 0.03, faces: 'right', top: 0.03, gait: 'waddle',
     likesText: '喜欢：锦鲤池', arrive: '小黄鸭看见锦鲤池，摇摇摆摆搬进花园啦！', hello: '嘎嘎！我是小黄鸭，以后就住这儿啦！',
     lines: ['嘎嘎！喝水了吗？', '天凉了，多穿件衣服', '晚饭清淡一点，嘎', '摇摇摆摆，散散步'],
   },
   turtle: {
-    scale: 0.5, stepMs: 2600, pauseMs: [3000, 6000], sleepy: 0.08, faces: 'right', top: 0.27,
+    scale: 0.5, stepMs: 2600, pauseMs: [3000, 6000], sleepy: 0.08, faces: 'right', top: 0.27, gait: 'crawl',
     likesText: '喜欢：鹅卵石', arrive: '小乌龟慢慢爬到鹅卵石边上，搬进花园啦！', hello: '我…是…小乌龟，以后…就住这儿啦！',
     lines: ['慢慢来，吃饭也要细嚼慢咽', '不急不急，坚持最重要', '早点睡，身体好', '我爬得慢，可我从不偷懒'],
   },
   tabby_cat: {
-    scale: 0.6, stepMs: 1300, pauseMs: [2500, 5000], sleepy: 0.2, faces: 'front', top: 0.03,
+    scale: 0.6, stepMs: 1300, pauseMs: [2500, 5000], sleepy: 0.2, faces: 'front', top: 0.03, gait: 'pad',
     likesText: '喜欢：小板凳', arrive: '小花猫相中了小板凳，搬进花园啦！', hello: '喵～我是小花猫，以后就住这儿啦！',
     lines: ['喵～今天吃得好吗？', '饭后别马上躺下哦', '喵，摸摸头', '水果当加餐，比零食好喵'],
   },
   ginger_cat: {
-    scale: 0.7, stepMs: 2000, pauseMs: [6000, 12000], sleepy: 0.5, faces: 'left', top: 0.39,
+    scale: 0.7, stepMs: 2000, pauseMs: [6000, 12000], sleepy: 0.5, faces: 'left', top: 0.39, gait: 'pad',
     likesText: '喜欢：茶桌', arrive: '胖橘猫闻着茶香，慢悠悠搬进花园啦！', hello: '喵…我是胖橘猫，以后就在这儿晒太阳啦',
     lines: ['晒太阳好舒服，饭后也出来走走吧', '我胖，你可别学我', '喵…七分饱刚刚好', '少吃点甜的喵'],
   },
   panda: {
-    scale: 0.8, stepMs: 1800, pauseMs: [3000, 6000], sleepy: 0.1, faces: 'front', top: 0.03,
+    scale: 0.8, stepMs: 1800, pauseMs: [3000, 6000], sleepy: 0.1, faces: 'front', top: 0.03, gait: 'pad',
     likesText: '喜欢：翠竹', arrive: '大熊猫闻着竹子香，搬进花园啦！', hello: '我是大熊猫，以后就住这儿啦！',
     lines: ['竹子要慢慢嚼，吃饭也一样～', '多吃蔬菜，像我一样', '吃饱了，打个滚', '今天也要开开心心的'],
   },
   crane: {
-    scale: 0.8, stepMs: 2000, pauseMs: [3000, 6000], sleepy: 0, faces: 'right', top: 0.03,
+    scale: 0.8, stepMs: 2000, pauseMs: [3000, 6000], sleepy: 0, faces: 'right', top: 0.03, gait: 'stride',
     likesText: '喜欢：荷花池', arrive: '仙鹤看中了荷花池，翩翩飞进花园啦！', hello: '我是仙鹤，以后就住这儿啦',
     lines: ['站直一点，腰背会舒服', '早睡早起，精神好', '心平气和，福寿安康', '饭后百步走'],
   },
   panda_family: {
-    scale: 1.1, stepMs: 2200, pauseMs: [4000, 8000], sleepy: 0.1, faces: 'front', top: 0.22,
+    scale: 1.1, stepMs: 2200, pauseMs: [4000, 8000], sleepy: 0.1, faces: 'front', top: 0.22, gait: 'pad',
     likesText: '喜欢：大熊猫 + 3 丛翠竹', arrive: '竹林长大了，熊猫一家都搬进花园啦！', hello: '我们是熊猫一家，以后就住这儿啦！',
     lines: ['一家人一起吃饭最香', '宝宝也要好好吃饭哦', '一起散步去～', '团团圆圆，平平安安'],
   },
@@ -283,6 +286,23 @@ function wanderTarget(pos, ctx, rand) {
   return null
 }
 
+// 平时溜达：一次走 2～4 格的小段路再歇（比一格一停自然）；有家且离得远就往家那边走；allow 限制范围
+function strollTarget(pos, { size, blocked, free, home, allow }, rand) {
+  let pool = free.filter((t) => dist(t, pos) >= 2 && dist(t, pos) <= 4)
+  if (allow) pool = pool.filter(allow)
+  if (home && dist(pos, home) > HOME_RANGE) {
+    const closer = pool.filter((t) => dist(t, home) < dist(pos, home))
+    if (closer.length) pool = closer
+  }
+  for (let i = 0; i < 4 && pool.length; i++) {
+    const t = pickOne(pool, rand)
+    const path = pathTo(pos, t, size, blocked)
+    if (path && path.length <= 4 && (!allow || path.every(allow))) return { target: t, path }
+    pool = pool.filter((x) => x !== t)
+  }
+  return null
+}
+
 // 屏幕上往右走 c−r 变大；图朝右的往左走要镜像，朝左的往右走要镜像，正面的往左走镜像
 function flipFor(faces, from, to, current) {
   const dx = (to.c - to.r) - (from.c - from.r)
@@ -323,6 +343,7 @@ module.exports = {
   TRICK_RANGE,
   TRICK_COOLDOWN_MS,
   SLEEP_LINE,
+  GAITS,
   periodOf,
   freeNeighbors,
   homeOf,
@@ -333,6 +354,7 @@ module.exports = {
   sleepTarget,
   gatherTarget,
   wanderTarget,
+  strollTarget,
   flipFor,
   lineFor,
   describe,
