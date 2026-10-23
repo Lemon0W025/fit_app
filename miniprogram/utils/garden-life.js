@@ -12,7 +12,7 @@ const START_MS = [300, 2000]
 const BUBBLE_MS = 3000
 const TAP_MS = 600
 const HELLO_MS = 4000
-// 下水时露出的上半身比例；气泡宽度占庭院宽度的比例
+// 下水时露出的上半身比例（按动物本身算，不算图里头顶的空白）；气泡宽度占庭院宽度的比例
 const WATER_LINE = 0.62
 const BUBBLE_RATIO = 0.44
 
@@ -88,7 +88,9 @@ function createLife({ L, placed, residents, arrivals = [], random = Math.random,
       bottom = L.height - (center.y + L.tileH * 0.18)
       z = (a.c + a.r) * 10 + a.c + 5
     }
-    // 气泡别出庭院左右边
+    // 下水时水面在身子的 62% 处；气泡贴着头顶，别出庭院左右边
+    const headroom = width * a.info.top
+    const bodyHeight = a.action === 'swim' ? headroom + (width - headroom) * WATER_LINE : width
     const bubbleWidth = L.width * BUBBLE_RATIO
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
     let emoji = ''
@@ -98,7 +100,7 @@ function createLife({ L, placed, residents, arrivals = [], random = Math.random,
       id: a.id,
       image: itemImage(a.id),
       width,
-      bodyHeight: a.action === 'swim' ? width * WATER_LINE : width,
+      bodyHeight,
       left: x - width / 2,
       bottom,
       z,
@@ -108,6 +110,7 @@ function createLife({ L, placed, residents, arrivals = [], random = Math.random,
       bubble: a.bubble,
       bubbleWidth,
       bubbleLeft: bubbleX - (x - width / 2),
+      bubbleBottom: bodyHeight - headroom + 4,
       emoji,
       tapping: a.tapping,
     }

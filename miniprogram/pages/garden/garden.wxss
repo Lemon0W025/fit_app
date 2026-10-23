@@ -423,8 +423,6 @@ button.btn-small {
 
 .bubble {
   position: absolute;
-  bottom: 100%;
-  margin-bottom: 8rpx;
   padding: 8rpx 16rpx;
   box-sizing: border-box;
   background: #fff;

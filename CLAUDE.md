@@ -1,8 +1,8 @@
 # 小暖养生打卡 — 给 Claude 的项目说明
 
-微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡长一棵树、得「暖豆」，暖豆去扭蛋抽物件摆进等距「养生庭院」，有图鉴和节气限定。家人自用，走微信「体验版」，不上架。用户用中文沟通。
+微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡长一棵树、得「暖豆」，暖豆去扭蛋抽物件摆进等距「养生庭院」，有图鉴和节气限定；摆了小动物喜欢的东西，打卡后它会搬进庭院自己走动玩耍。家人自用，走微信「体验版」，不上架。用户用中文沟通。
 
-- 设计：`docs/superpowers/specs/`（主功能、每日树、庭院扭蛋）；实现计划：`docs/superpowers/plans/`；美术需求：`docs/art/garden-art-brief.md`
+- 设计：`docs/superpowers/specs/`（主功能、每日树、庭院扭蛋、小动物）；实现计划：`docs/superpowers/plans/`；美术需求：`docs/art/garden-art-brief.md`
 - 上手与排错：`README.md`
 
 ## 开发约定
@@ -45,6 +45,7 @@
 - AI 模型（按用户控制台截图）：生文模型列表里有 `hy3`（标注小程序成长计划）、`hy-vision-2.0-instruct`（图生文）、`hunyuan-t1-vision-20250916` 等；开关「套餐抵扣」默认全关。config 已改为 provider `cloudbase` + 备用 `hunyuan-exp`，vision `hy-vision-2.0-instruct`，text `hy3`。分组名未验证：ai.js 会自动试备用分组，看云函数日志里的 `AI 分组 … 失败` 确认哪个分组调通，再把 `provider` 定下来。也可以试 miniprogram-ci 内部的 `dist/ci/cloud/cloudapi` 的 `boundTransactRequest` 调 tcb `DescribeAIModels` 直接查（未验证）
 - 用户电脑上已用开发者工具导入项目（从 GitHub ZIP），能跑起来
 - 2026-10-23：养生庭院 + 扭蛋机 + 图鉴上线；原「森林」tab 改为「庭院」，森林页变成「打卡日历」。用户用 Codex 生成的 3D 风格美术（zip 上传，8 张整图）已全部切好换上，48 个物件、6 个树阶段、扭蛋机/扭蛋/礼盒/图鉴/暖豆都是正式图
+- 2026-10-23：庭院小动物上线：9 只动物不再从扭蛋出，摆了喜欢的东西后下次正餐打卡搬来，在庭院里自己走动、和物件互动、点一下说话（`utils/animals.js` + `utils/garden-life.js`，设计见 specs/2026-10-23-garden-animals-design.md）
 - 2026-10-23：`api` 已由用户在开发者工具里创建、超时改为 60 秒；之后用 `npm run wx:function` 从云端更新成功；`npm run wx:preview` 生成预览二维码成功，已发给用户试用
 
 ## 首次部署清单（新会话从这里接）

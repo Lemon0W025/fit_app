@@ -114,6 +114,22 @@ test('鸭子下水：站到池子的落脚点上，半身入水', () => {
   assert.ok(Math.abs(swim.left + swim.width / 2 - (center.x - iw / 2 + A.PLAYS.koi_pond.spot.x * iw)) < 0.01)
   assert.ok(swim.bodyHeight < swim.width)
   assert.equal(swim.emoji, '💧')
+  assert.ok(Math.abs(swim.bubbleBottom - (swim.bodyHeight - swim.width * A.ANIMAL_INFO.duck.top + 4)) < 0.01)
+})
+
+test('小乌龟下水：按它本身的高度算水面，不算图里头顶的空白', () => {
+  const placed = [{ uid: 'p1', itemId: 'lotus_pond', c: 3, r: 3 }]
+  const { clock, life, sprites } = setup({ placed, residents: ['turtle'], random: () => 0.2 })
+  life.start()
+  let swim = null
+  for (let i = 0; i < 120 && !swim; i++) {
+    clock.advance(500)
+    if (sprites[0].action === 'swim') swim = { ...sprites[0] }
+  }
+  assert.ok(swim, '没下水')
+  const headroom = swim.width * A.ANIMAL_INFO.turtle.top
+  assert.ok(Math.abs(swim.bodyHeight - (headroom + (swim.width - headroom) * 0.62)) < 0.01)
+  life.stop()
 })
 
 test('新住户从院子边上走进来，头上说自我介绍', () => {

@@ -13,6 +13,7 @@ test('每只动物都有脾气、台词和搬家的话', () => {
     assert.ok(info.scale > 0 && info.scale <= 1.2, id)
     assert.ok(info.stepMs > 0 && info.pauseMs[0] <= info.pauseMs[1], id)
     assert.ok(['left', 'right', 'front'].indexOf(info.faces) !== -1, id)
+    assert.ok(info.top >= 0 && info.top < 0.5, id)
     assert.ok(info.lines.length >= 4, id)
     assert.ok(info.arrive && info.hello && info.likesText.startsWith('喜欢：'), id)
   }
