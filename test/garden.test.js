@@ -15,16 +15,6 @@ const {
   rollRarity,
   pickItem,
   currentTerm,
-  ISLAND_SIZE,
-  REGIONS,
-  SCENERY,
-  regionOf,
-  isPath,
-  onIsland,
-  sceneryIn,
-  tileOpen,
-  tilePlaceable,
-  placeProblem,
   collectibleCount,
   ANIMALS,
   waitingAnimals,
@@ -134,56 +124,18 @@ test('currentTerm：按北京时间日期找当前节气', () => {
   assert.equal(currentTerm('2026-01-01'), null)
 })
 
-test('小岛：分区、小路、风景、能不能摆', () => {
-  assert.equal(ISLAND_SIZE, 12)
-  assert.deepEqual(REGIONS.map((g) => [g.id, g.cost]), [['center', 0], ['pond', 200], ['bamboo', 300], ['veg', 400], ['tea', 500]])
-  assert.equal(regionOf(4, 4), 'center')
-  assert.equal(regionOf(4, 1), 'pond')
-  assert.equal(regionOf(1, 4), 'bamboo')
-  assert.equal(regionOf(10, 4), 'veg')
-  assert.equal(regionOf(4, 10), 'tea')
-  assert.equal(regionOf(1, 1), null)
-  assert.equal(regionOf(10, 10), null)
-  assert.equal(isPath(6, 2), true)
-  assert.equal(isPath(2, 6), true)
-  assert.equal(isPath(5, 5), false)
-  const keys = new Set()
-  SCENERY.forEach((s) => {
-    assert.equal(regionOf(s.c, s.r), s.region, s.uid)
-    assert.equal(isPath(s.c, s.r), false, s.uid)
-    assert.ok(itemById(s.itemId), s.uid)
-    assert.ok(!keys.has(`${s.c},${s.r}`), s.uid)
-    keys.add(`${s.c},${s.r}`)
-  })
-  assert.equal(SCENERY.filter((s) => s.region === 'bamboo' && s.itemId === 'bamboo').length, 2)
-  assert.deepEqual(sceneryIn(['center']), [])
-  assert.deepEqual(sceneryIn(['center', 'bamboo']).map((s) => s.itemId), ['bamboo', 'bamboo', 'lantern'])
-  assert.equal(tileOpen(['center'], 4, 4), true)
-  assert.equal(tileOpen(['center'], 6, 6), true)
-  assert.equal(tileOpen(['center'], 4, 1), false)
-  assert.equal(tileOpen(['center', 'pond'], 4, 1), true)
-  assert.equal(tileOpen(['center'], 1, 1), false)
-  assert.equal(tileOpen(['center'], 12, 4), false)
-  assert.equal(tilePlaceable(['center'], 4, 4), true)
-  assert.equal(tilePlaceable(['center'], 6, 4), false)
-  assert.equal(tilePlaceable(['center', 'pond'], 4, 1), false)
-  assert.equal(tilePlaceable(['center', 'pond'], 5, 1), true)
-  assert.equal(tilePlaceable(['center'], 4.5, 4), false)
-  assert.equal(onIsland(11, 11), true)
-  assert.equal(onIsland(-1, 0), false)
-})
-
-test('placeProblem：为什么不能摆', () => {
-  const placed = [{ uid: 'p1', itemId: 'daisy', c: 4, r: 4 }]
-  const opened = ['center', 'pond']
-  assert.equal(placeProblem(opened, placed, 12, 0), '放不到花园外面哦')
-  assert.equal(placeProblem(opened, placed, 1, 1), '这里是花坛，不能摆')
-  assert.equal(placeProblem(opened, placed, 1, 4), '这块地还没修整呢')
-  assert.equal(placeProblem(opened, placed, 6, 4), '小路上不能摆东西')
-  assert.equal(placeProblem(opened, placed, 4, 1), '这里已经有风景了')
-  assert.equal(placeProblem(opened, placed, 4, 4), '这块地上已经有东西了')
-  assert.equal(placeProblem(opened, placed, 4, 4, 'p1'), '')
-  assert.equal(placeProblem(opened, placed, 5, 1), '')
+test('物件的地面和占格', () => {
+  assert.deepEqual(itemById('daisy').ground, ['lawn', 'soil'])
+  assert.deepEqual(itemById('osmanthus').ground, ['lawn', 'soil'])
+  assert.deepEqual(itemById('cabbage').ground, ['soil', 'lawn'])
+  assert.deepEqual(itemById('stool').ground, ['lawn', 'pave'])
+  assert.deepEqual(itemById('pavilion').ground, ['lawn', 'pave'])
+  assert.deepEqual(itemById('koi_pond').ground, ['lawn'])
+  assert.equal(itemById('pavilion').foot, 2)
+  assert.equal(itemById('lotus_pond').foot, 2)
+  assert.equal(itemById('daisy').foot, 1)
+  assert.equal(itemById('panda').ground, undefined)
+  ITEMS.filter((i) => i.kind !== 'animal').forEach((i) => assert.ok(i.ground.length && (i.foot === 1 || i.foot === 2), i.id))
 })
 
 test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
