@@ -39,6 +39,7 @@
 - 云开发环境 ID：`cloud1-d0gc0a24t697e8d8b`（已写入 `miniprogram/config.js`）
 - 云端环境：网络已放行并验证能连上 servicewechat.com / tencentcloudapi.com；`WX_UPLOAD_KEY` 用户已保存（新会话里先确认读得到，只看长度，别打印内容）
 - 小程序后台上传 IP 白名单：已提醒用户关闭，未确认
+- 小程序成长计划：用户已报名（hunyuan-exp 分组应可用）
 - 用户电脑上已用开发者工具导入项目（从 GitHub ZIP），能跑起来
 
 ## 首次部署清单（新会话从这里接）
@@ -47,5 +48,5 @@
 2. `npm run wx:function` 部署 `api` 云函数；报 IP 白名单错误就请用户去后台关闭白名单
 3. 请用户到「云开发控制台 → 云函数 → api → 函数配置」把超时改成 60 秒
 4. `npm run wx:preview`，用 SendUserFile 把 `.wechat/preview-qrcode.jpg` 发给用户扫码，先试建档、记体重（不依赖 AI）
-5. AI：用户还没报名成长计划，也没确认可用模型。请用户截图「云开发控制台 → AI → 大模型」，据此改 `cloudfunctions/api/config.js` 再 `wx:function`，然后试拍照打卡
+5. AI：成长计划已报名，但还没确认可用模型名。请用户截图「云开发控制台 → AI → 大模型」，据此改 `cloudfunctions/api/config.js` 再 `wx:function`，然后试拍照打卡
 6. 都正常后 `npm run wx:upload -- 1.0.0 首个体验版`，请用户在「版本管理」选为体验版、在「成员管理」加妈妈为体验成员
