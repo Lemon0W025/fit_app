@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { dateKey } = require('../cloudfunctions/api/lib/shared/date')
 const { analysisJson } = require('./helpers/fake-repo')
+const config = require('../cloudfunctions/api/config')
 
 const profileInput = { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light', avoid: '' }
 
@@ -11,6 +12,8 @@ test('完整流程：建档 → 打卡 → 重新分析 → 记体重 → 总结
   const cloud = createFakeCloud({
     replies: [
       analysisJson({ foods: [{ name: '米饭', kcal: 230 }, { name: '红烧肉', kcal: 400 }], totalKcal: 630 }),
+      // 重新分析时看图在主分组和备用分组都失败，退回文字估算
+      new Error('vision down'),
       new Error('vision down'),
       analysisJson({ foods: [{ name: '面条', kcal: 450 }], totalKcal: 450 }),
       '今天整体不错，明天早餐加个鸡蛋。',
@@ -31,8 +34,8 @@ test('完整流程：建档 → 打卡 → 重新分析 → 记体重 → 总结
   assert.equal(analyzed.ok, true, analyzed.message)
   assert.equal(analyzed.data.status, 'done')
   assert.equal(analyzed.data.analysis.totalKcal, 630)
-  assert.equal(cloud.aiCalls[0].provider, 'hunyuan-exp')
-  assert.equal(cloud.aiCalls[0].model, 'hunyuan-vision')
+  assert.equal(cloud.aiCalls[0].provider, config.provider)
+  assert.equal(cloud.aiCalls[0].model, config.visionModel)
   const image = cloud.aiCalls[0].messages[1].content.find((c) => c.type === 'image_url')
   assert.equal(image.image_url.url, 'https://tmp/cloud://env/meals/a.jpg')
 
@@ -44,7 +47,8 @@ test('完整流程：建档 → 打卡 → 重新分析 → 记体重 → 总结
   const re = await main({ action: 'meal.reanalyze', data: { mealId, note: '其实是一碗面条' } })
   assert.equal(re.ok, true, re.message)
   assert.equal(re.data.mode, 'text')
-  assert.equal(cloud.aiCalls[2].model, 'hunyuan-2.0-instruct-20251111')
+  // 视觉失败时 ai.js 会先试备用分组，再退回文字模型
+  assert.equal(cloud.aiCalls[cloud.aiCalls.length - 1].model, config.textModel)
   const stored = cloud.db.collections.get('meals').get(mealId)
   assert.deepEqual(stored.analysis.foods, [{ name: '面条', portion: '', kcal: 450 }])
   assert.equal(stored.note, '其实是一碗面条')

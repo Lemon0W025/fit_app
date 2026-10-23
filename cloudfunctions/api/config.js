@@ -1,18 +1,17 @@
-// AI 模型配置。改完重新「上传并部署」api 云函数即可生效，小程序前端不用改。
-// 可用的分组和模型以云开发控制台 → AI → 大模型 页面为准，详见 README。
+// AI 模型配置。改完重新部署 api 云函数即可生效，小程序前端不用改。
+// 模型在「云开发控制台 → AI → 生文模型」里查看，用到的模型要把「套餐抵扣」开关打开。
 
 module.exports = {
-  // createModel 的分组名（不是模型名）：
-  //   'hunyuan-exp'：报名「小程序成长计划」后可用，有赠送额度
-  //   'cloudbase'  ：购买 Token 资源包后可用，模型需要先在控制台开启
-  provider: 'hunyuan-exp',
+  // createModel 的分组名（不是模型名）。新版控制台的模型一般在 'cloudbase' 分组；
+  // 调不通时会自动试 fallbackProviders 里的分组，并记住调通的那个（见 ai.js）
+  provider: 'cloudbase',
+  fallbackProviders: ['hunyuan-exp'],
 
-  // 看图识菜的视觉模型，必须是上面分组里已开启的模型。
-  // 填 '' 表示不看图，只根据打卡时写的文字描述估算。
-  visionModel: 'hunyuan-vision',
+  // 看图识菜：混元图生文模型。填 '' 表示不看图，只根据打卡时写的文字描述估算
+  visionModel: 'hy-vision-2.0-instruct',
 
-  // 文字估算和每日总结用的模型
-  textModel: 'hunyuan-2.0-instruct-20251111',
+  // 文字估算和每日总结：hy3（控制台标注「小程序成长计划」）
+  textModel: 'hy3',
 
   // 图片怎么交给模型：
   //   'url'   ：云存储临时链接（默认）

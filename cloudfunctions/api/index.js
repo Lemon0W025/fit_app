@@ -19,7 +19,7 @@ const log = (...args) => console.error(...args)
 const now = () => new Date()
 
 const repo = createRepo(cloud.database())
-const chat = createChat(cloud)
+const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
 

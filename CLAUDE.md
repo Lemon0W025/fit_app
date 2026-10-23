@@ -39,7 +39,8 @@
 - 云开发环境 ID：`cloud1-d0gc0a24t697e8d8b`（已写入 `miniprogram/config.js`）
 - 云端环境：网络已放行并验证能连上 servicewechat.com / tencentcloudapi.com；`WX_UPLOAD_KEY` 用户已保存（新会话里先确认读得到，只看长度，别打印内容）
 - 小程序后台上传 IP 白名单：已提醒用户关闭，未确认
-- 小程序成长计划：用户已报名（hunyuan-exp 分组应可用）
+- 小程序成长计划：用户已报名
+- AI 模型（按用户控制台截图）：生文模型列表里有 `hy3`（标注小程序成长计划）、`hy-vision-2.0-instruct`（图生文）、`hunyuan-t1-vision-20250916` 等；开关「套餐抵扣」默认全关。config 已改为 provider `cloudbase` + 备用 `hunyuan-exp`，vision `hy-vision-2.0-instruct`，text `hy3`。分组名未验证：ai.js 会自动试备用分组，看云函数日志里的 `AI 分组 … 失败` 确认哪个分组调通，再把 `provider` 定下来。也可以试 miniprogram-ci 内部的 `dist/ci/cloud/cloudapi` 的 `boundTransactRequest` 调 tcb `DescribeAIModels` 直接查（未验证）
 - 用户电脑上已用开发者工具导入项目（从 GitHub ZIP），能跑起来
 
 ## 首次部署清单（新会话从这里接）
@@ -48,5 +49,5 @@
 2. `npm run wx:function` 部署 `api` 云函数；报 IP 白名单错误就请用户去后台关闭白名单
 3. 请用户到「云开发控制台 → 云函数 → api → 函数配置」把超时改成 60 秒
 4. `npm run wx:preview`，用 SendUserFile 把 `.wechat/preview-qrcode.jpg` 发给用户扫码，先试建档、记体重（不依赖 AI）
-5. AI：成长计划已报名，但还没确认可用模型名。请用户截图「云开发控制台 → AI → 大模型」，据此改 `cloudfunctions/api/config.js` 再 `wx:function`，然后试拍照打卡
+5. AI：请用户在「云开发控制台 → AI → 生文模型」打开 `hy3` 和 `hy-vision-2.0-instruct` 的「套餐抵扣」开关，然后试拍照打卡；失败就看云函数日志定位分组或模型问题
 6. 都正常后 `npm run wx:upload -- 1.0.0 首个体验版`，请用户在「版本管理」选为体验版、在「成员管理」加妈妈为体验成员

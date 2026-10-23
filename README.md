@@ -71,23 +71,23 @@ docs/superpowers/            设计文档与实现计划
 
 小暖用的是云开发自带的大模型，在云函数里通过 `cloud.ai().createModel(分组名)` 调用。
 
-1. 报名 **小程序成长计划**（[说明](https://docs.cloudbase.net/ai/ai-inspire-plan)），开通后 `hunyuan-exp` 分组有赠送额度
-2. 打开 **云开发控制台 → AI → 大模型**，看 `hunyuan-exp` 分组里已开启哪些模型
-3. 把实际可用的模型名填进 `cloudfunctions/api/config.js`：
+1. 报名 **小程序成长计划**（[说明](https://docs.cloudbase.net/ai/ai-inspire-plan)），有赠送额度
+2. 打开 **云开发控制台 → AI → 生文模型**，把要用的模型右边的「**套餐抵扣**」开关打开：
+   - `hy-vision-2.0-instruct`：图生文，用来看饭菜照片
+   - `hy3`：标注「小程序成长计划」，用来按文字估算和写每日总结
+3. 模型名都写在 `cloudfunctions/api/config.js`：
 
 ```js
 module.exports = {
-  provider: 'hunyuan-exp',                         // 分组名
-  visionModel: 'hunyuan-vision',                   // 看图的模型；没有就填 ''，只按文字估算
-  textModel: 'hunyuan-2.0-instruct-20251111',      // 文字估算 + 每日总结
-  imageMode: 'url',                                // 模型取不到图片时改成 'base64'
+  provider: 'cloudbase',                 // 分组名
+  fallbackProviders: ['hunyuan-exp'],    // 主分组调不通时依次尝试，调通后记住
+  visionModel: 'hy-vision-2.0-instruct', // 看图的模型；填 '' 则只按文字估算
+  textModel: 'hy3',                      // 文字估算 + 每日总结
+  imageMode: 'url',                      // 模型取不到图片时改成 'base64'
 }
 ```
 
-> 看图需要**视觉模型**（名字里一般带 `vision` 或 `V`）。默认的 `hunyuan-2.0-instruct` 只认文字。如果你的分组里没有视觉模型：
-> - 在控制台为该分组开启一个视觉模型，或
-> - 改用 `provider: 'cloudbase'`（需要购买 Token 资源包），在控制台开启一个视觉模型并把名字填进 `visionModel`，或
-> - 先把 `visionModel` 设成 `''`，打卡时写一句文字描述（照片照样保存、显示）
+> 想换模型时，在控制台复制模型名（名字旁边有复制按钮）填进去，并打开它的「套餐抵扣」开关。调用失败的原因会写在云函数日志里（搜 `AI 分组`）。
 
 ### 5. 部署云函数
 
