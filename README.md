@@ -95,7 +95,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   lib/                       提示词、AI 输出解析、校验等纯逻辑
 scripts/draw-images.py      重新生成图片（需要 Pillow：pip install pillow）
 scripts/estate/blockout.py  按 shared/estate.js 画宅院白模、切块、画云朵
-art/guide/estate-blockout.jpg  宅院白模整图（给即梦出图参照，由 blockout.py 生成）
+art/guide/estate-blockout.jpg  宅院白模整图（blockout.py 生成；-3x2 版给 Codex 当重绘底稿）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
 docs/superpowers/            设计文档与实现计划
 ```
@@ -203,10 +203,13 @@ npm test
 ### 图片
 
 - 美术原图在 `art/raw/`（Codex 生成的 8 张 3×3 整图，格子顺序见 `art/raw/中文物件索引.txt`）；`python3 scripts/slice-art.py` 把它们切成单张图，覆盖 `miniprogram/images/` 下的花园物件和界面图（需要 Pillow 和 numpy）
-- 加新物件：在 `lib/shared/garden.js` 的 ITEMS 里加一项，按 `docs/art/garden-art-brief.md` 出图放进 `art/raw/`，在 `slice-art.py` 的 SHEETS 里写上格子对应的物件 id，再跑一遍
+- 加新物件：在 `lib/shared/garden.js` 的 ITEMS 里加一项，按 `docs/art/codex-art-pack.md` 的拼图规则出图放进 `art/raw/`，在 `slice-art.py` 的 SHEETS 里写上格子对应的物件 id，再跑一遍
 - `scripts/draw-images.py` 画 tab 图标、修整木牌、亮格；还没有正式美术的物件和图标，它会补一张 emoji 占位图（已有的不覆盖）
-- `python3 scripts/estate/blockout.py` 按 `estate.js` 的布局画宅院白模：切成 16 块 jpg 当占位底图（`images/garden/estate/`）、画云朵、输出 `art/guide/estate-blockout*.jpg`；正式美术按 `docs/art/garden-estate-art-brief.md` 出图（附上白模）
-- 原画到了：`python3 scripts/estate/cut_art.py <原画>` 切块到 `art/estate/`，`npm run wx:art` 传云存储，把打印出来的 fileID 前缀填进 `miniprogram/config.js` 的 `estateArt`，再 `npm run wx:preview`；加载失败页面会自动退回白模
+- `python3 scripts/estate/blockout.py` 按 `estate.js` 的布局画宅院白模：切成 16 块 jpg 当占位底图（`images/garden/estate/`）、画云朵、输出 `art/guide/estate-blockout*.jpg`
+- **全套正式美术由 Codex 按 `docs/art/codex-art-pack.md` 生成**（宅院整图、云、图标、表情、新物件、11 张小动物动画拼图），输出到 `art/raw/`，`python3 scripts/art/check_art.py` 自检
+- 宅院原画到了：`python3 scripts/estate/cut_art.py art/raw/estate/estate.png --pad32` 切块到 `art/estate/`，`npm run wx:art` 传云存储，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `estateArt`，再 `npm run wx:preview`；加载失败页面会自动退回白模。要更清楚：`detail_crops.py` 切块给 Codex 逐块重绘，`merge_details.py` 拼回高清图再切
+- 动画拼图到了：`python3 scripts/pack_anim.py` 对齐打包到 `art/anim/`，`npm run wx:art` 一并上传，前缀填进 `config.animArt`；没图或加载失败的那只自动退回单张图 + CSS 步态。`--demo` 用现在的单张图合成示意拼图验证播放
+- 遮挡：墙、月亮门、大门、建筑会挡住站在后面的物件和小动物（`utils/occlusion.js`，从底图上按多边形抠一块盖上去，只在需要时生成）。原画的墙比白模高矮不同就调里面的 `WALL_H` / `BUILDINGS`
 - 小程序主包上限 2MB，现在约 1.5MB；加图后看一眼 `du -sh --apparent-size miniprogram`
 
 ## 第二期计划
