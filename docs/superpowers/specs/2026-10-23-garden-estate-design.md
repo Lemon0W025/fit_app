@@ -218,15 +218,15 @@
 
 ### 浏览
 
-- `movable-view` 拖动缩放 0.5～2 倍；第一次进来 1.2 倍、停在正院；左下「🏠」回正院。
+- `movable-view` 拖动缩放 0.5～2 倍；第一次进来 1 倍（一个院子正好占满屏宽）、停在正院；左下「🏠」回正院。
 - 摆放模式只亮起当前选中物件能放的格子（按它的 `ground` 和 `foot`）。
 
 ## 架构
 
 | 位置 | 改动 |
 |---|---|
-| `scripts/estate/`（新） | `layout.py` 院子、墙、门、壳里每样东西的形状（格子坐标）；`blockout.py` 画白模（给即梦的参考和占位底图）；`build_map.py` 生成 `estate-map.js`；`cut_art.py` 把原画或白模对齐、切块、压缩到 `art/estate/`（原画）或 `miniprogram/images/garden/estate/`（占位） |
-| `lib/shared/estate-map.js`（新，生成） | `GRID: { cols, rows }`、`AREAS: [{ id, name, cost, rect, neighbors, sign: { c, r }, sleep: [{ animals, c, r }], spots: [{ kind, c, r }] }]`、`TILES`（每格 `area`、`kind` 的紧凑编码）、`GATES`、`DOOR`、`STARTER_TILE` |
+| `scripts/estate/blockout.py`（新） | 用 node 读 `estate.js` 的布局画白模，切成 16 块 jpg 当占位底图，画云朵，输出给即梦的整图；原画到了再加 `cut_art.py` 对齐切块 |
+| `lib/shared/estate.js`（新） | 布局数据（`AREAS`、`SHELL`、`GATES`、`DOOR`、`SPOTS`）和加载时算出的格子表，以及 `tileInfo / walkable / canUnlock / unlockProblem / signTile / footprint / placeProblem / placeableTiles` |
 | `lib/shared/garden.js` | 删掉小岛的 `ISLAND_SIZE / REGIONS / SCENERY / regionOf / isPath / sceneryIn / tileOpen / tilePlaceable`；`ITEMS` 加 `ground`、`foot`，新 18 件；新动物 `bird`、`butterfly`（`likesAny`、`fly: true`）；新增 `tileInfo(c, r) → { area, kind }`、`areaById`、`canUnlock(opened, id)`、`walkable(opened, c, r, swims)`、`footprint(itemId, c, r)`、`placeProblem(opened, placed, itemId, c, r, ignoreUid)`；`waitingAnimals` 支持 `likesAny` |
 | `lib/garden-state.js` | `opened` 默认 `['front', 'main']`；`estate: 1` 迁移（收回物件、退暖豆） |
 | `services/garden.js` | `view`：`areas: [{ id, name, cost, unlocked, unlockable }]`，去掉 `scenery`；`place`/`move` 带 `flip`，校验用新的 `placeProblem`；`flip(openid, { uid })` 切换方向；`unlock` 加相邻校验；`arrive` 不变（喜欢的东西只看 `placed`） |
