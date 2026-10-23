@@ -146,7 +146,15 @@ def save_small(img, *parts, quantize=True):
     img.save(path, optimize=True)
 
 
-def draw_land(size):
+WILD = (126, 160, 92)
+WILD_DARK = (98, 132, 70)
+WEED = ((92, 140, 66), (120, 166, 82), (150, 170, 90))
+STONE = ((168, 162, 150), (140, 134, 124))
+
+
+def draw_plot(wild=False):
+    """一块 6×6 的地：开垦的是浅深相间的草地；荒地颜色深一些，长满杂草、散着小石头。带下面的土边"""
+    size = 6
     W = LAND_WIDTH * 2
     tw = W / size
     th = tw / 2
@@ -159,20 +167,65 @@ def draw_land(size):
     d.polygon([left, bottom, (bottom[0], bottom[1] + depth), (left[0], left[1] + depth)], fill=SOIL_LEFT)
     d.polygon([bottom, right, (right[0], right[1] + depth), (bottom[0], bottom[1] + depth)], fill=SOIL_RIGHT)
     rim = depth * 0.35
-    d.polygon([left, bottom, (bottom[0], bottom[1] + rim), (left[0], left[1] + rim)], fill=GRASS_DARK)
-    d.polygon([bottom, right, (right[0], right[1] + rim), (bottom[0], bottom[1] + rim)], fill=shade(GRASS_DARK, 0.92))
+    edge = WILD_DARK if wild else GRASS_DARK
+    d.polygon([left, bottom, (bottom[0], bottom[1] + rim), (left[0], left[1] + rim)], fill=edge)
+    d.polygon([bottom, right, (right[0], right[1] + rim), (bottom[0], bottom[1] + rim)], fill=shade(edge, 0.92))
+    base = WILD if wild else GRASS
     for c in range(size):
         for r in range(size):
             x, y = top(c, r)
-            color = GRASS if (c + r) % 2 == 0 else shade(GRASS, 0.95)
+            color = base if (c + r) % 2 == 0 else shade(base, 0.95)
+            if wild:
+                color = base
             d.polygon([(x, y), (x + tw / 2, y + th / 2), (x, y + th), (x - tw / 2, y + th / 2)], fill=color)
-    rnd = random.Random(size)
-    for _ in range(size * size * 2):
-        x, y = rnd.uniform(0.15, 0.85) * W, rnd.uniform(0.1, 0.9) * size * th
-        if abs(x - W / 2) / (W / 2) + abs(y - size * th / 2) / (size * th / 2) < 0.92:
-            d.line([(x, y), (x + 3, y - 10)], fill=GRASS_DARK, width=4)
+    rnd = random.Random(7 if wild else size)
+    inside = lambda x, y, k: abs(x - W / 2) / (W / 2) + abs(y - size * th / 2) / (size * th / 2) < k
+    if wild:
+        for _ in range(26):
+            x, y = rnd.uniform(0.1, 0.9) * W, rnd.uniform(0.12, 0.88) * size * th
+            if inside(x, y, 0.85):
+                rx, ry = rnd.uniform(18, 34), rnd.uniform(10, 18)
+                d.ellipse([x - rx, y - ry, x + rx, y + ry], fill=rnd.choice(STONE))
+        for _ in range(420):
+            x, y = rnd.uniform(0.05, 0.95) * W, rnd.uniform(0.06, 0.94) * size * th
+            if not inside(x, y, 0.9):
+                continue
+            color = rnd.choice(WEED)
+            h = rnd.uniform(26, 56)
+            for dx in (-10, 0, 10):
+                d.line([(x, y), (x + dx * 1.6 + rnd.uniform(-6, 6), y - h)], fill=color, width=7)
+    else:
+        for _ in range(size * size * 2):
+            x, y = rnd.uniform(0.15, 0.85) * W, rnd.uniform(0.1, 0.9) * size * th
+            if inside(x, y, 0.92):
+                d.line([(x, y), (x + 3, y - 10)], fill=GRASS_DARK, width=4)
     img = img.resize((LAND_WIDTH, int(H / 2)), Image.LANCZOS)
-    save_small(img, 'garden', f'land-{size}.png')
+    save_small(img, 'garden', 'plot-wild.png' if wild else 'plot-open.png')
+
+
+def draw_sign():
+    """开荒木牌：一根木桩 + 上面一块空白木板（价格由页面写上去）"""
+    S = 480
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    wood, wood_dark, board = (150, 100, 56), (112, 72, 38), (226, 184, 120)
+    d.rounded_rectangle([S / 2 - 22, 150, S / 2 + 22, S - 20], radius=10, fill=wood_dark)
+    d.ellipse([S / 2 - 60, S - 44, S / 2 + 60, S - 8], fill=(90, 120, 60, 120))
+    d.rounded_rectangle([40, 40, S - 40, 230], radius=28, fill=wood_dark)
+    d.rounded_rectangle([52, 50, S - 52, 218], radius=22, fill=board)
+    for y in (100, 160):
+        d.line([(70, y), (S - 70, y)], fill=shade(board, 0.9), width=4)
+    d.ellipse([S / 2 - 12, 58, S / 2 + 12, 82], fill=wood)
+    save_small(img.resize((240, 240), Image.LANCZOS), 'garden', 'sign.png')
+
+
+def draw_cloud():
+    S = 480
+    img = Image.new('RGBA', (S, S // 2), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    for x, y, r in ((150, 150, 70), (230, 120, 95), (320, 150, 75), (240, 175, 80)):
+        d.ellipse([x - r, y - r * 0.8, x + r, y + r * 0.8], fill=(255, 255, 255, 235))
+    save_small(img.resize((240, 120), Image.LANCZOS), 'garden', 'decor-cloud.png')
 
 
 def draw_hint():
@@ -223,8 +276,10 @@ def draw_gacha_machine():
 
 
 def draw_garden(force=False):
-    draw_land(6)
-    draw_land(8)
+    draw_plot()
+    draw_plot(wild=True)
+    draw_sign()
+    draw_cloud()
     draw_hint()
     # 物品与界面的占位图：已经有正式美术就不覆盖
     def missing(*parts):

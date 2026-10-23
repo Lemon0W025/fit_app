@@ -46,7 +46,7 @@ function createLife({ L, placed, residents, arrivals = [], open = () => true, ra
     for (let r = 0; r < L.size; r++) if (!open(c, r)) closed.add(key({ c, r }))
   }
 
-  // 有物件或别的动物的格子
+  // 走不进去的格子：没开垦的、摆了东西的、有别的动物的
   function blockedFor(self) {
     const set = new Set(closed)
     items.forEach((p) => set.add(key(p)))
