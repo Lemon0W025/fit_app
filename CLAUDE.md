@@ -1,6 +1,6 @@
 # 小暖养生打卡 — 给 Claude 的项目说明
 
-微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡得「暖豆」（早午晚印章），打开就是首页「园林大宅院」：可拖动缩放的等距大宅院，墙和月亮门隔成 11 个院子，壳画好、院子里的东西靠玩家摆（扭蛋抽物件，按地面种类摆、2×2 大件、能转向），花暖豆挨着修整院子；有图鉴和节气限定；摆了小动物喜欢的东西，打卡后它从大门搬进来，在各院子里按作息走动、玩耍、做小事。家人自用，走微信「体验版」，不上架。用户用中文沟通。
+微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡得「暖豆」（早午晚印章），打开就是首页「园林大宅院」：可拖动缩放的等距大宅院，墙和月亮门隔成 11 个院子，壳画好、院子里的东西靠玩家摆（扭蛋抽物件，按地面种类摆、2×2 大件、能转向），花暖豆挨着修整院子；有图鉴和节气限定；摆了小动物喜欢的东西，打卡后它从大门搬进来，在各院子里按作息走动、玩耍、做小事；新物件、小鸟蝴蝶先用占位图。家人自用，走微信「体验版」，不上架。用户用中文沟通。
 
 - 设计：`docs/superpowers/specs/`（主功能、每日树、庭院扭蛋、小动物、大地图、小岛花园、园林大宅院）；实现计划：`docs/superpowers/plans/`；美术需求：`docs/art/garden-art-brief.md`、`docs/art/garden-estate-art-brief.md`（附 `art/guide/estate-blockout.jpg` 白模）
 - 上手与排错：`README.md`
@@ -12,7 +12,7 @@
 - 云函数响应统一 `{ ok, data }` / `{ ok: false, code, message }`，message 直接展示给用户，用中文
 - services 通过依赖注入拿 repo / chat / forest，测试用 `test/helpers/fake-repo.js`；端到端用 `test/helpers/fake-cloud.js` 加载真实 `index.js`；页面用 `test/helpers/page-harness.js` 跑
 - 页面面向长辈：字号偏大、文案口语化
-- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成物件和界面图；`scripts/draw-images.py` 画 tab 图标、木牌、亮格和缺图时的占位图；`scripts/estate/blockout.py` 按 `shared/estate.js` 画宅院白模（底图切块、云朵、给即梦的整图）。主包上限 2MB（现在约 1.4MB，用 `du -sh --apparent-size miniprogram` 看）
+- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成物件和界面图；`scripts/draw-images.py` 画 tab 图标、木牌、亮格和缺图时的占位图；`scripts/estate/blockout.py` 按 `shared/estate.js` 画宅院白模（底图切块、云朵、给即梦的整图）。主包上限 2MB（现在约 1.5MB，用 `du -sh --apparent-size miniprogram` 看）
 
 ## 从云端部署（miniprogram-ci）
 
@@ -28,6 +28,7 @@
 |---|---|
 | `cloudfunctions/**` | `npm run wx:function` |
 | `miniprogram/**` | `npm run wx:preview`，把 `.wechat/preview-qrcode.jpg` 发给用户扫码；确认后 `npm run wx:upload -- <版本号> <描述>` |
+| 原画切块 `art/estate/**` | `python3 scripts/estate/cut_art.py <原画>`，然后 `npm run wx:art`，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `estateArt` |
 
 第一次 `wx:upload` 后，需要用户在小程序后台「版本管理」把 ci 机器人 1 上传的版本选为体验版，并在「成员管理」添加体验成员。
 
@@ -49,6 +50,7 @@
 - 2026-10-23：大地图上线：庭院页全屏（自定义导航）、`movable-view` 拖动缩放，3×3 块地、花暖豆开荒；界面去掉每日的树，改成早午晚印章 + 暖豆；（已被小岛花园取代）
 - 2026-10-23：小岛花园上线，取代 3×3 大地图：花园做首页（tab 第一个，没建档跳去建档），12×12 小岛 = 中间花园 + 四个修整角落（200/300/400/500，自带风景，风景也引小动物）+ 四个花坛；十字小路不能摆；底部大按钮去打卡；旧数据自动迁移（大地图坐标 −3、开荒暖豆退回）。（已被园林大宅院取代）
 - 2026-10-23：园林大宅院上线（第一步）：37×28 格、11 个院子（开局前院 + 正院，其余挨着修，共 3500 暖豆），`shared/estate.js` 管布局和规则；物件按地面摆、2×2、flip、影子；小动物跨院走动、作息、小事、「找它」；旧数据迁移（物件收回背包、暖豆退回、`estate: 1`）。底图是白模切块（jpg），正式原画等用户按 `docs/art/garden-estate-art-brief.md` 出；第二步换原画（切块传云存储）、第三步新物件 18 件 + 小鸟蝴蝶，见设计文档「上线节奏」
+- 2026-10-23：第三步上线：步态（`gait`：四条腿踱步 / 摇摆 / 蹦 / 爬 / 迈步 / 飞 / 扑棱）+ 小段散步；18 件新物件（水生 6、家具 11、稻草人）、`likesAny`；小鸟（树 3 棵或喂鸟台）和蝴蝶（花 3 丛或花架）会飞、不占格、夜里 / 非时段藏起来；图鉴 68。新图是 emoji 占位，出图说明第 4～6 张。原画工具链 `cut_art.py` → `wx:art` 已用白模验证上传成功，fileID 前缀 `cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/estate/`；`config.estateArt` 仍为空、页面用本地白模，真机看过云存储的图再切换
 - 2026-10-23：测试福利 `config.testGrant`（5000 暖豆，10/26 前打开花园的账号各送一次）给用户试修整角落和扭蛋。**上传体验版给妈妈之前把 `testGrant` 改成 `null` 并重新部署云函数**
 - 2026-10-23：`api` 已由用户在开发者工具里创建、超时改为 60 秒；之后用 `npm run wx:function` 从云端更新成功；`npm run wx:preview` 生成预览二维码成功，已发给用户试用
 

@@ -77,6 +77,50 @@
 
 ---
 
+---
+
+## 第 4～6 张 · 新物件和两只会飞的（3 × 3 拼图）
+
+拼图格式和以前的物件一样（每张都附上 `style-ref.jpg`）：
+
+```
+A sprite sheet, 1536 x 1536 px, a 3 x 3 grid of equal 512 x 512 cells.
+Each object is centered in its own cell with at least 60 px of empty space on every side,
+its base at the bottom center of the cell, no ground plane under it.
+Fill the cells left-to-right, top-to-bottom in the order listed.
+Cute 3D isometric mobile-game asset, soft rounded chunky shapes, matte clay-like material,
+warm cheerful pastel colors, soft light from the upper left, cozy Chinese countryside garden theme,
+no text, no labels, no borders. Background: transparent PNG, or a perfectly flat solid magenta #FF00FF.
+```
+
+**第 4 张 · 水里的东西和小摆件**（按顺序 9 格）：
+1. 荷花丛：几片荷叶托着两朵粉荷花，**底部是水面，不要画石头池边**（它要放进画好的池子里）
+2. 睡莲：两片圆荷叶浮在水面，一朵白睡莲，同样不要池边
+3. 芦苇：一丛细长的芦苇，顶上几穗棕色的穗子，根部在水里
+4. 汀步石：三块扁圆的石头一溜排开，浮在水面上
+5. 锦鲤群：三四条红白锦鲤在水面下游，带一点水波
+6. 小木栈桥：一段矮矮的木板桥，几根木桩入水
+7. 竹帘：一卷挂在竹竿上的竹帘，半卷着
+8. 草窝：一个圆圆的干草窝，中间凹下去
+9. 食槽：一个长条木食槽，里面有金黄的谷粒
+
+**第 5 张 · 院子家具**（按顺序 9 格）：
+1. 草垛：一个圆锥形的金黄草垛
+2. 稻草人：一个可爱的稻草人，戴草帽，张开双臂
+3. 木梯：一架斜靠着的木梯
+4. 果篮：一只竹篮装满橘子和苹果
+5. 茶炉：一个红泥小炭炉，上面坐着一把铜壶，冒一点热气
+6. 泡汤木桶：一个圆木桶，里面是热水，冒着热气
+7. 花架：一座木花架，上面爬满紫藤和小花（这件占 2×2 格，画大一点、宽一点）
+8. 长椅：一张中式木长椅
+9. 喂鸟台：一根木柱顶着一个小木台，台上撒着谷粒，旁边一只小麻雀
+
+**第 6 张 · 会飞的（只用前 2 格，其余留空）**：
+1. 小鸟：一只圆滚滚的蓝色小鸟，翅膀半张，侧身朝左，像正停在枝头
+2. 蝴蝶：一只黄底黑纹的蝴蝶，翅膀张开，侧身朝右
+
+出好后我把它们写进 `scripts/slice-art.py` 的 SHEETS 里切图替换占位图。
+
 ## 我这边怎么用
 
 - 第 1 张对齐游戏格子后切成 16 块放云存储，当整座宅院的底图；物件、小动物摆在上面，脚下有影子
