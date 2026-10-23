@@ -93,4 +93,4 @@ function collectionGroups(collected) {
   return groups.map((g) => ({ ...g, collectedCount: g.items.filter((i) => i.collected).length }))
 }
 
-module.exports = { itemImage, rarityOf, buildScene, inventoryList, hintTiles, collectionGroups }
+module.exports = { SIZE_SCALE, itemImage, rarityOf, buildScene, inventoryList, hintTiles, collectionGroups }
