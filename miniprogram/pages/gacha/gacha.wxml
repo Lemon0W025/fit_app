@@ -35,7 +35,6 @@
       <image class="reveal-image" src="{{result.image}}" mode="aspectFit" />
       <view class="reveal-name">{{result.name}}</view>
       <view class="rarity-pill" style="background: {{result.rarityColor}}">{{result.rarityLabel}}</view>
-      <view wx:if="{{result.sizeGrew}}" class="grew">🎉 图鉴集齐 20 种，庭院扩大成 8×8 啦！</view>
       <view class="reveal-actions">
         <button class="btn-plain reveal-btn" bindtap="goPlace">去摆放</button>
         <button class="btn-primary reveal-btn" bindtap="spin" disabled="{{beans < spinCost}}">再扭一次</button>

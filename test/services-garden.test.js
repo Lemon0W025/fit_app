@@ -17,17 +17,18 @@ function setup({ random = sequence([]), garden, now = NOW } = {}) {
   return { repo, service }
 }
 
-const richGarden = (extra = {}) => ({ welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, ...extra })
+const richGarden = (extra = {}) => ({ welcomed: true, plots: ['0,0'], beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, ...extra })
 
 test('get：第一次进来送 60 暖豆和一棵大树，只送一次', async () => {
   const { repo, service } = setup()
   const first = await service.get('u1')
   assert.deepEqual(first.welcome, { beans: 60, itemId: 'starter_tree' })
   assert.equal(first.beans, 60)
-  assert.equal(first.size, 6)
+  assert.deepEqual(first.plots, ['1,1'])
+  assert.equal(first.expandCost, 100)
   assert.equal(first.placed.length, 1)
   assert.equal(first.placed[0].itemId, 'starter_tree')
-  assert.deepEqual([first.placed[0].c, first.placed[0].r], [2, 2])
+  assert.deepEqual([first.placed[0].c, first.placed[0].r], [8, 8])
   assert.ok(first.placed[0].uid)
   assert.equal(first.collectedCount, 0)
   assert.equal(first.totalCount, 48)
@@ -109,23 +110,6 @@ test('spin：当季限定会出现在稀有池里', async () => {
   // 不在霜降期间就抽不到
   const { service: off } = setup({ random: sequence([0.7, 0.9999]), garden: richGarden() })
   assert.notEqual((await off.spin('u1')).itemId, 'dried_persimmon')
-})
-
-test('spin：图鉴集齐 20 种时庭院扩成 8×8', async () => {
-  // 已有 19 种（不含小板凳），这次抽中小板凳凑满 20 种
-  const collected = ITEMS.filter((i) => !i.starter && i.id !== 'stool').slice(0, 19).map((i) => i.id)
-  const target = itemById('stool')
-  const commons = ITEMS.filter((i) => i.rarity === 'common' && !i.starter && !i.term)
-  const index = commons.indexOf(target)
-  const { service } = setup({
-    random: sequence([0, (index + 0.5) / commons.length]),
-    garden: richGarden({ collected }),
-  })
-  const res = await service.spin('u1')
-  assert.equal(res.isNew, true)
-  assert.equal(res.collectedCount, 20)
-  assert.equal(res.size, 8)
-  assert.equal(res.sizeGrew, true)
 })
 
 test('place：从背包摆到空地上', async () => {
@@ -234,4 +218,50 @@ test('旧数据：扭蛋抽到的小动物变成住户，不放进新住户', as
   assert.deepEqual(view.arrivals, [])
   assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 2 }])
   assert.deepEqual(view.placed.map((p) => p.itemId), ['daisy'])
+})
+
+test('expand：花暖豆开垦相邻的荒地，价格递增', async () => {
+  const { repo, service } = setup({ garden: { welcomed: true, plots: ['1,1'], beans: { earned: {}, bonus: 400, spent: 0 } } })
+  let view = await service.expand('u1', { plot: '1,0' })
+  assert.deepEqual(view.plots, ['1,1', '1,0'])
+  assert.equal(view.beans, 300)
+  assert.equal(view.expandCost, 150)
+  assert.deepEqual(view.world, { plotSize: 6, grid: 3 })
+  view = await service.expand('u1', { plot: '2,0' })
+  assert.equal(view.beans, 150)
+  assert.equal(view.expandCost, 200)
+  assert.equal((await repo.getGarden('u1')).beans.spent, 250)
+})
+
+test('expand：不相邻、已开垦、不在地图里、暖豆不够都不行', async () => {
+  const { service } = setup({ garden: { welcomed: true, plots: ['1,1'], beans: { earned: {}, bonus: 120, spent: 0 } } })
+  await assert.rejects(service.expand('u1', { plot: '0,0' }), { code: 'BAD_REQUEST', message: '要挨着已经开垦的地才能开荒' })
+  await assert.rejects(service.expand('u1', { plot: '1,1' }), { code: 'BAD_REQUEST', message: '这块地已经开垦过了' })
+  await assert.rejects(service.expand('u1', { plot: '3,1' }), { code: 'BAD_REQUEST', message: '这块地不在庭院里' })
+  await assert.rejects(service.expand('u1', {}), { code: 'BAD_REQUEST', message: '这块地不在庭院里' })
+  await service.expand('u1', { plot: '0,1' })
+  await assert.rejects(service.expand('u1', { plot: '2,1' }), { code: 'NO_BEANS', message: '暖豆不够啦，开荒要 150 暖豆，再攒攒' })
+})
+
+test('全部开垦完，expandCost 是 null', async () => {
+  const all = ['0,0', '1,0', '2,0', '0,1', '1,1', '2,1', '0,2', '1,2', '2,2']
+  const { service } = setup({ garden: richGarden({ plots: all }) })
+  assert.equal((await service.get('u1')).expandCost, null)
+})
+
+test('place / move：只能放在开垦了的地上', async () => {
+  const { service } = setup({ garden: richGarden({ plots: ['1,1'], inventory: { daisy: 2 }, placed: [{ uid: 'p1', itemId: 'pavilion', c: 7, r: 7 }] }) })
+  await assert.rejects(service.place('u1', { itemId: 'daisy', c: 0, r: 0 }), { code: 'BAD_REQUEST', message: '这块地还没开荒呢' })
+  await assert.rejects(service.place('u1', { itemId: 'daisy', c: 18, r: 0 }), { code: 'BAD_REQUEST', message: '放不到庭院外面哦' })
+  await service.place('u1', { itemId: 'daisy', c: 6, r: 11 })
+  await assert.rejects(service.move('u1', { uid: 'p1', c: 12, r: 7 }), { code: 'BAD_REQUEST', message: '这块地还没开荒呢' })
+})
+
+test('旧数据：小庭院的坐标挪进中间那块，越界的东西所在的地块直接开垦', async () => {
+  const { service } = setup({
+    garden: { welcomed: true, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 2, r: 2 }, { uid: 'p2', itemId: 'daisy', c: 7, r: 0 }] },
+  })
+  const view = await service.get('u1')
+  assert.deepEqual(view.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 8, 8], ['daisy', 13, 6]])
+  assert.deepEqual(view.plots, ['1,1', '2,1'])
 })

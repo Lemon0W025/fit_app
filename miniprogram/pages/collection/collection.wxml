@@ -6,7 +6,7 @@
     <view class="progress-body">
       <view class="progress-title">已收集 {{collectedCount}} / {{totalCount}}</view>
       <view class="bar"><view class="bar-fill" style="width: {{percent}}%"></view></view>
-      <view class="muted small">集齐 20 种，庭院会扩大成 8×8</view>
+      <view class="muted small">摆对东西，小动物会自己搬来</view>
     </view>
   </view>
 

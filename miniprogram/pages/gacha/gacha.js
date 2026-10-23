@@ -63,7 +63,6 @@ Page({
             rarityLabel: rarity.label,
             rarityColor: rarity.color,
             isNew: res.isNew,
-            sizeGrew: res.sizeGrew,
           },
         })
       })

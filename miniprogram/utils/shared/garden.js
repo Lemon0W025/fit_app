@@ -82,6 +82,14 @@ const WELCOME_BEANS = 60
 const PITY = 10
 const SEASONAL_WEIGHT = 4
 
+// 庭院地图：PLOT_GRID × PLOT_GRID 块地，每块 PLOT_SIZE × PLOT_SIZE 格；一开始只开垦中间一块，其余花暖豆开荒
+const PLOT_SIZE = 6
+const PLOT_GRID = 3
+const WORLD_SIZE = PLOT_SIZE * PLOT_GRID
+const CENTER_PLOT = '1,1'
+const EXPAND_BASE = 100
+const EXPAND_STEP = 50
+
 // 节气起始日（北京时间），由天文算法算出；key 用于每年循环的节气限定
 const SOLAR_TERMS = [
   { key: 'bailu', name: '白露', start: '2026-09-07' },
@@ -171,8 +179,43 @@ function currentTerm(dateKey) {
   return found
 }
 
-function gardenSize(collectedCount) {
-  return collectedCount >= 20 ? 8 : 6
+function plotOf(c, r) {
+  return `${Math.floor(c / PLOT_SIZE)},${Math.floor(r / PLOT_SIZE)}`
+}
+
+function parsePlot(key) {
+  const m = /^(\d+),(\d+)$/.exec(String(key))
+  if (!m) return null
+  const pc = Number(m[1])
+  const pr = Number(m[2])
+  return pc < PLOT_GRID && pr < PLOT_GRID ? { pc, pr } : null
+}
+
+// 上下左右相邻的地块
+function plotNeighbors(key) {
+  const p = parsePlot(key)
+  if (!p) return []
+  return [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    .map(([dc, dr]) => ({ pc: p.pc + dc, pr: p.pr + dr }))
+    .filter((n) => n.pc >= 0 && n.pr >= 0 && n.pc < PLOT_GRID && n.pr < PLOT_GRID)
+    .map((n) => `${n.pc},${n.pr}`)
+}
+
+function canExpand(plots, key) {
+  return !!parsePlot(key) && plots.indexOf(key) === -1 && plotNeighbors(key).some((n) => plots.indexOf(n) !== -1)
+}
+
+// 已开垦 openedCount 块时再开一块要多少暖豆：100、150、200……
+function expandCost(openedCount) {
+  return EXPAND_BASE + EXPAND_STEP * (openedCount - 1)
+}
+
+function inWorld(c, r) {
+  return Number.isInteger(c) && Number.isInteger(r) && c >= 0 && r >= 0 && c < WORLD_SIZE && r < WORLD_SIZE
+}
+
+function tileOpen(plots, c, r) {
+  return inWorld(c, r) && plots.indexOf(plotOf(c, r)) !== -1
 }
 
 // 摆放编号 p12 → 12，越小越早摆
@@ -213,7 +256,17 @@ module.exports = {
   rollRarity,
   pickItem,
   currentTerm,
-  gardenSize,
+  PLOT_SIZE,
+  PLOT_GRID,
+  WORLD_SIZE,
+  CENTER_PLOT,
+  plotOf,
+  parsePlot,
+  plotNeighbors,
+  canExpand,
+  expandCost,
+  inWorld,
+  tileOpen,
   placedOrder,
   waitingAnimals,
 }

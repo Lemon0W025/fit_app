@@ -15,7 +15,14 @@ const {
   rollRarity,
   pickItem,
   currentTerm,
-  gardenSize,
+  WORLD_SIZE,
+  PLOT_SIZE,
+  plotOf,
+  parsePlot,
+  plotNeighbors,
+  canExpand,
+  expandCost,
+  tileOpen,
   collectibleCount,
   ANIMALS,
   waitingAnimals,
@@ -125,10 +132,27 @@ test('currentTerm：按北京时间日期找当前节气', () => {
   assert.equal(currentTerm('2026-01-01'), null)
 })
 
-test('gardenSize：图鉴集齐 20 种扩成 8×8', () => {
-  assert.equal(gardenSize(0), 6)
-  assert.equal(gardenSize(19), 6)
-  assert.equal(gardenSize(20), 8)
+test('地图：块坐标、相邻、开荒价格、格子开没开垦', () => {
+  assert.equal(PLOT_SIZE, 6)
+  assert.equal(WORLD_SIZE, 18)
+  assert.equal(plotOf(0, 0), '0,0')
+  assert.equal(plotOf(8, 8), '1,1')
+  assert.equal(plotOf(17, 6), '2,1')
+  assert.deepEqual(parsePlot('2,1'), { pc: 2, pr: 1 })
+  assert.equal(parsePlot('3,1'), null)
+  assert.equal(parsePlot('x'), null)
+  assert.deepEqual(plotNeighbors('1,1').sort(), ['0,1', '1,0', '1,2', '2,1'])
+  assert.deepEqual(plotNeighbors('0,0').sort(), ['0,1', '1,0'])
+  assert.deepEqual(plotNeighbors('3,3'), [])
+  assert.equal(canExpand(['1,1'], '1,0'), true)
+  assert.equal(canExpand(['1,1'], '0,0'), false)
+  assert.equal(canExpand(['1,1'], '1,1'), false)
+  assert.equal(canExpand(['1,1'], '9,9'), false)
+  assert.deepEqual([1, 2, 8].map(expandCost), [100, 150, 450])
+  assert.equal(tileOpen(['1,1'], 6, 11), true)
+  assert.equal(tileOpen(['1,1'], 5, 11), false)
+  assert.equal(tileOpen(['1,1'], 6.5, 7), false)
+  assert.equal(tileOpen(['1,1'], 18, 7), false)
 })
 
 test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
