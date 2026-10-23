@@ -1,11 +1,13 @@
 const api = require('../../utils/api')
 const { decorateMeal, decorateTree } = require('../../utils/view')
+const { arrivalCard } = require('../../utils/garden-view')
 
 Page({
   data: {
     loading: true,
     meal: null,
     tree: null,
+    arrival: null,
     note: '',
     editing: false,
     working: false,
@@ -17,7 +19,7 @@ Page({
     const app = getApp()
     const last = app.globalData.lastTree
     if (last && last.mealId === options.id) {
-      this.setData({ tree: decorateTree(last.tree) })
+      this.setData({ tree: decorateTree(last.tree), arrival: arrivalCard(last.arrival) })
       app.globalData.lastTree = null
     }
     api.call('meal.get', { mealId: this.mealId })

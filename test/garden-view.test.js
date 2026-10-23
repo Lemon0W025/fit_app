@@ -8,6 +8,7 @@ const {
   inventoryList,
   hintTiles,
   collectionGroups,
+  arrivalCard,
 } = require('../miniprogram/utils/garden-view')
 
 const L = isoLayout(6, 360)
@@ -64,16 +65,30 @@ test('hintTiles：标出所有空地，移动时自己原来的位置也算空�
   assert.equal(first.top, L.top)
 })
 
-test('collectionGroups：按稀有度分组，加上节气限定组', () => {
-  const groups = collectionGroups(['daisy', 'panda', 'snowman'])
+test('collectionGroups：按稀有度分组（不含小动物），再加小动物和节气限定', () => {
+  const groups = collectionGroups(['daisy', 'panda', 'snowman', 'osmanthus'])
   assert.deepEqual(groups.map((g) => [g.label, g.items.length]), [
-    ['普通', 15], ['稀有', 15], ['珍稀', 9], ['传说', 4], ['节气限定', 5],
+    ['普通', 15], ['稀有', 10], ['珍稀', 6], ['传说', 3], ['小动物', 9], ['节气限定', 5],
   ])
   const daisy = groups[0].items.find((i) => i.id === 'daisy')
   assert.equal(daisy.collected, true)
   assert.equal(groups[0].collectedCount, 1)
   assert.equal(groups[0].items.find((i) => i.id === 'grass').collected, false)
-  const snowman = groups[4].items.find((i) => i.id === 'snowman')
+  const animals = groups[4]
+  assert.equal(animals.id, 'animals')
+  assert.equal(animals.collectedCount, 1)
+  assert.equal(animals.items.find((i) => i.id === 'panda').hint, '喜欢：翠竹')
+  assert.equal(animals.items.find((i) => i.id === 'panda_family').hint, '喜欢：大熊猫 + 3 丛翠竹')
+  assert.equal(groups[0].items[0].hint, '')
+  const snowman = groups[5].items.find((i) => i.id === 'snowman')
   assert.equal(snowman.termName, '小雪')
   assert.equal(snowman.collected, true)
+})
+
+test('arrivalCard：搬家横幅', () => {
+  assert.deepEqual(arrivalCard({ id: 'panda', name: '大熊猫' }), {
+    id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进庭院啦！',
+  })
+  assert.equal(arrivalCard(null), null)
+  assert.equal(arrivalCard(undefined), null)
 })

@@ -9,6 +9,13 @@
       <view class="tree-banner-hint">{{tree.hint}}</view>
     </view>
   </view>
+  <view wx:if="{{arrival}}" class="card arrival-banner" bindtap="goGarden">
+    <image class="arrival-image" src="{{arrival.image}}" mode="aspectFit" />
+    <view class="arrival-body">
+      <view class="arrival-title">{{arrival.text}}</view>
+      <view class="arrival-link">去庭院看看 ›</view>
+    </view>
+  </view>
 
   <image wx:if="{{meal.fileID}}" class="hero-photo" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
 

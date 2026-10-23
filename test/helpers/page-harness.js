@@ -9,8 +9,9 @@ function clone(v) {
   return v == null ? v : JSON.parse(JSON.stringify(v))
 }
 
+// 和小程序一样支持 'a.b' 和 'list[0].x' 两种路径
 function setPath(obj, key, value) {
-  const parts = key.split('.')
+  const parts = key.replace(/\[(\d+)\]/g, '.$1').split('.')
   let cur = obj
   for (let i = 0; i < parts.length - 1; i++) {
     if (cur[parts[i]] == null) cur[parts[i]] = {}

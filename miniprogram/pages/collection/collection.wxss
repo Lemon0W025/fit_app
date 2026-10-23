@@ -77,3 +77,9 @@
   font-size: 20rpx;
   color: #d97a1e;
 }
+
+.cell-hint {
+  font-size: 20rpx;
+  color: var(--primary);
+  padding: 0 4rpx;
+}

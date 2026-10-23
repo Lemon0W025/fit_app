@@ -20,6 +20,7 @@
         <image class="cell-image {{item.collected ? '' : 'locked'}}" src="{{item.image}}" mode="aspectFit" />
         <view class="cell-name">{{item.collected ? item.name : '？？？'}}</view>
         <view wx:if="{{item.termName}}" class="cell-term">{{item.termName}}限定</view>
+        <view wx:if="{{item.hint && !item.collected}}" class="cell-hint">{{item.hint}}</view>
       </view>
     </view>
   </view>

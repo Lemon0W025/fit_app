@@ -2,6 +2,7 @@
 
 const { ITEMS, RARITIES, SOLAR_TERMS, itemById } = require('./shared/garden')
 const { tileTop, tileCenter } = require('./iso')
+const { ANIMAL_INFO } = require('./animals')
 
 // 物品在庭院里的宽度（相对格子宽度）
 const SIZE_SCALE = { s: 0.8, m: 1.0, l: 1.3 }
@@ -82,15 +83,30 @@ function termName(key) {
 
 function collectionGroups(collected) {
   const has = (id) => collected.indexOf(id) !== -1
-  const toEntry = (i) => ({ id: i.id, name: i.name, image: itemImage(i.id), collected: has(i.id), termName: i.term ? termName(i.term) : '' })
+  const isAnimal = (i) => i.kind === 'animal'
+  const toEntry = (i) => ({
+    id: i.id,
+    name: i.name,
+    image: itemImage(i.id),
+    collected: has(i.id),
+    termName: i.term ? termName(i.term) : '',
+    hint: isAnimal(i) ? ANIMAL_INFO[i.id].likesText : '',
+  })
   const groups = RARITIES.map((r) => ({
     id: r.id,
     label: r.label,
     color: r.color,
-    items: ITEMS.filter((i) => i.rarity === r.id && !i.starter && !i.term).map(toEntry),
+    items: ITEMS.filter((i) => i.rarity === r.id && !i.starter && !i.term && !isAnimal(i)).map(toEntry),
   }))
+  groups.push({ id: 'animals', label: '小动物', color: '#4E7D5B', items: ITEMS.filter(isAnimal).map(toEntry) })
   groups.push({ id: 'seasonal', label: '节气限定', color: '#D97A1E', items: ITEMS.filter((i) => i.term).map(toEntry) })
   return groups.map((g) => ({ ...g, collectedCount: g.items.filter((i) => i.collected).length }))
 }
 
-module.exports = { SIZE_SCALE, itemImage, rarityOf, buildScene, inventoryList, hintTiles, collectionGroups }
+// 打卡结果页的搬家横幅
+function arrivalCard(arrival) {
+  if (!arrival) return null
+  return { id: arrival.id, name: arrival.name, image: itemImage(arrival.id), text: ANIMAL_INFO[arrival.id].arrive }
+}
+
+module.exports = { SIZE_SCALE, itemImage, rarityOf, buildScene, inventoryList, hintTiles, collectionGroups, arrivalCard }

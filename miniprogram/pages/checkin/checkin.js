@@ -62,7 +62,7 @@ Page({
         return api.call('meal.analyze', { fileID, mealType, note })
       })
       .then((meal) => {
-        getApp().globalData.lastTree = { mealId: meal._id, tree: meal.tree }
+        getApp().globalData.lastTree = { mealId: meal._id, tree: meal.tree, arrival: meal.arrival }
         wx.redirectTo({ url: `/pages/meal/meal?id=${meal._id}` })
       })
       .catch((err) => {

@@ -307,7 +307,8 @@ test('养生庭院页面：新手礼 → 扭蛋 → 摆放 → 移动 → 收回
   await settle()
   assert.ok(collection.data.collectedCount >= 1)
   assert.equal(collection.data.totalCount, 48)
-  assert.equal(collection.data.groups.length, 5)
+  assert.equal(collection.data.groups.length, 6)
+  assert.equal(collection.data.groups[4].label, '小动物')
 
   // 打卡日历
   const calendar = loadPage('forest', wx)
@@ -358,8 +359,11 @@ test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横�
   assert.equal(garden.data.animals.length, 1)
   assert.equal(garden.data.animals[0].id, 'panda')
   assert.equal(garden.data.animals[0].bubble, '我是大熊猫，以后就住这儿啦！')
+  const outside = garden.data.animals[0].left
   garden.clock.advance(20000)
   assert.ok(Number.isFinite(garden.data.animals[0].left) && Number.isFinite(garden.data.animals[0].bottom))
+  assert.notEqual(garden.data.animals[0].left, outside)
+  assert.equal(garden.data.animals[0].bubble, '')
   garden.tapAnimal(event({ index: 0 }))
   assert.ok(garden.data.animals[0].bubble)
   assert.equal(garden.data.animals[0].tapping, true)
