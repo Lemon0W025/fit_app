@@ -10,6 +10,7 @@ const RARITIES = [
 
 // 物品 id 会存进数据库，不能改；size 决定在庭院里画多大（s 小件 / m 中件 / l 大件）
 // emoji 只用于占位图，正式图片见 docs/art/garden-art-brief.md
+// kind: 'animal' 的是小动物：不进扭蛋；庭院里摆着 likes 里的东西（likesCount 件，needs 已住进来）时，下次正餐打卡搬来
 const ITEMS = [
   { id: 'starter_tree', name: '大树', rarity: 'common', size: 'l', emoji: '🌳', starter: true },
 
@@ -38,26 +39,26 @@ const ITEMS = [
   { id: 'wood_bridge', name: '小木桥', rarity: 'rare', size: 'm', emoji: '🛶' },
   { id: 'lantern', name: '灯笼柱', rarity: 'rare', size: 'm', emoji: '🏮' },
   { id: 'stone_table', name: '石桌石凳', rarity: 'rare', size: 'm', emoji: '🍵' },
-  { id: 'chick', name: '小黄鸡', rarity: 'rare', size: 's', emoji: '🐤' },
-  { id: 'rabbit', name: '小白兔', rarity: 'rare', size: 's', emoji: '🐇' },
-  { id: 'duck', name: '小黄鸭', rarity: 'rare', size: 's', emoji: '🦆' },
+  { id: 'chick', name: '小黄鸡', rarity: 'rare', size: 's', emoji: '🐤', kind: 'animal', likes: ['grass'] },
+  { id: 'rabbit', name: '小白兔', rarity: 'rare', size: 's', emoji: '🐇', kind: 'animal', likes: ['radish'] },
+  { id: 'duck', name: '小黄鸭', rarity: 'rare', size: 's', emoji: '🦆', kind: 'animal', likes: ['koi_pond'] },
   { id: 'koi_pond', name: '锦鲤池', rarity: 'rare', size: 'm', emoji: '🐟' },
-  { id: 'turtle', name: '小乌龟', rarity: 'rare', size: 's', emoji: '🐢' },
-  { id: 'tabby_cat', name: '小花猫', rarity: 'rare', size: 's', emoji: '🐈' },
+  { id: 'turtle', name: '小乌龟', rarity: 'rare', size: 's', emoji: '🐢', kind: 'animal', likes: ['pebbles'] },
+  { id: 'tabby_cat', name: '小花猫', rarity: 'rare', size: 's', emoji: '🐈', kind: 'animal', likes: ['stool'] },
 
-  { id: 'panda', name: '大熊猫', rarity: 'epic', size: 'm', emoji: '🐼' },
-  { id: 'ginger_cat', name: '晒太阳的橘猫', rarity: 'epic', size: 'm', emoji: '😺' },
+  { id: 'panda', name: '大熊猫', rarity: 'epic', size: 'm', emoji: '🐼', kind: 'animal', likes: ['bamboo'] },
+  { id: 'ginger_cat', name: '晒太阳的橘猫', rarity: 'epic', size: 'm', emoji: '😺', kind: 'animal', likes: ['tea_table'] },
   { id: 'plum_tree', name: '梅花树', rarity: 'epic', size: 'l', emoji: '🌸' },
   { id: 'lotus_pond', name: '荷花池', rarity: 'epic', size: 'm', emoji: '🪷' },
   { id: 'pavilion', name: '六角凉亭', rarity: 'epic', size: 'l', emoji: '🛖' },
   { id: 'arch_bridge', name: '石拱桥', rarity: 'epic', size: 'm', emoji: '🌉' },
-  { id: 'crane', name: '仙鹤', rarity: 'epic', size: 'm', emoji: '🦢' },
+  { id: 'crane', name: '仙鹤', rarity: 'epic', size: 'm', emoji: '🦢', kind: 'animal', likes: ['lotus_pond'] },
   { id: 'swing_tree', name: '秋千树', rarity: 'epic', size: 'l', emoji: '🌲' },
   { id: 'waterwheel', name: '小水车', rarity: 'epic', size: 'm', emoji: '🎡' },
 
   { id: 'teahouse', name: '中式小茶楼', rarity: 'legendary', size: 'l', emoji: '🏯' },
   { id: 'zigzag_bridge', name: '九曲桥荷塘', rarity: 'legendary', size: 'l', emoji: '🎑' },
-  { id: 'panda_family', name: '熊猫一家', rarity: 'legendary', size: 'l', emoji: '🐾' },
+  { id: 'panda_family', name: '熊猫一家', rarity: 'legendary', size: 'l', emoji: '🐾', kind: 'animal', likes: ['bamboo'], likesCount: 3, needs: 'panda' },
   { id: 'golden_ginkgo', name: '金色银杏', rarity: 'legendary', size: 'l', emoji: '🍂' },
 
   // 节气限定：只有那个节气期间抽得到（每年都会回来）
@@ -69,6 +70,7 @@ const ITEMS = [
 ]
 
 const STARTER_ITEM = 'starter_tree'
+const ANIMALS = ITEMS.filter((i) => i.kind === 'animal').map((i) => i.id)
 
 // 每天的树长到哪个阶段，当天就给多少暖豆（见 shared/forest.js 的 dayTree）
 const STAGE_BEANS = { empty: 0, sprout: 10, small: 20, big: 40, bloom: 50, fruit: 60 }
@@ -151,10 +153,11 @@ function rollRarity(rand, sincePity) {
   return pickWeighted(pool.map((r) => ({ value: r.id, weight: r.weight })), rand)
 }
 
-// termKey：当前节气的 key；当季限定款进入同稀有度的池子，权重更高
+// termKey：当前节气的 key；当季限定款进入同稀有度的池子，权重更高。小动物不进扭蛋
 function pickItem(rarity, termKey, rand) {
-  const regular = ITEMS.filter((i) => i.rarity === rarity && !i.starter && !i.term)
-  const seasonal = ITEMS.filter((i) => i.rarity === rarity && i.term && i.term === termKey)
+  const inPool = (i) => i.rarity === rarity && !i.starter && i.kind !== 'animal'
+  const regular = ITEMS.filter((i) => inPool(i) && !i.term)
+  const seasonal = ITEMS.filter((i) => inPool(i) && i.term && i.term === termKey)
   const entries = regular.map((i) => ({ value: i.id, weight: 1 }))
     .concat(seasonal.map((i) => ({ value: i.id, weight: SEASONAL_WEIGHT })))
   return pickWeighted(entries, rand)
@@ -172,10 +175,32 @@ function gardenSize(collectedCount) {
   return collectedCount >= 20 ? 8 : 6
 }
 
+// 摆放编号 p12 → 12，越小越早摆
+function placedOrder(uid) {
+  return Number(String(uid).replace(/\D/g, '')) || 0
+}
+
+// 条件满足、还没住进来的动物，按「最后一件需要的物件」摆进庭院的先后排队
+function waitingAnimals(placed, residentIds) {
+  const waiting = []
+  ITEMS.forEach((animal) => {
+    if (animal.kind !== 'animal' || residentIds.indexOf(animal.id) !== -1) return
+    if (animal.needs && residentIds.indexOf(animal.needs) === -1) return
+    const need = animal.likesCount || 1
+    const orders = placed
+      .filter((p) => animal.likes.indexOf(p.itemId) !== -1)
+      .map((p) => placedOrder(p.uid))
+      .sort((a, b) => a - b)
+    if (orders.length >= need) waiting.push({ id: animal.id, order: orders[need - 1] })
+  })
+  return waiting.sort((a, b) => a.order - b.order).map((w) => w.id)
+}
+
 module.exports = {
   RARITIES,
   ITEMS,
   STARTER_ITEM,
+  ANIMALS,
   STAGE_BEANS,
   SPIN_COST,
   WELCOME_BEANS,
@@ -189,4 +214,6 @@ module.exports = {
   pickItem,
   currentTerm,
   gardenSize,
+  placedOrder,
+  waitingAnimals,
 }

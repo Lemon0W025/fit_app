@@ -17,6 +17,9 @@ const {
   currentTerm,
   gardenSize,
   collectibleCount,
+  ANIMALS,
+  waitingAnimals,
+  placedOrder,
 } = require('../cloudfunctions/api/lib/shared/garden')
 
 test('常量', () => {
@@ -90,8 +93,8 @@ test('rollRarity：第 10 次保底只在珍稀和传说里抽（8:2）', () => 
   assert.equal(rollRarity(0, PITY - 2), 'common')
 })
 
-test('pickItem：同稀有度等概率，排除新手大树和非当季限定', () => {
-  const commons = ITEMS.filter((i) => i.rarity === 'common' && !i.starter && !i.term)
+test('pickItem：同稀有度等概率，排除新手大树、小动物和非当季限定', () => {
+  const commons = ITEMS.filter((i) => i.rarity === 'common' && !i.starter && !i.term && i.kind !== 'animal')
   assert.equal(pickItem('common', null, 0), commons[0].id)
   assert.equal(pickItem('common', null, 0.9999), commons[commons.length - 1].id)
   for (let k = 0; k < 50; k++) {
@@ -102,7 +105,7 @@ test('pickItem：同稀有度等概率，排除新手大树和非当季限定', 
 })
 
 test('pickItem：当季限定在稀有池里权重 ×4', () => {
-  const rares = ITEMS.filter((i) => i.rarity === 'rare' && !i.term)
+  const rares = ITEMS.filter((i) => i.rarity === 'rare' && !i.term && i.kind !== 'animal')
   const total = rares.length + 4
   // 限定款排在池子最后，占最后 4/total 的区间
   assert.equal(pickItem('rare', 'dongzhi', 0.9999), 'dumpling_steamer')
@@ -126,4 +129,51 @@ test('gardenSize：图鉴集齐 20 种扩成 8×8', () => {
   assert.equal(gardenSize(0), 6)
   assert.equal(gardenSize(19), 6)
   assert.equal(gardenSize(20), 8)
+})
+
+test('小动物：9 只，各有喜欢的物件，扭蛋里抽不到', () => {
+  assert.deepEqual(ANIMALS, ['chick', 'rabbit', 'duck', 'turtle', 'tabby_cat', 'panda', 'ginger_cat', 'crane', 'panda_family'])
+  for (const id of ANIMALS) {
+    const animal = itemById(id)
+    assert.equal(animal.kind, 'animal')
+    assert.ok(animal.likes.length, id)
+    animal.likes.forEach((like) => assert.ok(itemById(like) && itemById(like).kind !== 'animal', like))
+  }
+  assert.deepEqual(itemById('panda').likes, ['bamboo'])
+  assert.equal(itemById('panda_family').likesCount, 3)
+  assert.equal(itemById('panda_family').needs, 'panda')
+  for (const rarity of ['common', 'rare', 'epic', 'legendary']) {
+    for (let k = 0; k < 100; k++) {
+      const id = pickItem(rarity, 'lidong', k / 100)
+      assert.equal(ANIMALS.indexOf(id), -1, `${rarity} ${id}`)
+    }
+  }
+})
+
+test('placedOrder：摆放编号转成数字', () => {
+  assert.equal(placedOrder('p12'), 12)
+  assert.equal(placedOrder('a'), 0)
+  assert.equal(placedOrder(undefined), 0)
+})
+
+test('waitingAnimals：庭院里摆着喜欢的东西才等，按摆放先后排队', () => {
+  const placed = [
+    { uid: 'p3', itemId: 'grass', c: 0, r: 0 },
+    { uid: 'p2', itemId: 'bamboo', c: 1, r: 0 },
+    { uid: 'p5', itemId: 'daisy', c: 2, r: 0 },
+  ]
+  assert.deepEqual(waitingAnimals(placed, []), ['panda', 'chick'])
+  // 已经住进来的不再等
+  assert.deepEqual(waitingAnimals(placed, ['panda']), ['chick'])
+  assert.deepEqual(waitingAnimals([], []), [])
+})
+
+test('waitingAnimals：熊猫一家要大熊猫住进来，且摆着 3 丛翠竹', () => {
+  const bamboo = (n) => Array.from({ length: n }, (_, i) => ({ uid: `p${i + 1}`, itemId: 'bamboo', c: i, r: 0 }))
+  assert.deepEqual(waitingAnimals(bamboo(3), []), ['panda'])
+  assert.deepEqual(waitingAnimals(bamboo(2), ['panda']), [])
+  assert.deepEqual(waitingAnimals(bamboo(3), ['panda']), ['panda_family'])
+  // 按第 3 丛翠竹的编号排队：p3 比 p4 的青草丛早
+  const placed = bamboo(3).concat({ uid: 'p4', itemId: 'grass', c: 5, r: 5 })
+  assert.deepEqual(waitingAnimals(placed, ['panda']), ['panda_family', 'chick'])
 })
