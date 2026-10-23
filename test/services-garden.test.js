@@ -265,3 +265,21 @@ test('旧数据：小庭院的坐标挪进中间那块，越界的东西所在�
   assert.deepEqual(view.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 8, 8], ['daisy', 13, 6]])
   assert.deepEqual(view.plots, ['1,1', '2,1'])
 })
+
+test('测试福利：期限内每个 id 只送一次，过期不送', async () => {
+  let grant = { id: 'g1', beans: 500, until: TODAY }
+  const repo = createFakeRepo()
+  repo.state.gardens.set('u1', richGarden())
+  const service = createGardenService({ repo, now: () => NOW, getGrant: () => grant })
+  const first = await service.get('u1')
+  assert.equal(first.testGift, 500)
+  assert.equal(first.beans, 620)
+  assert.deepEqual((await repo.getGarden('u1')).grants, ['g1'])
+  const again = await service.get('u1')
+  assert.equal(again.testGift, 0)
+  assert.equal(again.beans, 620)
+  grant = { id: 'g2', beans: 100, until: '2026-10-21' }
+  assert.equal((await service.get('u1')).testGift, 0)
+  grant = null
+  assert.equal((await service.get('u1')).testGift, 0)
+})

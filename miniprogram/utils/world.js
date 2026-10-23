@@ -51,19 +51,19 @@ function plotViews(plots, L, cost) {
   return views.sort((a, b) => a.z - b.z)
 }
 
-// 小岛外面的装饰（不能点）：坐标是地图外面的格子，scale 是相对格子宽度的大小
+// 小岛外面的装饰（不能点）：枯树、枯灌木、石头和云——外面荒着，衬得院子里有生气。坐标是地图外面的格子，scale 是相对格子宽度的大小
 const DECOR = [
-  { image: 'decor-tree', c: -2, r: 2, scale: 1.6 },
-  { image: 'decor-bush', c: -2, r: 7, scale: 1.1 },
-  { image: 'decor-tree', c: -3, r: 12, scale: 2 },
+  { image: 'decor-deadtree', c: -2, r: 2, scale: 1.6 },
+  { image: 'decor-deadbush', c: -2, r: 7, scale: 1.1 },
+  { image: 'decor-deadtree', c: -3, r: 12, scale: 2 },
   { image: 'items/pebbles', c: -2, r: 16, scale: 0.9 },
-  { image: 'decor-tree', c: 3, r: -2, scale: 1.8 },
+  { image: 'decor-deadtree', c: 3, r: -2, scale: 1.8 },
   { image: 'items/pebbles', c: 9, r: -2, scale: 0.9 },
-  { image: 'decor-bush', c: 14, r: -2, scale: 1.2 },
-  { image: 'decor-tree', c: 20, r: 4, scale: 1.7 },
-  { image: 'decor-bush', c: 20, r: 11, scale: 1.1 },
-  { image: 'decor-tree', c: 5, r: 20, scale: 1.6 },
-  { image: 'decor-bush', c: 12, r: 20, scale: 1.2 },
+  { image: 'decor-deadbush', c: 14, r: -2, scale: 1.2 },
+  { image: 'decor-deadtree', c: 20, r: 4, scale: 1.7 },
+  { image: 'decor-deadbush', c: 20, r: 11, scale: 1.1 },
+  { image: 'decor-deadtree', c: 5, r: 20, scale: 1.6 },
+  { image: 'decor-deadbush', c: 12, r: 20, scale: 1.2 },
   { image: 'decor-cloud', c: -6, r: 2, scale: 2.4, cloud: true },
   { image: 'decor-cloud', c: 6, r: -7, scale: 2, cloud: true },
 ]

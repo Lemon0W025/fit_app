@@ -221,3 +221,18 @@ test('开荒：豆不够提示、开垦后能往新地上摆', async () => {
   const placed = await main({ action: 'garden.place', data: { itemId: 'daisy', c: 8, r: 2 } })
   assert.equal(placed.ok, true, placed.message)
 })
+
+test('测试福利：按 config.testGrant 送一次暖豆', async () => {
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  config.testGrant = { id: 'e2e', beans: 300, until: '2999-12-31' }
+  try {
+    const first = await main({ action: 'garden.get' })
+    assert.equal(first.data.testGift, 300)
+    assert.equal(first.data.beans, 360)
+    assert.equal((await main({ action: 'garden.get' })).data.testGift, 0)
+  } finally {
+    config.testGrant = null
+  }
+})

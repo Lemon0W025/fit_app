@@ -158,6 +158,9 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
 }
 
 // 用假的 wx-server-sdk 加载一份全新的云函数入口
+// 测试默认不发测试福利，免得暖豆数对不上；要测福利的用例自己打开
+require('../../cloudfunctions/api/config').testGrant = null
+
 function loadCloudFunction(fakeCloud) {
   const indexPath = path.join(__dirname, '../../cloudfunctions/api/index.js')
   const originalLoad = Module._load

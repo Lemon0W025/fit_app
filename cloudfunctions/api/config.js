@@ -17,4 +17,8 @@ module.exports = {
   //   'url'   ：云存储临时链接（默认）
   //   'base64'：把图片内容直接塞进请求（模型拿不到链接时改用这个）
   imageMode: 'url',
+
+  // 测试福利：until 这天（含）之前打开庭院的账号，各送一次 beans 暖豆（id 换了可以再送一次）。
+  // 只给开发测试用，上传体验版给家人之前改成 null
+  testGrant: { id: 'preview-1', beans: 5000, until: '2026-10-26' },
 }

@@ -27,7 +27,8 @@ const {
 
 const HIGH_RARITIES = ['epic', 'legendary']
 
-function createGardenService({ repo, now, random = Math.random }) {
+// getGrant：返回当前的测试福利（见 config.testGrant），没有就是 null
+function createGardenService({ repo, now, random = Math.random, getGrant = () => null }) {
   async function load(openid) {
     return normalizeGarden(await repo.getGarden(openid))
   }
@@ -38,7 +39,7 @@ function createGardenService({ repo, now, random = Math.random }) {
     return { name: term.name, items: ITEMS.filter((i) => i.term === term.key).map((i) => i.id) }
   }
 
-  function view(garden, welcome = null) {
+  function view(garden, welcome = null, testGift = 0) {
     return {
       beans: Math.max(0, beanBalance(garden)),
       world: { plotSize: PLOT_SIZE, grid: PLOT_GRID },
@@ -57,6 +58,7 @@ function createGardenService({ repo, now, random = Math.random }) {
       arrivals: garden.arrivals,
       waiting: waitingAnimals(garden.placed, garden.residents.map((r) => r.id)),
       welcome,
+      testGift,
     }
   }
 
@@ -94,10 +96,18 @@ function createGardenService({ repo, now, random = Math.random }) {
         garden.placed = garden.placed.concat({ uid: newUid(garden), itemId: STARTER_ITEM, c: center.c, r: center.r })
         welcome = { beans: WELCOME_BEANS, itemId: STARTER_ITEM }
       }
-      const result = view(garden, welcome)
+      // 测试福利：期限内每个 id 只送一次
+      const grant = getGrant()
+      let testGift = 0
+      if (grant && dateKey(now()) <= grant.until && garden.grants.indexOf(grant.id) === -1) {
+        garden.grants = garden.grants.concat(grant.id)
+        garden.beans = { ...garden.beans, bonus: garden.beans.bonus + grant.beans }
+        testGift = grant.beans
+      }
+      const result = view(garden, welcome, testGift)
       const seen = !!(input && input.markSeen) && garden.arrivals.length > 0
       if (seen) garden.arrivals = []
-      if (welcome || seen) await repo.saveGarden(openid, garden)
+      if (welcome || seen || testGift) await repo.saveGarden(openid, garden)
       return result
     },
 

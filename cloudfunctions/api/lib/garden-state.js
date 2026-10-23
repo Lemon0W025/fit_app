@@ -54,6 +54,8 @@ function normalizeGarden(doc) {
     // 住进来的小动物 [{ id, since }]，和还没在庭院里看到的新住户
     residents: g.residents || [],
     arrivals: g.arrivals || [],
+    // 已经领过的测试福利 id
+    grants: g.grants || [],
   }, g.plots))
 }
 

@@ -228,6 +228,64 @@ def draw_cloud():
     save_small(img.resize((240, 120), Image.LANCZOS), 'garden', 'decor-cloud.png')
 
 
+BARK = (124, 98, 78)
+BARK_DARK = (96, 74, 58)
+DRY_SOIL = (198, 170, 124, 230)
+DRY_LEAF = ((206, 168, 98), (182, 136, 80))
+
+
+def draw_dead_tree():
+    """小岛外面的枯树：光秃秃的树干和分叉的枝条，脚下一小片干土"""
+    S = 960
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(5)
+    d.ellipse([S * 0.26, S * 0.87, S * 0.74, S * 0.98], fill=DRY_SOIL)
+
+    def branch(x, y, angle, length, width, depth):
+        x2, y2 = x + math.cos(angle) * length, y - math.sin(angle) * length
+        d.line([(x, y), (x2, y2)], fill=BARK, width=max(4, int(width)))
+        d.ellipse([x2 - width / 2, y2 - width / 2, x2 + width / 2, y2 + width / 2], fill=BARK)
+        if depth == 0:
+            return
+        for turn in (rnd.uniform(0.3, 0.6), -rnd.uniform(0.3, 0.6)):
+            branch(x2, y2, angle + turn, length * rnd.uniform(0.6, 0.74), width * 0.6, depth - 1)
+
+    base, top = S * 0.93, S * 0.52
+    d.polygon([(S * 0.43, base), (S * 0.57, base), (S * 0.535, top), (S * 0.465, top)], fill=BARK)
+    d.polygon([(S * 0.5, base), (S * 0.57, base), (S * 0.535, top), (S * 0.5, top)], fill=BARK_DARK)
+    for dx, w in ((-0.1, 0.05), (0.09, 0.045)):
+        d.polygon([(S * (0.5 + dx), base + 6), (S * 0.5, base - S * 0.08), (S * (0.5 + dx / 3), base)], fill=BARK_DARK)
+    branch(S * 0.5, top + 10, math.pi / 2 + 0.08, S * 0.15, S * 0.05, 4)
+    branch(S * 0.5, S * 0.68, math.pi / 2 - 0.7, S * 0.12, S * 0.03, 2)
+    for _ in range(4):
+        x, y = rnd.uniform(0.3, 0.7) * S, rnd.uniform(0.86, 0.95) * S
+        d.ellipse([x - 14, y - 7, x + 14, y + 7], fill=rnd.choice(DRY_LEAF))
+    return img.resize((240, 240), Image.LANCZOS)
+
+
+def draw_dead_bush():
+    """小岛外面的枯灌木：一丛干枝条，零星几片干叶子"""
+    S = 960
+    img = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    rnd = random.Random(9)
+    d.ellipse([S * 0.24, S * 0.86, S * 0.76, S * 0.97], fill=DRY_SOIL)
+    cx, cy = S * 0.5, S * 0.9
+    for _ in range(22):
+        angle = rnd.uniform(0.35, math.pi - 0.35)
+        length = rnd.uniform(0.18, 0.34) * S
+        x2, y2 = cx + math.cos(angle) * length, cy - math.sin(angle) * length
+        color = BARK if rnd.random() < 0.6 else BARK_DARK
+        d.line([(cx + rnd.uniform(-20, 20), cy), (x2, y2)], fill=color, width=10)
+        mx, my = (cx + x2) / 2, (cy + y2) / 2
+        side = angle + rnd.choice((0.6, -0.6))
+        d.line([(mx, my), (mx + math.cos(side) * length * 0.3, my - math.sin(side) * length * 0.3)], fill=color, width=6)
+        if rnd.random() < 0.35:
+            d.ellipse([x2 - 16, y2 - 9, x2 + 16, y2 + 9], fill=rnd.choice(DRY_LEAF))
+    return img.resize((240, 240), Image.LANCZOS)
+
+
 def draw_hint():
     W, H = 360, 180
     img = Image.new('RGBA', (W, H), (0, 0, 0, 0))
@@ -305,6 +363,10 @@ def draw_garden(force=False):
     for name, fn in ui.items():
         if missing('garden', 'ui', name):
             save_small(fn(), 'garden', 'ui', name)
+    # 小岛外面的枯树、枯灌木：有正式美术就不覆盖
+    for name, fn in (('decor-deadtree.png', draw_dead_tree), ('decor-deadbush.png', draw_dead_bush)):
+        if missing('garden', name):
+            save_small(fn(), 'garden', name)
 
 
 if __name__ == '__main__':

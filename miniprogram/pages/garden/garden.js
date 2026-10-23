@@ -100,6 +100,9 @@ Page({
     }
     this.setData(patch)
     this.syncLife(view, fresh)
+    if (view.testGift) {
+      wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，开荒、扭蛋随便试试`, showCancel: false, confirmText: '好的' })
+    }
   },
 
   // movable-view 只在 x / y / scale-value 的值变了才会动：每次换一点点不同的小数

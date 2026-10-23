@@ -32,7 +32,7 @@ SHEETS = [
     ('01-界面元素.png', 'ui', ['bean', 'gacha', 'capsule-common', 'capsule-rare', 'capsule-epic',
                            'capsule-legendary', 'gift', 'book', 'shovel']),
     # 每天的树已经不用了；这张图只取「大树」给院子中间的新手大树（见 EXTRA_ITEMS）
-    ('02-每天的树.png', 'source', [None, None, None, 'small', 'big', None, None, None, None]),
+    ('02-每天的树.png', 'source', [None, None, None, None, 'big', None, None, None, None]),
     ('03-普通-花草.png', 'item', ['daisy', 'chrysanthemum', 'orchid', 'pothos', 'sunflower', 'bamboo',
                               'dandelion', 'grass', 'mushroom']),
     ('04-普通-田园.png', 'item', ['cabbage', 'radish', 'pumpkin', 'pebbles', 'fence', 'stool', None, None, None]),
@@ -48,9 +48,6 @@ SHEETS = [
 
 # 院子中间送的那棵大树，用每日树里的「大树」
 EXTRA_ITEMS = {'starter_tree': ('02-每天的树.png', 'big')}
-
-# 小岛外面的装饰树：每日树里的大树和小树（存到 images/garden/，不是物件）
-EXTRA_DECOR = {'decor-tree': ('02-每天的树.png', 'big'), 'decor-bush': ('02-每天的树.png', 'small')}
 
 
 def label(mask):
@@ -152,9 +149,6 @@ def main():
     for item_id, (sheet, piece) in EXTRA_ITEMS.items():
         if sheet in cut:
             total += save(fit(cut[sheet][piece], ITEM_PX), 'garden', 'items', f'{item_id}.png')
-    for name, (sheet, piece) in EXTRA_DECOR.items():
-        if sheet in cut:
-            total += save(fit(cut[sheet][piece], ITEM_PX), 'garden', f'{name}.png')
     print(f'共写入 {total // 1024} KB')
 
 
