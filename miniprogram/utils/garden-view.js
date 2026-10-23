@@ -59,8 +59,8 @@ function inventoryList(inventory) {
     .filter(Boolean)
 }
 
-// 摆放、移动时可以点的空地（移动时自己原来的位置也算空地）
-function hintTiles(placed, L, ignoreUid) {
+// 摆放、移动时可以点的空地（移动时自己原来的位置也算空地；open 判断格子开没开垦）
+function hintTiles(placed, L, ignoreUid, open = () => true) {
   const taken = {}
   placed.forEach((p) => {
     if (p.uid !== ignoreUid) taken[`${p.c},${p.r}`] = true
@@ -68,7 +68,7 @@ function hintTiles(placed, L, ignoreUid) {
   const tiles = []
   for (let c = 0; c < L.size; c++) {
     for (let r = 0; r < L.size; r++) {
-      if (taken[`${c},${r}`]) continue
+      if (taken[`${c},${r}`] || !open(c, r)) continue
       const t = tileTop(c, r, L)
       tiles.push({ key: `${c}-${r}`, c, r, left: t.x - L.tileW / 2, top: t.y, width: L.tileW, height: L.tileH })
     }

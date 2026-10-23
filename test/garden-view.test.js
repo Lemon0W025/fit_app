@@ -92,3 +92,11 @@ test('arrivalCard：搬家横幅', () => {
   assert.equal(arrivalCard(null), null)
   assert.equal(arrivalCard(undefined), null)
 })
+
+test('hintTiles：可以只算开垦了的格子', () => {
+  const L18 = isoLayout(18, 540)
+  const open = (c, r) => c >= 6 && c < 12 && r >= 6 && r < 12
+  const tiles = hintTiles([{ uid: 'a', itemId: 'daisy', c: 8, r: 8 }], L18, null, open)
+  assert.equal(tiles.length, 35)
+  assert.ok(tiles.every((t) => open(t.c, t.r)))
+})
