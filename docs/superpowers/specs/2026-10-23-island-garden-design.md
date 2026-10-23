@@ -1,6 +1,6 @@
 # 小岛后花园 — 设计文档
 
-日期：2026-10-23 · 状态：待确认 · 取代：[大地图庭院](2026-10-23-big-garden-map-design.md) 中的 3×3 地块与开荒；保留其中的「去掉每日的树」（印章 + 暖豆）
+日期：2026-10-23 · 状态：已确认 · 取代：[大地图庭院](2026-10-23-big-garden-map-design.md) 中的 3×3 地块与开荒；保留其中的「去掉每日的树」（印章 + 暖豆）
 
 ## 目标
 
@@ -111,7 +111,7 @@
 | `pages/garden` | 新布局（左上资源条 + 今日印章、左右圆按钮、底部大打卡按钮）、海背景、风景 / 花坛 / 岛边花草、修整木牌；进页面先确认建档 |
 | `app.json` | 页面和 tabBar 顺序：花园第一，标签文字「花园」 |
 | `pages/meal` | 「回到花园」 |
-| `scripts/draw-images.py` | 画小岛底图 `garden/island.png`、篱笆杂草遮罩 `garden/region-locked.png`；删掉地块图和枯树；另画 `art/guide/island-layout.png` 草图 |
+| `scripts/draw-images.py` | 画小岛底图 `garden/island.png`、篱笆杂草遮罩 `garden/locked-wide.png`（`locked-tall.png` 是它的镜像）；删掉地块图和枯树；另画 `art/guide/island-layout.png` 草图 |
 
 ## 测试
 
