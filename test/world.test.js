@@ -1,87 +1,88 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const W = require('../miniprogram/utils/world')
+const E = require('../miniprogram/utils/shared/estate')
 const { tileTop, tileCenter } = require('../miniprogram/utils/iso')
 
-const L = W.islandLayout(375)
-const REGIONS = [
-  { id: 'center', name: '中间花园', cost: 0, unlocked: true },
-  { id: 'pond', name: '荷塘角', cost: 200, unlocked: false },
-  { id: 'bamboo', name: '竹林角', cost: 300, unlocked: true },
-  { id: 'veg', name: '菜园角', cost: 400, unlocked: false },
-  { id: 'tea', name: '茶亭角', cost: 500, unlocked: false },
-]
+const L = W.estateLayout(375)
+const WIN = { width: 375, height: 700 }
+const AREAS = E.AREAS.map((a) => ({
+  id: a.id, name: a.name, cost: a.cost, unlocked: E.START_OPENED.indexOf(a.id) !== -1, unlockable: E.canUnlock(E.START_OPENED, a.id),
+}))
 
-test('islandLayout：1 倍时中间花园占屏幕宽 92%，四周一圈海', () => {
-  assert.equal(L.size, 12)
-  assert.ok(Math.abs(L.tileW * 6 - 375 * 0.92) < 1e-9)
+test('estateLayout：1 倍时一个院子加两边的墙占屏幕宽 96%，四周留白', () => {
+  assert.deepEqual([L.cols, L.rows], [37, 28])
+  assert.ok(Math.abs(L.tileW * 9 - 375 * 0.96) < 1e-9)
   assert.equal(L.margin, 188)
   assert.equal(L.viewWidth, L.width + 376)
   assert.equal(L.viewHeight, L.height + 376)
 })
 
-test('centerOffset：小岛正中对准屏幕正中', () => {
-  const o = W.centerOffset(L, 375, 700)
-  const p = tileTop(6, 6, L)
+test('areaOffset / tileOffset：把院子中间、某一格放到屏幕正中', () => {
+  const o = W.areaOffset('main', L, WIN)
+  const p = tileTop(14, 14, L)
   assert.ok(Math.abs(o.x + L.margin + p.x - 187.5) < 1e-9)
   assert.ok(Math.abs(o.y + L.margin + p.y - 350) < 1e-9)
   assert.equal(o.scale, 1)
+  const t = W.tileOffset(11, 16, L, WIN)
+  const q = tileCenter(11, 16, L)
+  assert.ok(Math.abs(t.x + L.margin + q.x - 187.5) < 1e-9)
+  assert.ok(Math.abs(t.y + L.margin + q.y - 350) < 1e-9)
 })
 
-test('islandView：底图盖住整座岛', () => {
-  assert.deepEqual(W.islandView(L), { image: '/images/garden/island.png', left: 0, top: L.top, width: L.width, height: L.landHeight })
+test('artTiles：16 块正好拼满整个 #world', () => {
+  const tiles = W.artTiles(L)
+  assert.equal(tiles.length, 16)
+  assert.equal(tiles[0].image, '/images/garden/estate/t00.jpg')
+  assert.equal(tiles[15].image, '/images/garden/estate/t33.jpg')
+  assert.ok(Math.abs(tiles[15].left + tiles[15].width - L.width) < 1e-9)
+  assert.ok(Math.abs(tiles[15].top + tiles[15].height - L.height) < 1e-9)
+  assert.deepEqual([tiles[1].left, tiles[1].top], [L.width / 4, 0])
+  assert.deepEqual([tiles[4].left, tiles[4].top], [0, L.height / 4])
 })
 
-test('regionViews：没修整的角落有遮罩和木牌，横竖两种图', () => {
-  const views = W.regionViews(REGIONS, L)
-  assert.deepEqual(views.map((v) => v.key), ['pond', 'veg', 'tea'])
-  const pond = views[0]
-  assert.equal(pond.image, '/images/garden/locked-wide.png')
-  assert.equal(views[1].image, '/images/garden/locked-tall.png')
-  assert.equal(views[2].image, '/images/garden/locked-wide.png')
-  assert.deepEqual([pond.sign.name, pond.sign.cost], ['荷塘角', 200])
-  const box = W.regionBox('pond', L)
-  const top = tileTop(3, 0, L)
-  assert.ok(Math.abs(box.left - (top.x - 1.5 * L.tileW)) < 1e-9)
-  assert.ok(Math.abs(box.width - 4.5 * L.tileW) < 1e-9)
-  assert.equal(box.top, top.y)
-  assert.ok(Math.abs(pond.left - box.left) < 1e-9)
-  assert.ok(pond.top < box.top)
+test('cloudViews：只有没修的院子有云，每个 6～9 朵，位置固定在院子里', () => {
+  const clouds = W.cloudViews(AREAS, L)
+  const byArea = {}
+  clouds.forEach((c) => { byArea[c.area] = (byArea[c.area] || 0) + 1 })
+  assert.deepEqual(Object.keys(byArea).sort(), E.AREAS.map((a) => a.id).filter((id) => E.START_OPENED.indexOf(id) === -1).sort())
+  Object.values(byArea).forEach((n) => assert.ok(n >= 6 && n <= 9))
+  assert.deepEqual(W.cloudViews(AREAS, L), clouds)
+  const box = W.areaBox('pond', L)
+  clouds.filter((c) => c.area === 'pond').forEach((c) => {
+    const mid = c.left + c.width / 2
+    assert.ok(mid > box.left && mid < box.left + box.width, c.key)
+    assert.ok(c.top > box.top - c.width && c.top < box.top + box.height, c.key)
+    assert.ok(c.image === '/images/garden/cloud.png' && c.width > 0 && c.delay >= 0)
+  })
 })
 
-test('sceneryViews：只有修整好的角落有风景，放大的按 scale', () => {
-  assert.deepEqual(W.sceneryViews(['center'], L), [])
-  const pond = W.sceneryViews(['center', 'pond'], L)
-  assert.deepEqual(pond.map((s) => s.itemId).sort(), ['koi_pond', 'lotus_pond'])
-  assert.ok(Math.abs(pond.find((s) => s.itemId === 'lotus_pond').width - L.tileW * 1.5) < 1e-9)
-  assert.ok(pond.every((s) => s.region === 'pond'))
+test('signViews：能修的院子门里侧立木牌', () => {
+  const signs = W.signViews(AREAS, E.START_OPENED, L)
+  assert.deepEqual(signs.map((s) => s.key), ['pond', 'flower', 'orchard', 'bamboo'])
+  const pond = signs[0]
+  assert.deepEqual([pond.name, pond.cost], ['荷塘院', 200])
+  const p = tileCenter(19, 13, L)
+  assert.ok(Math.abs(pond.left + pond.width / 2 - p.x) < 1e-9)
+  assert.ok(Math.abs(pond.bottom - (L.height - p.y)) < 1e-9)
 })
 
-test('flowerBeds、shoreDecor、waves：花坛和岛边铺满景色', () => {
-  const beds = W.flowerBeds(L)
-  assert.equal(beds.length, 28)
-  assert.ok(beds.every((b) => /^\/images\/garden\/items\/\w+\.png$/.test(b.image) && Number.isInteger(b.z) && b.key))
-  assert.equal(new Set(beds.filter((b) => b.key.endsWith('-0')).map((b) => b.image)).size, 4)
-  const shore = W.shoreDecor(L)
-  assert.equal(shore.length, 16)
-  assert.ok(shore.every((s) => Number.isInteger(s.z)))
-  assert.ok(W.waves(L).length >= 6)
+test('hintViews：亮起能摆的格子', () => {
+  const placed = [{ uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }]
+  const hints = W.hintViews(E.START_OPENED, placed, 'daisy', null, L)
+  assert.equal(hints.length, 47)
+  const h = hints.find((t) => t.c === 10 && t.r === 15)
+  const top = tileTop(10, 15, L)
+  assert.deepEqual([h.key, h.left, h.top, h.width, h.height], ['10-15', top.x - L.tileW / 2, top.y, L.tileW, L.tileH])
+  assert.equal(W.hintViews(E.START_OPENED, placed, 'daisy', 'p1', L).length, 48)
+  assert.ok(W.hintViews(E.START_OPENED, placed, 'pavilion', null, L).length < 47)
 })
 
 test('tileFromTouch：拖动、缩放之后点到的还是那一格', () => {
   for (const scale of [0.5, 1, 1.5]) {
     const rect = { left: -300, top: -120, width: L.width * scale }
-    const p = tileCenter(7, 4, L)
-    assert.deepEqual(W.tileFromTouch(rect.left + p.x * scale, rect.top + p.y * scale, rect, L), { c: 7, r: 4 })
+    const p = tileCenter(21, 14, L)
+    assert.deepEqual(W.tileFromTouch(rect.left + p.x * scale, rect.top + p.y * scale, rect, L), { c: 21, r: 14 })
   }
   assert.equal(W.tileFromTouch(-5000, -5000, { left: 0, top: 0, width: L.width }, L), null)
-})
-
-test('placeChecker / openChecker', () => {
-  const place = W.placeChecker(['center'])
-  assert.equal(place(4, 4), true)
-  assert.equal(place(6, 4), false)
-  const open = W.openChecker(['center'])
-  assert.equal(open(6, 4), true)
-  assert.equal(open(1, 1), false)
 })

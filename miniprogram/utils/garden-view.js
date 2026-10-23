@@ -6,6 +6,26 @@ const { ANIMAL_INFO } = require('./animals')
 
 // 物品在庭院里的宽度（相对格子宽度）
 const SIZE_SCALE = { s: 0.8, m: 1.0, l: 1.3 }
+// 2×2 大件的宽度（相对格子宽度）
+const FOOT2_SCALE = 2.2
+// 脚下影子：宽是图宽的 0.7，扁椭圆
+const SHADOW_RATIO = 0.7
+
+// 物件的落点：1 格的在格子中心，2×2 的在四格中间（正好是左前角那格的顶点）；y 是图底边（比落点再往下一点，像踩在地上）
+function itemAnchor(p, L) {
+  const item = itemById(p.itemId)
+  const foot = item && item.foot === 2 ? 2 : 1
+  const width = L.tileW * (foot === 2 ? FOOT2_SCALE : SIZE_SCALE[item ? item.size : 'm'])
+  const base = foot === 2 ? tileTop(p.c, p.r, L) : tileCenter(p.c, p.r, L)
+  return { x: base.x, y: base.y + L.tileH * 0.18 * foot, width, foot }
+}
+
+// 影子的位置（x、y 是图底边中点，和 itemAnchor 一样的坐标系）
+function shadowOf(x, y, width, L) {
+  const w = width * SHADOW_RATIO
+  const h = w / 4
+  return { left: x - w / 2, bottom: L.height - y - h / 2, width: w, height: h }
+}
 
 function itemImage(id) {
   return `/images/garden/items/${id}.png`
@@ -16,25 +36,26 @@ function rarityOf(id) {
   return { id: r.id, label: r.label, color: r.color }
 }
 
-// 花园里摆的东西（和角落里的风景）：按前后排序（后排先画），图片底边对准格子中心稍靠下的位置；scale 可以单独放大
+// 花园里摆的东西：按前后排序（后排先画），图底边对准落点；2×2 的按左前角那格排前后
 function buildScene(placed, L) {
   return placed
     .map((p) => ({ p, item: itemById(p.itemId) }))
     .filter((x) => x.item)
     .map(({ p, item }) => {
-      const width = L.tileW * (p.scale || SIZE_SCALE[item.size])
-      const center = tileCenter(p.c, p.r, L)
+      const a = itemAnchor(p, L)
       return {
         uid: p.uid,
-        region: p.region || '',
         itemId: p.itemId,
         c: p.c,
         r: p.r,
+        foot: a.foot,
+        flip: !!p.flip,
         name: item.name,
         image: itemImage(item.id),
-        width,
-        left: center.x - width / 2,
-        bottom: L.height - (center.y + L.tileH * 0.18),
+        width: a.width,
+        left: a.x - a.width / 2,
+        bottom: L.height - a.y,
+        shadow: shadowOf(a.x, a.y, a.width, L),
         z: (p.c + p.r) * 10 + p.c,
       }
     })
@@ -58,23 +79,6 @@ function inventoryList(inventory) {
       }
     })
     .filter(Boolean)
-}
-
-// 摆放、移动时可以点的空地（移动时自己原来的位置也算空地；open 判断这一格能不能摆）
-function hintTiles(placed, L, ignoreUid, open = () => true) {
-  const taken = {}
-  placed.forEach((p) => {
-    if (p.uid !== ignoreUid) taken[`${p.c},${p.r}`] = true
-  })
-  const tiles = []
-  for (let c = 0; c < L.size; c++) {
-    for (let r = 0; r < L.size; r++) {
-      if (taken[`${c},${r}`] || !open(c, r)) continue
-      const t = tileTop(c, r, L)
-      tiles.push({ key: `${c}-${r}`, c, r, left: t.x - L.tileW / 2, top: t.y, width: L.tileW, height: L.tileH })
-    }
-  }
-  return tiles
 }
 
 function termName(key) {
@@ -110,4 +114,4 @@ function arrivalCard(arrival) {
   return { id: arrival.id, name: arrival.name, image: itemImage(arrival.id), text: ANIMAL_INFO[arrival.id].arrive }
 }
 
-module.exports = { SIZE_SCALE, itemImage, rarityOf, buildScene, inventoryList, hintTiles, collectionGroups, arrivalCard }
+module.exports = { SIZE_SCALE, FOOT2_SCALE, itemImage, rarityOf, itemAnchor, shadowOf, buildScene, inventoryList, collectionGroups, arrivalCard }
