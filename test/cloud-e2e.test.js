@@ -158,15 +158,15 @@ test('养生庭院：打卡赚豆 → 新手礼 → 扭蛋 → 摆放 → 移动
   assert.equal(spin.data.isNew, true)
   const itemId = spin.data.itemId
 
-  const placed = await main({ action: 'garden.place', data: { itemId, c: 3, r: 3 } })
+  const placed = await main({ action: 'garden.place', data: { itemId, c: 10, r: 15 } })
   assert.equal(placed.ok, true, placed.message)
   const uid = placed.data.placed.find((p) => p.itemId === itemId).uid
   assert.deepEqual(placed.data.inventory, [])
 
-  const blocked = await main({ action: 'garden.move', data: { uid, c: 4, r: 4 } })
+  const blocked = await main({ action: 'garden.move', data: { uid, c: 11, r: 16 } })
   assert.equal(blocked.code, 'BAD_REQUEST')
-  const moved = await main({ action: 'garden.move', data: { uid, c: 8, r: 8 } })
-  assert.deepEqual(moved.data.placed.find((p) => p.uid === uid), { uid, itemId, c: 8, r: 8 })
+  const moved = await main({ action: 'garden.move', data: { uid, c: 16, r: 17 } })
+  assert.deepEqual(moved.data.placed.find((p) => p.uid === uid), { uid, itemId, c: 16, r: 17, flip: false })
 
   const stashed = await main({ action: 'garden.stash', data: { uid } })
   assert.deepEqual(stashed.data.inventory, [{ itemId, count: 1 }])
@@ -186,7 +186,7 @@ test('庭院小动物：摆翠竹 → 打卡午餐 → 熊猫搬来 → 庭院�
   await main({ action: 'profile.save', data: profileInput })
   await main({ action: 'garden.get' })
   const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 3, r: 4 }) })
+  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 10, r: 15 }) })
 
   const waiting = await main({ action: 'garden.get' })
   assert.deepEqual(waiting.data.waiting, ['panda'])
@@ -204,23 +204,28 @@ test('庭院小动物：摆翠竹 → 打卡午餐 → 熊猫搬来 → 庭院�
   assert.deepEqual(cloud.db.collections.get('gardens').get('u1').residents.map((r) => r.id), ['panda'])
 })
 
-test('修整角落：豆不够提示、修好竹林角后熊猫打卡时搬来', async () => {
-  const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
+test('修整院子：豆不够提示、修好后旁边的能修、不挨着的不行', async () => {
+  const cloud = createFakeCloud({ replies: [] })
   const { main } = loadCloudFunction(cloud)
   await main({ action: 'profile.save', data: profileInput })
   const first = await main({ action: 'garden.get' })
   assert.equal(first.data.hasProfile, true)
   assert.equal(first.data.daily.beansToday, 0)
-  const poor = await main({ action: 'garden.unlock', data: { region: 'bamboo' } })
+  assert.deepEqual(first.data.areas.filter((a) => a.unlockable).map((a) => a.id), ['pond', 'flower', 'orchard', 'bamboo'])
+  const poor = await main({ action: 'garden.unlock', data: { area: 'bamboo' } })
   assert.equal(poor.code, 'NO_BEANS')
 
   const doc = cloud.db.collections.get('gardens').get('u1')
   cloud.db.collections.get('gardens').set('u1', { ...doc, beans: { ...doc.beans, bonus: 500 } })
-  const opened = await main({ action: 'garden.unlock', data: { region: 'bamboo' } })
+  const opened = await main({ action: 'garden.unlock', data: { area: 'bamboo' } })
   assert.equal(opened.ok, true, opened.message)
-  assert.deepEqual(opened.data.waiting, ['panda'])
-  const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭青菜' } })
-  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫' })
+  assert.equal(opened.data.beans, 100)
+  assert.deepEqual(opened.data.areas.filter((a) => a.unlocked).map((a) => a.id), ['front', 'main', 'bamboo'])
+  assert.equal(opened.data.areas.find((a) => a.id === 'farm').unlockable, true)
+  const far = await main({ action: 'garden.unlock', data: { area: 'spring' } })
+  assert.deepEqual([far.code, far.message], ['BAD_REQUEST', '要先修好旁边的院子'])
+  const flipped = await main({ action: 'garden.flip', data: { uid: first.data.placed[0].uid } })
+  assert.equal(flipped.data.placed[0].flip, true)
 })
 
 test('测试福利：按 config.testGrant 送一次暖豆', async () => {

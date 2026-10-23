@@ -19,6 +19,7 @@ const ROUTES = {
   'garden.move': ['garden', 'move'],
   'garden.stash': ['garden', 'stash'],
   'garden.unlock': ['garden', 'unlock'],
+  'garden.flip': ['garden', 'flip'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {
