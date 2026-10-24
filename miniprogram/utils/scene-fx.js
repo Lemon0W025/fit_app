@@ -36,8 +36,8 @@ function fxViews(L, hour, placed, potLevel = 0) {
   }
   if (night) {
     // 帐篷里亮着灯
-    const t = SCENE.nogo.tent
-    out.push({ key: 'tent-glow', kind: 'glow', ...at((t[0][0] + t[1][0]) / 2, t[2][1] + 40, 900, 620, L), z: zOf(t[2][1]) + 2, delay: 0 })
+    const t = SCENE.cutouts.tent
+    out.push({ key: 'tent-glow', kind: 'glow', ...at((t.box[0] + t.box[2]) / 2, t.box[3] - 40, 900, 620, L), z: zOf(t.zy) + 2, delay: 0 })
     for (let i = 0; i < FIREFLY_COUNT; i++) {
       const x = 400 + noise(i * 3 + 1) * (SCENE.width - 800)
       const y = 900 + noise(i * 3 + 2) * (SCENE.height - 1500)

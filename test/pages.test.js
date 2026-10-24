@@ -227,7 +227,7 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.deepEqual(camp.data.welcome, { beans: 60, petId: 'doudou' })
   assert.equal(camp.data.beans, 60)
   assert.equal(camp.data.base.length, 16)
-  assert.equal(camp.data.base[0].image, '/images/camp/base/t00.jpg')
+  assert.ok(camp.data.base[0].image.endsWith('/t00.jpg')) // 白天的日景块（填了 campArt 就是云存储的）
   assert.equal(camp.data.bowls.length, 2)
   assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou'])
   assert.ok(camp.data.fx.some((f) => f.kind === 'flame'))

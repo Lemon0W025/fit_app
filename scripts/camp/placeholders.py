@@ -1,6 +1,7 @@
 """第一步的占位图：宠物（旧动物图顶替，没有的画个圆团）、装饰块（草绿底 + 色块 + 名字）、食物图标（圆底 + 两个字）
 
-    python3 scripts/camp/placeholders.py
+    python3 scripts/camp/placeholders.py            # 全部（注意：宠物占位用的旧动物图已不在仓库，别再整个重跑）
+    python3 scripts/camp/placeholders.py --decor    # 只重画装饰占位
 
 正式图到了由各自的脚本覆盖（装饰块 decor_patch.py、宠物 pack_anim.py + 图册插画、食物 slice-art.py）。暖暖锅的占位在 pot_art.py --placeholder。
 注意：宠物占位用的旧动物图已经不在仓库里了，别再整个重跑这个脚本。需要 Pillow。
@@ -8,6 +9,7 @@
 import json
 import os
 import subprocess
+import sys
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
@@ -75,19 +77,18 @@ def face(img):
 
 def decor_patch(dc):
     w, h = round(dc['patch']['w'] * PATCH_SCALE), round(dc['patch']['h'] * PATCH_SCALE)
-    img = Image.new('RGBA', (w, h), GRASS + (255,))
+    # 透明底：正式图是连草地一起重绘的块，占位只画一个色块和影子，贴在真画上不扎眼
+    img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     fw, fh = round(dc['foot']['w'] * PATCH_SCALE), round(dc['foot']['h'] * PATCH_SCALE)
     ax, ay = round(dc['anchor']['x'] * PATCH_SCALE), round(dc['anchor']['y'] * PATCH_SCALE)
     color = CATEGORY_COLOR[dc['category']]
-    d.rounded_rectangle([ax - fw // 2, ay - fh, ax + fw // 2, ay], radius=6, fill=color, outline=(90, 70, 50))
-    d.ellipse([ax - fw // 2, ay - 4, ax + fw // 2, ay + 4], fill=(110, 150, 70))
-    d.text((ax - fw // 2 + 4, ay - fh + 4), dc['name'], fill=(50, 40, 30), font=font(12))
-    # 羽化边：alpha 从边缘 6px 处渐变到 0
-    mask = Image.new('L', (w, h), 0)
-    ImageDraw.Draw(mask).rectangle([6, 6, w - 7, h - 7], fill=255)
-    mask = mask.filter(ImageFilter.GaussianBlur(4))
-    img.putalpha(mask)
+    shadow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).ellipse([ax - fw // 2 - 4, ay - 8, ax + fw // 2 + 4, ay + 6], fill=(40, 60, 20, 90))
+    img = Image.alpha_composite(img, shadow.filter(ImageFilter.GaussianBlur(3)))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([ax - fw // 2, ay - fh, ax + fw // 2, ay - 2], radius=6, fill=color + (235,), outline=(90, 70, 50, 255))
+    d.text((ax - fw // 2 + 4, ay - fh + 4), dc['name'], fill=(50, 40, 30, 255), font=font(12))
     return img
 
 
@@ -102,6 +103,11 @@ def food_icon(f):
 
 def main():
     D = data()
+    if '--decor' in sys.argv:
+        for dc in D['decor']:
+            save(decor_patch(dc), 'camp', 'decor', f"{dc['id']}.png")
+        print(f"装饰 {len(D['decor'])} 张占位图已重画（透明底）")
+        return
     for p in D['pets']:
         img = pet_image(p)
         save(img, 'camp', 'pets', f"{p['id']}.png")

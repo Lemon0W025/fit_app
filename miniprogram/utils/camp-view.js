@@ -9,7 +9,7 @@ const { SCENE } = require('./shared/camp')
 
 const Z_DECOR = 100
 const MARGIN_RATIO = 0.6
-const BOWL_PX = 200 // 食盆在画上的直径（像素）
+const BOWL_PX = 270 // 食盆在画上的直径（像素，照画量的）
 
 const fmt = (n) => Math.round(n * 100) / 100
 
@@ -164,10 +164,10 @@ function focusOffset(x, y, L, win, scale) {
   return { x: win.width / 2 - cx - scale * (px - cx), y: win.height / 2 - cy - scale * (py - cy), scale }
 }
 
-// 首页默认视角：画填满屏幕高度、篝火（暖暖锅）对准屏幕中心；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
+// 首页默认视角：画填满屏幕高度（纵向正好不露边）、横向对准篝火（暖暖锅）；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
 function homeView(L, win) {
   const scale = Math.min(2.5, Math.max(1, Math.round((win.height / L.height) * 100) / 100))
-  return focusOffset(SCENE.fire[0], SCENE.fire[1], L, win, scale)
+  return focusOffset(SCENE.fire[0], H / 2, L, win, scale)
 }
 
 // 暖暖锅：今天打了几顿正餐（早午晚印章里有状态的），锅里就有几层（0～3）

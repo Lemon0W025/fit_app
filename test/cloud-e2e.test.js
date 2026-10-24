@@ -174,7 +174,7 @@ test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后�
   const placed = await main({ action: 'camp.place', data: { decorId: 'ball', x: 1500, y: 1800 } })
   assert.equal(placed.ok, true, placed.message)
   const uid = placed.data.decor.placed[0].uid
-  const bad = await main({ action: 'camp.move', data: { uid, x: 2048, y: 2100 } })
+  const bad = await main({ action: 'camp.move', data: { uid, x: 2130, y: 2600 } })
   assert.deepEqual([bad.ok, bad.message], [false, '这儿放不下，挪开一点'])
   const stashed = await main({ action: 'camp.stash', data: { uid } })
   assert.deepEqual(stashed.data.decor.unplaced, [{ id: 'ball', count: 1 }])

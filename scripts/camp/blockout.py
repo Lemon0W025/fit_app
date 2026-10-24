@@ -3,8 +3,7 @@
     python3 scripts/camp/blockout.py
 
 输出：miniprogram/images/camp/base/t00.jpg…t33.jpg（1536×1536 切 4×4，底图占位）、
-miniprogram/images/camp/cut/tent.png、pot-0.png～pot-3.png（帐篷和锅的「抠图层」占位：盖在底图上，宠物走到后面会被挡住；锅按今天打了几顿换图）、
-以上各再出一套夜景（night-t00.jpg…、night-tent.png…，夜里 19～6 点页面整套换掉）、
+以上再出一套夜景 night-t00.jpg…（夜里 19～6 点页面整套换掉；帐篷 / 锅的抠图层由 scripts/camp/cutouts.py 从画上抠）、
 art/guide/camp-blockout.jpg（1152×1152，Codex 底稿）、art/guide/camp-blockout-labels.jpg（带名字，给人看）。需要 Pillow。
 """
 import json
@@ -44,15 +43,10 @@ def scene():
 
 
 def draw_tent(d, S, k):
-    """大帐篷：地面占位是 nogo.tent，门朝前（朝篝火）；后面一层深色表示进深"""
+    """大帐篷：按抠图轮廓 poly 画一块（地面占位 nogo.tent 画深一点）"""
     P = lambda pts: [(x * k, y * k) for x, y in pts]
-    (tx0, ty0), (tx1, _), (_, ty1) = S['nogo']['tent'][0], S['nogo']['tent'][1], S['nogo']['tent'][2]
-    tmx = (tx0 + tx1) / 2
-    apex = ty0 - 320
-    d.polygon(P([[tx0 + 60, ty1 - 200], [tx1 - 60, ty1 - 200], [tmx, apex - 60]]), fill=C['TENT_DARK'])
-    d.polygon(P([[tx0, ty1], [tmx, ty1], [tmx, apex], [tx0 + 40, ty1 - 200]]), fill=C['TENT_DARK'])
-    d.polygon(P([[tmx, ty1], [tx1, ty1], [tx1 - 40, ty1 - 200], [tmx, apex]]), fill=C['TENT'])
-    d.polygon(P([[tmx - 150, ty1], [tmx + 150, ty1], [tmx, ty1 - 380]]), fill=C['TENT_DOOR'])
+    d.polygon(P(S['cutouts']['tent']['poly']), fill=C['TENT'])
+    d.polygon(P(S['nogo']['tent']), fill=C['TENT_DARK'])
 
 
 def draw_pot(d, S, k, level=0):
@@ -121,16 +115,17 @@ def draw(width, labels=False):
         font = ImageFont.load_default()
         def tag(x, y, text):
             d.text((x * k + 4, y * k + 4), text, fill=(0, 0, 0), font=font)
-        tx0, ty1 = S['nogo']['tent'][0][0], S['nogo']['tent'][2][1]
         tag(fx, fy, 'fire 篝火')
         tag(fx + 320, fy - 560, 'pot 暖暖锅')
-        tag(tx0, ty1 + 20, 'tent 大帐篷')
+        tag(S['nogo']['tent'][0][0], S['nogo']['tent'][0][1] + 20, 'tent 大帐篷')
         tag(S['bowls'][0][0], S['bowls'][0][1] - 120, 'bowls 食盆')
         tag(S['sun'][0][0], S['sun'][0][1], 'sun 晒太阳')
         tag(60, 400, 'forest 树林（只在后面当背景）')
         for key, c in S['cutouts'].items():
-            l, t, r, b = c['box']
-            d.rectangle([l * k, t * k, r * k, b * k], outline=(255, 255, 255), width=2)
+            l, t, r, bb = c['box']
+            d.rectangle([l * k, t * k, r * k, bb * k], outline=(255, 255, 255), width=2)
+            if c.get('poly'):
+                d.polygon(P(c['poly']), outline=(80, 160, 255))
             tag(l, t, f'cutout {key}')
         for i, (ex, ey) in enumerate(S['entries']):
             tag(ex, ey, f'entry {i + 1}')
@@ -171,14 +166,10 @@ def main():
                 path = os.path.join(OUT_TILES, f'{pfx}t{row}{col}.jpg')
                 tile.save(path, quality=72, optimize=True)
                 total += os.path.getsize(path)
-        for name, what, level in [('tent', 'tent', 0)] + [(f'pot-{n}', 'pot', n) for n in range(4)]:
-            path = os.path.join(OUT_CUT, f'{pfx}{name}.png')
-            cutout(FULL_W, what, level).save(path, optimize=True)
-            cuts += os.path.getsize(path)
     use(DAY)
     draw(GUIDE_W).save(os.path.join(GUIDE, 'camp-blockout.jpg'), quality=88)
     draw(GUIDE_W, labels=True).save(os.path.join(GUIDE, 'camp-blockout-labels.jpg'), quality=88)
-    print(f'日 / 夜底图各 16 块共 {total // 1024} KB；抠图层 10 张共 {cuts // 1024} KB；底稿和标注图已写入 art/guide/')
+    print(f'日 / 夜底图各 16 块共 {total // 1024} KB；底稿和标注图已写入 art/guide/（抠图层由 cutouts.py 从画上抠）')
 
 
 if __name__ == '__main__':

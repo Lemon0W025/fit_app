@@ -20,7 +20,9 @@ ASPECT = 1.0
 def boxes_for(w, h, cols, overlap):
     cw = w / (cols - (cols - 1) * overlap)
     ch = cw / ASPECT
-    rows = max(1, math.ceil((h - ch * overlap) / (ch * (1 - overlap))))
+    required_rows = (h - ch * overlap) / (ch * (1 - overlap))
+    # 浮点误差可能把 2 行算成 2.0000000000000004，ceil 后就多切一行。
+    rows = max(1, math.ceil(required_rows - 1e-9))
     step_x = cw * (1 - overlap)
     step_y = (h - ch) / (rows - 1) if rows > 1 else 0
     out = []
