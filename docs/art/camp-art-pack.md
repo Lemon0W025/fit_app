@@ -1,0 +1,257 @@
+# 暖暖营地 · 给 Codex 的出图工单
+
+这份文件是给 **Codex（内置 image_gen）** 直接执行的工作清单：在仓库根目录打开 Codex，告诉它
+「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
+生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
+
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。一共三批，每批交完小程序就能上一版：
+
+| 批 | 内容 |
+|---|---|
+| 1 | 营地整图（+ 高清 12 块）；豆豆、糯糯、莲莲、柿柿各 4 张；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；食物图标；界面图标 |
+| 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
+| 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
+
+## 0. 总则（每张都适用）
+
+**风格**（所有提示词都带上这段）：
+
+```
+UNIFIED STYLE: premium cozy mobile-game look in the spirit of Pokémon Sleep: soft 3D-rendered cartoon,
+round chunky shapes, matte clay-like material with gentle subsurface softness, warm cheerful pastel
+colors, soft daylight from the upper left, gentle ambient occlusion, clean tidy edges, no hard black
+outlines, no text, no labels, no watermark, no UI, no borders. Everything is cute, friendly and calm.
+```
+
+**参考图**（都在仓库里，生成时作为参考图 / edit 输入；工具不支持传参考图就先用视觉能力看一遍，把看到的外形特征写进提示词）：
+
+| 文件 | 用途 |
+|---|---|
+| `art/guide/camp-blockout.jpg` | 营地白模：第 1 张图直接以它为底重绘，**布局一点都不能动** |
+| `art/guide/camp-blockout-labels.jpg` | 同一张白模加了名字，只给你看懂布局用，不要作为生成输入 |
+| `art/guide/town/*.jpg` | 画风参考（小镇风格的柔和 3D 渲染）：营地、装饰都要这个味道 |
+| `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
+
+**尺寸与格式**：
+- 分辨率选工具支持的**最大**（竖图 3:4 → 1152×1536 或更大；1:1 → 1536×1536；只能出 1024 也接受）。输出原图，不要自己缩放、不要截图
+- 拼图和精灵图一律 **真透明 PNG**（alpha 通道），不要把棋盘格画进图里；实在做不到透明就用纯洋红 `#FF00FF` 平涂背景，物体里不能有洋红
+- 营地整图、装饰的「原地重绘」是不透明的场景图，PNG 或高质量 JPG 都行
+
+**拼图（sprite sheet）规则**（3×3 和 6×6 两种，都是等分格、不画格线）：
+
+```
+SHEET RULES: an invisible grid of equal cells, no visible grid lines. Exactly one isolated object per
+occupied cell, filled in reading order (left to right, top to bottom); unused cells completely empty.
+Each object centered in its cell with at least 8% of the cell size empty on every side; nothing touches
+or crosses a cell border. Base of each object at the bottom center of its cell, no ground plane, no
+cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the cell.
+```
+
+**自检**：每出完一张就跑 `python3 scripts/art/check_art.py`（需要 Pillow 和 numpy），它会检查文件在不在、是不是透明、每格有没有东西、有没有贴边越格、比例对不对。没过的那张重新生成或用 edit 修，直到这批全部 ✓。清单在 `art/manifest.json`，输出路径必须一致，脚本按名字找。
+
+---
+
+## 1. 营地整图 `art/raw/camp/camp.png`（3:4 竖图）
+
+这是整个游戏的舞台，值得多生成几轮挑最好的。
+
+- **布局底稿**：`art/guide/camp-blockout.jpg`，image-to-image，相似度调高，**布局一点都不能动**：草地的范围、小溪的位置（沿左侧流到左下的水塘）、篝火在正中、营地木台在篝火左下、两个食盆在木台右边、五棵树的位置、上缘的树林边缘。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
+- **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
+- **必须画成这样**：
+  - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
+  - 篝火：一圈石头围着的篝火，有火苗（游戏里会叠动画，画小一点的火就好），旁边一两根木头
+  - 营地木台：矮矮的木板平台，边缘有一级小台阶
+  - 两个食盆：木头或陶的小碗，空着
+  - 小溪：清澈见底，溪边几块圆石头，流进左下的小水塘，水塘里一两片荷叶
+  - 树：五棵圆圆的大树，树冠蓬松，树下有一圈柔和的树荫；上缘一排树林（深一点的绿）做背景，再远处是柔和的山和天空
+  - 整体像清晨到上午的柔和光线，没有强烈的投影
+
+```
+PROMPT: Repaint reference image 1 (a rough blockout of a camp) as a finished, high-end mobile-game main
+scene in UNIFIED STYLE, portrait 3:4, camera tilted about 45–50 degrees looking down. Keep the layout
+EXACTLY as in the blockout: the meadow shape, the stream running down the left side into a small pond at
+the lower left, the campfire ring at the center, the low wooden deck at the lower left of the fire, two
+empty food bowls to the right of the deck, five round trees at the marked positions, a line of forest
+along the top edge with soft hills and sky beyond. The meadow must be a clean, even, uniform lawn with
+only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no clutter (decorations will
+be pasted on it later). Soft morning light, gentle shadows under the trees, calm and cozy.
+```
+
+**高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 12 块放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成 `out-*.png`（比例和 in 一样，尺寸尽量大），提示词：
+
+```
+Redraw this crop of the camp scene at much higher detail in the same UNIFIED STYLE: identical
+composition and colors, every object in the same place, crisper edges and richer material detail.
+Do not add or remove anything. Same lighting.
+```
+
+然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
+
+---
+
+## 2. 装饰（24 件 + 金色小帐篷，`art/raw/decor/out-<id>.png`）
+
+装饰不是单独画的透明图，而是**在营地原图的一块草地上原地画出来**，这样它天然长在地上、影子和光线都对。流程：
+
+1. 小程序这边先跑 `python3 scripts/camp/decor_crop.py`，从高清营地图裁出每件装饰需要的一块空草地 `art/raw/decor/in-<id>.png`（已经按块大小裁好，带 25% 边）。
+2. 你用 image-to-image / edit，把装饰画在这块草地**正中偏下**（装饰的底边落在块高的 80% 左右），**块里其他像素一概不动**，存成 `out-<id>.png`（和 in 一样的尺寸和比例）。
+3. 小程序这边 `python3 scripts/camp/decor_patch.py` 比对 in / out，把装饰连一圈草地裁下来、边缘羽化。
+
+每件的提示词模板：
+
+```
+Edit this crop of the camp meadow: paint ONE <装饰> standing on the grass at the lower center of the
+image, in UNIFIED STYLE, same camera angle (about 45–50 degrees from above) and the same soft light from
+the upper left as the surrounding grass. The object must sit convincingly ON the ground with a soft
+contact shadow and a few blades of grass overlapping its base. Do not change anything else: the grass
+texture, colors and lighting outside the object must stay pixel-identical. No text, no people.
+```
+
+| id | 名字（中文） | 画什么（英文填进 `<装饰>`） | 块大小 |
+|---|---|---|---|
+| tent | 小帐篷 | a small cozy camping tent, cream canvas with a warm orange trim, door flap tied open | 大 |
+| hammock | 吊床 | a striped fabric hammock slung between two slim young trees | 大 |
+| treehouse | 树洞小屋 | a tiny house built into a short hollow tree stump, round door, tiny windows | 大 |
+| strawbed | 草窝 | a round nest bed of golden straw | 小 |
+| picnic | 野餐垫 | a red-and-white checkered picnic blanket with a small basket and two cups | 中 |
+| table | 小桌椅 | a small round wooden table with two little stools | 中 |
+| kettle | 水壶炉 | a small camping stove with a copper kettle on it (no steam, the game adds steam) | 小 |
+| swing | 秋千 | a wooden swing hanging from a sturdy wooden A-frame | 大 |
+| ball | 滚球 | a big soft rubber ball, cream with a wide pastel blue band | 小 |
+| ladder | 木梯 | a short wooden step ladder leaning slightly, with a flat top platform | 中 |
+| slide | 小滑梯 | a small children's slide, pastel green with wooden steps | 大 |
+| flowerbed | 花坛 | a round flower bed edged with small stones, full of pastel daisies and cosmos | 中 |
+| pumpkins | 南瓜堆 | a pile of three plump orange pumpkins with a tiny one on top | 中 |
+| sapling | 小树 | a young round tree with a bushy soft canopy and a slim trunk | 大 |
+| sunflower | 向日葵 | three tall sunflowers of different heights | 小 |
+| lights | 灯串 | a string of warm round festoon lights hung between two slim wooden poles (lights off in daylight, bulbs visible) | 大 |
+| bunting | 彩旗 | a line of pastel triangular bunting flags strung between two short wooden poles | 中 |
+| windmill | 风车 | a small wooden garden windmill with pastel sails | 小 |
+| mailbox | 信箱 | a cute red mailbox on a wooden post, flag up | 小 |
+| lantern | 小灯笼 | a small paper lantern on a short bamboo stick (unlit) | 小 |
+| stonelamp | 石灯笼 | a small Japanese-style stone lantern with moss on top | 小 |
+| fence | 木栅栏 | a short section of low wooden picket fence, three posts | 中 |
+| clothesline | 晾衣绳 | a clothesline between two wooden poles with two tiny towels and a sock hanging | 中 |
+| scarecrow | 稻草人 | a friendly scarecrow with a straw hat and a smiling face, arms out | 中 |
+| gold_tent | 金色小帐篷 | the same camping tent but made of shimmering gold fabric with tiny star patterns (unlit) | 大 |
+
+块大小（营地高清图按 3072 宽算）：小约 240×200、中约 360×300、大约 520×420，装饰要整个落在裁出来的块里，四周留出一圈草地。
+
+---
+
+## 3. 宠物（12 只 × 4 张）
+
+每只四张，**顺序必须是**：造型定稿 → 看过没问题 → 动画 A、动画 B、图册插画。定稿没定就出动画，24 帧画完发现不像就白做了。
+
+### 3.1 造型定稿 `art/raw/pets/<id>-ref.png`（1:1，透明底）
+
+一张图里同一只宠物的三视图：左边正面、中间 3/4 侧面（脸朝右）、右边背面，底下对齐，再加一个记忆点的特写（比如豆豆头顶的豆芽）。提示词 = UNIFIED STYLE + 下面这只的 CHARACTER +
+
+```
+CHARACTER SHEET: the same character three times side by side on a transparent background — front view,
+three-quarter side view facing right, back view — feet on one baseline, same scale, plus a small close-up
+of its signature feature in a corner. Chibi proportions (big round head about 45% of the height, tiny
+limbs), big glossy eyes, soft rounded body, Pokémon-like cuteness but an ORIGINAL design.
+```
+
+### 3.2 动画拼图 `art/raw/anim/<id>-a.png` 和 `<id>-b.png`（1:1，6 列 × 6 行 = 36 格，透明底）
+
+一格一帧，游戏里按行循环播放（每行 6 帧是一个完整循环）。A 张：
+
+| 行 | 内容 |
+|---|---|
+| 1 | **走路**（3/4 侧面，朝右）：一个完整步幅 6 帧，脚明显抬起落下，身体保持水平；兔子蹦、乌龟爬、鸭子鸡摇摆、猫狐狸鹿四条腿踱步、仙鹤是**飞** |
+| 2 | **坐着待机**：坐着，6 帧轻微呼吸、眨眼、尾巴 / 耳朵动一动 |
+| 3 | **睡姿 A**：蜷着睡，6 帧呼吸起伏 |
+| 4 | **睡姿 B**：另一种睡姿（仰着 / 趴着 / 靠着什么），6 帧 |
+| 5 | **吃东西**：低头吃、抬头嚼，6 帧 |
+| 6 | **小动作**：伸懒腰 → 东张西望，6 帧 |
+
+B 张：
+
+| 行 | 内容 |
+|---|---|
+| 1 | **开心蹭你**：朝观众探身蹭一蹭、眼睛弯弯，6 帧 |
+| 2 | **被戳打滚**：咯咯笑着打一个滚，6 帧（允许转一圈） |
+| 3 | **被摸眯眼**：眯眼享受、头上冒小爱心（不画爱心，游戏加），6 帧 |
+| 4 | **叼礼物走**：叼着 / 抱着一个小礼物盒走路，6 帧（礼物盒是唯一允许的道具） |
+| 5 | **庆祝蹦**：原地开心地蹦，6 帧 |
+| 6 | **专属动作**：见下表，6 帧 |
+
+硬性要求（写进每张的提示词里）：
+
+```
+ANIMATION SHEET RULES: square image, an invisible grid of 6 columns x 6 rows of equal cells (36 frames).
+The SAME character in every frame: same proportions, colors, face and scale; it must look exactly like
+the attached character sheet. Same soft lighting from the upper left in every frame. Feet on the same
+baseline in every frame (about 15% above the cell bottom), centered horizontally, at least 8% of the
+cell empty on every side, nothing crosses a cell border. The character always faces RIGHT (the game
+mirrors it for the other side). Each row is one looping action of 6 frames, rows in the given order.
+No props unless stated, no ground, no shadow, no text, no frame numbers. Transparent background.
+```
+
+### 3.3 图册插画 `art/raw/pets/<id>-album.png`（1:1，透明底，1024 以上）
+
+坐着的正面偏 3/4 姿势，看着观众，最可爱的一张，图册里当大头照。
+
+### 3.4 每只的 CHARACTER 和专属动作
+
+| id | 名字 | CHARACTER（外形，英文） | 走路 | B 张第 6 行 专属动作 |
+|---|---|---|---|---|
+| doudou | 豆豆 | a round fluffy yellow chick with a sprouting soybean on top of its head (a pale yellow bean with two tiny green leaves), tiny orange beak and feet, big shiny dark eyes, curious expression | waddle, short quick steps | shakes its head so the sprout wobbles and a glowing golden bean pops out and bounces |
+| nuonuo | 糯糯 | a plump white rabbit whose long ears are soft, floppy and slightly translucent like strips of rice cake, pink inner ears, rosy cheeks, shy expression | hop cycle (crouch, push off, stretch, land, settle) | twists its two ears together into a braid and lets them spring apart |
+| lianlian | 莲莲 | a round yellow duckling wearing a big green lotus leaf on its head like a hat/umbrella, flat orange bill, orange webbed feet, sleepy slow expression | waddle, body rocking side to side | takes the lotus leaf off and fans itself with it |
+| shishi | 柿柿 | a small brown hedgehog whose back spines carry a cluster of tiny orange persimmons like fruit on branches, cream face, little black nose, busy expression | slow crawl, legs one at a time | curls up and rolls, persimmons tumble off, it uncurls and scoops them back |
+| huahua | 花花 | a chubby calico kitten (white with orange and dark-grey patches) whose tail ends in a yellow chrysanthemum flower, big round eyes, pink nose, proud expression | quadruped walk, tail swaying | sits and waves its flower tail like a fan toward the viewer |
+| guigui | 龟龟 | a small chubby green turtle whose shell is a tiny moss garden: velvety green moss, a pebble and one tiny mushroom growing on it; friendly half-closed eyes | slow crawl, head bobbing | pulls head and legs into the shell so only the moss garden is left, then peeks out |
+| qiqi | 杞杞 | a small orange fox with a white chest and tail tip, wearing a necklace of twelve bright red goji berries, mischievous grin, one ear slightly bent | light quick quadruped trot | sneaks a goji berry off its necklace and flicks it away with a sly look |
+| shushu | 薯薯 | a small brown squirrel with a huge bushy tail and enormous round cheeks the color and shape of two sweet potatoes, tiny paws, greedy happy expression | hop-run with the tail bouncing | stuffs an imaginary snack into its cheeks, cheeks balloon, looks innocent |
+| jutuan | 橘团 | a very fat orange cat shaped like a tangerine segment: round body with faint tangerine ridges, a green leaf-shaped tail, cream belly, lazy half-closed eyes | heavy slow quadruped walk, belly swaying | curls into a perfect tangerine ball and rolls one full turn, then flops |
+| sunbao | 笋宝 | a chubby round giant panda wearing a bamboo-shoot hat (a pale green cone with brown scales), black eye patches, round black ears, dopey sweet expression | heavy quadruped walk on all fours | takes the bamboo-shoot hat off, nibbles two bites, puts it back on |
+| chacha | 茶茶 | a small cream-colored deer with white spots, slim legs, and small antlers with pink-white camellia flowers blooming on them, gentle attentive eyes, long lashes | elegant stride, legs lifting high | lowers its head toward the viewer and the camellias on its antlers open from buds to full bloom |
+| hehe | 鹤鹤 | an elegant white crane with black wing tips, long legs, and a bright red hawthorn berry on its crown instead of the red patch, aloof calm expression | row 1 is FLYING: slow wing beats in the air, legs trailing (6 frames) | stands on one leg, eyes slowly close, dozes, sways slightly |
+
+参考 `art/raw/pets/<id>-ref.png`（同一只）；A 张和 B 张分开出，每张都要带 CHARACTER。
+
+---
+
+## 4. 食物图标 `art/raw/ui/foods.png`（1:1，6×6，前 33 格）
+
+每格一样食物，chibi 风格的小图标（像游戏道具），顺序按 `shared/foods.js`：
+
+| 格 | 食物 |
+|---|---|
+| 1–8 | 小米（一小碗黄色小米）、玉米粒（一撮金黄的玉米粒）、胡萝卜（带绿叶）、年糕（白色软糯的一块）、莲子（几颗米白的莲子）、小鱼（一条可爱的小银鱼）、柿子（橙红色带叶）、苹果（红苹果） |
+| 9–16 | 小鱼干（几条）、菊花茶（一杯泡着菊花的茶）、西瓜（一牙三角瓜）、草莓（两颗）、烤红薯（掰开冒热气的）、葡萄（紫色一小串）、核桃（两颗，一颗开壳）、红薯（一整个） |
+| 17–22 | 橘子（一个带叶）、牛奶（一瓶）、竹笋（一根剥开一半）、竹叶（一枝）、茶叶（一撮绿茶叶）、桂花糕（方方一块，撒桂花） |
+| 23 | 山楂（三颗红红的，带一片叶）|
+| 24–33 | 节气点心：柿饼（挂霜）、烤栗子（开口）、糖葫芦（一串）、饺子（三个）、腊八粥（一碗）、春卷（两根）、青团（两个）、青梅（三颗）、粽子（一个剥开一角）、月饼（一块切开露馅）|
+| 34–36 | 留空 |
+
+```
+PROMPT: UNIFIED STYLE + SHEET RULES, a 6x6 grid of cute chibi food icons for a cozy game, each a
+small appetizing object on a transparent background, slightly from above, soft highlights. Cells 1–33
+in this order: … Cells 34–36 empty.
+```
+
+---
+
+## 5. 界面图标 `art/raw/ui/camp-icons.png`（1:1，3×3，9 格）
+
+顺序：食盆（木碗，空的）、篝火（小小的篝火图标）、图册封面（一本厚厚的画册，封面有一只小宠物的剪影）、商店（一个小木摊）、背包（帆布小背包）、礼物盒（系着蝴蝶结）、爪印、相机（圆润的小相机）、回家（小帐篷图标）。透明底，每格一个，风格和现有的 `miniprogram/images/garden/ui/*.png` 一致（圆润、暖色、可爱）。
+
+---
+
+## 6. 全家福 `art/raw/camp/family.png`（第 3 批，3:2）
+
+12 只宠物围着篝火坐成一圈，傍晚暖光，看向观众，每只都能认出来（参考 12 张定稿），营地背景和第 1 张一致。图册全收集后当封面。
+
+---
+
+## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
+
+- 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `npm run wx:art` 传云存储 → `config.campArt`
+- 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`
+- 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）
+- 食物、界面：`slice-art.py` 加两条 SHEETS（`ui/foods.png` → `images/camp/foods/`，`ui/camp-icons.png` → `images/garden/ui/`）切成单张
+- 每批接完 `npm test`、截图核对、`npm run wx:preview`

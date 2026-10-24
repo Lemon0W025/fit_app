@@ -1,8 +1,8 @@
 # 小暖养生打卡 — 给 Claude 的项目说明
 
-微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡得「暖豆」（早午晚印章），打开就是首页「园林大宅院」：可拖动缩放的等距大宅院，墙和月亮门隔成 11 个院子，壳画好、院子里的东西靠玩家摆（扭蛋抽物件，按地面种类摆、2×2 大件、能转向），花暖豆挨着修整院子；有图鉴和节气限定；摆了小动物喜欢的东西，打卡后它从大门搬进来，在各院子里按作息走动、玩耍、做小事；新物件、小鸟蝴蝶先用占位图。家人自用，走微信「体验版」，不上架。用户用中文沟通。
+微信小程序：家人（主要是妈妈）每餐拍照打卡，AI 养生师「小暖」估算热量并点评；每天按正餐打卡得「暖豆」（早午晚印章），打开就是首页「暖暖营地」：一张竖画的营地（篝火、木台、食盆、小溪、水塘、树一开始就在），暖豆扭蛋抽食物，食物放进食盆引来 12 只「动物 × 养生食材」的原创小精灵（豆豆、糯糯、笋宝……），每次打卡都算喂它们一顿、越喂越亲（五级解锁睡姿、小动作、专属动作和图册小故事）；暖豆在商店买装饰拖到草地上任意摆，装饰是在营地原图上原地重绘的整块（连草地一起裁、羽化边）所以不会浮；宠物有作息、互动、它们之间的小事、早上叼礼物、打卡后围篝火庆祝。家人自用，走微信「体验版」，不上架。用户用中文沟通。
 
-- 设计：`docs/superpowers/specs/`（主功能、每日树、庭院扭蛋、小动物、大地图、小岛花园、园林大宅院）；实现计划：`docs/superpowers/plans/`；美术需求：`docs/art/codex-art-pack.md`（给 Codex 的全套出图工单：宅院、云、图标、表情、新物件、动画拼图；参考图在 `art/guide/`），早期物件的出图说明 `docs/art/garden-art-brief.md`
+- 设计：`docs/superpowers/specs/`（主功能、每日树、庭院扭蛋、小动物、大地图、小岛花园、园林大宅院，最新的是 `2026-10-24-camp-pets-design.md` 暖暖营地，前面几版都被它取代）；实现计划：`docs/superpowers/plans/`（最新 `2026-10-24-camp-step1.md`）；美术需求：`docs/art/camp-art-pack.md`（给 Codex 的出图工单：营地整图、装饰原地重绘、12 只宠物各 4 张、食物和界面图标；白模和参考图在 `art/guide/`）
 - 上手与排错：`README.md`
 
 ## 开发约定
@@ -12,7 +12,7 @@
 - 云函数响应统一 `{ ok, data }` / `{ ok: false, code, message }`，message 直接展示给用户，用中文
 - services 通过依赖注入拿 repo / chat / forest，测试用 `test/helpers/fake-repo.js`；端到端用 `test/helpers/fake-cloud.js` 加载真实 `index.js`；页面用 `test/helpers/page-harness.js` 跑
 - 页面面向长辈：字号偏大、文案口语化
-- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成物件和界面图；`scripts/draw-images.py` 画 tab 图标、木牌、亮格和缺图时的占位图；`scripts/estate/blockout.py` 按 `shared/estate.js` 画宅院白模（兜底的底图切块、给 Codex 的 3:2 底稿）。主包上限 2MB（**现在约 1.93MB，很满了**，再往包里加图先用 `du -sb miniprogram` 看字节数；大图一律走云存储）
+- 图片：美术原图在 `art/raw/`；`scripts/camp/blockout.py` 按 `shared/camp.js` 的 `SCENE` 画营地白模（包里的占位底图切块 + 给 Codex 的底稿）；`scripts/camp/placeholders.py` 画宠物 / 装饰 / 食物的占位图；`scripts/slice-art.py` 切界面图标和表情；`scripts/draw-images.py` 画 tab 图标。主包上限 2MB（现在约 1.05MB，`test/assets.test.js` 会查；大图一律走云存储）
 
 ## 从云端部署（miniprogram-ci）
 
@@ -28,9 +28,10 @@
 |---|---|
 | `cloudfunctions/**` | `npm run wx:function` |
 | `miniprogram/**` | `npm run wx:preview`，把 `.wechat/preview-qrcode.jpg` 发给用户扫码；确认后 `npm run wx:upload -- <版本号> <描述>` |
-| 宅院原画 `art/raw/estate/estate-hd.png` | `python3 scripts/estate/cut_art.py art/raw/estate/estate-hd.png --warp art/raw/estate/estate-hd.warp.json --width 4096`（画得和白模一样正的用 `--pad32` 自动对齐），然后 `npm run wx:art`，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `estateArt`；壳数据要跟着画改（见「当前状态」最新一条） |
-| 动画拼图 `art/raw/anim/*.png` | `python3 scripts/pack_anim.py`，然后 `npm run wx:art`，前缀填进 `config.animArt` |
-| 其他 Codex 出的图 `art/raw/**` | `python3 scripts/art/check_art.py` 自检，`python3 scripts/slice-art.py` 切图替换占位 |
+| 营地整图 `art/raw/camp/camp-hd.png` | `python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png`，然后 `npm run wx:art`，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `campArt`（高清：`detail_crops.py` → Codex 逐块重绘 → `merge_details.py`） |
+| 装饰原地重绘 `art/raw/decor/out-*.png` | `python3 scripts/camp/decor_patch.py`（之前先用 `decor_crop.py` 裁空草地给 Codex），然后 `npm run wx:art`，前缀填进 `config.decorArt` |
+| 动画拼图 `art/raw/anim/<id>-a.png`、`<id>-b.png` | `python3 scripts/pack_anim.py`，然后 `npm run wx:art`，前缀填进 `config.animArt` |
+| 其他 Codex 出的图 `art/raw/**` | `python3 scripts/art/check_art.py` 自检（清单 `art/manifest.json`），界面图标 `python3 scripts/slice-art.py`，宠物图册插画和食物图标的切法见 `docs/art/camp-art-pack.md` |
 
 第一次 `wx:upload` 后，需要用户在小程序后台「版本管理」把 ci 机器人 1 上传的版本选为体验版，并在「成员管理」添加体验成员。
 
@@ -56,6 +57,7 @@
 - 2026-10-23：第四步上线：遮挡（`utils/occlusion.js`：墙 / 月亮门 / 大门 / 建筑按多边形从底图抠块盖在后面的东西上，只在需要时生成；木牌云朵彩带 z 2000+）；逐帧动画引擎（`utils/anim.js` + `anim-sheets.js`，6×4 拼图、steps 跳帧、朝向分正背面、没图退回单张图；`config.animArt` 仍为空）；给 Codex 的出图工单 `docs/art/codex-art-pack.md`（18 张）+ `art/manifest.json` + `scripts/art/check_art.py`；第二轮高清工具 `detail_crops.py` / `merge_details.py`；`cut_art.py --pad32`。
 - 2026-10-24：Codex 出的 18 张图全部接入：宅院原画（自动对齐 scale 0.99 / dy −3，`cut_art.py --pad32 --width 3072`）和 11 张动画拼图已传云存储，`config.estateArt` / `animArt` 都已填（前缀 `cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/estate/` 和 `…/garden/anim/`）；18 件新物件、小鸟蝴蝶单张、木牌、背包/日历/回家/住户/相机图标、9 朵云（`images/garden/clouds/`，`world.js` 轮换）、9 个表情（`images/garden/fx/`，页面 `fx` 表把常用 emoji 换成图）都进了包。壳数据按原画微调：荷塘院水榭平台去掉、池北加木桥 `pave`，后花园假山改成 `[9,1,22,3]` 一长排、瀑布水潭 `[13,2,15,4]`+`[15,3,17,4]`，温泉木屋 `[27,1,29,3]`，影壁 `[12,23,14,25]`。木牌文字按木牌宽度定字号、价钱放板子下面的白条。**待办**：真机核对遮挡多边形和原画（尤其正房屋顶、月亮门洞）；原画只有 1536 宽，想更清楚就做第二轮高清（`detail_crops.py` → Codex 逐块重绘 → `merge_details.py` → 重新 `cut_art.py`，这次不用 `--pad32`）
 - 2026-10-24（晚）：第二版宅院原画接入。Codex 按新画风重画（低围栏 / 绿篱 / 小溪 / 台地，宅院坐在石崖上，`art/raw/estate/estate.png` + 高清 `estate-hd.png` 4146 宽）。原画带一点透视、布局和白模也不完全一样，所以：`cut_art.py --warp art/raw/estate/estate-hd.warp.json --width 4096`（四点透视校正：json 里是外墙内侧四角在原画上的像素坐标，`--save` 可存出对齐后的整张画）切 16 块传云存储（已传，`estateArtVersion: 2`）；`shared/estate.js` 的院子矩形、壳、门、隔断（`FENCE_TILES`，一格一格列）、活动点、起始格 (15,18) 全部照画重新量过（`scripts/estate/occ_overlay.py` 把遮挡多边形画在对齐后的画上核对，`FENCE_H` 分 outer 1.1 / wall 1.9，正房屋顶 3.4 格高、出挑 0.7）；旧档迁移 `adoptEstate2`（estate 1 → 2：摆在现在摆不了的格子上的收回背包，大树挪到新起始格）。相邻关系有变：前院只挨果园和正院，正院挨后花园和动物小院，花圃院只挨荷塘院和菜园。物件只有 07 珍稀一张重画了（已切），03～06、08～11 还是第一版风格。**待办**：真机看第二版原画和遮挡；要不要让 Codex 把剩下的物件拼图也按新画风重画
+- 2026-10-24（夜）：**宅院整个换成暖暖营地**（设计 `specs/2026-10-24-camp-pets-design.md`，计划 `plans/2026-10-24-camp-step1.md`，第一步「玩法先跑通」已完成）：`shared/camp.js`（3072×4096 竖画的草地多边形、禁区、篝火坐点、食盆、入口、树荫、远近缩放、亲密度等级、礼物时机）、`pets.js`（12 只）、`foods.js`（23 + 10 节气点心）、`decor.js`（24 件 + 金帐篷、自由摆放规则）；云函数 `services/camp.js`（`camp.get/spin/putFood/takeFood/feed/buy/place/move/stash/gift/album`，正餐打卡后 `arrive`）、`lib/camp-state.js`（旧档迁移：暖豆退回、住户按原型搬来、`camp: 1`）；小程序 `pages/camp`（首页）、`shop`、`album`，`utils/camp-view.js`、`camp-life.js`（自由走动 + 绕禁区、作息、点 / 连点 / 长按 / 拖食物、它们之间的小事、礼物、庆祝）、`anim.js`（两张 6×6）、`scene-fx.js`。宅院、格子、遮挡、院子、旧物件图、`scripts/estate` 全删（git 历史里有）。**现在是白模 + 占位图**：底图 `images/camp/base/`（`blockout.py`），宠物用旧动物图顶替、没有旧图的是圆团，装饰是草绿色块，食物是圆底两个字；`config.campArt / decorArt / animArt` 都是空。包 1.05MB。**下一步**：把 `docs/art/camp-art-pack.md` + `art/guide/camp-blockout.jpg` 交给 Codex 出第一批（营地整图 + 4 只常见宠物 + 8 件装饰 + 食物图标），回来按工单末尾的流程接入
 - 2026-10-23：测试福利 `config.testGrant`（5000 暖豆，10/26 前打开花园的账号各送一次）给用户试修整角落和扭蛋。**上传体验版给妈妈之前把 `testGrant` 改成 `null` 并重新部署云函数**
 - 2026-10-23：`api` 已由用户在开发者工具里创建、超时改为 60 秒；之后用 `npm run wx:function` 从云端更新成功；`npm run wx:preview` 生成预览二维码成功，已发给用户试用
 
@@ -66,4 +68,4 @@
 3. 请用户到「云开发控制台 → 云函数 → api → 函数配置」把超时改成 60 秒
 4. `npm run wx:preview`，用 SendUserFile 把 `.wechat/preview-qrcode.jpg` 发给用户扫码，先试建档、记体重（不依赖 AI）
 5. AI：请用户在「云开发控制台 → AI → 生文模型」打开 `hy3` 和 `hy-vision-2.0-instruct` 的「套餐抵扣」开关，然后试拍照打卡；失败就看云函数日志定位分组或模型问题
-6. 都正常后先把 `cloudfunctions/api/config.js` 的 `testGrant` 改成 `null`、`npm run wx:function`，再 `npm run wx:upload -- 1.0.0 首个体验版`，请用户在「版本管理」选为体验版、在「成员管理」加妈妈为体验成员
+6. 都正常后先把 `cloudfunctions/api/config.js` 的 `testGrant` 改成 `null`、`npm run wx:function`，再 `npm run wx:upload -- 1.0.0 首个体验版`，请用户在「版本管理」选为体验版、在「成员管理」加妈妈为体验成员（营地的正式图没到之前先别给妈妈）

@@ -1,4 +1,4 @@
-"""检查 Codex 出的图合不合规矩（文件在不在、透明不透明、每格有没有东西、有没有贴边越格）
+"""检查 Codex 出的图合不合规矩（清单在 art/manifest.json，说明见 docs/art/camp-art-pack.md）（文件在不在、透明不透明、每格有没有东西、有没有贴边越格）
 
     python3 scripts/art/check_art.py            # 按 art/manifest.json 全部检查
     python3 scripts/art/check_art.py art/raw/anim/panda.png   # 只查这几张
@@ -16,7 +16,7 @@ REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 ALPHA_MIN = 8        # 低于这个透明度算背景
 OCCUPIED = 0.004     # 一格里不透明像素占比超过这个算「有东西」
 EDGE = 0.02          # 格子四边这么宽的一圈必须是空的（不然切图会切到）
-ANIM = {'cols': 6, 'rows': 4, 'cells': 24, 'aspect': 1.5}
+ANIM = {'cols': 6, 'rows': 6, 'cells': 36, 'aspect': 1.0}
 MAGENTA = np.array([255, 0, 255])
 
 
@@ -73,8 +73,8 @@ def check_grid(path, spec, problems):
         ys = np.nonzero(cell.any(axis=1))[0]
         heights.append((i, (ys[-1] - ys[0] + 1) / ch if len(ys) else 0))
     if spec.get('kind') == 'anim' and heights:
-        # 前两行是走路：同一只动物的高矮不该差太多
-        for row in (0, 1):
+        # 第一行是走路（A 张）/ 开心蹭你（B 张）：同一只的高矮不该差太多
+        for row in (0,):
             hs = [h for i, h in heights if i // cols == row]
             if hs and max(hs) > min(hs) * 1.35:
                 problems.append(f'第 {row + 1} 行的几帧大小不一致（最高 {max(hs):.0%}、最矮 {min(hs):.0%} 格高），同一只动物比例要一样')
@@ -83,7 +83,7 @@ def check_grid(path, spec, problems):
 def check_painting(path, spec, problems):
     img = load(path)
     ratio = img.width / img.height
-    if abs(ratio - spec['aspect']) > 0.05:
+    if 'aspect' in spec and abs(ratio - spec['aspect']) > 0.05:
         problems.append(f'比例应为 {spec["aspect"]:.2f}:1，现在是 {ratio:.2f}:1')
     if img.width < spec.get('minWidth', 0):
         problems.append(f'太小：{img.width} 宽，至少 {spec["minWidth"]}')

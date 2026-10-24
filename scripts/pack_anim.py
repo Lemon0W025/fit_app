@@ -1,16 +1,15 @@
-"""把 Codex 出的小动物动画拼图（6×4，见 docs/art/codex-art-pack.md §6）对齐、统一尺寸、压小，给小程序用
+"""把 Codex 出的宠物动画拼图（每只两张 6×6，见 docs/art/camp-art-pack.md）对齐、统一尺寸、压小，给小程序用
 
-    python3 scripts/pack_anim.py              # art/raw/anim/<id>.png → art/anim/<id>.png，并回写 utils/anim-sheets.js 的 top
-    python3 scripts/pack_anim.py --demo       # 没有正式图时，用现在的单张图合成一套示意拼图到 art/anim-demo/（只用来验证播放）
+    python3 scripts/pack_anim.py              # art/raw/anim/<id>-a.png、<id>-b.png → art/anim/<id>-a.png、<id>-b.png，并回写 utils/anim-sheets.js
+    python3 scripts/pack_anim.py --demo       # 没有正式图时，用占位单张图合成示意拼图到 art/anim-demo/（只用来验证播放）
 
-对齐：同一组帧（走路一整行、发呆两帧、睡觉两帧……）一起平移，让这组的脚底平均落在格底往上 10% 处、水平居中——
-按组而不是按帧对齐，才不会把模型画的步幅起伏抹掉。输出每格 CELL px、6×4 格、256 色 PNG，传云存储（npm run wx:art）。
+对齐：同一行（一个动作的 6 帧）一起平移，让这行的脚底平均落在格底往上 10% 处、水平居中——
+按行而不是按帧对齐，才不会把模型画的步幅起伏抹掉。输出每格 CELL px、6×6 格、256 色 PNG，传云存储（npm run wx:art）。
 需要 Pillow 和 numpy。
 """
 import argparse
 import json
 import os
-import re
 import subprocess
 
 import numpy as np
@@ -21,16 +20,16 @@ RAW = os.path.join(REPO, 'art', 'raw', 'anim')
 OUT = os.path.join(REPO, 'art', 'anim')
 DEMO = os.path.join(REPO, 'art', 'anim-demo')
 SHEETS_JS = os.path.join(REPO, 'miniprogram', 'utils', 'anim-sheets.js')
-COLS, ROWS = 6, 4
+COLS, ROWS = 6, 6
 CELL = 192
 FOOT = 0.10        # 脚底离格底的距离（格高比例）
 ALPHA_MIN = 8
-# 哪些格子是一组（一起平移）
-GROUPS = [list(range(0, 6)), list(range(6, 12)), [12, 13], [14, 15], [16, 17], [18, 19], [20, 21, 22, 23]]
+SHEETS = ['a', 'b']
+GROUPS = [list(range(r * COLS, (r + 1) * COLS)) for r in range(ROWS)]
 
 
-def animal_ids():
-    js = "console.log(JSON.stringify(Object.keys(require('./miniprogram/utils/anim-sheets'))))"
+def pet_ids():
+    js = "console.log(JSON.stringify(require('./cloudfunctions/api/lib/shared/pets').PETS.map((p) => p.id)))"
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
@@ -42,7 +41,7 @@ def bbox(a):
 
 
 def pack(src):
-    """6×4 原图 → (对齐好的 CELL 格拼图, 发呆帧的头顶空白比例)"""
+    """6×6 原图 → 对齐好的 CELL 格拼图"""
     cw, ch = src.width / COLS, src.height / ROWS
     cells = []
     for i in range(COLS * ROWS):
@@ -50,7 +49,6 @@ def pack(src):
         box = (round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch))
         cell = src.crop(box)
         cells.append((cell, bbox(np.array(cell)[:, :, 3] >= ALPHA_MIN)))
-    scale = CELL / cw
     out = Image.new('RGBA', (COLS * CELL, ROWS * CELL), (0, 0, 0, 0))
     for group in GROUPS:
         boxes = [cells[i][1] for i in group if cells[i][1]]
@@ -67,35 +65,41 @@ def pack(src):
             c, r = i % COLS, i // COLS
             moved = Image.new('RGBA', cell.size, (0, 0, 0, 0))
             moved.paste(cell, (round(dx), round(dy)))
-            small = moved.resize((CELL, CELL), Image.LANCZOS)
-            out.paste(small, (c * CELL, r * CELL))
-    # 头顶空白按对齐之后的发呆帧（第 13 格）量
-    idle = bbox(np.array(out.crop((0, 2 * CELL, CELL, 3 * CELL)))[:, :, 3] >= ALPHA_MIN)
-    top = (idle[1] / CELL) if idle else 0.1
-    return out, round(float(top), 2)
+            out.paste(moved.resize((CELL, CELL), Image.LANCZOS), (c * CELL, r * CELL))
+    return out
+
+
+def top_of(packed_a):
+    """头顶空白：按 A 张第 2 行（坐着待机）第一格量"""
+    idle = bbox(np.array(packed_a.crop((0, CELL, CELL, 2 * CELL)))[:, :, 3] >= ALPHA_MIN)
+    return round(float(idle[1] / CELL), 2) if idle else 0.1
 
 
 def save(img, path):
     a = np.array(img)
     a[:, :, 3][a[:, :, 3] < ALPHA_MIN] = 0
-    img = Image.fromarray(a)
-    img.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(path, optimize=True)
+    Image.fromarray(a).quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(path, optimize=True)
     return os.path.getsize(path)
 
 
-def write_tops(tops):
-    s = open(SHEETS_JS, encoding='utf-8').read()
-    for animal_id, top in tops.items():
-        s, n = re.subn(rf"(\b{animal_id}: \{{[^}}]*top: )[0-9.]+", rf"\g<1>{top}", s)
-        if not n:
-            print('  注意：anim-sheets.js 里没有', animal_id)
-    open(SHEETS_JS, 'w', encoding='utf-8').write(s)
+def write_sheets(tops):
+    """anim-sheets.js 整个重写：只列有拼图的宠物"""
+    lines = ['// 有逐帧拼图的宠物（拼图在云存储 config.animArt 下，<id>-a.png / <id>-b.png；scripts/pack_anim.py 打包时回写）',
+             '// top：待机帧头顶上空白占格高的比例（定气泡的高度）。没列到的宠物页面用单张图 + CSS 步态',
+             'module.exports = {']
+    for pet_id, top in tops.items():
+        lines.append(f'  {pet_id}: {{ top: {top} }},')
+    lines.append('}')
+    open(SHEETS_JS, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
 
 
-def demo_sheet(animal_id):
-    """用单张图合成 24 帧示意：走路左右摇、背面调暗、睡觉压扁、小动作转圈，每格标帧号"""
-    sprite = Image.open(os.path.join(REPO, 'miniprogram', 'images', 'garden', 'items', f'{animal_id}.png')).convert('RGBA')
-    font = ImageFont.truetype('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 26)
+def demo_sheet(pet_id, sheet):
+    """用占位单张图合成 36 帧示意：走路左右摇、睡觉压扁、打滚转圈，每格标帧号"""
+    sprite = Image.open(os.path.join(REPO, 'miniprogram', 'images', 'camp', 'pets', f'{pet_id}.png')).convert('RGBA')
+    try:
+        font = ImageFont.truetype('/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc', 26)
+    except OSError:
+        font = ImageFont.load_default()
     S = 256
     out = Image.new('RGBA', (COLS * S, ROWS * S), (0, 0, 0, 0))
     base = sprite.copy()
@@ -103,19 +107,14 @@ def demo_sheet(animal_id):
     for i in range(COLS * ROWS):
         c, r = i % COLS, i // COLS
         f = base.copy()
-        if r in (0, 1):
+        if sheet == 'a' and r == 0:
             f = f.rotate(6 * np.sin(c / 6 * 2 * np.pi), resample=Image.BICUBIC)
-            if r == 1:
-                dark = Image.new('RGBA', f.size, (0, 0, 0, 0))
-                dark.paste((60, 60, 90, 255), (0, 0) + f.size)
-                f = Image.blend(f, dark, 0.25)
-                f.putalpha(base.rotate(6 * np.sin(c / 6 * 2 * np.pi), resample=Image.BICUBIC).split()[3])
-        elif r == 2 and c in (2, 3):
-            f = f.resize((f.width, int(f.height * (0.72 if c == 2 else 0.68))), Image.LANCZOS)
-        elif r == 3 and c >= 2:
-            f = f.rotate(-90 * (c - 2), resample=Image.BICUBIC, expand=True)
-        elif r == 3:
-            f = f.resize((int(f.width * 1.08), int(f.height * (1.12 if c == 0 else 1.0))), Image.LANCZOS)
+        elif sheet == 'a' and r in (2, 3):
+            f = f.resize((f.width, int(f.height * 0.7)), Image.LANCZOS)
+        elif sheet == 'b' and r == 1:
+            f = f.rotate(-60 * c, resample=Image.BICUBIC, expand=True)
+        elif sheet == 'b' and r == 4:
+            f = f.resize((f.width, int(f.height * (1.15 if c % 2 else 1.0))), Image.LANCZOS)
         x = c * S + (S - f.width) // 2
         y = r * S + int(S * (1 - FOOT)) - f.height
         out.paste(f, (x, y), f)
@@ -127,31 +126,31 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--demo', action='store_true')
     a = ap.parse_args()
-    ids = animal_ids()
+    ids = pet_ids()
     if a.demo:
         os.makedirs(DEMO, exist_ok=True)
         total = 0
-        for animal_id in ids:
-            packed, _ = pack(demo_sheet(animal_id))
-            total += save(packed, os.path.join(DEMO, f'{animal_id}.png'))
-        print(f'示意拼图 {len(ids)} 张 → {DEMO}，共 {total // 1024} KB（只用来验证播放，不要上传）')
+        for pet_id in ids:
+            for sheet in SHEETS:
+                total += save(pack(demo_sheet(pet_id, sheet)), os.path.join(DEMO, f'{pet_id}-{sheet}.png'))
+        print(f'示意拼图 {len(ids) * 2} 张 → {DEMO}，共 {total // 1024} KB（只用来验证播放，不要上传）')
         return
     os.makedirs(OUT, exist_ok=True)
     tops = {}
     total = 0
-    for animal_id in ids:
-        path = os.path.join(RAW, f'{animal_id}.png')
-        if not os.path.exists(path):
-            print('  跳过（还没有原图）', animal_id)
+    for pet_id in ids:
+        paths = [os.path.join(RAW, f'{pet_id}-{s}.png') for s in SHEETS]
+        if not all(os.path.exists(p) for p in paths):
+            print('  跳过（a、b 两张没出齐）', pet_id)
             continue
-        packed, top = pack(Image.open(path).convert('RGBA'))
-        size = save(packed, os.path.join(OUT, f'{animal_id}.png'))
-        total += size
-        tops[animal_id] = top
-        print(f'  {animal_id}: {COLS * CELL}×{ROWS * CELL}，{size // 1024} KB，头顶空白 {top}')
+        packed = [pack(Image.open(p).convert('RGBA')) for p in paths]
+        for sheet, img in zip(SHEETS, packed):
+            total += save(img, os.path.join(OUT, f'{pet_id}-{sheet}.png'))
+        tops[pet_id] = top_of(packed[0])
+        print(f'  {pet_id}: 2 张 {COLS * CELL}×{ROWS * CELL}，头顶空白 {tops[pet_id]}')
     if tops:
-        write_tops(tops)
-        print(f'共 {len(tops)} 张 {total // 1024} KB → {OUT}；已回写 utils/anim-sheets.js 的 top。接着 npm run wx:art')
+        write_sheets(tops)
+        print(f'共 {len(tops)} 只 {total // 1024} KB → {OUT}；已重写 utils/anim-sheets.js。接着 npm run wx:art')
     else:
         print('art/raw/anim/ 里还没有拼图')
 

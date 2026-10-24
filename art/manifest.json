@@ -1,103 +1,363 @@
 {
-  "_": "Codex 出图清单（docs/art/codex-art-pack.md）；scripts/art/check_art.py 按这里检查。cells 是从第 1 格起连续占用的格数",
+  "_": "Codex 出图清单（docs/art/camp-art-pack.md）；scripts/art/check_art.py 按这里检查。grid 的 cells 是从第 1 格起连续占用的格数；anim 是 6×6 的动画拼图",
   "sheets": [
     {
-      "file": "art/raw/estate/estate.png",
+      "file": "art/raw/camp/camp.png",
       "kind": "painting",
-      "aspect": 1.5,
-      "minWidth": 1500
+      "aspect": 0.75,
+      "minWidth": 1100
     },
     {
-      "file": "art/raw/estate/estate-hd.png",
+      "file": "art/raw/camp/camp-hd.png",
       "kind": "painting",
-      "aspect": 1.83,
+      "aspect": 0.75,
       "minWidth": 3000
     },
     {
-      "file": "art/raw/estate/clouds.png",
+      "file": "art/raw/ui/foods.png",
+      "kind": "grid",
+      "cols": 6,
+      "rows": 6,
+      "cells": 33
+    },
+    {
+      "file": "art/raw/ui/camp-icons.png",
       "kind": "grid",
       "cols": 3,
       "rows": 3,
       "cells": 9
     },
     {
-      "file": "art/raw/ui/icons.png",
+      "file": "art/raw/decor/out-tent.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-hammock.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-treehouse.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-strawbed.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-picnic.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-table.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-kettle.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-swing.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-ball.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-ladder.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-slide.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-flowerbed.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-pumpkins.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-sapling.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-sunflower.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-lights.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-bunting.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-windmill.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-mailbox.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-lantern.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-stonelamp.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-fence.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-clothesline.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-scarecrow.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/decor/out-gold_tent.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/pets/doudou-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/doudou-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/doudou-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/doudou-album.png",
       "kind": "grid",
-      "cols": 3,
-      "rows": 3,
-      "cells": 9
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
     },
     {
-      "file": "art/raw/ui/fx.png",
+      "file": "art/raw/pets/nuonuo-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/nuonuo-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/nuonuo-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/nuonuo-album.png",
       "kind": "grid",
-      "cols": 3,
-      "rows": 3,
-      "cells": 9
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
     },
     {
-      "file": "art/raw/09-水生与小摆件.png",
+      "file": "art/raw/pets/lianlian-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/lianlian-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/lianlian-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/lianlian-album.png",
       "kind": "grid",
-      "cols": 3,
-      "rows": 3,
-      "cells": 9
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
     },
     {
-      "file": "art/raw/10-院子家具.png",
+      "file": "art/raw/pets/shishi-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/shishi-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/shishi-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/shishi-album.png",
       "kind": "grid",
-      "cols": 3,
-      "rows": 3,
-      "cells": 9
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
     },
     {
-      "file": "art/raw/11-会飞的.png",
+      "file": "art/raw/pets/huahua-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/huahua-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/huahua-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/huahua-album.png",
       "kind": "grid",
-      "cols": 3,
-      "rows": 3,
-      "cells": 2
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
     },
     {
-      "file": "art/raw/anim/chick.png",
+      "file": "art/raw/pets/guigui-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/guigui-a.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/rabbit.png",
+      "file": "art/raw/anim/guigui-b.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/duck.png",
+      "file": "art/raw/pets/guigui-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/qiqi-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/qiqi-a.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/turtle.png",
+      "file": "art/raw/anim/qiqi-b.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/tabby_cat.png",
+      "file": "art/raw/pets/qiqi-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/shushu-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/shushu-a.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/ginger_cat.png",
+      "file": "art/raw/anim/shushu-b.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/panda.png",
+      "file": "art/raw/pets/shushu-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/jutuan-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/jutuan-a.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/crane.png",
+      "file": "art/raw/anim/jutuan-b.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/panda_family.png",
+      "file": "art/raw/pets/jutuan-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/sunbao-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/sunbao-a.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/bird.png",
+      "file": "art/raw/anim/sunbao-b.png",
       "kind": "anim"
     },
     {
-      "file": "art/raw/anim/butterfly.png",
+      "file": "art/raw/pets/sunbao-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/chacha-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/chacha-a.png",
       "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/chacha-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/chacha-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/pets/hehe-ref.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/anim/hehe-a.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/hehe-b.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/pets/hehe-album.png",
+      "kind": "grid",
+      "cols": 1,
+      "rows": 1,
+      "cells": 1
+    },
+    {
+      "file": "art/raw/camp/family.png",
+      "kind": "painting"
     }
   ]
 }

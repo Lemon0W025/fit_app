@@ -9,7 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:art                 把 art/estate/ 的底图切块、art/anim/ 的动画拼图传到云存储 garden/estate/、garden/anim/
+//   npm run wx:art                 把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图传到云存储 camp/base/、camp/decor/、camp/anim/
 
 const fs = require('fs')
 const path = require('path')
@@ -86,12 +86,13 @@ async function main() {
 
   if (command === 'art') {
     const env = envId()
-    // 宅院底图切块 art/estate/ → garden/estate/；小动物动画拼图 art/anim/ → garden/anim/。有哪个传哪个
+    // 营地底图切块 art/camp/ → camp/base/；装饰块 art/decor/ → camp/decor/；宠物动画拼图 art/anim/ → camp/anim/。有哪个传哪个
     const jobs = [
-      { dir: path.join(ROOT, 'art/estate'), check: 't00.jpg', remote: 'garden/estate', key: 'estateArt', hint: 'python3 scripts/estate/cut_art.py <原画>' },
-      { dir: path.join(ROOT, 'art/anim'), check: null, remote: 'garden/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
+      { dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', remote: 'camp/base', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
+      { dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
+      { dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
     ].filter((j) => fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png)$/.test(f)))
-    if (!jobs.length) fail('art/estate/ 和 art/anim/ 里都没有切好的图：先跑 python3 scripts/estate/cut_art.py <原画> 或 python3 scripts/pack_anim.py')
+    if (!jobs.length) fail('art/camp/、art/decor/、art/anim/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py 或 pack_anim.py')
     let bucket = ''
     try {
       // 拼 fileID 要桶名，miniprogram-ci 没公开，从它内部的环境信息里拿；拿不到就让用户去控制台看
