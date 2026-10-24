@@ -28,8 +28,9 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
 2. 高清：python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块，
    用第 1 节「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1024，16 块），
    然后 python3 scripts/camp/merge_details.py 得到 art/raw/camp/camp-hd.png。
-3. 暖暖锅三种状态：python3 scripts/camp/pot_art.py --crop 裁出锅那块 art/raw/pot/in.png，按第 1b 节用 edit 画三版
-   art/raw/pot/out-1.png（早：一层粥底）、out-2.png（午：加了菜）、out-3.png（晚：满满一锅冒热气），锅以外的像素不动。
+3. 帐篷和锅的抠图 + 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-tent.png、in-pot.png，
+   按第 1b 节用 edit 画 out-tent-removed.png（把帐篷整个去掉）、out-pot-removed.png（把锅和三脚架去掉）、
+   out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），每张只改该改的地方，其他像素不动。
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
@@ -107,7 +108,7 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 这是整个游戏的舞台，值得多生成几轮挑最好的。
 
-- **布局底稿**：`art/guide/camp-blockout.jpg`（正方形），image-to-image，相似度调高，**布局一点都不能动**：篝火和火上的暖暖锅在正中、大帐篷在整块营地的左上角（门朝篝火）、两个食盆在篝火右下、三样东西的大小、上缘的树林边缘（**草坪里一棵树都没有**）。手机上默认只看到中间一半宽，所以营地是「比屏幕大一圈的大草坪」，帐篷在默认视角里只露一个角，往左一拖才全看到。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
+- **布局底稿**：`art/guide/camp-blockout.jpg`（正方形），image-to-image，相似度调高，**布局一点都不能动**：篝火和火上的暖暖锅在正中、大帐篷在锅的正后方（上方，门朝前对着锅）、两个食盆在篝火右下、三样东西的大小、上缘的树林边缘（**草坪里一棵树都没有**）。手机上默认只看到中间一半宽、锅在屏幕正中，所以营地是「比屏幕大一圈的大草坪」，四周的空草坪是拖着看的。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
 - **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
 - **必须画成这样**：
   - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
@@ -123,9 +124,9 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 PROMPT: Repaint reference image 1 (a rough blockout of a camp) as a finished, high-end mobile-game main
 scene in UNIFIED STYLE, portrait 3:4, camera tilted about 45–50 degrees looking down. Keep the layout
 EXACTLY as in the blockout, at the SAME sizes: at the very center a stone campfire ring with a big round clay
-cooking pot (empty, lid leaning beside the fire) hanging from a wooden tripod over the fire; one big cozy
-camping tent in the upper-left corner of the meadow with its door open toward the fire; two empty food bowls
-at the lower right of the fire. Everything else is one wide, open, even meadow reaching the left, right and
+cooking pot (empty, lid leaning beside the fire) hanging from a wooden tripod over the fire; directly behind the
+fire (above it in the image) one big cozy camping tent facing the viewer with its door open toward the fire; two
+empty food bowls at the lower right of the fire. Everything else is one wide, open, even meadow reaching the left, right and
 bottom edges. A band of round forest trees only along the top edge, with soft hills and sky beyond. No trees
 inside the meadow, no stream, no pond, no deck, no rocks, no paths. The meadow must be a clean, even, uniform lawn with
 only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no clutter (decorations will
@@ -142,22 +143,25 @@ Do not add or remove anything. Same lighting.
 
 然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
 
-### 1b. 暖暖锅的三种状态 `art/raw/pot/out-1.png`、`out-2.png`、`out-3.png`
+### 1b. 帐篷和锅的抠图、锅的三种状态 `art/raw/cut/out-*.png`
 
-锅是营地的中心：妈妈今天打了几顿正餐，锅里就有几层。底图里的锅是空的，这三张是「锅里的内容」，页面按当天的打卡数叠在锅上。
+帐篷和锅在游戏里是从底图里抠出来单独的一层：宠物走到它们后面会被挡住。锅还是营地的中心：妈妈今天打了几顿正餐，锅里就有几层。做法是你把它们「去掉」一版，脚本比对就知道它们的范围。
 
-1. `python3 scripts/camp/pot_art.py --crop` 从高清营地图裁出锅连篝火圈那一块 `art/raw/pot/in.png`（1000×840 的比例）。
-2. 用 edit 在 in.png 上画三版，**锅以外的像素一概不动**，尺寸和 in 一样：
-   - `out-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
-   - `out-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
-   - `out-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
-3. `python3 scripts/camp/pot_art.py` 会比对 in / out 只留你画了的那块像素、羽化边缘。
+1. `python3 scripts/camp/cutouts.py --crop` 从高清营地图裁出两块：`art/raw/cut/in-tent.png`（帐篷连周围）、`in-pot.png`（锅连篝火圈）。
+2. 用 edit 画，**每张只改该改的地方，其他像素一概不动**，尺寸和 in 一样：
+   - `out-tent-removed.png`：把帐篷整个去掉，那块补成草地和后面的树林，像从来没有帐篷
+   - `out-pot-removed.png`：把锅和三脚架去掉，只留篝火石圈、火和草地
+   - `out-pot-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
+   - `out-pot-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
+   - `out-pot-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
+3. `python3 scripts/camp/cutouts.py` 比对 in / out 得到帐篷和锅的范围，合成 `art/cut/tent.png`、`pot-0.png`（空锅）～`pot-3.png`。
 
 ```
-PROMPT: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
-满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, seen from the same camera angle, lit by the same soft light.
-Change ONLY the inside of the pot (and the faint steam right above it); the pot, tripod, fire, stones and grass
-must stay pixel-identical. UNIFIED STYLE.
+PROMPT（去掉）: Edit this crop of the camp scene: remove the <tent / cooking pot and its tripod> completely and fill
+that area with the same meadow grass (and forest) as around it, seamless, same lighting. Change nothing else.
+PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
+满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, same camera angle, same soft light. Change ONLY the inside of the pot
+(and the faint steam right above it); the pot, tripod, fire, stones and grass must stay pixel-identical. UNIFIED STYLE.
 ```
 
 ---

@@ -37,7 +37,7 @@ Page({
     pets: [],
     bowls: [],
     fx: [],
-    pot: null,
+    cuts: [],
     tint: '',
     peekText: '',
     termText: '',
@@ -123,7 +123,7 @@ Page({
       decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
       bowls: V.bowlViews(view.bowls, L),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel),
-      pot: V.potView(potLevel, L, config.potArt || ''),
+      cuts: V.cutoutViews(L, potLevel, config.cutArt || ''),
       tint: V.tintFor(this.nowHour()),
       peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
@@ -162,9 +162,9 @@ Page({
     this.setData({ base: V.baseTiles(this.L, '') })
   },
 
-  onPotError() {
-    if (!config.potArt || !this.data.pot) return
-    this.setData({ pot: V.potView(this.potLevel || 0, this.L, '') })
+  onCutError() {
+    if (!config.cutArt || !this.data.cuts.length || this.data.cuts[0].image.indexOf('cloud://') !== 0) return
+    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '') })
   },
 
   onDecorError() {

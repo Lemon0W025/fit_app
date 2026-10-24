@@ -5,7 +5,7 @@
     <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.8" scale-max="2.5" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
       <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px">
         <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
-        <image wx:if="{{pot}}" class="pot" src="{{pot.image}}" mode="scaleToFill" binderror="onPotError" style="left: {{pot.left}}px; top: {{pot.top}}px; width: {{pot.width}}px; height: {{pot.height}}px; z-index: {{pot.z}}" />
+        <image wx:for="{{cuts}}" wx:key="key" class="cut" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
         <block wx:for="{{fx}}" wx:key="key">
           <view wx:if="{{item.kind === 'shimmer'}}" class="fx-shimmer" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}; animation-delay: -{{item.delay}}s"></view>
           <image wx:elif="{{item.kind === 'steam'}}" class="fx-steam" src="{{item.image}}" mode="aspectFit" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s" />

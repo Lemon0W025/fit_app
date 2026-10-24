@@ -13,6 +13,16 @@ function circle(cx, cy, r, n = 12) {
   return pts
 }
 
+// 椭圆上从 fromDeg 到 toDeg 的一段弧，均匀取 n 个点
+function arc(cx, cy, rx, ry, fromDeg, toDeg, n) {
+  const pts = []
+  for (let i = 0; i < n; i++) {
+    const a = ((fromDeg + ((toDeg - fromDeg) * i) / (n - 1)) * Math.PI) / 180
+    pts.push([Math.round(cx + rx * Math.cos(a)), Math.round(cy + ry * Math.sin(a))])
+  }
+  return pts
+}
+
 function ellipse(cx, cy, rx, ry, n = 16) {
   const pts = []
   for (let i = 0; i < n; i++) {
@@ -22,9 +32,9 @@ function ellipse(cx, cy, rx, ry, n = 16) {
   return pts
 }
 
-const FIRE = [2048, 2048]
-// 大帐篷的地面占位：整块营地的左上角，门朝篝火（右下）
-const TENT = [[300, 1000], [1300, 1000], [1300, 1680], [300, 1680]]
+const FIRE = [2048, 2300]
+// 大帐篷的地面占位：篝火正后方（上方），门朝前对着锅
+const TENT = [[1500, 1000], [2600, 1000], [2600, 1580], [1500, 1580]]
 
 const SCENE = {
   width: W,
@@ -36,22 +46,25 @@ const SCENE = {
     tent: TENT,
     fire: circle(FIRE[0], FIRE[1], 260),
   },
-  // 篝火在正中，火上架着暖暖锅（营地的中心，像 Pokémon Sleep 的卡比兽）
+  // 篝火在正中，火上吊着暖暖锅（营地的中心，像 Pokémon Sleep 的卡比兽）；帐篷在锅正后方
   fire: FIRE,
-  // 暖暖锅连篝火圈一起的那块（画的像素，left top right bottom）：今天打了几顿，锅里就有几层，页面在这块上叠「锅里的内容」图
-  pot: { box: [1548, 1500, 2548, 2340] },
-  // 傍晚围着锅坐的 12 个点
-  seats: ellipse(FIRE[0], FIRE[1], 600, 380, 12),
+  // 从底图里抠出来单独一层的东西（画的像素 box；zy 是它落地的 y，宠物按 y 排前后就能被它挡住）。锅按今天打了几顿换图 pot-0～3
+  cutouts: {
+    tent: { box: [1400, 620, 2700, 1600], zy: 1580 },
+    pot: { box: [1548, 1650, 2548, 2590], zy: 2300 },
+  },
+  // 傍晚围着锅坐的 12 个点：开口朝后的马蹄形，没人坐到锅正后面被挡住
+  seats: arc(FIRE[0], FIRE[1], 640, 400, -30, 210, 12),
   // 两个食盆：篝火右下
-  bowls: [[2560, 2620], [2780, 2670]],
+  bowls: [[2560, 2870], [2780, 2920]],
   // 大帐篷门口的 3 个点：没窝的在这儿睡
-  tent: { spots: [[700, 1780], [920, 1800], [1140, 1780]] },
+  tent: { spots: [[1620, 1690], [2470, 1690], [2050, 1700]] },
   // 篝火右边一片向阳的草地：橘团、龟龟晒太阳的点
-  sun: [[2900, 1950], [3100, 2100], [2800, 2250]],
-  // 树林边缘的入口：新住户从这里走进来，鹤鹤从这里飞走
-  entries: [[1800, 780], [2400, 780], [3000, 780]],
-  // 树林边上的树荫：没窝、帐篷门口也满了就睡这儿
-  shade: [[1700, 880], [2300, 860], [2900, 860], [3500, 880]],
+  sun: [[2950, 2200], [3150, 2350], [2850, 2500]],
+  // 树林边缘的入口：新住户从这里走进来，鹤鹤从这里飞走（避开帐篷后面）
+  entries: [[1000, 780], [3000, 780], [3400, 780]],
+  // 树林边上的树荫：没窝、帐篷门口也满了就睡这儿（避开帐篷后面）
+  shade: [[700, 880], [1150, 860], [3000, 860], [3500, 880]],
 }
 
 // 亲密度：喂了几顿 → 几级（1～5）
@@ -171,6 +184,7 @@ function giftDue(lastGift, today, hour) {
 }
 
 module.exports = {
+  arc,
   W, H, SCENE, LEVELS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass,
   levelOf, nextLevelAt, giftDue,

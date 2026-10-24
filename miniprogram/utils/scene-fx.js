@@ -32,7 +32,7 @@ function fxViews(L, hour, placed, potLevel = 0) {
   }
   // 暖暖锅：打了两顿起冒热气，三顿冒得更欢
   for (let i = 0; i < (potLevel >= 3 ? 2 : potLevel >= 2 ? 1 : 0); i++) {
-    out.push({ key: `pot-steam-${i}`, kind: 'steam', image: STEAM_IMAGE, ...at(fx + (i ? 90 : -70), SCENE.pot.box[1] + 260, 300, 300, L), z: zOf(fy) + 3, delay: fmt(i * 1.3) })
+    out.push({ key: `pot-steam-${i}`, kind: 'steam', image: STEAM_IMAGE, ...at(fx + (i ? 90 : -70), fy - 400, 300, 300, L), z: zOf(fy) + 3, delay: fmt(i * 1.3) })
   }
   if (night) {
     // 帐篷里亮着灯

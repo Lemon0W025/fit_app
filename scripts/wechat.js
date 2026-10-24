@@ -9,7 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:art                 把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/pot/ 的锅传到云存储 camp/base/、camp/decor/、camp/anim/、camp/pot/
+//   npm run wx:art                 把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base/、camp/decor/、camp/anim/、camp/cut/
 
 const fs = require('fs')
 const path = require('path')
@@ -91,9 +91,9 @@ async function main() {
       { dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', remote: 'camp/base', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
       { dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
       { dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
-      { dir: path.join(ROOT, 'art/pot'), check: 'p1.png', remote: 'camp/pot', key: 'potArt', hint: 'python3 scripts/camp/pot_art.py' },
+      { dir: path.join(ROOT, 'art/cut'), check: 'pot-0.png', remote: 'camp/cut', key: 'cutArt', hint: 'python3 scripts/camp/cutouts.py' },
     ].filter((j) => fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png)$/.test(f)))
-    if (!jobs.length) fail('art/camp/、art/decor/、art/anim/、art/pot/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py、pack_anim.py 或 pot_art.py')
+    if (!jobs.length) fail('art/camp/、art/decor/、art/anim/、art/cut/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py、pack_anim.py 或 cutouts.py')
     let bucket = ''
     try {
       // 拼 fileID 要桶名，miniprogram-ci 没公开，从它内部的环境信息里拿；拿不到就让用户去控制台看

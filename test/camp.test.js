@@ -21,8 +21,14 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   assert.equal(C.SCENE.shade.length, 4)
   assert.equal(C.SCENE.tent.spots.length, 3)
   assert.equal(C.SCENE.sun.length, 3)
-  const [pl, pt, pr, pb] = C.SCENE.pot.box
+  const [pl, pt, pr, pb] = C.SCENE.cutouts.pot.box
   assert.ok(pl < C.SCENE.fire[0] && C.SCENE.fire[0] < pr && pt < C.SCENE.fire[1] && C.SCENE.fire[1] < pb)
+  const [tl, tt, tr, tb] = C.SCENE.cutouts.tent.box
+  const tent = C.SCENE.nogo.tent
+  assert.ok(tl <= tent[0][0] && tr >= tent[1][0] && tt < tent[0][1] && tb >= tent[2][1])
+  assert.ok(C.SCENE.cutouts.tent.zy < C.SCENE.cutouts.pot.zy)
+  // 坐点是开口朝后的马蹄形：没人坐在锅正后面
+  C.SCENE.seats.forEach(([x, y]) => assert.ok(y > C.SCENE.fire[1] - 120 || Math.abs(x - C.SCENE.fire[0]) > 320, `seat ${x},${y}`))
   // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地
   C.SCENE.seats.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `seat ${x},${y}`))
   C.SCENE.bowls.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `bowl ${x},${y}`))
@@ -47,20 +53,21 @@ test('多边形命中', () => {
   assert.equal(C.segmentHitsPoly([-5, 15], [15, 15], sq), false)
   assert.equal(C.circle(0, 0, 10, 4).length, 4)
   assert.equal(C.ellipse(0, 0, 10, 5, 8).length, 8)
+  assert.deepEqual(C.arc(0, 0, 10, 10, 0, 180, 3), [[10, 0], [0, 10], [-10, 0]])
 })
 
 test('inGrass / hitsNogo：篝火中心、帐篷不是草地；margin 和 names 管用', () => {
-  assert.equal(C.inGrass(2048, 3000), true)
-  assert.equal(C.inGrass(2048, 2048), false) // 篝火
-  assert.equal(C.inGrass(800, 1200), false) // 大帐篷
+  assert.equal(C.inGrass(2048, 3200), true)
+  assert.equal(C.inGrass(2048, 2300), false) // 篝火
+  assert.equal(C.inGrass(2000, 1300), false) // 大帐篷
   assert.equal(C.inGrass(640, 2500), true) // 草坪里没有树、没有小溪
   assert.equal(C.inGrass(3900, 3900), true) // 右下角也是草坪
   assert.equal(C.inGrass(2048, 300), false) // 树林
-  const near = { left: 1320, top: 1200, right: 1390, bottom: 1260 } // 帐篷右边 20px
+  const near = { left: 2620, top: 1300, right: 2690, bottom: 1360 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
   assert.equal(C.hitsNogo(near, 40, ['tent']), true)
   assert.equal(C.hitsNogo(near, 40, ['fire']), false)
-  assert.equal(C.hitsNogo({ left: 2000, top: 1760, right: 2060, bottom: 1820 }, 0), true)
+  assert.equal(C.hitsNogo({ left: 2000, top: 2000, right: 2060, bottom: 2060 }, 0), true)
 })
 
 test('亲密度等级和礼物时机', () => {
