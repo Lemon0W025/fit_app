@@ -27,6 +27,13 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   C.SCENE.nogo.tent.forEach(([x, y]) => assert.ok(x >= tl && x <= tr && y >= tt && y <= tb, `tent foot ${x},${y}`))
   Object.values(C.SCENE.cutouts).forEach((c) => c.poly.forEach(([x, y]) => assert.ok(x >= c.box[0] - 1 && x <= c.box[2] + 1 && y >= c.box[1] - 1 && y <= c.box[3] + 1, `poly out of box ${x},${y}`)))
   assert.ok(C.SCENE.cutouts.tent.zy < C.SCENE.cutouts.pot.zy)
+  // 火苗那块在篝火石圈里；锅的抠图沿锅底走，不把锅底下的火苗抠进去
+  const [fl, ft, fr, fb] = C.SCENE.flame.box
+  C.SCENE.flame.zone.forEach(([x, y]) => {
+    assert.ok(x > fl && x < fr && y > ft && y < fb, `flame zone ${x},${y}`)
+    assert.ok(C.pointInPoly(x, y, C.SCENE.nogo.fire), `flame zone outside the fire ring ${x},${y}`)
+  })
+  C.SCENE.cutouts.pot.poly.filter(([x]) => x > 1900 && x < 2300).forEach(([x, y]) => assert.ok(y <= 2712, `pot cutout reaches into the flames ${x},${y}`))
   // 坐点是开口朝后的马蹄形：没人坐在锅正后面
   C.SCENE.seats.forEach(([x, y]) => assert.ok(y > C.SCENE.fire[1] - 120 || Math.abs(x - C.SCENE.fire[0]) > 320, `seat ${x},${y}`))
   // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地

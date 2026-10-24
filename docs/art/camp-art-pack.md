@@ -369,6 +369,7 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `npm run wx:art` 传云存储 → `config.campArt`
+- 帐篷 / 锅：`cutouts.py`（不带 `--from-base`）用 Codex 的「去掉」版和锅里三态覆盖过渡版 → `fx_art.py` 重出篝火逐帧（画换了才要）→ `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`
 - 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`
 - 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）
 - 食物、界面：`slice-art.py` 加两条 SHEETS（`ui/foods.png` → `images/camp/foods/`，`ui/camp-icons.png` → `images/garden/ui/`）切成单张

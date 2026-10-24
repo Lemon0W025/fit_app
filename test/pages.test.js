@@ -230,7 +230,7 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.ok(camp.data.base[0].image.endsWith('/t00.jpg')) // 白天的日景块（填了 campArt 就是云存储的）
   assert.equal(camp.data.bowls.length, 2)
   assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou'])
-  assert.ok(camp.data.fx.some((f) => f.kind === 'flame'))
+  assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
   assert.equal(camp.data.tint, '')
   camp.closeWelcome()
   camp.clock.advance(5000)

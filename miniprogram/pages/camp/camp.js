@@ -124,8 +124,8 @@ Page({
       base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, config.campArt || '', night),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
       bowls: V.bowlViews(view.bowls, L),
-      fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel),
-      cuts: V.cutoutViews(L, potLevel, config.cutArt || '', night),
+      fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
+      cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
       peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
@@ -164,9 +164,16 @@ Page({
     this.setData({ base: V.baseTiles(this.L, '', this.baseNight) })
   },
 
+  // 帐篷 / 锅的抠图层和火苗逐帧图的前缀；云存储的图加载失败过一次就一直用包里的
+  cutBase() {
+    return this.cutFailed ? '' : config.cutArt || ''
+  },
+
   onCutError() {
-    if (!config.cutArt || !this.data.cuts.length || this.data.cuts[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight) })
+    if (this.cutFailed || !config.cutArt) return
+    this.cutFailed = true
+    const placed = this.camp ? this.camp.decor.placed : []
+    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight), fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, '') })
   },
 
   onDecorError() {

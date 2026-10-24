@@ -5,8 +5,8 @@ module.exports = {
   campArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/base/',
   // 装饰块的前缀（…/camp/decor/）；留空用包里的占位块
   decorArt: '',
-  // 帐篷和暖暖锅抠图层的前缀（…/camp/cut/，tent.png、pot-0.png～pot-3.png）；留空用包里的占位图
-  cutArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/cut/',
+  // 帐篷 / 锅 / 木盖 / 提灯抠图层和篝火逐帧图的前缀（…/camp/cut-vN/，tent.png、pot-0～3.png、fire.jpg，夜里加 night-）；留空用包里的小图
+  cutArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/cut-v2/',
   // 宠物动画拼图的前缀（…/camp/anim/，<id>-a.png / <id>-b.png）；留空用单张图 + CSS 步态
   animArt: '',
 }

@@ -4,7 +4,7 @@
     python3 scripts/camp/cutouts.py [--local]                           # 合成 art/cut/tent.png、pot-0.png～pot-3.png；--local 再写 1/4 小图到 miniprogram/images/camp/cut/
     加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-tent.png、night-pot-N.png）
     python3 scripts/camp/cutouts.py --from-base [art/raw/camp/camp-hd.png] [--night] [--local]
-        不等 Codex 的「去掉」版，直接按 SCENE.cutouts 里量好的轮廓 poly 从画上抠（羽化边），锅里的内容按 rim 程序画；Codex 的 B 批出了再覆盖
+        不等 Codex 的「去掉」版，直接按 SCENE.cutouts 里量好的轮廓 poly 从画上抠（羽化边），锅里的内容由 pot_fill.py 画在锅口里；Codex 的 B 批出了再覆盖
 
 Codex 在裁出来的块上用 edit 画（其他像素不动）：
     out-tent-removed.png   把帐篷整个去掉，补成草地和后面的树林       → 和 in 比对得到帐篷的范围 → tent.png
@@ -19,6 +19,8 @@ import subprocess
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+
+from pot_fill import fill, night_tone
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 RAW = os.path.join(REPO, 'art', 'raw', 'cut')
@@ -36,14 +38,12 @@ def scene():
 
 
 def from_base(image, night, local):
-    """按 poly 轮廓从整画上抠：alpha = 多边形（羽化），锅再按 rim 画 1～3 层内容"""
+    """按 poly 轮廓从整画上抠：alpha = 多边形（羽化），锅再按 rim 画 1～3 层内容（pot_fill.py）"""
     S = scene()
     img = Image.open(image).convert('RGB')
     k = img.width / S['W']
     pfx = 'night-' if night else ''
-    dim = 0.55 if night else 1.0
     scale = min(1.0, CLOUD_TARGET / img.width)   # 按 4096 尺度算：日景高清 3641 宽就缩一半，夜景 1903 宽基本不缩
-    tone = lambda c: tuple(int(v * dim) for v in c)
     os.makedirs(OUT, exist_ok=True)
     for key, c in S['cutouts'].items():
         if not c.get('poly'):
@@ -59,23 +59,7 @@ def from_base(image, night, local):
             alpha = mask
             if n:
                 cx, cy, rx, ry = c['rim']
-                cx, cy, rx, ry = cx * k - l, cy * k - t, rx * k, ry * k
-                d = ImageDraw.Draw(rgb)
-                d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=tone((246, 222, 160)))
-                if n >= 2:
-                    for dx, dy in [(-0.5, -0.2), (-0.1, 0.3), (0.4, -0.3), (0.65, 0.2), (-0.75, 0.3)]:
-                        d.ellipse([cx + dx * rx - 0.12 * rx, cy + dy * ry - 0.25 * ry, cx + dx * rx + 0.12 * rx, cy + dy * ry + 0.25 * ry], fill=tone((120, 170, 90)))
-                if n >= 3:
-                    for dx, dy in [(-0.33, 0.2), (0.17, -0.3), (0.5, 0.3)]:
-                        d.ellipse([cx + dx * rx - 0.13 * rx, cy + dy * ry - 0.3 * ry, cx + dx * rx + 0.13 * rx, cy + dy * ry + 0.3 * ry], fill=tone((230, 130, 70)))
-                    steam = Image.new('RGBA', rgb.size, (0, 0, 0, 0))
-                    sd = ImageDraw.Draw(steam)
-                    for dx, dy, rr in [(-0.5, -2.2, 0.25), (0.15, -3.2, 0.32), (0.65, -2.0, 0.22)]:
-                        R = rr * rx
-                        sd.ellipse([cx + dx * rx - R, cy + dy * ry - R, cx + dx * rx + R, cy + dy * ry + R], fill=(255, 255, 255, 120))
-                    steam = steam.filter(ImageFilter.GaussianBlur(max(2, 8 * k)))
-                    rgb = Image.alpha_composite(rgb.convert('RGBA'), steam).convert('RGB')
-                    alpha = Image.fromarray(np.maximum(np.array(mask), np.array(steam.split()[3])))
+                rgb = fill(crop_rgb, n, (cx * k - l, cy * k - t, rx * k, ry * k), night_tone() if night else None)
             name = f'{pfx}{key}{"-" + str(n) if n is not None else ""}.png'
             emit(rgb, alpha, name, local, scale)
     print(f'→ {OUT}（按轮廓抠的过渡版）；接着 npm run wx:art')

@@ -7,9 +7,11 @@
         <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <image wx:for="{{cuts}}" wx:key="key" class="cut" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
         <block wx:for="{{fx}}" wx:key="key">
-          <view wx:if="{{item.kind === 'shimmer'}}" class="fx-shimmer" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}; animation-delay: -{{item.delay}}s"></view>
-          <image wx:elif="{{item.kind === 'steam'}}" class="fx-steam" src="{{item.image}}" mode="aspectFit" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s" />
-          <view wx:else class="fx-{{item.kind}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
+          <view wx:if="{{item.kind === 'fire'}}" class="fx-fire" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
+            <image class="fx-fire-strip" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="width: {{item.strip.width}}%; height: {{item.strip.height}}%; left: {{item.strip.left}}%; top: {{item.strip.top}}%; animation-duration: {{item.ms}}ms" />
+          </view>
+          <image wx:elif="{{item.kind === 'wisp'}}" class="fx-wisp" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s; animation-duration: {{item.ms}}ms" />
+          <view wx:else class="fx-{{item.kind}} {{item.variant ? 'fx-' + item.variant : ''}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
         </block>
         <image wx:for="{{decor}}" wx:key="uid" class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
         <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.size}}px; height: {{item.size}}px; z-index: {{item.z}}">

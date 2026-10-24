@@ -9,7 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:art                 把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base/、camp/decor/、camp/anim/、camp/cut/
+//   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base/、camp/decor/、camp/anim/、camp/cut/
 
 const fs = require('fs')
 const path = require('path')
@@ -84,15 +84,21 @@ async function main() {
     ignores: ['node_modules/**/*', 'test/**/*', 'docs/**/*', 'scripts/**/*', '.wechat/**/*'],
   })
 
+  // art/cut 的版本：帐篷 / 锅抠图、火苗逐帧图改过就加一（传到 camp/cut-vN/，再把打印的前缀填进 config.cutArt）
+  const CUT_VERSION = 2
+
   if (command === 'art') {
     const env = envId()
     // 营地底图切块 art/camp/ → camp/base/；装饰块 art/decor/ → camp/decor/；宠物动画拼图 art/anim/ → camp/anim/。有哪个传哪个
+    // 只传某几类：npm run wx:art -- cut（base / decor / anim / cut）；不写就全传
+    const only = process.argv.slice(3)
     const jobs = [
-      { dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', remote: 'camp/base', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
-      { dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
-      { dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
-      { dir: path.join(ROOT, 'art/cut'), check: 'pot-0.png', remote: 'camp/cut', key: 'cutArt', hint: 'python3 scripts/camp/cutouts.py' },
-    ].filter((j) => fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png)$/.test(f)))
+      { name: 'base', dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', remote: 'camp/base', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
+      { name: 'decor', dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
+      { name: 'anim', dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
+      // 抠图层和火苗逐帧图重新生成过就把版本号加一：同名覆盖的话 CDN 和手机会继续用旧图一阵子
+      { name: 'cut', dir: path.join(ROOT, 'art/cut'), check: 'pot-0.png', remote: `camp/cut-v${CUT_VERSION}`, key: 'cutArt', hint: 'python3 scripts/camp/cutouts.py && python3 scripts/camp/fx_art.py' },
+    ].filter((j) => (!only.length || only.includes(j.name)) && fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png)$/.test(f)))
     if (!jobs.length) fail('art/camp/、art/decor/、art/anim/、art/cut/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py、pack_anim.py 或 cutouts.py')
     let bucket = ''
     try {
