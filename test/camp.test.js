@@ -64,7 +64,7 @@ test('inGrass / hitsNogo：篝火中心、帐篷不是草地；margin 和 names 
   assert.equal(C.inGrass(640, 2500), true) // 草坪里没有树、没有小溪
   assert.equal(C.inGrass(3900, 3900), true) // 右下角也是草坪
   assert.equal(C.inGrass(2048, 300), false) // 树林
-  const near = { left: 1320, top: 1300, right: 1390, bottom: 1360 } // 帐篷右边 20px
+  const near = { left: 1080, top: 1300, right: 1150, bottom: 1360 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
   assert.equal(C.hitsNogo(near, 40, ['tent']), true)
   assert.equal(C.hitsNogo(near, 40, ['fire']), false)
