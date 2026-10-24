@@ -69,4 +69,10 @@ test('背包、商店、食盆、色调、横幅', () => {
   const o = V.focusOffset(W / 2, H / 2, L, WIN, 1)
   assert.ok(Math.abs(o.x + L.margin + L.width / 2 - WIN.width / 2) < 1e-9)
   assert.ok(Math.abs(o.y + L.margin + L.height / 2 - WIN.height / 2) < 1e-9)
+  // 默认视角：画填满屏幕高度、居中
+  const home = V.homeView(L, WIN)
+  assert.equal(home.scale, Math.round((WIN.height / L.height) * 100) / 100)
+  assert.ok(home.scale > 1 && home.scale <= 2.5)
+  assert.deepEqual(home, V.focusOffset(W / 2, H / 2, L, WIN, home.scale))
+  assert.deepEqual(V.homeView(L, { width: 375, height: 300 }).scale, 1)
 })

@@ -7,7 +7,6 @@ const { beansCard } = require('../../utils/view')
 const { petById } = require('../../utils/shared/pets')
 const { foodById } = require('../../utils/shared/foods')
 const { decorById, placeProblem } = require('../../utils/shared/decor')
-const { SCENE } = require('../../utils/shared/camp')
 const SHEETS = require('../../utils/anim-sheets')
 
 const DOUBLE_TAP_MS = 300
@@ -132,7 +131,7 @@ Page({
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
     if (!this.centered) {
-      patch.view = V.focusOffset(SCENE.fire[0], SCENE.fire[1], L, win, 1)
+      patch.view = V.homeView(L, win)
       this.centered = true
     }
     this.setData(patch)
@@ -151,7 +150,7 @@ Page({
   },
 
   recenter() {
-    this.nudgeView(V.focusOffset(SCENE.fire[0], SCENE.fire[1], this.L, this.win(), 1))
+    this.nudgeView(V.homeView(this.L, this.win()))
   },
 
   onBaseError() {
@@ -228,18 +227,23 @@ Page({
 
   // ---------------------------------------------------------------- 礼物
 
+  // 4 级以上的住户里挑一只在场的（这会儿不在营地的不算），叼着礼物走到篝火边
   offerGift(view) {
     const givers = view.pets.filter((p) => p.level >= 4).map((p) => p.id)
-    const index = this.life.whereIs().findIndex((w) => givers.indexOf(w.id) !== -1)
-    if (index === -1) return
-    this.giftIndex = index
-    if (this.life.gift(index)) this.setData({ giftShown: true })
+    const here = this.life.whereIs().filter((w) => givers.indexOf(w.id) !== -1)
+    for (const w of here) {
+      if (this.life.gift(w.index)) {
+        this.giftPet = w.id
+        this.setData({ giftShown: true })
+        return
+      }
+    }
   },
 
   takeGift() {
     if (this.taking) return
     this.taking = true
-    api.call('camp.gift')
+    api.call('camp.gift', this.giftPet ? { petId: this.giftPet } : {})
       .then((view) => {
         this.taking = false
         const g = view.gift

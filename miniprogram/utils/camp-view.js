@@ -161,7 +161,13 @@ function focusOffset(x, y, L, win, scale) {
   return { x: win.width / 2 - cx - scale * (px - cx), y: win.height / 2 - cy - scale * (py - cy), scale }
 }
 
+// 首页默认视角：画填满屏幕高度（两侧看不全的拖一拖、捏一下能缩到 0.8 看全貌），画的中心对准屏幕中心
+function homeView(L, win) {
+  const scale = Math.min(2.5, Math.max(1, Math.round((win.height / L.height) * 100) / 100))
+  return focusOffset(W / 2, H / 2, L, win, scale)
+}
+
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView,
 }

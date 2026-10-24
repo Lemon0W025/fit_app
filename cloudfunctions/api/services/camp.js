@@ -234,12 +234,12 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       return view(camp)
     },
 
-    // 早上的礼物：4 级以上的住户里随机一只叼来
-    async gift(openid) {
+    // 早上的礼物：页面里叼着礼物走过来的那只（petId）；没传或不够格，就在 4 级以上的住户里随机一只
+    async gift(openid, data = {}) {
       const camp = await load(openid)
       if (!giftReady(camp)) throw new AppError(CODES.BAD_REQUEST, '今天没有礼物啦')
       const givers = camp.pets.filter((p) => levelOf(p.fed) >= GIFT_LEVEL)
-      const giver = givers[Math.min(givers.length - 1, Math.floor(random() * givers.length))]
+      const giver = givers.find((p) => p.id === data.petId) || givers[Math.min(givers.length - 1, Math.floor(random() * givers.length))]
       const gift = { petId: giver.id, beans: 0, foodId: null }
       if (random() < GIFT_BEANS_CHANCE) {
         gift.beans = GIFT_BEANS

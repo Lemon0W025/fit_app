@@ -189,6 +189,12 @@ test('gift：5 点后每天一次，要有 4 级住户；70% 5 暖豆、30% 普�
   assert.deepEqual(f.foods, [{ id: 'xiaomi', count: 1 }])
   const early = setup({ camp: lv4, hour: 4 })
   assert.equal((await early.service.get('u1')).giftReady, false)
+  // 页面传来叼礼物走过来的那只：按它算；不够 4 级的不认，照旧随机
+  const two = (fedHehe) => rich({ pets: [{ id: 'doudou', since: TODAY, fed: 15, fedToday: { date: '', n: 0 } }, { id: 'hehe', since: TODAY, fed: fedHehe, fedToday: { date: '', n: 0 } }] })
+  const named = setup({ camp: two(20), hour: 8, random: sequence([0.2]) })
+  assert.equal((await named.service.gift('u1', { petId: 'hehe' })).gift.petId, 'hehe')
+  const low = setup({ camp: two(2), hour: 8, random: sequence([0.5, 0.2]) })
+  assert.equal((await low.service.gift('u1', { petId: 'hehe' })).gift.petId, 'doudou')
 })
 
 test('album：12 页宠物（没来的只给提示）、尝过的食物、买过的装饰、进度', async () => {
