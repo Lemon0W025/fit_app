@@ -676,9 +676,9 @@ button.btn-small {
 .tint-dusk { background: linear-gradient(180deg, rgba(255, 150, 60, 0.18), rgba(255, 120, 80, 0.26)); }
 .tint-night { background: radial-gradient(circle at 50% 61%, rgba(255, 170, 60, 0) 0, rgba(255, 170, 60, 0) 9%, rgba(20, 30, 80, 0.45) 30%, rgba(14, 22, 70, 0.6) 100%); }
 
-.fx-firefly { position: absolute; border-radius: 50%; background: radial-gradient(circle, #fff7a8 0%, rgba(255, 240, 120, 0.6) 40%, rgba(255, 240, 120, 0) 70%); animation: glimmer 4s ease-in-out infinite; }
+.fx-firefly { position: absolute; pointer-events: none; border-radius: 50%; background: radial-gradient(circle, #fff7a8 0%, rgba(255, 240, 120, 0.6) 40%, rgba(255, 240, 120, 0) 70%); animation: glimmer 4s ease-in-out infinite; }
 @keyframes glimmer { 0%, 100% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 60% { opacity: 0.3; transform: translate(14px, -18px); } 80% { opacity: 1; } }
-.fx-glow { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255, 220, 120, 0.55) 0%, rgba(255, 200, 80, 0) 70%); animation: pulse 2.6s ease-in-out infinite; mix-blend-mode: screen; }
+.fx-glow { position: absolute; pointer-events: none; border-radius: 50%; background: radial-gradient(circle, rgba(255, 220, 120, 0.55) 0%, rgba(255, 200, 80, 0) 70%); animation: pulse 2.6s ease-in-out infinite; mix-blend-mode: screen; }
 @keyframes pulse { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
 
 /* 宠物头上的表情 */

@@ -44,15 +44,17 @@ const realHour = () => new Date().getHours()
 
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by)
 
-// 一段路 from → to 跨过哪些东西的那条线（lines：[{ l, r, y }]，身子横着挨着它的才算），返回跨过去的那些点（按先后）
+// 一段路 from → to 跨过哪些东西的那条线（lines：[{ l, r, y }]），返回跨过去的那些点（按先后）。
+// 只要这一段路上身子哪儿横着挨着它就算（不只是跨线那一下）：斜着走，跨线时在旁边、走着走着挨上了，也得在跨线处切开，
+// 不然后半段按前半段的前后排，走到提灯后面还盖在提灯上面
 function depthCuts(from, to, half, lines) {
   const ts = []
+  const len = Math.hypot(to.x - from.x, to.y - from.y)
   lines.forEach((o) => {
     if ((from.y - o.y) * (to.y - o.y) >= 0) return
+    if (Math.max(from.x, to.x) + half < o.l || Math.min(from.x, to.x) - half > o.r) return
     const t = (o.y - from.y) / (to.y - from.y)
-    const x = from.x + (to.x - from.x) * t
-    if (x + half < o.l || x - half > o.r) return
-    if (t > 0.01 && t < 0.99) ts.push(t)
+    if (t * len > 1 && (1 - t) * len > 1) ts.push(t)
   })
   ts.sort((p, q) => p - q)
   return ts.map((t) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, piece: true }))
@@ -86,7 +88,7 @@ function createLife({
       const s = scaleAt(p.y)
       d.spots.forEach((sp) => {
         if (sp.action !== action) return
-        out.push({ x: rect.left + sp.x * s, y: rect.top + sp.y * s, action, uid: p.uid, name: d.name })
+        out.push({ x: rect.left + sp.x * s, y: rect.top + sp.y * s, action, uid: p.uid, name: d.name, baseY: p.y })
       })
     })
     return out
@@ -154,7 +156,7 @@ function createLife({
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
     const shadowW = width * SHADOW_RATIO
     return {
-      id: a.id, name: a.pet.name, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(a.depthY == null ? a.y : a.depthY) + 1,
+      id: a.id, name: a.pet.name, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
       bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (x - width / 2), bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
@@ -163,6 +165,14 @@ function createLife({
       ...nightLayers(a.x, a.y),
       shadow: { left: x - shadowW / 2, bottom: L.height - y - shadowW / 6, width: shadowW, height: shadowW / 3 },
     }
+  }
+
+  // 排前后用的 y：走路时按这一小段的中点；在装饰上玩、睡（吊床、窝、梯子）就排在那件装饰前面（盖在它上面）；其余按脚下
+  function sortY(a) {
+    if (a.depthY != null) return a.depthY
+    const spot = a.goal && !a.goal.path && a.goal.spot
+    if (spot && spot.baseY != null && Math.hypot(a.x - spot.x, a.y - spot.y) < 1) return Math.max(a.y, spot.baseY + 4)
+    return a.y
   }
 
   function nightLayers(x, y) {
@@ -503,8 +513,9 @@ function createLife({
       })
     },
 
+    // 暂停过才重新开始（没暂停时再 start 会让正在走的跳过这一步剩下的路）
     resume() {
-      this.start()
+      if (!running) this.start()
     },
 
     stop() {
