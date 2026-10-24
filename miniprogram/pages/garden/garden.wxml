@@ -9,7 +9,7 @@
         <block wx:for="{{sprites}}" wx:key="uid">
           <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>
           <view wx:if="{{item.ripple}}" class="ripple-item" style="left: {{item.ripple.left}}px; bottom: {{item.ripple.bottom}}px; width: {{item.ripple.width}}px; height: {{item.ripple.height}}px; z-index: {{item.z + 9}}"></view>
-          <image class="sprite {{item.flip ? 'flip' : ''}} {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
+          <image class="sprite {{item.flip ? 'flip' : ''}} {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" bindlongpress="liftSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
         </block>
         <block wx:for="{{animals}}" wx:key="id">
           <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}; transition-duration: {{item.duration}}ms"></view>
@@ -46,6 +46,10 @@
           <view class="confetti-bit b5"></view>
           <view class="confetti-bit b6"></view>
         </view>
+      </view>
+      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
+        <view wx:if="{{target}}" class="drag-target {{target.ok ? 'ok' : 'bad'}}" style="left: {{target.left}}px; top: {{target.top}}px; width: {{target.width}}px; height: {{target.height}}px"></view>
+        <image wx:if="{{drag}}" class="drag-ghost {{drag.flip ? 'flip' : ''}} {{drag.ok ? '' : 'bad'}}" src="{{drag.image}}" mode="widthFix" style="left: {{drag.left}}px; bottom: {{drag.bottom}}px; width: {{drag.width}}px" />
       </view>
     </movable-view>
   </movable-area>
@@ -103,7 +107,7 @@
     </view>
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
-      <view class="placing-text">{{mode === 'place' ? '摆放' : '移动'}}「{{selectedName}}」：点一块亮着的空地</view>
+      <view class="placing-text">{{mode === 'place' ? '摆放' : '移动'}}「{{selectedName}}」：拖到亮着的空地松手，或者点一下</view>
       <view class="placing-btns">
         <button class="btn-plain btn-small" bindtap="toggleFlip">↔ 换个方向</button>
         <button class="btn-plain btn-small" bindtap="cancel">取消</button>

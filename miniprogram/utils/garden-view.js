@@ -29,6 +29,11 @@ function shadowOf(x, y, width, L) {
   return { left: x - w / 2, bottom: L.height - y - h / 2, width: w, height: h }
 }
 
+// 拖着走的幽灵图：和摆下去一样宽
+function ghostWidth(itemId, L) {
+  return itemAnchor({ itemId, c: 0, r: 0 }, L).width
+}
+
 function itemImage(id) {
   return `/images/garden/items/${id}.png`
 }
@@ -120,4 +125,4 @@ function arrivalCard(arrival) {
   return { id: arrival.id, name: arrival.name, image: itemImage(arrival.id), text: ANIMAL_INFO[arrival.id].arrive }
 }
 
-module.exports = { SIZE_SCALE, FOOT2_SCALE, itemImage, rarityOf, itemAnchor, shadowOf, buildScene, inventoryList, collectionGroups, arrivalCard }
+module.exports = { SIZE_SCALE, FOOT2_SCALE, itemImage, rarityOf, itemAnchor, ghostWidth, shadowOf, buildScene, inventoryList, collectionGroups, arrivalCard }

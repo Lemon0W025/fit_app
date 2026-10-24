@@ -238,6 +238,42 @@ page {
   filter: drop-shadow(0 2rpx 2rpx rgba(60, 50, 30, 0.2));
 }
 
+/* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
+.drag-layer {
+  position: absolute;
+  z-index: 2500;
+}
+
+.drag-ghost {
+  position: absolute;
+  opacity: 0.92;
+  pointer-events: none;
+  transform: scale(1.08);
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 14rpx 12rpx rgba(40, 30, 10, 0.35));
+}
+
+.drag-ghost.flip {
+  transform: scale(1.08) scaleX(-1);
+}
+
+.drag-ghost.bad {
+  opacity: 0.6;
+  filter: grayscale(0.5) drop-shadow(0 14rpx 12rpx rgba(40, 30, 10, 0.35));
+}
+
+.drag-target {
+  position: absolute;
+  pointer-events: none;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  -webkit-clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: rgba(120, 220, 110, 0.55);
+}
+
+.drag-target.bad {
+  background: rgba(230, 90, 70, 0.5);
+}
+
 .sprite-ghost {
   pointer-events: none;
   opacity: 0.85;

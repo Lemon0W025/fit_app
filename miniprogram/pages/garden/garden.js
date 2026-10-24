@@ -2,10 +2,11 @@ const api = require('../../utils/api')
 const config = require('../../config')
 const W = require('../../utils/world')
 const A = require('../../utils/animals')
-const { buildScene, inventoryList } = require('../../utils/garden-view')
+const { buildScene, inventoryList, ghostWidth, itemImage } = require('../../utils/garden-view')
 const { beansCard } = require('../../utils/view')
 const { itemById } = require('../../utils/shared/garden')
 const { SPOTS, DOOR, areaById, tileInfo, walkable, placeProblem } = require('../../utils/shared/estate')
+const { tileTop } = require('../../utils/iso')
 const { createLife } = require('../../utils/garden-life')
 const O = require('../../utils/occlusion')
 const SHEETS = require('../../utils/anim-sheets')
@@ -60,6 +61,9 @@ Page({
     selectedName: '',
     placingFlip: false,
     hints: [],
+    // 拖动摆放：幽灵图跟着手指，目标格亮绿（能放）或红（不能）
+    drag: null,
+    target: null,
     justOpened: '',
     burst: null,
     welcome: null,
@@ -244,6 +248,103 @@ Page({
       hints: W.hintViews(this.opened, this.garden.placed, id, null, this.L),
     })
     if (this.life) this.life.pause()
+    this.queryWorldRect()
+  },
+
+  // 长按摆好的东西：拎起来，接着拖到别的格
+  liftSprite(e) {
+    if (this.data.mode !== 'view') return
+    const uid = e.currentTarget.dataset.uid
+    const sprite = this.data.sprites.find((s) => s.uid === uid)
+    if (!sprite) return
+    this.startMove(sprite)
+    wx.vibrateShort && wx.vibrateShort({ type: 'light' })
+  },
+
+  startMove(sprite) {
+    this.selected = { type: 'move', uid: sprite.uid, itemId: sprite.itemId }
+    this.setData({
+      mode: 'move',
+      selectedName: sprite.name,
+      placingFlip: sprite.flip,
+      hints: W.hintViews(this.opened, this.garden.placed, sprite.itemId, sprite.uid, this.L),
+    })
+    if (this.life) this.life.pause()
+    this.queryWorldRect()
+  },
+
+  // #world 此刻在屏幕上的位置（含拖动和缩放），拖东西时换算手指位置用
+  queryWorldRect(cb) {
+    wx.createSelectorQuery()
+      .select('#world')
+      .boundingClientRect()
+      .exec((res) => {
+        if (res && res[0]) this.worldRect = res[0]
+        if (cb) cb()
+      })
+  },
+
+  // ---- 拖动层：摆放 / 移动时盖在地图上，吃掉触摸（地图不再跟着平移）
+  onDragStart(e) {
+    const t = e.touches && e.touches[0]
+    if (!t || !this.selected) return
+    this.dragFrom = { x: t.clientX, y: t.clientY }
+    this.queryWorldRect(() => this.updateDrag(t.clientX, t.clientY))
+  },
+
+  onDragMove(e) {
+    const t = e.touches && e.touches[0]
+    if (!t || !this.selected) return
+    this.updateDrag(t.clientX, t.clientY)
+  },
+
+  onDragEnd(e) {
+    const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
+    this.setData({ drag: null, target: null })
+    if (!t || !this.selected) return
+    const tile = this.worldRect ? W.tileFromTouch(t.clientX, t.clientY, this.worldRect, this.L) : null
+    this.placeAt(tile)
+  },
+
+  updateDrag(x, y) {
+    const sel = this.selected
+    const rect = this.worldRect
+    if (!sel || !rect) return
+    const L = this.L
+    const scale = rect.width / L.width
+    const wx0 = (x - rect.left) / scale
+    const wy = (y - rect.top) / scale
+    const width = ghostWidth(sel.itemId, L)
+    const tile = W.tileFromTouch(x, y, rect, L)
+    const problem = tile ? placeProblem(this.opened, this.garden.placed, sel.itemId, tile.c, tile.r, sel.type === 'move' ? sel.uid : undefined) : '放不到这里哦'
+    let target = null
+    if (tile) {
+      const top = tileTop(tile.c, tile.r, L)
+      const foot = itemById(sel.itemId).foot === 2 ? 2 : 1
+      target = { left: top.x - (L.tileW * foot) / 2, top: top.y, width: L.tileW * foot, height: L.tileH * foot, ok: !problem }
+    }
+    // 幽灵图提到手指上方一点，别被手指挡住
+    this.setData({
+      drag: { image: itemImage(sel.itemId), width, left: wx0 - width / 2, bottom: L.height - wy + L.tileH * 1.2, flip: this.data.placingFlip, ok: !problem },
+      target,
+    })
+  },
+
+  // 落到某一格（点一下或者拖过去松手）
+  placeAt(tile) {
+    const sel = this.selected
+    if (!sel) return
+    if (!tile) {
+      wx.showToast({ title: '放不到这里哦', icon: 'none' })
+      return
+    }
+    const problem = placeProblem(this.opened, this.garden.placed, sel.itemId, tile.c, tile.r, sel.type === 'move' ? sel.uid : undefined)
+    if (problem) {
+      wx.showToast({ title: problem, icon: 'none' })
+      return
+    }
+    if (sel.type === 'place') this.save('garden.place', { itemId: sel.itemId, c: tile.c, r: tile.r, flip: this.data.placingFlip })
+    else this.save('garden.move', { uid: sel.uid, c: tile.c, r: tile.r })
   },
 
   tapSprite(e) {
@@ -255,14 +356,7 @@ Page({
       itemList: ['移动位置', '收回背包'],
       success: (res) => {
         if (res.tapIndex === 0) {
-          this.selected = { type: 'move', uid, itemId: sprite.itemId }
-          this.setData({
-            mode: 'move',
-            selectedName: sprite.name,
-            placingFlip: sprite.flip,
-            hints: W.hintViews(this.opened, this.garden.placed, sprite.itemId, uid, this.L),
-          })
-          if (this.life) this.life.pause()
+          this.startMove(sprite)
         } else if (res.tapIndex === 1) {
           this.save('garden.stash', { uid }, `${sprite.name}收进背包了`)
         }
@@ -297,16 +391,10 @@ Page({
       .exec((res) => {
         const rect = res && res[0]
         if (!rect) return
+        this.worldRect = rect
         const tile = W.tileFromTouch(x, y, rect, this.L)
         if (!tile) return
-        const sel = this.selected
-        const problem = placeProblem(this.opened, this.garden.placed, sel.itemId, tile.c, tile.r, sel.type === 'move' ? sel.uid : undefined)
-        if (problem) {
-          wx.showToast({ title: problem, icon: 'none' })
-          return
-        }
-        if (sel.type === 'place') this.save('garden.place', { itemId: sel.itemId, c: tile.c, r: tile.r, flip: this.data.placingFlip })
-        else this.save('garden.move', { uid: sel.uid, c: tile.c, r: tile.r })
+        this.placeAt(tile)
       })
   },
 
@@ -328,7 +416,7 @@ Page({
 
   cancel() {
     this.selected = null
-    this.setData({ mode: 'view', selectedName: '', placingFlip: false, hints: [] })
+    this.setData({ mode: 'view', selectedName: '', placingFlip: false, hints: [], drag: null, target: null })
     if (this.life) this.life.resume()
   },
 

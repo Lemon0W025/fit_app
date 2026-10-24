@@ -302,6 +302,36 @@ test('园林大宅院首页：今日暖豆、底图云朵木牌、扭蛋、背�
   garden.tapLand(tap(other.c, other.r))
   await settle()
   assert.deepEqual((({ c, r }) => [c, r])(garden.data.sprites.find((x) => x.uid === mine.uid)), [other.c, other.r])
+
+  // 拖动：长按拎起 → 拖到小路上幽灵变红 → 拖到亮着的空地松手就落下；拖动层上点一下也算
+  const touch = (c, r) => {
+    const p = tileCenter(c, r, garden.L)
+    const t = { clientX: wx.worldRect.left + p.x * 0.8, clientY: wx.worldRect.top + p.y * 0.8 }
+    return { touches: [t], changedTouches: [t] }
+  }
+  garden.liftSprite(event({ uid: mine.uid }))
+  assert.equal(garden.data.mode, 'move')
+  garden.onDragStart(touch(13, 15))
+  assert.equal(garden.data.target.ok, false)
+  assert.equal(garden.data.drag.ok, false)
+  assert.equal(garden.data.drag.image, `/images/garden/items/${itemId}.png`)
+  const dest = garden.data.hints.find((t) => t.c !== other.c || t.r !== other.r)
+  garden.onDragMove(touch(dest.c, dest.r))
+  assert.equal(garden.data.target.ok, true)
+  assert.ok(garden.data.drag.ok)
+  assert.ok(garden.data.drag.bottom > garden.L.height - tileCenter(dest.c, dest.r, garden.L).y, '幽灵图在手指上方')
+  garden.onDragEnd(touch(dest.c, dest.r))
+  await settle()
+  assert.equal(garden.data.mode, 'view')
+  assert.equal(garden.data.drag, null)
+  assert.deepEqual((({ c, r }) => [c, r])(garden.data.sprites.find((x) => x.uid === mine.uid)), [dest.c, dest.r])
+  // 松手在放不了的地方：提示，还在移动模式
+  garden.liftSprite(event({ uid: mine.uid }))
+  garden.onDragEnd(touch(0, 0))
+  assert.equal(wx.log.toasts.pop(), '放不到这里哦')
+  assert.equal(garden.data.mode, 'move')
+  garden.cancel()
+  assert.equal(garden.data.mode, 'view')
   wx.actionSheetChoice = 1
   garden.tapSprite(event({ uid: mine.uid }))
   await settle()
