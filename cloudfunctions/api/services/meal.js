@@ -29,7 +29,7 @@ function beansChange(beforeMeals, afterMeals) {
   }
 }
 
-function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, garden, log = () => {} }) {
+function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, camp, log = () => {} }) {
   async function requireProfile(openid) {
     const profile = await repo.getProfile(openid)
     if (!profile) throw new AppError(CODES.NO_PROFILE, '先完善一下个人档案吧')
@@ -111,13 +111,13 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       }
       const saved = { _id: await repo.addMeal(meal), ...meal }
 
-      // 只有正餐算暖豆、引来小动物，加餐不算
+      // 只有正餐算暖豆、喂宠物、引来新住户，加餐不算
       let gain = null
       let arrival = null
       if (isMainMeal(src.mealType)) {
         await forest.syncDay(openid, date)
         gain = beansChange(meals, meals.concat(saved))
-        arrival = await garden.arrive(openid)
+        arrival = await camp.arrive(openid)
       }
       return { ...saved, gain, arrival }
     },

@@ -1,5 +1,5 @@
 const { AppError, CODES } = require('../lib/errors')
-const { normalizeGarden } = require('../lib/garden-state')
+const { normalizeCamp } = require('../lib/camp-state')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey, addDays } = require('../lib/shared/date')
 const { dayTree, mealStamps, beansHint, streakFrom } = require('../lib/shared/forest')
@@ -18,7 +18,7 @@ function shiftMonth(month, n) {
 
 function createForestService({ repo, now }) {
   async function load(openid) {
-    return normalizeGarden(await repo.getGarden(openid))
+    return normalizeCamp(await repo.getGarden(openid))
   }
 
   async function todayView(openid, date, meals, garden) {

@@ -14,7 +14,7 @@ const { createMealService } = require('./services/meal')
 const { createDayService } = require('./services/day')
 const { createWeightService } = require('./services/weight')
 const { createForestService } = require('./services/forest')
-const { createGardenService } = require('./services/garden')
+const { createCampService } = require('./services/camp')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -23,16 +23,16 @@ const repo = createRepo(cloud.database())
 const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
-const garden = createGardenService({ repo, now, forest, getGrant: () => config.testGrant })
+const camp = createCampService({ repo, now, forest, getGrant: () => config.testGrant })
 
 const route = createRouter(
   {
     profile: createProfileService({ repo, now }),
-    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, garden, log }),
+    meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, camp, log }),
     day: createDayService({ repo, chat, config, now, forest, log }),
     weight: createWeightService({ repo, now }),
     forest,
-    garden,
+    camp,
   },
   { log },
 )

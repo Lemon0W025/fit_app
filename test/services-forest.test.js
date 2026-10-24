@@ -50,18 +50,23 @@ test('syncDay：只剩加餐时这天不算种树，暖豆收回', async () => {
   assert.deepEqual(garden.beans.earned, {})
 })
 
-test('syncDay：保留花园里其他字段，去掉旧的树种字段', async () => {
+test('syncDay：旧档先迁成营地再记豆；营地文档里其他字段保留', async () => {
   const { repo, forest } = setup()
   await repo.saveGarden('u1', { currentSpecies: 'peach', unlocked: ['apple'], unseen: [], days: { '2026-10-20': 'apple' }, inventory: { daisy: 2 }, beans: { spent: 30, bonus: 60, earned: {} } })
   await addMeal(repo, TODAY, 'lunch')
   await forest.syncDay('u1', TODAY)
   const garden = await repo.getGarden('u1')
-  assert.deepEqual(garden.inventory, { daisy: 2 })
-  assert.equal(garden.beans.spent, 30)
-  assert.equal(garden.beans.bonus, 60)
+  assert.equal(garden.camp, 1)
+  assert.equal(garden.inventory, undefined)
+  assert.deepEqual(garden.beans, { spent: 0, bonus: 0, earned: { [TODAY]: 10 } })
   assert.deepEqual(garden.days, { '2026-10-20': 'apple', [TODAY]: true })
   assert.equal(garden.currentSpecies, undefined)
   assert.equal(garden.unlocked, undefined)
+  await repo.saveGarden('u1', { ...garden, foods: { xiaomi: 2 }, beans: { ...garden.beans, bonus: 60, spent: 30 } })
+  await forest.syncDay('u1', TODAY)
+  const again = await repo.getGarden('u1')
+  assert.deepEqual(again.foods, { xiaomi: 2 })
+  assert.deepEqual(again.beans, { spent: 30, bonus: 60, earned: { [TODAY]: 10 } })
 })
 
 test('today：今天的印章、暖豆、提示和连续天数', async () => {
