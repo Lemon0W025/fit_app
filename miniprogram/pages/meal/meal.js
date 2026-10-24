@@ -1,6 +1,6 @@
 const api = require('../../utils/api')
 const { decorateMeal, decorateGain } = require('../../utils/view')
-const { arrivalCard } = require('../../utils/garden-view')
+const { arrivalCard } = require('../../utils/camp-view')
 
 Page({
   data: {
@@ -86,8 +86,8 @@ Page({
     })
   },
 
-  goGarden() {
-    wx.switchTab({ url: '/pages/garden/garden' })
+  goCamp() {
+    wx.switchTab({ url: '/pages/camp/camp' })
   },
 
   backToToday() {

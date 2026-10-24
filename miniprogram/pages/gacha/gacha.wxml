@@ -20,7 +20,7 @@
   <view class="card info">
     <view class="info-line">🎯 再扭 <text class="strong">{{pityLeft}}</text> 次，必出珍稀以上</view>
     <view class="info-line muted small">出货概率：{{ratesText}}</view>
-    <view class="info-line muted small">暖豆只能靠打卡赚：每天的树长得越好，暖豆越多</view>
+    <view class="info-line muted small">暖豆只能靠打卡赚：每天早午晚三顿都打卡，暖豆最多</view>
   </view>
 
   <view wx:if="{{phase === 'capsule' || phase === 'reveal'}}" class="overlay">
@@ -36,7 +36,7 @@
       <view class="reveal-name">{{result.name}}</view>
       <view class="rarity-pill" style="background: {{result.rarityColor}}">{{result.rarityLabel}}</view>
       <view class="reveal-actions">
-        <button class="btn-plain reveal-btn" bindtap="goPlace">去摆放</button>
+        <button class="btn-plain reveal-btn" bindtap="goCamp">去喂它们</button>
         <button class="btn-primary reveal-btn" bindtap="spin" disabled="{{beans < spinCost}}">再扭一次</button>
       </view>
       <view class="link link-muted" bindtap="closeResult">收进背包</view>

@@ -63,6 +63,8 @@ Page({
       })
       .then((meal) => {
         getApp().globalData.lastGain = { mealId: meal._id, gain: meal.gain, arrival: meal.arrival }
+        // 正餐打卡成功：回营地时全员到篝火边庆祝
+        if (meal.gain) getApp().globalData.celebrate = true
         wx.redirectTo({ url: `/pages/meal/meal?id=${meal._id}` })
       })
       .catch((err) => {

@@ -362,7 +362,14 @@ function createLife({
     start() {
       running = true
       animals.forEach((a) => {
-        if (a.goal && a.goal.path) return stepAlong(a)
+        // 叼着礼物的：接着走，或者已经到了就举着
+        if (a.holdGift) {
+          if (a.goal && a.goal.path && a.goal.path.length) return stepAlongGift(a)
+          if (a.goal && a.goal.then && a.action !== 'gift') return a.goal.then(a)
+          return
+        }
+        // 暂停时正在走：路没走完接着走；走完了（path 空）下一回合由 turn 收尾
+        if (a.goal && a.goal.path && a.goal.path.length) return stepAlong(a)
         schedule(a, between(START_MS))
       })
     },

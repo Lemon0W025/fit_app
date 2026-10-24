@@ -41,7 +41,7 @@ Page({
   },
 
   goGarden() {
-    wx.switchTab({ url: '/pages/garden/garden' })
+    wx.switchTab({ url: '/pages/camp/camp' })
   },
 
   goCheckin() {

@@ -90,7 +90,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.match(wx.log.uploads[0].cloudPath, /^meals\/\d{4}-\d{2}-\d{2}\/\d+-\w+\.jpg$/)
 
   // 4. 详情页
-  assert.ok(readWxml('meal').includes('回到花园'))
+  assert.ok(readWxml('meal').includes('回到营地'))
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
@@ -119,7 +119,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(today.data.daily.hint, '再打卡晚餐还能得 10 暖豆')
   assert.equal(today.data.daily.streakText, '🔥 已连续 1 天')
   today.goGarden()
-  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
+  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/camp/camp'])
   assert.match(today.data.greeting, /妈妈/)
   today.openMeal(event({ id: mealId }))
   assert.deepEqual(wx.log.nav.pop(), ['navigateTo', `/pages/meal/meal?id=${mealId}`])

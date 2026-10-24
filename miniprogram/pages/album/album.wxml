@@ -1,0 +1,51 @@
+<view wx:if="{{!loaded}}" class="empty">翻开图册…</view>
+<swiper wx:if="{{loaded}}" class="book" current="{{current}}" bindchange="onSwipe" previous-margin="24rpx" next-margin="24rpx">
+  <swiper-item wx:for="{{pages}}" wx:key="key" wx:for-item="pg">
+    <view class="leaf">
+      <block wx:if="{{pg.kind === 'cover'}}">
+        <image class="cover-img" src="/images/garden/ui/book.png" mode="aspectFit" />
+        <view class="cover-title">暖暖营地图册</view>
+        <view class="cover-progress">住户 {{pg.progress.pets}} / {{pg.progress.total}}</view>
+        <view wx:if="{{pg.full}}" class="cover-full">🎉 全员到齐，金色小帐篷已经送到背包</view>
+        <view class="muted small">左右翻页，看每一只的故事</view>
+      </block>
+      <block wx:elif="{{pg.kind === 'pet'}}">
+        <image class="pet-img {{pg.home ? '' : 'locked'}}" src="{{pg.image}}" mode="aspectFit" />
+        <view class="pet-name">{{pg.home ? pg.name : '？？？'}}</view>
+        <block wx:if="{{pg.home}}">
+          <view class="pet-hook">{{pg.hook}}</view>
+          <view class="muted">{{pg.mood}} · {{pg.foodsText}}</view>
+          <view class="muted small">{{pg.sinceText}} · 喂了 {{pg.fed}} 顿 · {{pg.levelText}}</view>
+          <view class="story">
+            <view wx:for="{{pg.story}}" wx:key="index" wx:for-item="s" class="story-line {{s.open ? '' : 'story-locked'}}">{{s.open ? s.text : '……（再喂熟一点就会告诉你）'}}</view>
+          </view>
+        </block>
+        <view wx:else class="pet-hint">{{pg.hint}}</view>
+      </block>
+      <block wx:elif="{{pg.kind === 'foods'}}">
+        <view class="leaf-title">尝过的食物</view>
+        <view class="grid">
+          <view wx:for="{{pg.foods}}" wx:key="id" class="cell">
+            <image class="cell-image {{item.tasted ? '' : 'locked'}}" src="{{item.image}}" mode="aspectFit" />
+            <view class="cell-name">{{item.tasted ? item.name : '？？？'}}</view>
+            <view wx:if="{{item.termName}}" class="cell-term">{{item.termName}}限定</view>
+            <view wx:if="{{item.tasted}}" class="cell-tip">{{item.tip}}</view>
+          </view>
+        </view>
+      </block>
+      <block wx:else>
+        <view class="leaf-title">买过的装饰</view>
+        <view class="grid">
+          <view wx:for="{{pg.decor}}" wx:key="id" class="cell">
+            <image class="cell-image {{item.owned ? '' : 'locked'}}" src="{{item.image}}" mode="aspectFit" />
+            <view class="cell-name">{{item.name}}</view>
+          </view>
+        </view>
+      </block>
+    </view>
+  </swiper-item>
+</swiper>
+<view wx:if="{{loaded}}" class="foot">
+  <text class="muted small">{{current + 1}} / {{pages.length}}</text>
+  <button class="btn-primary btn-small" bindtap="goGacha">去扭蛋</button>
+</view>

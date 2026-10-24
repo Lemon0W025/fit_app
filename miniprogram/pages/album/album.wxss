@@ -1,0 +1,23 @@
+.empty { padding: 120rpx 0; text-align: center; color: var(--muted); }
+.book { height: 80vh; }
+.leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #fffdf7; border-radius: 28rpx; box-shadow: 0 8rpx 24rpx rgba(80, 60, 30, 0.12); overflow-y: auto; }
+.cover-img { width: 240rpx; height: 240rpx; display: block; margin: 40rpx auto 24rpx; }
+.cover-title { text-align: center; font-size: 44rpx; font-weight: 700; }
+.cover-progress { text-align: center; font-size: 36rpx; color: var(--primary); margin: 16rpx 0; }
+.cover-full { text-align: center; color: #9a6b12; margin-bottom: 16rpx; }
+.pet-img { width: 320rpx; height: 320rpx; display: block; margin: 0 auto 16rpx; }
+.locked { filter: brightness(0) opacity(0.18); }
+.pet-name { text-align: center; font-size: 42rpx; font-weight: 700; }
+.pet-hook { text-align: center; font-size: 30rpx; margin: 8rpx 0; }
+.pet-hint { text-align: center; color: var(--muted); margin-top: 24rpx; }
+.story { margin-top: 24rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.story-line { font-size: 30rpx; line-height: 1.6; padding-left: 20rpx; border-left: 6rpx solid var(--primary-soft); }
+.story-locked { color: var(--gray); }
+.leaf-title { font-size: 36rpx; font-weight: 600; margin-bottom: 16rpx; }
+.grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
+.cell { width: calc((100% - 32rpx) / 3); display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
+.cell-image { width: 120rpx; height: 120rpx; }
+.cell-name { font-size: 26rpx; }
+.cell-term { font-size: 22rpx; color: #d97a1e; }
+.cell-tip { font-size: 22rpx; color: var(--muted); text-align: center; }
+.foot { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 40rpx; }

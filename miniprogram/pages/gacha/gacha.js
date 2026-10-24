@@ -1,6 +1,6 @@
 const api = require('../../utils/api')
-const { itemImage, rarityOf } = require('../../utils/garden-view')
-const { itemById } = require('../../utils/shared/garden')
+const { foodImage, rarityOf } = require('../../utils/camp-view')
+const { foodById } = require('../../utils/shared/foods')
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -23,17 +23,17 @@ Page({
 
   onShow() {
     if (this.data.phase !== 'idle') return
-    api.call('garden.get')
+    api.call('camp.get')
       .then((view) => {
         const total = view.rates.reduce((sum, r) => sum + r.weight, 0)
-        const termItems = view.term ? view.term.items.map((id) => itemById(id).name).join('、') : ''
+        const termItems = view.term ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
         this.setData({
           loaded: true,
           beans: view.beans,
           spinCost: view.spinCost,
           pityLeft: view.pityLeft,
           ratesText: view.rates.map((r) => `${r.label} ${Math.round((r.weight / total) * 100)}%`).join(' · '),
-          termText: termItems ? `${view.term.name}限定「${termItems}」出现概率提高` : '',
+          termText: termItems ? `${view.term.name}限定点心「${termItems}」出现概率提高` : '',
         })
       })
       .catch((err) => api.showError(err))
@@ -46,18 +46,18 @@ Page({
       return
     }
     this.setData({ phase: 'shaking', result: null })
-    Promise.all([api.call('garden.spin'), wait(this.shakeMs)])
+    Promise.all([api.call('camp.spin'), wait(this.shakeMs)])
       .then(([res]) => {
-        const item = itemById(res.itemId)
+        const item = foodById(res.foodId)
         const rarity = rarityOf(res.rarity)
         this.setData({
           phase: 'capsule',
           beans: res.beans,
           pityLeft: res.pityLeft,
           result: {
-            itemId: res.itemId,
+            foodId: res.foodId,
             name: item ? item.name : '',
-            image: itemImage(res.itemId),
+            image: foodImage(res.foodId),
             capsule: `/images/garden/ui/capsule-${rarity.id}.png`,
             rarity: rarity.id,
             rarityLabel: rarity.label,
@@ -80,8 +80,8 @@ Page({
     this.setData({ phase: 'idle', result: null })
   },
 
-  goPlace() {
+  goCamp() {
     this.setData({ phase: 'idle', result: null })
-    wx.switchTab({ url: '/pages/garden/garden' })
+    wx.switchTab({ url: '/pages/camp/camp' })
   },
 })
