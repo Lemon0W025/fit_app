@@ -330,6 +330,16 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.equal(camp.data.decor.length, 0)
   assert.equal(camp.data.decorBag[0].id, 'ball')
 
+  // 页面开着跨过 19 点：一分钟内换成夜景整套（底图、抠图、垫图都带 night-）
+  assert.ok(camp.data.base[0].image.indexOf('night-') === -1 && camp.data.backdrop.indexOf('night-') === -1)
+  camp.hour = () => 19
+  camp.clock.advance(60000)
+  assert.ok(camp.data.backdrop.indexOf('night-backdrop') !== -1)
+  assert.ok(camp.data.cuts.every((c) => c.image.indexOf('night-') !== -1))
+  camp.hour = () => 10
+  camp.clock.advance(60000)
+  assert.ok(camp.data.backdrop.indexOf('night-') === -1)
+
   // 找它
   camp.openResidents()
   assert.deepEqual(camp.data.residents.map((r) => r.name), ['豆豆', '糯糯'])

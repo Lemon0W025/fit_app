@@ -10,6 +10,7 @@ const { decorById, placeProblem } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
 
 const DOUBLE_TAP_MS = 300
+const HOUR_CHECK_MS = 60000
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -144,6 +145,7 @@ Page({
     }
     this.setData(patch)
     this.syncLife(view, fresh)
+    if (!this.hourTimer) this.watchHour()
     if (view.testGift) {
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，扭蛋、买装饰随便试试`, showCancel: false, confirmText: '好的' })
     }
@@ -228,6 +230,26 @@ Page({
   stopLife() {
     if (this.life) this.life.stop()
     this.life = null
+    this.stopWatchHour()
+  },
+
+  // 页面一直开着跨过 6 / 17 / 19 点：换日景 / 夜景整套、傍晚的色调（宠物自己每走一步就按新钟点上色，画也要跟上）
+  watchHour() {
+    const clock = this.clock || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h) }
+    this.stopWatchHour()
+    this.hourTimer = clock.set(() => {
+      this.hourTimer = null
+      const h = this.nowHour()
+      if (this.camp && (V.isNight(h) !== this.baseNight || V.tintFor(h) !== this.data.tint)) this.render(this.camp)
+      this.watchHour()
+    }, HOUR_CHECK_MS)
+  },
+
+  stopWatchHour() {
+    if (!this.hourTimer) return
+    const clock = this.clock || { clear: (h) => clearTimeout(h) }
+    clock.clear(this.hourTimer)
+    this.hourTimer = null
   },
 
   // 点一下说话；300ms 内再点一下是连点（打滚）

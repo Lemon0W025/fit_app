@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk（不写全录）
 //   输出到 .preview/camp/<场景>.mp4、.gif（.preview 不进仓库）
 //
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了；Playwright 不进 package.json，测试仍然零依赖）。云存储的图换成仓库里 art/ 下的同名文件
@@ -57,6 +57,8 @@ const SCENARIOS = {
     plan: [[0, 0, 1700, 1750], [0, 1, 800, 1850], [0, 2, 1650, 1450], [500, 0, 1210, 1460], [500, 1, 1000, 1530], [500, 2, 1420, 1400]],
   },
   'overview-day': { hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
+  // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
+  'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 2.0, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
 }
 
 async function build(sc) {
