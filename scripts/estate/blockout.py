@@ -35,6 +35,14 @@ COLORS = {
 }
 WALL = (240, 238, 232)
 WALL_TOP = (72, 80, 96)
+HEDGE = (104, 158, 74)
+STONE = (168, 164, 154)
+STONE_DARK = (132, 128, 118)
+SAKURA = (244, 190, 206)
+HEDGE_H = 0.7
+FENCE_H = 0.55
+CLIFF_H = 0.5
+POST_H = 0.9
 WIDE = '--wide' in sys.argv
 WALL_H = TH * (2.2 if WIDE else 1.6)
 GATE_R = TH * (1.1 if WIDE else 0.9)  # 月亮门洞半径（洞底贴地：圆心高 = 半径）
@@ -44,8 +52,8 @@ WOOD = (150, 104, 64)
 def load_layout():
     js = (
         "const E=require('./cloudfunctions/api/lib/shared/estate');"
-        "const kinds=[];for(let r=0;r<E.GRID.rows;r++){const row=[];for(let c=0;c<E.GRID.cols;c++)row.push(E.tileInfo(c,r).kind);kinds.push(row)}"
-        "console.log(JSON.stringify({grid:E.GRID,areas:E.AREAS,shell:E.SHELL,gates:E.GATES,door:E.DOOR,kinds}))"
+        "const kinds=[],fences=[];for(let r=0;r<E.GRID.rows;r++){const row=[],fr=[];for(let c=0;c<E.GRID.cols;c++){const t=E.tileInfo(c,r);row.push(t.kind);fr.push(t.fence||'')}kinds.push(row);fences.push(fr)}"
+        "console.log(JSON.stringify({grid:E.GRID,areas:E.AREAS,shell:E.SHELL,gates:E.GATES,door:E.DOOR,kinds,fences}))"
     )
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
@@ -53,12 +61,14 @@ def load_layout():
 LAYOUT = load_layout()
 COLS, ROWS = LAYOUT['grid']['cols'], LAYOUT['grid']['rows']
 KINDS = LAYOUT['kinds']
+FENCES = LAYOUT['fences']
 if WIDE:
     for g in LAYOUT['gates']:
         (c0, r0), (c1, r1) = g['tiles']
         third = [max(c0, c1) + 1, r0] if r0 == r1 else [c0, max(r0, r1) + 1]
         g['tiles'].append(third)
         KINDS[third[1]][third[0]] = 'gate'
+        FENCES[third[1]][third[0]] = FENCES[r0][c0]
 TOP = TW * 1.3
 DEPTH = TH * 0.4
 W = int((COLS + ROWS) * TW / 2)
@@ -136,6 +146,16 @@ def post(d, c, r, h, color=WOOD, width=3):
     d.line([(x, y), (x, y - h)], fill=color, width=width)
 
 
+def rail(d, c, r):
+    """一格矮木栏：沿格子的长方向两根横杆 + 两根柱子"""
+    horiz = KINDS[r][c - 1] == 'wall' or KINDS[r][c + 1] == 'wall' if 0 < c < COLS - 1 else False
+    a, b = ((c, r + 0.5), (c + 1, r + 0.5)) if horiz else ((c + 0.5, r), (c + 0.5, r + 1))
+    h = TH * FENCE_H
+    for frac in (0.5, 0.95):
+        d.line([(top(*a)[0], top(*a)[1] - h * frac), (top(*b)[0], top(*b)[1] - h * frac)], fill=WOOD, width=3)
+    post(d, a[0], a[1], h, width=4)
+
+
 def fence(d, c0, r0, c1, r1, inset=0.45):
     """一圈矮栅栏（动物小院）"""
     pts = []
@@ -162,7 +182,13 @@ def draw_ground(d, rnd):
     for r in range(ROWS):
         for c in range(COLS):
             k = KINDS[r][c]
+            f = FENCES[r][c]
+            if k == 'wall' and f == 'stream':
+                d.polygon(quad(c, r, c + 1, r + 1), fill=COLORS['water'])
+                continue
             if k == 'wall':
+                if f in ('hedge', 'fence', 'cliff', 'post'):
+                    d.polygon(quad(c, r, c + 1, r + 1), fill=COLORS['lawn'])
                 continue
             color = COLORS[k]
             if k == 'lawn':
@@ -206,8 +232,20 @@ def standing():
 
     for r in range(ROWS):
         for c in range(COLS):
-            if KINDS[r][c] == 'wall':
+            if KINDS[r][c] != 'wall':
+                continue
+            f = FENCES[r][c]
+            if f == 'wall':
                 add(c + r, lambda d, c=c, r=r: (box(d, c, r, c + 1, r + 1, WALL_H, WALL), d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)))
+            elif f == 'hedge':
+                add(c + r, lambda d, c=c, r=r: (box(d, c + 0.12, r + 0.12, c + 0.88, r + 0.88, TH * HEDGE_H, HEDGE), d.polygon(raised(quad(c + 0.12, r + 0.12, c + 0.88, r + 0.88), TH * HEDGE_H), fill=shade(HEDGE, 1.18))))
+            elif f == 'fence':
+                add(c + r, lambda d, c=c, r=r: rail(d, c, r))
+            elif f == 'cliff':
+                add(c + r, lambda d, c=c, r=r: (box(d, c, r, c + 1, r + 1, TH * CLIFF_H, STONE), d.polygon(raised(quad(c, r, c + 1, r + 1), TH * CLIFF_H), fill=COLORS['lawn'])))
+            elif f == 'post':
+                add(c + r, lambda d, c=c, r=r: (box(d, c + 0.25, r + 0.25, c + 0.75, r + 0.75, TH * POST_H, STONE), d.polygon(raised(quad(c + 0.25, r + 0.25, c + 0.75, r + 0.75), TH * POST_H), fill=STONE_DARK)))
+            # stream：地面已经画成水，不立东西
     # 月亮门：两格墙中间开一个圆洞（洞里露出对面的地）
     for g in LAYOUT['gates']:
         tiles = g['tiles']
@@ -216,11 +254,26 @@ def standing():
         x, y = top((min(cs) + max(cs) + 1) / 2, (min(rs) + max(rs) + 1) / 2)
         rr = GATE_R
 
-        def gate(d, tiles=tiles, x=x, y=y, rr=rr):
-            for c, r in tiles:
-                box(d, c, r, c + 1, r + 1, WALL_H, WALL)
-                d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)
-            d.ellipse([x - rr, y - rr - rr, x + rr, y], fill=COLORS['lawn'], outline=WALL_TOP, width=3)
+        ftype = FENCES[tiles[0][1]][tiles[0][0]]
+
+        def gate(d, tiles=tiles, x=x, y=y, rr=rr, ftype=ftype):
+            if ftype == 'wall':
+                for c, r in tiles:
+                    box(d, c, r, c + 1, r + 1, WALL_H, WALL)
+                    d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)
+                d.ellipse([x - rr, y - rr - rr, x + rr, y], fill=COLORS['lawn'], outline=WALL_TOP, width=3)
+            elif ftype == 'stream':
+                # 木板桥：横过小溪的几块木板
+                for c, r in tiles:
+                    d.polygon(quad(c, r, c + 1, r + 1), fill=COLORS['water'])
+                    d.polygon(quad(c + 0.05, r + 0.05, c + 0.95, r + 0.95), fill=WOOD, outline=shade(WOOD, 0.75))
+            elif ftype == 'cliff':
+                # 台阶：三级
+                for c, r in tiles:
+                    for i in range(3):
+                        t = i / 3
+                        box(d, c, r + t, c + 1, r + t + 1 / 3, TH * CLIFF_H * (1 - t), STONE)
+            # fence / hedge 的门：就是个缺口，什么都不画
         add(max(c + r for c, r in tiles) + 0.1, gate)
     # 大门：比墙高一点的门楼，朱红双开门
     (c0, r0), (c1, r1) = LAYOUT['door']
@@ -287,6 +340,12 @@ def standing():
     return [fn for _, _, fn in sorted(items, key=lambda t: (t[0], t[1]))]
 
 
+def sakura(d, x, y, r):
+    d.ellipse([x - r * 0.12, y - r * 0.2, x + r * 0.12, y + r * 0.9], fill=(120, 84, 60))
+    for dx, dy, rr in ((0, -r * 0.5, r), (-r * 0.6, -r * 0.2, r * 0.7), (r * 0.6, -r * 0.25, r * 0.7), (0, -r * 1.1, r * 0.6)):
+        d.ellipse([x + dx - rr, y + dy - rr * 0.8, x + dx + rr, y + dy + rr * 0.8], fill=SAKURA)
+
+
 def draw_estate():
     img = Image.new('RGB', (W, H), PAPER)
     d = ImageDraw.Draw(img)
@@ -294,14 +353,27 @@ def draw_estate():
     # 宅院外面：淡淡的远山
     for i, (x, rx, ry) in enumerate(((W * 0.2, W * 0.22, TH * 4), (W * 0.55, W * 0.3, TH * 5), (W * 0.85, W * 0.2, TH * 3.5))):
         d.ellipse([x - rx, TOP + TH * 2 - ry, x + rx, TOP + TH * 2 + ry], fill=shade((196, 214, 180), 1 - i * 0.04))
-    # 地基侧面
+    # 整座宅院坐在一块石崖台地上
     base = quad(0, 0, COLS, ROWS)
-    d.polygon([base[3], base[2], (base[2][0], base[2][1] + DEPTH), (base[3][0], base[3][1] + DEPTH)], fill=(150, 118, 92))
-    d.polygon([base[2], base[1], (base[1][0], base[1][1] + DEPTH), (base[2][0], base[2][1] + DEPTH)], fill=(176, 134, 96))
+    cliff = DEPTH * 2.4
+    d.polygon([base[3], base[2], (base[2][0], base[2][1] + cliff), (base[3][0], base[3][1] + cliff)], fill=STONE_DARK)
+    d.polygon([base[2], base[1], (base[1][0], base[1][1] + cliff), (base[2][0], base[2][1] + cliff)], fill=STONE)
+    for i in range(14):
+        x = base[3][0] + (base[1][0] - base[3][0]) * (i + 0.5) / 14
+        yy = base[3][1] + (base[2][1] - base[3][1]) * (i + 0.5) / 7 if i < 7 else base[2][1] + (base[1][1] - base[2][1]) * (i - 6.5) / 7
+        d.line([(x, yy + cliff * 0.15), (x + 6, yy + cliff * 0.85)], fill=shade(STONE, 0.8), width=2)
     d.polygon(base, fill=COLORS['lawn'])
     draw_ground(d, rnd)
     for fn in standing():
         fn(d)
+    # 门前：一条小溪和进门的木桥，两边樱花树
+    (c0, r0), (c1, r1) = LAYOUT['door']
+    gx, gy = top((c0 + c1 + 1) / 2, r1 + 1)
+    stream_y = gy + cliff * 0.6
+    d.rounded_rectangle([gx - TW * 3.5, stream_y - TH * 0.5, gx + TW * 3.5, stream_y + TH * 0.5], radius=int(TH * 0.5), fill=COLORS['water'])
+    d.rectangle([gx - TW * 0.5, gy + cliff * 0.05, gx + TW * 0.5, stream_y + TH * 0.7], fill=WOOD, outline=shade(WOOD, 0.7), width=2)
+    for x, y, r in ((gx - TW * 4.5, gy, TW * 0.8), (gx + TW * 4.5, gy, TW * 0.8), (W * 0.12, TOP + TH * 14, TW * 0.9), (W * 0.9, TOP + TH * 12, TW * 0.9), (W * 0.3, TOP + TH * 3, TW * 0.7), (W * 0.74, TOP + TH * 2.5, TW * 0.7)):
+        sakura(d, x, y, r)
     return img
 
 

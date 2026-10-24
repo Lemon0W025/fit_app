@@ -147,7 +147,7 @@ Page({
     }
     this.setData(patch)
     // 墙和建筑要挡住站在后面的东西：摆的物件算一次，小动物每动一下算它自己的
-    this.pieces = O.pieces(L)
+    this.pieces = O.pieces(L, { legacy: !(config.estateArtVersion >= 2) })
     this.staticOcc = O.occludersFor(this.pieces, patch.sprites.map((s) => O.rectOf(s, L)))
     this.syncLife(view, fresh)
     this.syncOcc()

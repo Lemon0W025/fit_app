@@ -5,8 +5,10 @@
 const { GRID, SHELL, GATES, DOOR, tileInfo } = require('./shared/estate')
 const { tileTop } = require('./iso')
 
-// 墙高（格高）和月亮门洞（圆心离地 = up × 墙高，半径按格高）。和现在这张原画对过（把 pieces 画在切块上看）；Codex 重画后要重新对
+// 各种隔断的高度（格高）：白墙 1.6、石柱 0.9、绿篱 0.7、矮木栏 0.55、台地石坎 0.5、小溪不挡人。月亮门洞：圆心离地 = up × 墙高，半径按格高
+// 和原画对过（把 pieces 画在切块上看）；Codex 重画后要重新对
 const WALL_H = 1.6
+const FENCE_H = { wall: WALL_H, post: 0.9, hedge: 0.7, fence: 0.55, cliff: 0.5, stream: 0 }
 const GATE_HOLE = { up: 0.55, radius: 0.9 }
 const DOOR_H = WALL_H * 1.3
 // 建筑：h 墙身高、roof 屋顶高、over 屋檐出挑（格）、inset 比格子缩进多少（格）
@@ -137,20 +139,27 @@ function pairCenter(tiles, L) {
 }
 
 // 所有会挡人的东西，每块一个多边形（世界坐标 px）。按格宽缓存
+// legacy：原画还是旧的（院子之间全是白墙、每道门都是月亮门）时按墙算；新画到了（config.estateArtVersion ≥ 2）按隔断类型算
 const cache = {}
-function pieces(L) {
-  if (cache[L.tileW]) return cache[L.tileW]
+function pieces(L, { legacy = false } = {}) {
+  const cacheKey = `${L.tileW}:${legacy ? 1 : 0}`
+  if (cache[cacheKey]) return cache[cacheKey]
   const out = []
   const gateTiles = new Set()
   GATES.forEach((g) => g.tiles.forEach(([c, r]) => gateTiles.add(`${c},${r}`)))
   const doorTiles = new Set(DOOR.map(([c, r]) => `${c},${r}`))
   for (let r = 0; r < GRID.rows; r++) {
     for (let c = 0; c < GRID.cols; c++) {
-      if (tileInfo(c, r).kind !== 'wall') continue
-      out.push(piece(`w${c}-${r}`, c, r, prism(c, r, c + 1, r + 1, WALL_H, L), L))
+      const t = tileInfo(c, r)
+      if (t.kind !== 'wall') continue
+      const h = legacy || FENCE_H[t.fence] == null ? WALL_H : FENCE_H[t.fence]
+      if (!h) continue
+      out.push(piece(`w${c}-${r}`, c, r, prism(c, r, c + 1, r + 1, h, L), L))
     }
   }
   GATES.forEach((g) => {
+    // 只有白墙上的门是带洞的月亮门；篱笆、小溪、台地的门是缺口、木板桥、台阶，不挡人
+    if (!legacy && tileInfo(g.tiles[0][0], g.tiles[0][1]).fence !== 'wall') return
     const cs = g.tiles.map((t) => t[0])
     const rs = g.tiles.map((t) => t[1])
     const [c0, r0] = g.tiles[0]
@@ -188,7 +197,7 @@ function pieces(L) {
       out.push(piece(`b${s.what}${c0}-${r0}-${k}`, c, r, band, L))
     }
   })
-  cache[L.tileW] = out
+  cache[cacheKey] = out
   return out
 }
 
@@ -240,4 +249,4 @@ function rectOf(s, L) {
   return { left: s.left + s.width * INSET, top: L.height - s.bottom - height, width: s.width * (1 - 2 * INSET), height, z: s.z + 10 }
 }
 
-module.exports = { WALL_H, BUILDINGS, pieces, occludersFor, view, rectOf, prism, clipX, hull, hitsRect }
+module.exports = { WALL_H, FENCE_H, BUILDINGS, pieces, occludersFor, view, rectOf, prism, clipX, hull, hitsRect }

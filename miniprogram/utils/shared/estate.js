@@ -93,6 +93,26 @@ const GATES = [
 // 外墙上的大门：新住户从这里进来
 const DOOR = [[13, 27], [14, 27]]
 
+// 院子之间的隔断（都不能走、不能摆，只影响画法和遮挡高度）：外圈是白墙黛瓦；里面按段换成矮木栏、绿篱、小溪、台地石阶，
+// 不一样才像园子，也不会把东西都挡在墙后面。type：wall 白墙（门是月亮门）/ fence 矮木栏 / hedge 绿篱 / stream 小溪（门是木板桥）/
+// cliff 台地边缘的石坎（后排三个院子高一层，门是台阶）；没列到的交叉口是 post 石柱
+const FENCES = [
+  { type: 'cliff', rect: [1, 9, 36, 10] },
+  { type: 'fence', rect: [9, 1, 10, 9] },
+  { type: 'fence', rect: [27, 1, 28, 9] },
+  { type: 'wall', rect: [9, 10, 10, 18] },
+  { type: 'stream', rect: [18, 10, 19, 18] },
+  { type: 'hedge', rect: [27, 10, 28, 18] },
+  { type: 'hedge', rect: [1, 18, 9, 19] },
+  { type: 'fence', rect: [10, 18, 18, 19] },
+  { type: 'stream', rect: [19, 18, 27, 19] },
+  { type: 'hedge', rect: [28, 18, 36, 19] },
+  { type: 'fence', rect: [9, 19, 10, 27] },
+  { type: 'hedge', rect: [18, 19, 19, 27] },
+  { type: 'fence', rect: [27, 19, 28, 27] },
+]
+const FENCE_TYPES = ['wall', 'fence', 'hedge', 'stream', 'cliff', 'post']
+
 // 小动物在壳里的活动点（站的那一格），作息和小事表按 id 引用
 const SPOTS = [
   { id: 'coop', area: 'farm', c: 2, r: 3 },
@@ -126,6 +146,15 @@ AREAS.forEach((a) => fill(a.rect, { area: a.id, kind: 'lawn' }))
 SHELL.forEach((s) => fill(s.rect, { kind: s.kind }))
 GATES.forEach((g) => g.tiles.forEach(([c, r]) => Object.assign(TILES[r * GRID.cols + c], { area: '', kind: 'gate' })))
 DOOR.forEach(([c, r]) => Object.assign(TILES[r * GRID.cols + c], { area: '', kind: 'door' }))
+// 隔断的样式：墙、门洞都带上 fence；外圈是墙，里面没列到的交叉口是石柱
+TILES.forEach((t, i) => {
+  if (t.kind !== 'wall' && t.kind !== 'gate' && t.kind !== 'door') return
+  const c = i % GRID.cols
+  const r = Math.floor(i / GRID.cols)
+  const outer = c === 0 || r === 0 || c === GRID.cols - 1 || r === GRID.rows - 1
+  const seg = FENCES.find((f) => c >= f.rect[0] && c < f.rect[2] && r >= f.rect[1] && r < f.rect[3])
+  t.fence = outer || t.kind === 'door' ? 'wall' : seg ? seg.type : 'post'
+})
 
 AREAS.forEach((a) => {
   a.neighbors = GATES.filter((g) => g.a === a.id || g.b === a.id).map((g) => (g.a === a.id ? g.b : g.a))
@@ -275,6 +304,8 @@ module.exports = {
   AREAS,
   START_OPENED,
   SHELL,
+  FENCES,
+  FENCE_TYPES,
   GATES,
   DOOR,
   SPOTS,

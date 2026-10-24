@@ -50,7 +50,7 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 | # | 文件 | 比例 / 格 | 内容 |
 |---|---|---|---|
-| 1 | `art/raw/estate/estate.png` | 3:2 | 宅院整图（见 §1） |
+| 1 | `art/raw/estate/estate.png` | 3:2 | 宅院整图（见 §1，第二版：新画风、新隔断）+ 高清 `estate-hd.png` |
 | 2 | `art/raw/estate/clouds.png` | 1:1，3×3 | 9 朵云（§2） |
 | 3 | `art/raw/ui/icons.png` | 1:1，3×3 | 9 个界面图标（§3） |
 | 4 | `art/raw/ui/fx.png` | 1:1，3×3 | 9 个表情 / 特效（§4） |
@@ -61,50 +61,55 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 ---
 
-## 1. 宅院整图 `art/raw/estate/estate.png`
+## 1. 宅院整图 `art/raw/estate/estate.png`（第二版：新画风、新布局）
 
-- **输入**：以 `art/guide/estate-blockout-3x2.jpg` 为底图做 edit / 重绘（image-to-image，相似度调高），`art/guide/style-ref.jpg` 作画风参考
-- **比例**：3:2 横图（白模已经是 3:2，上下的米色是留白，照样留着）
-- **怎么挑**：先看布局——11 个院子、每一道月亮门、大门和影壁、正房、荷塘、四条菜畦、三条花坛的位置大小都要和白模对上，墙的高矮厚薄也要一样；再看漂不漂亮。**院子里面必须是空的**（只有地面），不要画树、花、桌椅、灯笼、动物、人——这些是玩家自己摆的。多生成几轮挑最好的一张
+- **画风参考**：`art/guide/town/` 里的 4 张（`town-overview.jpg`、`town-hotspring-house.jpg`、`town-noodle-shop.jpg`、`town-grill-stall.jpg`）。
+  要的是这种味道：圆润厚实的 3D 渲染、釉面一样有光泽的瓦、暖色木头、奶白墙，整张画一个光源、柔和的接触阴影，边缘微缩模型般的轻微景深。
+  **注意我们是中式园林**：黛瓦（深青灰，不是日式亮蓝）、白墙、朱红柱、月亮门；不要鸟居、不要日文招牌。
+- **布局底稿**：`art/guide/estate-blockout-3x2.jpg`（已更新，用它做 image-to-image 的底图，相似度调高，布局一格都不能动）。
+  和第一版最大的不同：院子之间**不再全是高墙**——
+  - 外圈四面是白墙黛瓦，正门在前墙正中（朱红双开门、小门楼），正院西侧保留一道白墙和月亮门；
+  - 其他院子之间是：**矮木栏**（原木色栏杆，门就是缺口）、**绿篱**（修剪整齐的矮灌木）、**小溪**（清澈的小水渠，门是几块木板搭的小桥）、
+    **台地石坎**（后排三个院子高出一层，边缘是石砌矮坎，门是三级石阶）；白模里颜色分得很清楚：木色是木栏、绿块是绿篱、蓝条是小溪、灰条是石坎；
+  - 整座宅院坐在一块**石崖台地**上，四周是岩石断面；门前一条小溪和一座进门的木桥；宅院外面零星几棵樱花树（粉色圆团）。
 
 ```
-Reference image 1 is a plain blockout of a Chinese garden estate (the exact layout). Reference image 2
-shows the art style of the game's props. Repaint reference image 1 as a finished, high-end mobile-game
-main scene in the style of reference image 2.
+Reference images 1-4 are the art style target. Reference image 5 is a plain blockout of a Chinese garden
+estate (the exact layout). Repaint reference image 5 as a finished, high-end mobile-game main scene in
+the rendering style of images 1-4: chunky rounded 3D render, glossy tiles, warm wood, cream plaster,
+one soft sunlight from the upper left, soft contact shadows under everything, saturated but gentle
+colors, a slight tilt-shift depth of field at the far edges. The architecture must stay CHINESE
+(Suzhou garden: dark blue-grey glazed tiles, white plaster walls, vermilion pillars, round moon gates;
+no torii, no Japanese signage).
 
-KEEP THE LAYOUT EXACTLY: same isometric camera, same framing and scale, every wall segment, every round
-moon gate, the red main gate, the main hall, every pool, flower bed, vegetable bed, paved area and
-footpath stay at the same position and size. Do not add, move or remove any wall, gate or building.
-Keep the walls the same height and thickness as in the blockout.
+KEEP THE LAYOUT EXACTLY: same isometric camera, framing and scale; every boundary, gate, building,
+pool, bed, paved area and path stays where the blockout puts it. Do not add, move or remove anything.
 
-Content: a Suzhou-style classical Chinese garden estate seen from above. White plaster walls with dark
-grey tiled copings divide it into 11 courtyards; between courtyards are round moon gates cut through the
-walls. On the front wall, centered: a vermilion double-door main gate under a small tiled roof; just
-inside it a free-standing screen wall. In the center courtyard a white-walled main hall with upturned
-dark-tile eaves, sitting on a stone platform with a few steps in front. Ground in each courtyard exactly
-as the blockout: fresh even lawn, dark loosened soil in the beds, pale flagstone paving, light stone
-footpaths. Right-middle courtyard: a large clear pond with a wooden waterside deck on the side facing
-the main hall. Top-right: a steaming rocky hot-spring pool and a small wooden changing hut. Top-left: a
-little chicken coop ringed by a low wooden fence. Left-middle: a Taihu-rock rockery and a patch of
-white sand. Back garden spanning two columns at the top: a Taihu rockery with a small waterfall into a
-pool and a winding brook with one stone slab crossing it. Far right-middle: a wooden tea deck and a
-red-pillared covered corridor along the outer wall. Bottom-left: a grape trellis against the wall.
-Bottom-right: four vegetable beds and a stone well.
+Boundaries, exactly as the blockout colors show: the outer ring is a white plaster wall with a dark
+tiled coping; the front wall has a vermilion double door under a small tiled gatehouse; the west side
+of the central court is a white wall with a round moon gate. All other boundaries between courtyards
+are LOW: natural-wood rail fences (the gap in the rail is the gate), neatly trimmed green hedges (the
+gap is the gate), a clear little brook with a plank bridge where the gate is, and along the whole back
+row a low stone terrace edge (the back three courtyards sit one step higher) with three stone steps at
+each gate. The whole estate sits on a rocky plateau with a cut-stone cliff face around it; in front of
+the main door a small stream with a wooden bridge; a few cherry trees in bloom outside the walls.
 
-ALL COURTYARDS ARE EMPTY INSIDE: ground only. No trees, flowers, furniture, lanterns, animals or people
-(the game places those). But make the ground itself rich and alive: lawns with visible grass texture
-and a few tiny wildflowers and clover at the foot of the walls, moss and small pebbles along the paths,
-crumbly soil with furrows in the beds, water with soft caustics and a few lily pads only where the
-blockout shows water, roof tiles with individual tile texture and a little moss, plaster walls with
-subtle weathering. Outside the walls: soft beige ground fading into faint distant hills; the estate
-fills the frame the way it does in the blockout.
-+ UNIFIED STYLE
+Inside: the central courtyard has the main hall (white walls, upturned glazed roof, stone platform and
+steps); right-middle a large clear pond with a wooden pier on its north side; top-right a steaming rocky
+hot spring and a small wooden hut; top-left a chicken coop with a low fence; left-middle a Taihu-rock
+rockery and white sand; the back garden a long rockery along the back wall with a waterfall into a pool
+and a brook winding down; far right-middle a wooden tea deck and a red-pillared corridor; bottom-left a
+grape trellis; bottom-right four vegetable beds and a stone well; bottom-center-right three flower beds.
+ALL COURTYARDS ARE EMPTY of trees, flowers, furniture, lanterns, animals and people (the game places
+those), but the ground is rich: grass with texture and tiny clover at the fences, pebbles and moss along
+the paths, crumbly furrowed soil, water with soft caustics, individual roof tiles with a little moss.
+No text, no watermark, no UI, no borders.
 ```
 
-出 **4 轮**，每轮挑最好的，再从 4 张里挑 1 张（Codex 自己判断：布局对、门洞大、地面细节丰富、整体精致）。
+出 **4 轮**，每轮挑最好的，再从 4 张里挑 1 张（布局对、隔断类型对、门洞大、地面细节丰富、整体精致）。
 
-**第二轮（可选，出来效果好再做）**：整图只有 1536 宽，放大看会糊。小程序这边会用 `python3 scripts/estate/detail_crops.py art/raw/estate/estate.png --pad32`
-把它切成 9 块带重叠的 3:2 小图放在 `art/raw/estate/detail/in-*.png`，每块用 edit 重绘成高清版存成同名的 `out-*.png`，提示词：
+**高清第二轮（必做）**：`python3 scripts/estate/detail_crops.py art/raw/estate/estate.png --pad32` 切 9 块放在
+`art/raw/estate/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成 `out-*.png`，提示词：
 
 ```
 This is a crop of a finished game scene. Re-render this exact crop at full resolution: keep every
@@ -113,7 +118,12 @@ element at the same place with the same colors and lighting; only add fine detai
 do not change the framing or the crop boundaries.
 ```
 
-然后 `python3 scripts/estate/merge_details.py` 拼回一张约 4000 宽的 `estate-hd.png`。
+然后 `python3 scripts/estate/merge_details.py` 拼成 `art/raw/estate/estate-hd.png`。
+
+**第三步（画风统一）**：物件也换成这个画风。按 §5 和早期的 `docs/art/garden-art-brief.md` 的格子清单，
+把 `art/raw/03`～`08` 和 `09`～`11` 这 9 张物件拼图**重新生成**（参考图换成 `art/guide/town/` 的 4 张 + 已有的 `style-ref.jpg`
+作为「长什么样」的参考，画风以 town 为准），文件名、格子顺序、透明底规则都不变，`check_art.py` 过了再提交。
+小动物的 11 张动画拼图**不用重画**。
 
 ---
 

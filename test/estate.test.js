@@ -22,9 +22,16 @@ test('11 个院子：价格、相邻、开局两个', () => {
 })
 
 test('格子表：墙、门、院子里的地面', () => {
-  assert.deepEqual(E.tileInfo(0, 0), { area: '', kind: 'wall' })
-  assert.deepEqual(E.tileInfo(9, 13), { area: '', kind: 'gate' })
-  assert.deepEqual(E.tileInfo(13, 27), { area: '', kind: 'door' })
+  assert.deepEqual(E.tileInfo(0, 0), { area: '', kind: 'wall', fence: 'wall' })
+  assert.deepEqual(E.tileInfo(9, 13), { area: '', kind: 'gate', fence: 'wall' })
+  assert.deepEqual(E.tileInfo(13, 27), { area: '', kind: 'door', fence: 'wall' })
+  // 院子之间的隔断各不一样：正院前面矮木栏、正院荷塘之间小溪、后排是台地石坎、交叉口石柱
+  assert.deepEqual(E.tileInfo(13, 18), { area: '', kind: 'gate', fence: 'fence' })
+  assert.deepEqual(E.tileInfo(18, 13), { area: '', kind: 'gate', fence: 'stream' })
+  assert.deepEqual(E.tileInfo(5, 9), { area: '', kind: 'gate', fence: 'cliff' })
+  assert.deepEqual(E.tileInfo(27, 11), { area: '', kind: 'wall', fence: 'hedge' })
+  assert.deepEqual(E.tileInfo(18, 18), { area: '', kind: 'wall', fence: 'post' })
+  assert.ok(E.FENCES.every((f) => E.FENCE_TYPES.indexOf(f.type) !== -1))
   assert.deepEqual(E.tileInfo(11, 16), { area: 'main', kind: 'lawn' })
   assert.deepEqual(E.tileInfo(13, 15), { area: 'main', kind: 'path' })
   assert.deepEqual(E.tileInfo(12, 11), { area: 'main', kind: 'block' })
