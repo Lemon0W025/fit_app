@@ -1,41 +1,34 @@
+// test/scene-fx.test.js
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { fxViews, diamond } = require('../miniprogram/utils/scene-fx')
-const W = require('../miniprogram/utils/world')
-const { AREAS } = require('../miniprogram/utils/shared/estate')
+const { fxViews } = require('../miniprogram/utils/scene-fx')
+const { campLayout } = require('../miniprogram/utils/camp-view')
 
-const L = W.estateLayout(375)
-const areas = (opened) => AREAS.map((a) => ({ id: a.id, unlocked: opened.indexOf(a.id) !== -1 }))
+const L = campLayout({ width: 375, height: 736 })
+const count = (list, kind) => list.filter((f) => f.kind === kind).length
 
-test('开局只有前院正院：没有水没有花，什么特效都没有', () => {
-  assert.deepEqual(fxViews(areas(['front', 'main']), L), [])
+test('白天：火苗、烟、波光、涟漪；没有萤火虫和灯光', () => {
+  const fx = fxViews(L, 12, [])
+  assert.equal(count(fx, 'flame'), 3)
+  assert.equal(count(fx, 'smoke'), 3)
+  assert.equal(count(fx, 'shimmer'), 2)
+  assert.equal(count(fx, 'ripple'), 2)
+  assert.equal(count(fx, 'firefly'), 0)
+  assert.equal(count(fx, 'glow'), 0)
+  fx.forEach((f) => assert.ok(f.key && f.width > 0 && f.height > 0 && f.z > 0 && f.delay >= 0, f.key))
+  assert.match(fx.find((f) => f.kind === 'shimmer').clip, /^polygon\(/)
+  assert.deepEqual(fxViews(L, 12, []), fx)
 })
 
-test('修了荷塘院：池子上有波光和几点星光，裁成菱形；花圃院有花瓣；温泉院冒热气；后花园有瀑布', () => {
-  const pond = fxViews(areas(['front', 'main', 'pond']), L)
-  const shimmer = pond.filter((f) => f.kind === 'shimmer')
-  assert.ok(shimmer.length >= 3, '方塘和几段小溪都有波光')
-  assert.match(shimmer[0].clip, /^polygon\(/)
-  assert.ok(shimmer[0].width > 0 && shimmer[0].height > 0)
-  assert.ok(pond.filter((f) => f.kind === 'sparkle').length >= 3)
-  assert.ok(!pond.some((f) => f.kind === 'steam' || f.kind === 'falls' || f.kind === 'petal'))
-
-  const all = fxViews(areas(['front', 'main', 'pond', 'flower', 'spring', 'back']), L)
-  assert.equal(all.filter((f) => f.kind === 'steam').length, 3)
-  assert.equal(all.filter((f) => f.kind === 'falls').length, 1)
-  assert.equal(all.filter((f) => f.kind === 'petal').length, 5)
-  assert.ok(all.filter((f) => f.kind === 'shimmer').length >= 4, '荷塘、温泉、后花园的潭和溪都有波光')
-  all.forEach((f) => {
-    assert.ok(f.key && f.left >= 0 && f.top >= 0 && f.width > 0 && f.height > 0, f.key)
-    assert.ok(f.delay >= 0 && f.z > 0)
-  })
-  // 同样的输入每次一样
-  assert.deepEqual(fxViews(areas(['front', 'main', 'pond']), L), pond)
-})
-
-test('diamond：一块地的菱形外框和 clip-path', () => {
-  const d = diamond([20, 11, 26, 16], L)
-  assert.equal(d.width, ((6 + 5) * L.tileW) / 2)
-  assert.equal(d.height, ((6 + 5) * L.tileH) / 2)
-  assert.equal(d.clip.split(',').length, 4)
+test('夜里：萤火虫 8 只；灯串、灯笼、金帐篷发光；水壶炉冒热气、花坛有蝴蝶', () => {
+  const placed = [{ uid: 'a', id: 'lights', x: 1500, y: 1800 }, { uid: 'b', id: 'kettle', x: 2000, y: 2000 }, { uid: 'c', id: 'flowerbed', x: 2300, y: 3400 }, { uid: 'd', id: 'ball', x: 900, y: 2200 }]
+  const night = fxViews(L, 22, placed)
+  assert.equal(count(night, 'firefly'), 8)
+  assert.equal(count(night, 'glow'), 1)
+  assert.equal(count(night, 'steam'), 1)
+  assert.equal(count(night, 'butterfly'), 0) // 蝴蝶只在白天
+  const day = fxViews(L, 10, placed)
+  assert.equal(count(day, 'butterfly'), 1)
+  assert.equal(count(day, 'glow'), 0)
+  assert.equal(night.find((f) => f.kind === 'steam').image, '/images/garden/fx/steam.png')
 })

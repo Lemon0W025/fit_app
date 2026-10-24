@@ -1,0 +1,72 @@
+// test/camp-view.test.js
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const V = require('../miniprogram/utils/camp-view')
+const { W, H, scaleAt } = require('../miniprogram/utils/shared/camp')
+const { decorById } = require('../miniprogram/utils/shared/decor')
+
+const WIN = { width: 375, height: 736 }
+const L = V.campLayout(WIN)
+
+test('campLayout：1 倍画宽占满屏幕，四周留白', () => {
+  assert.equal(L.W, W)
+  assert.equal(L.width, 375)
+  assert.ok(Math.abs(L.height - (375 * H) / W) < 1e-9)
+  assert.equal(L.margin, 225)
+  assert.equal(L.viewWidth, 375 + 450)
+  assert.equal(L.viewHeight, L.height + 450)
+  assert.deepEqual(V.toScreen(W, H, L), { x: 375, y: L.height })
+  const rect = { left: -100, top: 20, width: 750, height: L.height * 2 }
+  assert.deepEqual(V.fromTouch(275, 20 + L.height, rect, L), { x: W / 2, y: H / 2 })
+})
+
+test('baseTiles：16 块拼满整张画', () => {
+  const tiles = V.baseTiles(L, '')
+  assert.equal(tiles.length, 16)
+  assert.equal(tiles[0].image, '/images/camp/base/t00.jpg')
+  assert.equal(tiles[15].image, '/images/camp/base/t33.jpg')
+  assert.equal(V.baseTiles(L, 'cloud://x/camp/base/')[5].image, 'cloud://x/camp/base/t11.jpg')
+  assert.ok(Math.abs(tiles[15].left + tiles[15].width - L.width) < 1e-6)
+  assert.ok(Math.abs(tiles[15].top + tiles[15].height - L.height) < 1e-6)
+})
+
+test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', () => {
+  const views = V.decorViews([{ uid: 'd2', id: 'ball', x: 1500, y: 3000 }, { uid: 'd1', id: 'tent', x: 1000, y: 1500 }], L, '')
+  assert.deepEqual(views.map((v) => v.uid), ['d1', 'd2'])
+  const tent = decorById('tent')
+  const s = scaleAt(1500)
+  assert.ok(Math.abs(views[0].width - tent.patch.w * s * L.k) < 0.011) // 视图值四舍五入到 0.01
+  assert.ok(Math.abs(views[0].left - (1000 - tent.anchor.x * s) * L.k) < 0.011)
+  assert.ok(Math.abs(views[0].top - (1500 - tent.anchor.y * s) * L.k) < 0.011)
+  assert.equal(views[0].image, '/images/camp/decor/tent.png')
+  assert.equal(views[0].z, V.Z_DECOR + Math.round(1500 / 4))
+  assert.ok(views[1].z > views[0].z)
+  assert.equal(V.decorViews([{ uid: 'x', id: 'nope', x: 1, y: 1 }], L, '').length, 0)
+  const ghost = V.ghostView('ball', 1500, 3000, L, false)
+  assert.equal(ghost.ok, false)
+  assert.ok(ghost.foot.width > 0 && ghost.width > ghost.foot.width)
+})
+
+test('背包、商店、食盆、色调、横幅', () => {
+  assert.deepEqual(V.foodBag([{ id: 'xiaomi', count: 2 }, { id: 'jiaozi', count: 1 }]).map((f) => [f.name, f.count, f.rarityLabel, f.term]), [['小米', 2, '普通', ''], ['饺子', 1, '稀有', 'dongzhi']])
+  assert.equal(V.foodBag([{ id: 'xiaomi', count: 1 }])[0].image, '/images/camp/foods/xiaomi.png')
+  assert.deepEqual(V.decorBag([{ id: 'ball', count: 1 }])[0], { id: 'ball', name: '滚球', count: 1, image: '/images/camp/decor/ball.png', category: 'play' })
+  const groups = V.shopGroups({ ball: 1, flowerbed: 3 }, 50)
+  assert.deepEqual(groups.map((g) => g.id), ['nest', 'eat', 'play', 'plant', 'mood'])
+  const ball = groups[2].items.find((i) => i.id === 'ball')
+  assert.deepEqual([ball.have, ball.soldOut, ball.canAfford], [1, true, true])
+  const tent = groups[0].items.find((i) => i.id === 'tent')
+  assert.deepEqual([tent.have, tent.soldOut, tent.canAfford], [0, false, false])
+  assert.equal(groups[3].items.find((i) => i.id === 'flowerbed').soldOut, true)
+  assert.ok(!groups.some((g) => g.items.some((i) => i.id === 'gold_tent')))
+  const bowls = V.bowlViews([{ food: 'xiaomi', peeking: 'doudou' }, { food: null, peeking: null }], L)
+  assert.deepEqual([bowls[0].index, bowls[0].foodImage, bowls[0].peekImage, bowls[1].foodImage], [0, '/images/camp/foods/xiaomi.png', '/images/camp/pets/doudou-face.png', ''])
+  assert.ok(bowls[0].size > 0 && bowls[0].left > 0)
+  assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', 'night', 'night', 'night'])
+  assert.deepEqual(V.arrivalCard({ id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯闻着胡萝卜的香味，搬进营地啦！' })
+  assert.deepEqual(V.arrivalCard({ id: null, ate: 'doudou', foodId: 'xiaomi', foodName: '小米' }), { image: '/images/camp/pets/doudou.png', text: '豆豆把食盆里的小米吃了，营地里没有别的小动物爱吃它啦' })
+  assert.equal(V.arrivalCard(null), null)
+  const o = V.focusOffset(W / 2, H / 2, L, WIN, 1)
+  assert.ok(Math.abs(o.x + L.margin + L.width / 2 - WIN.width / 2) < 1e-9)
+  assert.ok(Math.abs(o.y + L.margin + L.height / 2 - WIN.height / 2) < 1e-9)
+})
