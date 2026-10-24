@@ -92,10 +92,16 @@ red-pillared covered corridor along the outer wall. Bottom-left: a grape trellis
 Bottom-right: four vegetable beds and a stone well.
 
 ALL COURTYARDS ARE EMPTY INSIDE: ground only. No trees, flowers, furniture, lanterns, animals or people
-(the game places those). Outside the walls: soft beige ground fading into faint distant hills; the
-estate fills the frame the way it does in the blockout.
+(the game places those). But make the ground itself rich and alive: lawns with visible grass texture
+and a few tiny wildflowers and clover at the foot of the walls, moss and small pebbles along the paths,
+crumbly soil with furrows in the beds, water with soft caustics and a few lily pads only where the
+blockout shows water, roof tiles with individual tile texture and a little moss, plaster walls with
+subtle weathering. Outside the walls: soft beige ground fading into faint distant hills; the estate
+fills the frame the way it does in the blockout.
 + UNIFIED STYLE
 ```
+
+出 **4 轮**，每轮挑最好的，再从 4 张里挑 1 张（Codex 自己判断：布局对、门洞大、地面细节丰富、整体精致）。
 
 **第二轮（可选，出来效果好再做）**：整图只有 1536 宽，放大看会糊。小程序这边会用 `python3 scripts/estate/detail_crops.py art/raw/estate/estate.png --pad32`
 把它切成 9 块带重叠的 3:2 小图放在 `art/raw/estate/detail/in-*.png`，每块用 edit 重绘成高清版存成同名的 `out-*.png`，提示词：
