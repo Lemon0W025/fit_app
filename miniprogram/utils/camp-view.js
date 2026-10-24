@@ -161,13 +161,26 @@ function focusOffset(x, y, L, win, scale) {
   return { x: win.width / 2 - cx - scale * (px - cx), y: win.height / 2 - cy - scale * (py - cy), scale }
 }
 
-// 首页默认视角：画填满屏幕高度（两侧看不全的拖一拖、捏一下能缩到 0.8 看全貌），画的中心对准屏幕中心
+// 首页默认视角：画填满屏幕高度、篝火（暖暖锅）对准屏幕中心；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
 function homeView(L, win) {
   const scale = Math.min(2.5, Math.max(1, Math.round((win.height / L.height) * 100) / 100))
-  return focusOffset(W / 2, H / 2, L, win, scale)
+  return focusOffset(SCENE.fire[0], SCENE.fire[1], L, win, scale)
+}
+
+// 暖暖锅：今天打了几顿正餐（早午晚印章里有状态的），锅里就有几层（0～3）
+function potLevel(daily) {
+  if (!daily || !daily.stamps) return 0
+  return Math.min(3, daily.stamps.filter((s) => s.state && s.state !== 'none').length)
+}
+
+// 锅里的内容图：盖在底图的锅上（只有锅口那一块不透明），0 层不显示
+function potView(level, L, base) {
+  if (!level) return null
+  const [l, t, r, b] = SCENE.pot.box
+  return { image: `${base || '/images/camp/pot/'}p${level}.png`, left: fmt(l * L.k), top: fmt(t * L.k), width: fmt((r - l) * L.k), height: fmt((b - t) * L.k), z: zOf(SCENE.fire[1]) + 1 }
 }
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, potView,
 }

@@ -1,9 +1,9 @@
-"""把营地整图（竖画 3:4）缩放到指定宽度、切成 4×4 块，传云存储用
+"""把营地整图（正方形）缩放到指定宽度、切成 4×4 块，传云存储用
 
     python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png [--width 3072] [--local]
 
 输出到 art/camp/t00.jpg … t33.jpg（npm run wx:art 上传到 camp/base/）；加 --local 则写到 miniprogram/images/camp/base/
-（替换白模占位，注意包大小，一般不用）。画的比例必须是 3:4（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
+（替换白模占位，注意包大小，一般不用）。画必须是正方形（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
 """
 import argparse
 import os
@@ -12,7 +12,7 @@ from PIL import Image
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 SPLIT = 4
-RATIO = 3072 / 4096
+RATIO = 1.0   # 营地是正方形（shared/camp.js 的 W×H）
 
 
 def edge_color(img):

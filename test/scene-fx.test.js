@@ -14,6 +14,11 @@ test('白天：火苗、烟；没有萤火虫和灯光', () => {
   assert.equal(count(fx, 'firefly'), 0)
   assert.equal(count(fx, 'glow'), 0)
   assert.equal(fx.length, 6)
+  // 暖暖锅：两顿起冒热气，三顿两股
+  assert.equal(count(fxViews(L, 12, [], 1), 'steam'), 0)
+  assert.equal(count(fxViews(L, 12, [], 2), 'steam'), 1)
+  assert.equal(count(fxViews(L, 12, [], 3), 'steam'), 2)
+  assert.ok(fxViews(L, 12, [], 3).every((f) => f.kind !== 'steam' || f.key.indexOf('pot-steam') === 0))
   fx.forEach((f) => assert.ok(f.key && f.width > 0 && f.height > 0 && f.z > 0 && f.delay >= 0, f.key))
   assert.deepEqual(fxViews(L, 12, []), fx)
 })

@@ -27,7 +27,7 @@ function describe(state) {
     case 'sleep': return d ? `在${d}里睡觉` : '在睡觉'
     case 'walk': case 'fly': return '在溜达'
     case 'play': case 'climb': return d ? `在玩${d}` : '在玩'
-    case 'sit': return d ? `坐在${d}上` : '围着篝火坐着'
+    case 'sit': return d ? `坐在${d}上` : '围着暖暖锅坐着'
     case 'sun': return '在晒太阳'
     case 'eat': return '在吃东西'
     case 'away': return '要清晨才来'

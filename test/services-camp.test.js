@@ -111,7 +111,7 @@ test('buy / place / move / stash：买了进背包，摆到草地上，挪、收
   assert.deepEqual(v.decor.placed, [{ uid: 'd1', id: 'ball', x: 1500, y: 1800 }])
   assert.deepEqual(v.decor.unplaced, [])
   await assert.rejects(service.place('u1', { decorId: 'ball', x: 2000, y: 1800 }), { code: 'BAD_REQUEST', message: '背包里没有这个了' })
-  await assert.rejects(service.move('u1', { uid: 'd1', x: 1536, y: 2520 }), { code: 'BAD_REQUEST', message: '这儿放不下，挪开一点' })
+  await assert.rejects(service.move('u1', { uid: 'd1', x: 2048, y: 2100 }), { code: 'BAD_REQUEST', message: '这儿放不下，挪开一点' })
   v = await service.move('u1', { uid: 'd1', x: 1510, y: 1810 })
   assert.deepEqual(v.decor.placed[0], { uid: 'd1', id: 'ball', x: 1510, y: 1810 })
   await assert.rejects(service.move('u1', { uid: 'zz', x: 1510, y: 1810 }), { code: 'NOT_FOUND' })

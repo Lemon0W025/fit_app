@@ -5,6 +5,8 @@ module.exports = {
   campArt: '',
   // 装饰块的前缀（…/camp/decor/）；留空用包里的占位块
   decorArt: '',
+  // 暖暖锅三种状态（锅里的内容）的前缀（…/camp/pot/，p1.png～p3.png）；留空用包里的占位图
+  potArt: '',
   // 宠物动画拼图的前缀（…/camp/anim/，<id>-a.png / <id>-b.png）；留空用单张图 + CSS 步态
   animArt: '',
 }

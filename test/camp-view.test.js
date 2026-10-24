@@ -2,7 +2,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const V = require('../miniprogram/utils/camp-view')
-const { W, H, scaleAt } = require('../miniprogram/utils/shared/camp')
+const { W, H, scaleAt, SCENE } = require('../miniprogram/utils/shared/camp')
 const { decorById } = require('../miniprogram/utils/shared/decor')
 
 const WIN = { width: 375, height: 736 }
@@ -69,10 +69,19 @@ test('背包、商店、食盆、色调、横幅', () => {
   const o = V.focusOffset(W / 2, H / 2, L, WIN, 1)
   assert.ok(Math.abs(o.x + L.margin + L.width / 2 - WIN.width / 2) < 1e-9)
   assert.ok(Math.abs(o.y + L.margin + L.height / 2 - WIN.height / 2) < 1e-9)
-  // 默认视角：画填满屏幕高度、居中
+  // 默认视角：画填满屏幕高度、篝火在正中
   const home = V.homeView(L, WIN)
   assert.equal(home.scale, Math.round((WIN.height / L.height) * 100) / 100)
   assert.ok(home.scale > 1 && home.scale <= 2.5)
-  assert.deepEqual(home, V.focusOffset(W / 2, H / 2, L, WIN, home.scale))
+  assert.deepEqual(home, V.focusOffset(SCENE.fire[0], SCENE.fire[1], L, WIN, home.scale))
   assert.deepEqual(V.homeView(L, { width: 375, height: 300 }).scale, 1)
+  // 暖暖锅：按今天有状态的印章数算层数，0 层不显示
+  assert.equal(V.potLevel(null), 0)
+  assert.equal(V.potLevel({ stamps: [{ state: 'none' }, { state: 'green' }, { state: 'yellow' }] }), 2)
+  assert.equal(V.potLevel({ stamps: [{ state: 'green' }, { state: 'green' }, { state: 'red' }] }), 3)
+  assert.equal(V.potView(0, L, ''), null)
+  const pot = V.potView(2, L, '')
+  assert.equal(pot.image, '/images/camp/pot/p2.png')
+  assert.ok(Math.abs(pot.left - SCENE.pot.box[0] * L.k) < 0.011 && pot.width > 0 && pot.z > V.Z_DECOR)
+  assert.equal(V.potView(3, L, 'cloud://x/camp/pot/').image, 'cloud://x/camp/pot/p3.png')
 })

@@ -2,7 +2,7 @@
 
     python3 scripts/camp/decor_crop.py [art/raw/camp/camp-hd.png] [--ids tent,ball]
 
-每件装饰裁一块正方形草地（边长 = shared/decor.js 的块大小 × 1.25 里较长的那边，高清图按 3072 宽换算；正方形是因为图像模型的
+每件装饰裁一块正方形草地（边长 = shared/decor.js 的块大小 × 1.25 里较长的那边，高清图按 shared/camp.js 的画宽换算；正方形是因为图像模型的
 edit 只出 1024×1024，这样 out 和 in 不会变形），位置自动挑在草地里离禁区远的地方，存成 art/raw/decor/in-<id>.png，
 并把裁的位置写进 art/raw/decor/boxes.json。
 Codex 把装饰画在这块草地上（其他像素不动）存成 out-<id>.png，再跑 decor_patch.py 裁成带羽化边的块。需要 Pillow。
@@ -21,7 +21,7 @@ MARGIN = 1.25
 
 def data():
     js = ("const C=require('./cloudfunctions/api/lib/shared/camp'),D=require('./cloudfunctions/api/lib/shared/decor');"
-          "const spots=[];for(let y=900;y<3900;y+=150)for(let x=300;x<2800;x+=150){const r={left:x-330,top:y-290,right:x+330,bottom:y+60};"
+          "const spots=[];for(let y=900;y<C.H-300;y+=150)for(let x=300;x<C.W-300;x+=150){const r={left:x-330,top:y-290,right:x+330,bottom:y+60};"
           "if(C.rectInPoly(r,C.SCENE.grass)&&!C.hitsNogo(r,120))spots.push([x,y])}"
           "console.log(JSON.stringify({W:C.W,decor:D.DECOR,spots}))")
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))

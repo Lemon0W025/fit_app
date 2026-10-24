@@ -23,21 +23,21 @@
 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带
 SHEET RULES / ANIMATION SHEET RULES）；输出路径和 art/manifest.json 里的一致；每出一张就跑
 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
-1. 营地整图：python3 scripts/camp/pad23.py art/guide/camp-blockout.jpg -o art/raw/camp/blockout-23.png，
-   以这张为底 image-to-image 按第 1 节的 PROMPT 生成 1024×1536，出 3 版，挑草地最干净均匀、布局最贴白模的一张存
-   art/raw/camp/camp-23.png，再 python3 scripts/camp/pad23.py --crop art/raw/camp/camp-23.png -o art/raw/camp/camp.png。
-   把 camp.png 发给我看，我说可以再往下。
+1. 营地整图：以 art/guide/camp-blockout.jpg 为底 image-to-image 按第 1 节的 PROMPT 生成 1024×1024（正方形，直接出），
+   出 3 版，挑草地最干净均匀、布局最贴白模的一张存 art/raw/camp/camp.png。把它发给我看，我说可以再往下。
 2. 高清：python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块，
-   用第 1 节「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1536，16 块），
+   用第 1 节「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1024，16 块），
    然后 python3 scripts/camp/merge_details.py 得到 art/raw/camp/camp-hd.png。
-3. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
+3. 暖暖锅三种状态：python3 scripts/camp/pot_art.py --crop 裁出锅那块 art/raw/pot/in.png，按第 1b 节用 edit 画三版
+   art/raw/pot/out-1.png（早：一层粥底）、out-2.png（午：加了菜）、out-3.png（晚：满满一锅冒热气），锅以外的像素不动。
+4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
-4. 宠物 doudou、nuonuo、lianlian、shishi：每只先按 3.1 出 art/raw/pets/<id>-ref.png，四张定稿一起发给我看；
+5. 宠物 doudou、nuonuo、lianlian、shishi：每只先按 3.1 出 art/raw/pets/<id>-ref.png，四张定稿一起发给我看；
    我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
    都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
-5. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
-6. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
+6. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
+7. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
    codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）。
 ```
 
@@ -85,7 +85,7 @@ outlines, no text, no labels, no watermark, no UI, no borders. Everything is cut
 | `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
 
 **尺寸与格式**：
-- 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：1:1 的图（定稿、拼图、插画、图标）用 1024×1024；竖图用 1024×1536，它是 2:3 不是 3:4，所以营地整图先用 `scripts/camp/pad23.py` 把白模补成 2:3 再生成、生成后 `--crop` 裁回 3:4（见第 1 节）；全家福 1536×1024。输出原图，不要自己缩放、不要截图
+- 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：营地整图、锅、定稿、拼图、插画、图标都是 1:1，用 1024×1024；全家福 1536×1024。输出原图，不要自己缩放、不要截图
 - 拼图和精灵图一律 **真透明 PNG**（alpha 通道），不要把棋盘格画进图里；实在做不到透明就用纯洋红 `#FF00FF` 平涂背景，物体里不能有洋红
 - 营地整图、装饰的「原地重绘」是不透明的场景图，PNG 或高质量 JPG 都行
 
@@ -103,18 +103,17 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 ---
 
-## 1. 营地整图 `art/raw/camp/camp.png`（3:4 竖图）
+## 1. 营地整图 `art/raw/camp/camp.png`（1:1 正方形）
 
 这是整个游戏的舞台，值得多生成几轮挑最好的。
 
-- **尺寸**：工具只出 1024×1536（2:3），先 `python3 scripts/camp/pad23.py art/guide/camp-blockout.jpg -o art/raw/camp/blockout-23.png` 把白模补成 2:3（上面多一条天、下面多一条草），用这张做底稿；生成结果存 `art/raw/camp/camp-23.png`，再 `python3 scripts/camp/pad23.py --crop art/raw/camp/camp-23.png -o art/raw/camp/camp.png` 裁回 3:4。补出来的上下两条随便画（会裁掉），中间那块的布局必须和白模一一对应
-- **布局底稿**：`art/guide/camp-blockout.jpg`（补成 2:3 的那张），image-to-image，相似度调高，**布局一点都不能动**：草地的范围、篝火在正中偏下、大帐篷在篝火左上（门朝篝火）、两个食盆在篝火右下、三样东西的大小和间距、上缘的树林边缘（**草坪里一棵树都没有**）。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
+- **布局底稿**：`art/guide/camp-blockout.jpg`（正方形），image-to-image，相似度调高，**布局一点都不能动**：篝火和火上的暖暖锅在正中、大帐篷在整块营地的左上角（门朝篝火）、两个食盆在篝火右下、三样东西的大小、上缘的树林边缘（**草坪里一棵树都没有**）。手机上默认只看到中间一半宽，所以营地是「比屏幕大一圈的大草坪」，帐篷在默认视角里只露一个角，往左一拖才全看到。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
 - **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
 - **必须画成这样**：
   - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
   - 篝火里的火苗画小一点（游戏里会叠火苗动画）
-  - 大帐篷：一顶暖色帆布的露营帐篷（米白帆布、橙色边），**按白模的大小画，约占画宽 1/3**，门帘掀开朝着篝火（3/4 视角、斜着放都行），门口一小块踩平的草地；它是营地唯一的「房子」，画得可爱、画得大
-  - 篝火：按白模的大小，石头圈约占画宽 1/6，旁边一两根木头；帐篷、篝火、食盆是挨在一起的一组，不要散开
+  - 大帐篷：一顶暖色帆布的露营帐篷（米白帆布、橙色边），**按白模的大小画，约占画宽 1/4**，门帘掀开朝着篝火（3/4 视角、斜着放都行），门口一小块踩平的草地；它是营地唯一的「房子」，画得可爱、画得大
+  - 篝火 + 暖暖锅：石头圈约占画宽 1/8，火上用三根木棍搭的三脚架吊着一口圆滚滚的大陶锅（深褐色、锅口朝上、里面是空的，木盖掀开靠在火边），旁边一两根木头。这口锅是整个营地的中心（相当于 Pokémon Sleep 的卡比兽），画得结实、可爱、显眼
   - 两个食盆：木头或陶的小碗，空着
   - **不要水、不要树**：草坪里没有小溪、水塘、石头堆、木台，也没有一棵树，草地一直铺到左右和下面的画框
   - 树林只在上缘：一排蓬松的圆树冠（深一点的绿）做背景，边缘整齐，再远处是柔和的山和天空
@@ -123,17 +122,17 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 ```
 PROMPT: Repaint reference image 1 (a rough blockout of a camp) as a finished, high-end mobile-game main
 scene in UNIFIED STYLE, portrait 3:4, camera tilted about 45–50 degrees looking down. Keep the layout
-EXACTLY as in the blockout, at the SAME sizes: one big cozy camping tent at the upper left of the fire (about
-one third of the image width) with its door open toward the fire, a stone campfire ring just below and to the
-right of the tent, two empty food bowls at the lower right of the fire; these three form one close campsite
-group. Everything else is one wide, open, even meadow reaching the left, right and bottom edges. A band of
-round forest trees only along the top edge, with soft hills and sky beyond. No trees inside the meadow, no
-stream, no pond, no deck, no rocks, no paths. The meadow must be a clean, even, uniform lawn with
+EXACTLY as in the blockout, at the SAME sizes: at the very center a stone campfire ring with a big round clay
+cooking pot (empty, lid leaning beside the fire) hanging from a wooden tripod over the fire; one big cozy
+camping tent in the upper-left corner of the meadow with its door open toward the fire; two empty food bowls
+at the lower right of the fire. Everything else is one wide, open, even meadow reaching the left, right and
+bottom edges. A band of round forest trees only along the top edge, with soft hills and sky beyond. No trees
+inside the meadow, no stream, no pond, no deck, no rocks, no paths. The meadow must be a clean, even, uniform lawn with
 only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no clutter (decorations will
 be pasted on it later). Soft morning light, gentle shadows under the trees, calm and cozy.
 ```
 
-**高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 16 块（2:3，带重叠）放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成同名 `out-*.png`（1024×1536，正好是工具的竖图档），提示词：
+**高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 16 块（正方形，带重叠）放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成同名 `out-*.png`（1024×1024），提示词：
 
 ```
 Redraw this crop of the camp scene at much higher detail in the same UNIFIED STYLE: identical
@@ -142,6 +141,24 @@ Do not add or remove anything. Same lighting.
 ```
 
 然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
+
+### 1b. 暖暖锅的三种状态 `art/raw/pot/out-1.png`、`out-2.png`、`out-3.png`
+
+锅是营地的中心：妈妈今天打了几顿正餐，锅里就有几层。底图里的锅是空的，这三张是「锅里的内容」，页面按当天的打卡数叠在锅上。
+
+1. `python3 scripts/camp/pot_art.py --crop` 从高清营地图裁出锅连篝火圈那一块 `art/raw/pot/in.png`（1000×840 的比例）。
+2. 用 edit 在 in.png 上画三版，**锅以外的像素一概不动**，尺寸和 in 一样：
+   - `out-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
+   - `out-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
+   - `out-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
+3. `python3 scripts/camp/pot_art.py` 会比对 in / out 只留你画了的那块像素、羽化边缘。
+
+```
+PROMPT: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
+满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, seen from the same camera angle, lit by the same soft light.
+Change ONLY the inside of the pot (and the faint steam right above it); the pot, tripod, fire, stones and grass
+must stay pixel-identical. UNIFIED STYLE.
+```
 
 ---
 

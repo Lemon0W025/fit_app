@@ -2,7 +2,8 @@
 
     python3 scripts/camp/placeholders.py
 
-正式图到了由各自的脚本覆盖（装饰块 decor_patch.py、宠物 pack_anim.py + 图册插画、食物 slice-art.py）。需要 Pillow。
+正式图到了由各自的脚本覆盖（装饰块 decor_patch.py、宠物 pack_anim.py + 图册插画、食物 slice-art.py）。暖暖锅的占位在 pot_art.py --placeholder。
+注意：宠物占位用的旧动物图已经不在仓库里了，别再整个重跑这个脚本。需要 Pillow。
 """
 import json
 import os

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const C = require('../cloudfunctions/api/lib/shared/camp')
 
 test('画的尺寸和远近缩放', () => {
-  assert.equal(C.W, 3072)
+  assert.equal(C.W, 4096)
   assert.equal(C.H, 4096)
   assert.equal(C.scaleAt(0), 0.82)
   assert.equal(C.scaleAt(C.H), 1)
@@ -21,6 +21,8 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   assert.equal(C.SCENE.shade.length, 4)
   assert.equal(C.SCENE.tent.spots.length, 3)
   assert.equal(C.SCENE.sun.length, 3)
+  const [pl, pt, pr, pb] = C.SCENE.pot.box
+  assert.ok(pl < C.SCENE.fire[0] && C.SCENE.fire[0] < pr && pt < C.SCENE.fire[1] && C.SCENE.fire[1] < pb)
   // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地
   C.SCENE.seats.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `seat ${x},${y}`))
   C.SCENE.bowls.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `bowl ${x},${y}`))
@@ -48,17 +50,17 @@ test('多边形命中', () => {
 })
 
 test('inGrass / hitsNogo：篝火中心、帐篷不是草地；margin 和 names 管用', () => {
-  assert.equal(C.inGrass(1536, 2000), true)
-  assert.equal(C.inGrass(1536, 2680), false) // 篝火
-  assert.equal(C.inGrass(1000, 1850), false) // 大帐篷
-  assert.equal(C.inGrass(640, 900), true) // 草坪里没有树
-  assert.equal(C.inGrass(300, 2500), true) // 也没有小溪
-  assert.equal(C.inGrass(1536, 300), false) // 树林
-  const near = { left: 1420, top: 1800, right: 1490, bottom: 1860 } // 帐篷右边 20px
+  assert.equal(C.inGrass(2048, 3000), true)
+  assert.equal(C.inGrass(2048, 2048), false) // 篝火
+  assert.equal(C.inGrass(800, 1200), false) // 大帐篷
+  assert.equal(C.inGrass(640, 2500), true) // 草坪里没有树、没有小溪
+  assert.equal(C.inGrass(3900, 3900), true) // 右下角也是草坪
+  assert.equal(C.inGrass(2048, 300), false) // 树林
+  const near = { left: 1320, top: 1200, right: 1390, bottom: 1260 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
   assert.equal(C.hitsNogo(near, 40, ['tent']), true)
   assert.equal(C.hitsNogo(near, 40, ['fire']), false)
-  assert.equal(C.hitsNogo({ left: 1500, top: 2400, right: 1560, bottom: 2460 }, 0), true)
+  assert.equal(C.hitsNogo({ left: 2000, top: 1760, right: 2060, bottom: 1820 }, 0), true)
 })
 
 test('亲密度等级和礼物时机', () => {

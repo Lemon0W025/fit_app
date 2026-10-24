@@ -1,4 +1,4 @@
-// 让营地自己动起来：篝火火苗和烟、夜里帐篷里的暖光和萤火虫、水壶炉的热气、花坛的蝴蝶、灯的光晕。全是 CSS 动画，不占包
+// 让营地自己动起来：篝火火苗和烟、暖暖锅的热气、夜里帐篷里的暖光和萤火虫、水壶炉的热气、花坛的蝴蝶、灯的光晕。全是 CSS 动画，不占包
 // 纯函数，有单测；坐标是屏幕像素（画的像素 × L.k）
 
 const { SCENE, scaleAt } = require('./shared/camp')
@@ -18,17 +18,21 @@ function at(x, y, w, h, L) {
   return { left: fmt(x * L.k - (w * L.k) / 2), top: fmt(y * L.k - h * L.k), width: fmt(w * L.k), height: fmt(h * L.k) }
 }
 
-function fxViews(L, hour, placed) {
+function fxViews(L, hour, placed, potLevel = 0) {
   const night = hour >= 19 || hour < 6
   const out = []
   const [fx, fy] = SCENE.fire
   const fireZ = zOf(fy) + 5
   for (let i = 0; i < 3; i++) {
-    const w = 320 - i * 60
+    const w = 240 - i * 50
     out.push({ key: `flame-${i}`, kind: 'flame', ...at(fx + (i - 1) * 30, fy - 20, w, w * 1.3, L), z: fireZ + i, delay: fmt(i * 0.3) })
   }
   for (let i = 0; i < 3; i++) {
     out.push({ key: `smoke-${i}`, kind: 'smoke', ...at(fx + (i - 1) * 40, fy - 300, 240, 240, L), z: fireZ + 4, delay: fmt(i * 1.4) })
+  }
+  // 暖暖锅：打了两顿起冒热气，三顿冒得更欢
+  for (let i = 0; i < (potLevel >= 3 ? 2 : potLevel >= 2 ? 1 : 0); i++) {
+    out.push({ key: `pot-steam-${i}`, kind: 'steam', image: STEAM_IMAGE, ...at(fx + (i ? 90 : -70), SCENE.pot.box[1] + 260, 300, 300, L), z: zOf(fy) + 3, delay: fmt(i * 1.3) })
   }
   if (night) {
     // 帐篷里亮着灯

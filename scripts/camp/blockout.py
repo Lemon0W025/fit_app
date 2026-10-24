@@ -1,8 +1,8 @@
-"""按 shared/camp.js 的 SCENE 画营地白模（空旷草坪、后面一片树林、大帐篷 + 篝火 + 食盆一组）：包里的占位底图（切 16 块）+ 给 Codex 的底稿和标注图
+"""按 shared/camp.js 的 SCENE 画营地白模（正方形大草坪、后面一片树林、左上角大帐篷、正中篝火 + 暖暖锅、火边食盆）：包里的占位底图（切 16 块）+ 给 Codex 的底稿和标注图
 
     python3 scripts/camp/blockout.py
 
-输出：miniprogram/images/camp/base/t00.jpg…t33.jpg（1536×2048 切 4×4）、art/guide/camp-blockout.jpg（1152×1536，Codex 底稿）、
+输出：miniprogram/images/camp/base/t00.jpg…t33.jpg（1536×1536 切 4×4）、art/guide/camp-blockout.jpg（1152×1152，Codex 底稿）、
 art/guide/camp-blockout-labels.jpg（带名字，给人看）。需要 Pillow。
 """
 import json
@@ -25,6 +25,9 @@ SKY = (218, 236, 244)
 TENT = (244, 226, 196)
 TENT_DARK = (214, 190, 156)
 TENT_DOOR = (222, 132, 80)
+POT = (96, 70, 56)
+POT_RIM = (130, 98, 78)
+POT_IN = (60, 44, 36)
 FIRE = (236, 120, 60)
 STONE = (170, 165, 150)
 TRUNK = (120, 86, 56)
@@ -45,18 +48,20 @@ def draw(width, labels=False):
     d = ImageDraw.Draw(img)
     P = lambda pts: [(x * k, y * k) for x, y in pts]
     # 远山、后面一片树林（只当背景，草坪里不放树）、草地
-    d.polygon(P([[0, 0], [S['width'], 0], [S['width'], 520], [2400, 300], [1600, 420], [900, 280], [0, 480]]), fill=MOUNTAIN)
-    d.rectangle([0, 360 * k, width, 720 * k], fill=FOREST)
-    for i in range(14):
-        cx = (i + 0.5) * S['width'] / 14
+    Wd = S['width']
+    d.polygon(P([[0, 0], [Wd, 0], [Wd, 520], [Wd * 0.78, 300], [Wd * 0.52, 420], [Wd * 0.29, 280], [0, 480]]), fill=MOUNTAIN)
+    d.rectangle([0, 360 * k, width, 760 * k], fill=FOREST)
+    n = max(10, round(Wd / 220))
+    for i in range(n):
+        cx = (i + 0.5) * Wd / n
         r = 150 if i % 2 else 120
-        d.ellipse([(cx - r) * k, (560 - r) * k, (cx + r) * k, (560 + r) * k], fill=CANOPY if i % 3 else FOREST)
-    d.rectangle([0, 700 * k, width, height], fill=GRASS_DARK)
+        d.ellipse([(cx - r) * k, (580 - r) * k, (cx + r) * k, (580 + r) * k], fill=CANOPY if i % 3 else FOREST)
+    d.rectangle([0, 740 * k, width, height], fill=GRASS_DARK)
     d.polygon(P(S['grass']), fill=GRASS)
     # 大帐篷：地面占位是 nogo.tent，帐篷本身往上立起来；左面背光、右面受光，门朝篝火（右下）
     (tx0, ty0), (tx1, _), (_, ty1) = S['nogo']['tent'][0], S['nogo']['tent'][1], S['nogo']['tent'][2]
     tmx = (tx0 + tx1) / 2
-    apex = ty0 - 520
+    apex = ty0 - 320
     d.polygon(P([[tx0, ty1], [tmx, ty1], [tmx, apex], [tx0, ty0]]), fill=TENT_DARK)
     d.polygon(P([[tmx, ty1], [tx1, ty1], [tx1, ty0], [tmx, apex]]), fill=TENT)
     d.polygon(P([[tmx + 60, ty1], [tx1 - 60, ty1], [tmx + 150, ty0 + 60]]), fill=TENT_DOOR)
@@ -65,6 +70,12 @@ def draw(width, labels=False):
     d.ellipse([(fx - 260) * k, (fy - 170) * k, (fx + 260) * k, (fy + 170) * k], fill=STONE)
     d.ellipse([(fx - 150) * k, (fy - 110) * k, (fx + 150) * k, (fy + 80) * k], fill=FIRE)
     d.rectangle([(fx + 300) * k, (fy + 120) * k, (fx + 560) * k, (fy + 190) * k], fill=TRUNK)   # 旁边一根木头
+    # 暖暖锅：三脚架吊着一口大陶锅（锅口中心 fy-348，和 pot_art.py 的占位一致）
+    for dx in (-230, 230, 0):
+        d.line([((fx + dx) * k, (fy + (60 if dx else -120)) * k), (fx * k, (fy - 620) * k)], fill=TRUNK, width=max(2, int(18 * k)))
+    d.ellipse([(fx - 300) * k, (fy - 480) * k, (fx + 300) * k, (fy - 10) * k], fill=POT)
+    d.ellipse([(fx - 280) * k, (fy - 438) * k, (fx + 280) * k, (fy - 258) * k], fill=POT_RIM)
+    d.ellipse([(fx - 240) * k, (fy - 425) * k, (fx + 240) * k, (fy - 271) * k], fill=POT_IN)
     for bx, by in S['bowls']:
         d.ellipse([(bx - 100) * k, (by - 65) * k, (bx + 100) * k, (by + 65) * k], fill=BOWL, outline=STONE, width=max(1, int(5 * k)))
     if labels:
@@ -76,6 +87,9 @@ def draw(width, labels=False):
         tag(S['bowls'][0][0], S['bowls'][0][1] - 120, 'bowls 食盆')
         tag(S['sun'][0][0], S['sun'][0][1], 'sun 晒太阳')
         tag(60, 400, 'forest 树林（只在后面当背景）')
+        tag(fx + 320, fy - 500, 'pot 暖暖锅')
+        pl, pt, pr, pb = S['pot']['box']
+        d.rectangle([pl * k, pt * k, pr * k, pb * k], outline=(255, 255, 255), width=2)
         for i, (ex, ey) in enumerate(S['entries']):
             tag(ex, ey, f'entry {i + 1}')
         for sx, sy in S['seats']:

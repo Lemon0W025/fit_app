@@ -1,9 +1,9 @@
-"""高清第二轮：把营地整图切成几块带重叠的 2:3 小图（图像模型原生就出 1024×1536），给它逐块重绘
+"""高清第二轮：把营地整图切成几块带重叠的正方形小图（图像模型原生就出 1024×1024），给它逐块重绘
 
     python3 scripts/camp/detail_crops.py art/raw/camp/camp.png [--cols 4] [--overlap 0.15]
 
 输出 art/raw/camp/detail/base.png（底图）、in-00.png … in-rc.png（小图，4 列 × 4 行 = 16 块）和 boxes.json（每块在底图上的位置）。
-模型重绘后存成同目录的 out-00.png …（和 in 同样的 2:3，1024×1536），再跑 merge_details.py 拼回高清整图（约 3600 宽）。
+模型重绘后存成同目录的 out-00.png …（和 in 一样是正方形，1024×1024），再跑 merge_details.py 拼回高清整图（约 3600 宽）。
 """
 import argparse
 import json
@@ -14,7 +14,7 @@ from PIL import Image
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 OUT = os.path.join(REPO, 'art', 'raw', 'camp', 'detail')
-ASPECT = 2 / 3
+ASPECT = 1.0
 
 
 def boxes_for(w, h, cols, overlap):

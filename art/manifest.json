@@ -4,14 +4,29 @@
     {
       "file": "art/raw/camp/camp.png",
       "kind": "painting",
-      "aspect": 0.75,
+      "aspect": 1.0,
       "minWidth": 1000
     },
     {
       "file": "art/raw/camp/camp-hd.png",
       "kind": "painting",
-      "aspect": 0.75,
+      "aspect": 1.0,
       "minWidth": 3000
+    },
+    {
+      "file": "art/raw/pot/out-1.png",
+      "kind": "painting",
+      "aspect": 1.19
+    },
+    {
+      "file": "art/raw/pot/out-2.png",
+      "kind": "painting",
+      "aspect": 1.19
+    },
+    {
+      "file": "art/raw/pot/out-3.png",
+      "kind": "painting",
+      "aspect": 1.19
     },
     {
       "file": "art/raw/ui/foods.png",

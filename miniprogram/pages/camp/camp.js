@@ -37,6 +37,7 @@ Page({
     pets: [],
     bowls: [],
     fx: [],
+    pot: null,
     tint: '',
     peekText: '',
     termText: '',
@@ -111,6 +112,8 @@ Page({
     const decorBag = V.decorBag(view.decor.unplaced)
     const peeking = view.bowls.map((b) => b.peeking).filter(Boolean).map((id) => petById(id).name)
     const treats = view.term && view.term.treats.length ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
+    if (view.daily !== undefined) this.potLevel = V.potLevel(view.daily)
+    const potLevel = this.potLevel || 0
     const patch = {
       loaded: true,
       beans: view.beans,
@@ -119,7 +122,8 @@ Page({
       base: this.data.base.length ? this.data.base : V.baseTiles(L, config.campArt || ''),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
       bowls: V.bowlViews(view.bowls, L),
-      fx: fxViews(L, this.nowHour(), view.decor.placed),
+      fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel),
+      pot: V.potView(potLevel, L, config.potArt || ''),
       tint: V.tintFor(this.nowHour()),
       peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
@@ -156,6 +160,11 @@ Page({
   onBaseError() {
     if (!config.campArt || !this.data.base.length || this.data.base[0].image.indexOf('cloud://') !== 0) return
     this.setData({ base: V.baseTiles(this.L, '') })
+  },
+
+  onPotError() {
+    if (!config.potArt || !this.data.pot) return
+    this.setData({ pot: V.potView(this.potLevel || 0, this.L, '') })
   },
 
   onDecorError() {
