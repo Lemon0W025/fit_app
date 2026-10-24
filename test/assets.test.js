@@ -15,7 +15,10 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
     assert.ok(exists('camp', 'pets', `${p.id}.png`), p.id)
     assert.ok(exists('camp', 'pets', `${p.id}-face.png`), p.id)
   })
-  FOODS.concat(TREATS).forEach((f) => assert.ok(exists('camp', 'foods', `${f.id}.png`), f.id))
+  FOODS.concat(TREATS).forEach((f) => {
+    assert.ok(exists('camp', 'foods', `${f.id}.png`), f.id)
+    assert.ok(exists('camp', 'foods', 'bowl', `${f.id}.png`), `碗里的 ${f.id}`)
+  })
   DECOR.forEach((d) => assert.ok(exists('camp', 'decor', `${d.id}.png`), d.id))
   ;['backdrop.jpg', 'night-backdrop.jpg'].forEach((f) => assert.ok(exists('camp', 'base', f), f))
   const { SCENE } = require('../cloudfunctions/api/lib/shared/camp')
@@ -25,6 +28,7 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
       files.forEach((f) => assert.ok(exists('camp', 'cut', pfx + f), pfx + f))
     })
     assert.ok(exists('camp', 'cut', `${pfx}fire.jpg`), `${pfx}fire.jpg`)
+    ;[0, 1].forEach((i) => assert.ok(exists('camp', 'cut', `${pfx}bowl-${i}.png`), `${pfx}bowl-${i}.png`))
   })
 })
 

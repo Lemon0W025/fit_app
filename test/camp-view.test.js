@@ -64,8 +64,14 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.equal(groups[3].items.find((i) => i.id === 'flowerbed').soldOut, true)
   assert.ok(!groups.some((g) => g.items.some((i) => i.id === 'gold_tent')))
   const bowls = V.bowlViews([{ food: 'xiaomi', peeking: 'doudou' }, { food: null, peeking: null }], L)
-  assert.deepEqual([bowls[0].index, bowls[0].foodImage, bowls[0].peekImage, bowls[1].foodImage], [0, '/images/camp/foods/xiaomi.png', '/images/camp/pets/doudou-face.png', ''])
-  assert.ok(bowls[0].size > 0 && bowls[0].left > 0)
+  assert.deepEqual([bowls[0].index, bowls[0].foodImage, bowls[0].peekImage, bowls[1].foodImage], [0, '/images/camp/foods/bowl/xiaomi.png', '/images/camp/pets/doudou-face.png', ''])
+  // 碗：框按 SCENE.bowl.boxes 摆；吃的画在碗口那圈里；碗沿兜底用包里的 PNG、云端用 WebP、夜里加 night-
+  const [bl, bt, br, bb] = SCENE.bowl.boxes[0]
+  assert.ok(Math.abs(bowls[0].left - bl * L.k) < 0.011 && Math.abs(bowls[0].width - (br - bl) * L.k) < 0.011 && Math.abs(bowls[0].height - (bb - bt) * L.k) < 0.011)
+  assert.ok(Math.abs(bowls[0].pile.width - 2 * SCENE.bowl.rx * L.k) < 0.011)
+  assert.ok(Math.abs(bowls[0].left + bowls[0].pile.left + bowls[0].pile.width / 2 - SCENE.bowls[0][0] * L.k) < 0.03)
+  assert.equal(bowls[0].rimImage, '/images/camp/cut/bowl-0.png')
+  assert.equal(V.bowlViews([], L, true, 'cloud://x/')[1].rimImage, 'cloud://x/night-bowl-1.webp')
   assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', '', '', ''])
   assert.deepEqual([6, 12, 18, 19, 23, 3, 5].map(V.isNight), [false, false, false, true, true, true, true])
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/', true)[15].image, 'cloud://x/camp/base/night-t33.jpg')

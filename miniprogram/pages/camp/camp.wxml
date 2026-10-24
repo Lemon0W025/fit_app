@@ -20,8 +20,9 @@
           <image class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.light || 'none'}}" />
           <image wx:if="{{item.night && item.moon}}" class="decor decor-moon {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.moonLight}}; opacity: {{item.moon}}" />
         </block>
-        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.size}}px; height: {{item.size}}px; z-index: {{item.z}}">
-          <image wx:if="{{item.foodImage}}" class="bowl-food" src="{{item.foodImage}}" mode="aspectFit" style="filter: {{item.light || 'none'}}" />
+        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
+          <image wx:if="{{item.foodImage}}" class="bowl-pile" src="{{item.foodImage}}" mode="scaleToFill" style="left: {{item.pile.left}}px; top: {{item.pile.top}}px; width: {{item.pile.width}}px; height: {{item.pile.height}}px; filter: {{item.light || 'none'}}" />
+          <image wx:if="{{item.foodImage}}" class="bowl-rim" src="{{item.rimImage}}" webp="{{true}}" mode="scaleToFill" binderror="onCutError" />
           <image wx:if="{{item.peekImage}}" class="bowl-peek" src="{{item.peekImage}}" mode="aspectFit" />
         </view>
         <block wx:for="{{pets}}" wx:key="id">

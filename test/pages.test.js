@@ -253,10 +253,10 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   camp.worldRect = wx.worldRect
   const bowl = camp.data.bowls[0]
   const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
-  camp.onDragStart(touchAt(bowl.left + bowl.size / 2, bowl.top + bowl.size / 2))
+  camp.onDragStart(touchAt(bowl.left + bowl.width / 2, bowl.top + bowl.height / 2))
   await settle()
   assert.equal(camp.data.drag.ok, true)
-  camp.onDragEnd(touchAt(bowl.left + bowl.size / 2, bowl.top + bowl.size / 2))
+  camp.onDragEnd(touchAt(bowl.left + bowl.width / 2, bowl.top + bowl.height / 2))
   await settle()
   assert.equal(camp.data.mode, 'view')
   assert.equal(camp.data.bowls[0].peeking, 'nuonuo')

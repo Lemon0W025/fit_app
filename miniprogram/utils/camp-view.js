@@ -126,18 +126,25 @@ function shopGroups(owned, beans) {
   }))
 }
 
-function bowlViews(bowls, L, night) {
+// 食盆：碗是画上的；放了吃的就在碗口里画一小堆（images/camp/foods/bowl/，scripts/camp/bowl_food.py），
+// 再把从画上抠下来的碗沿和碗身（bowl-0 / bowl-1，cutBase 那儿）盖在上面：吃的在碗里，不是浮在碗上的一片
+function bowlViews(bowls, L, night, base) {
+  const { rx, ry, boxes } = SCENE.bowl
+  const ext = base ? 'webp' : 'png'
   return SCENE.bowls.map(([bx, by], index) => {
     const b = (bowls && bowls[index]) || { food: null, peeking: null }
-    const size = BOWL_PX * scaleAt(by) * L.k
+    const [l, t, r, bt] = boxes[index]
     return {
       index,
-      left: fmt(bx * L.k - size / 2),
-      top: fmt(by * L.k - size / 2),
-      size: fmt(size),
+      left: fmt(l * L.k),
+      top: fmt(t * L.k),
+      width: fmt((r - l) * L.k),
+      height: fmt((bt - t) * L.k),
       z: zOf(by),
+      rimImage: `${base || '/images/camp/cut/'}${night ? 'night-' : ''}bowl-${index}.${ext}`,
+      pile: { left: fmt((bx - rx - l) * L.k), top: fmt((by - ry - t) * L.k), width: fmt(2 * rx * L.k), height: fmt(2 * ry * L.k) },
       food: b.food || '',
-      foodImage: b.food ? foodImage(b.food) : '',
+      foodImage: b.food ? `/images/camp/foods/bowl/${b.food}.png` : '',
       peeking: b.peeking || '',
       peekImage: b.peeking ? petFace(b.peeking) : '',
       light: night ? nightFilter(bx, by) : '',

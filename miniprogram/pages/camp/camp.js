@@ -125,7 +125,7 @@ Page({
       backdrop: V.backdropImage(night),
       base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night),
-      bowls: V.bowlViews(view.bowls, L, night),
+      bowls: V.bowlViews(view.bowls, L, night, this.cutBase()),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
@@ -177,7 +177,11 @@ Page({
     if (this.cutFailed || !config.cutArt) return
     this.cutFailed = true
     const placed = this.camp ? this.camp.decor.placed : []
-    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight), fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, '') })
+    this.setData({
+      cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
+      fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
+      bowls: V.bowlViews(this.camp ? this.camp.bowls : [], this.L, this.baseNight, ''),
+    })
   },
 
   onDecorError() {
@@ -426,7 +430,7 @@ Page({
       if (px >= s.left && px <= s.left + s.width && py >= top && py <= L.height - s.bottom) return { pet: i }
     }
     for (const b of this.data.bowls) {
-      if (px >= b.left && px <= b.left + b.size && py >= b.top && py <= b.top + b.size) return { bowl: b.index }
+      if (px >= b.left && px <= b.left + b.width && py >= b.top && py <= b.top + b.height) return { bowl: b.index }
     }
     return null
   },
