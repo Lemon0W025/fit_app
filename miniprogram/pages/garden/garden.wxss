@@ -915,6 +915,122 @@ button.btn-small {
 }
 
 /* 物件、小动物脚下的影子 */
+/* ---------------------------------------------------------------- 壳上的小动静（全是 CSS，不占包） */
+
+/* 水面波光：一道道斜着的淡高光慢慢滑过去 */
+.fx-shimmer {
+  position: absolute;
+  pointer-events: none;
+  background: repeating-linear-gradient(-30deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0) 18px, rgba(255, 255, 255, 0.22) 22px, rgba(255, 255, 255, 0) 30px);
+  background-size: 160px 160px;
+  animation: shimmer 6s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 160px 0;
+  }
+}
+
+/* 星光：一闪一闪 */
+.fx-sparkle {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%,
+  60%,
+  100% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  75% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
+/* 温泉热气：冒上来、散开 */
+.fx-steam {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: steam 4s ease-out infinite;
+}
+
+@keyframes steam {
+  0% {
+    opacity: 0;
+    transform: translateY(10%) scale(0.5);
+  }
+  25% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-120%) scale(1.3);
+  }
+}
+
+/* 瀑布：一条往下流的白练 */
+.fx-falls {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.55;
+  border-radius: 40%;
+  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.6) 6px, rgba(255, 255, 255, 0) 14px);
+  background-size: 100% 28px;
+  animation: falls 0.7s linear infinite;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 25%, #000 85%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 25%, #000 85%, transparent 100%);
+}
+
+@keyframes falls {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 28px;
+  }
+}
+
+/* 花瓣：粉色小瓣飘下来，边飘边转 */
+.fx-petal {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 100% 0 100% 0;
+  background: linear-gradient(135deg, #ffd3e0, #ff9fbd);
+  opacity: 0;
+  animation: petal 7s ease-in-out infinite;
+}
+
+@keyframes petal {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  10% {
+    opacity: 0.95;
+  }
+  50% {
+    transform: translate(-30px, 40px) rotate(200deg);
+  }
+  90% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, 90px) rotate(420deg);
+  }
+}
+
 /* 遮挡块：从底图上抠下来的墙 / 门 / 建筑，盖在站在它后面的东西上；点击穿透 */
 .occ {
   position: absolute;

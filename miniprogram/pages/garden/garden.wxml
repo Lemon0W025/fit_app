@@ -5,6 +5,12 @@
     <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.5" scale-max="2" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
       <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" bindtap="tapLand">
         <image wx:for="{{art}}" wx:key="key" class="art" src="{{item.image}}" binderror="onArtError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+        <block wx:for="{{sceneFx}}" wx:key="key">
+          <view wx:if="{{item.kind === 'shimmer'}}" class="fx-shimmer" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}; animation-delay: -{{item.delay}}s"></view>
+          <image wx:elif="{{item.kind === 'sparkle' || item.kind === 'steam'}}" class="fx-{{item.kind}}" src="{{item.image}}" mode="aspectFit" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s" />
+          <view wx:elif="{{item.kind === 'falls'}}" class="fx-falls" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}"></view>
+          <view wx:elif="{{item.kind === 'petal'}}" class="fx-petal" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
+        </block>
         <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <block wx:for="{{sprites}}" wx:key="uid">
           <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>

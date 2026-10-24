@@ -10,6 +10,7 @@ const { tileTop } = require('../../utils/iso')
 const { createLife } = require('../../utils/garden-life')
 const O = require('../../utils/occlusion')
 const SHEETS = require('../../utils/anim-sheets')
+const { fxViews } = require('../../utils/scene-fx')
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -49,6 +50,7 @@ Page({
     // 小动物头上的表情：有正式图的用图，其他还是 emoji
     fx: { '💤': 'zzz', '❤️': 'heart', '🎵': 'note', '✨': 'sparkle', '💧': 'drop', '♨️': 'steam', '☀️': 'sun', '🌾': 'grain', '👀': 'bang' },
     clouds: [],
+    sceneFx: [],
     signs: [],
     sprites: [],
     animals: [],
@@ -128,6 +130,7 @@ Page({
       world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
       art: this.data.art.length ? this.data.art : W.artTiles(L, this.data.artBase),
       clouds: W.cloudViews(view.areas, L),
+      sceneFx: fxViews(view.areas, L),
       signs: W.signViews(view.areas, this.opened, L),
       sprites: buildScene(view.placed, L),
       inventory,
