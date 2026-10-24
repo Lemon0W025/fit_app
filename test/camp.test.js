@@ -58,16 +58,17 @@ test('多边形命中', () => {
 
 test('inGrass / hitsNogo：篝火中心、帐篷不是草地；margin 和 names 管用', () => {
   assert.equal(C.inGrass(2048, 3200), true)
-  assert.equal(C.inGrass(2048, 2300), false) // 篝火
-  assert.equal(C.inGrass(2000, 1300), false) // 大帐篷
+  assert.equal(C.inGrass(2048, 2250), false) // 篝火
+  assert.equal(C.inGrass(800, 1200), false) // 大帐篷（左上角）
+  assert.equal(C.inGrass(2000, 1300), true) // 锅后面是空草坪
   assert.equal(C.inGrass(640, 2500), true) // 草坪里没有树、没有小溪
   assert.equal(C.inGrass(3900, 3900), true) // 右下角也是草坪
   assert.equal(C.inGrass(2048, 300), false) // 树林
-  const near = { left: 2620, top: 1300, right: 2690, bottom: 1360 } // 帐篷右边 20px
+  const near = { left: 1320, top: 1300, right: 1390, bottom: 1360 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
   assert.equal(C.hitsNogo(near, 40, ['tent']), true)
   assert.equal(C.hitsNogo(near, 40, ['fire']), false)
-  assert.equal(C.hitsNogo({ left: 2000, top: 2000, right: 2060, bottom: 2060 }, 0), true)
+  assert.equal(C.hitsNogo({ left: 2000, top: 1950, right: 2060, bottom: 2010 }, 0), true)
 })
 
 test('亲密度等级和礼物时机', () => {

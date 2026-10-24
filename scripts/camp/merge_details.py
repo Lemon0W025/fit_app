@@ -1,8 +1,9 @@
 """把逐块重绘的高清小图拼回一张营地整图（重叠处羽化过渡）
 
-    python3 scripts/camp/merge_details.py [--out art/raw/camp/camp-hd.png]
+    python3 scripts/camp/merge_details.py [--dir detail] [--out art/raw/camp/camp-hd.png]
+    python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/night-hd.png
 
-读 art/raw/camp/detail/boxes.json 和 out-*.png；缺哪块就用底图放大顶上（会提示）。
+读 art/raw/camp/<dir>/boxes.json 和 out-*.png；缺哪块就用底图放大顶上（会提示）。
 输出尺寸 = 底图 × （小图宽 / 原切块宽）。然后 python3 scripts/camp/cut_art.py 切这张高清图。
 """
 import argparse
@@ -13,7 +14,6 @@ import numpy as np
 from PIL import Image
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-DIR = os.path.join(REPO, 'art', 'raw', 'camp', 'detail')
 
 
 def feather(w, h, margin):
@@ -25,8 +25,10 @@ def feather(w, h, margin):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument('--dir', default='detail')
     ap.add_argument('--out', default=os.path.join(REPO, 'art', 'raw', 'camp', 'camp-hd.png'))
     a = ap.parse_args()
+    DIR = os.path.join(REPO, 'art', 'raw', 'camp', a.dir)
     meta = json.load(open(os.path.join(DIR, 'boxes.json')))
     base = Image.open(os.path.join(DIR, 'base.png')).convert('RGB')
     first = meta['boxes'][0]['box']

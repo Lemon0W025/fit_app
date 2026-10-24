@@ -31,8 +31,11 @@ function fromTouch(clientX, clientY, rect, L) {
   return { x: ((clientX - rect.left) / scale) / L.k, y: ((clientY - rect.top) / scale) / L.k }
 }
 
-function baseTiles(L, base) {
-  const prefix = base || '/images/camp/base/'
+// 夜里（19～6 点）换整套夜景底图和抠图（文件名加 night-），白天 / 傍晚用日景（傍晚再叠一层橙色）
+const isNight = (hour) => hour >= 19 || hour < 6
+
+function baseTiles(L, base, night) {
+  const prefix = (base || '/images/camp/base/') + (night ? 'night-' : '')
   const tiles = []
   const tw = L.width / 4
   const th = L.height / 4
@@ -136,8 +139,8 @@ function bowlViews(bowls, L) {
 
 // 一天的光：傍晚偏橙、夜里偏蓝
 function tintFor(hour) {
-  if (hour >= 19 || hour < 6) return 'night'
-  if (hour >= 17) return 'dusk'
+  // 夜里整套换成夜景图，不叠色；傍晚在日景上叠一层橙
+  if (hour >= 17 && hour < 19) return 'dusk'
   return ''
 }
 
@@ -161,10 +164,10 @@ function focusOffset(x, y, L, win, scale) {
   return { x: win.width / 2 - cx - scale * (px - cx), y: win.height / 2 - cy - scale * (py - cy), scale }
 }
 
-// 首页默认视角：画填满屏幕高度、篝火（暖暖锅）在屏幕正中略偏下（上面给帐篷和界面留地方）；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
+// 首页默认视角：画填满屏幕高度、篝火（暖暖锅）对准屏幕中心；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
 function homeView(L, win) {
   const scale = Math.min(2.5, Math.max(1, Math.round((win.height / L.height) * 100) / 100))
-  return focusOffset(SCENE.fire[0], SCENE.fire[1] - 200, L, win, scale)
+  return focusOffset(SCENE.fire[0], SCENE.fire[1], L, win, scale)
 }
 
 // 暖暖锅：今天打了几顿正餐（早午晚印章里有状态的），锅里就有几层（0～3）
@@ -174,8 +177,8 @@ function potLevel(daily) {
 }
 
 // 帐篷和暖暖锅是从底图里抠出来的独立一层（zy 是它们落地的 y）：宠物走到后面被挡住、走到前面盖在上面。锅按今天打了几顿换图
-function cutoutViews(L, potLevel, base) {
-  const prefix = base || '/images/camp/cut/'
+function cutoutViews(L, potLevel, base, night) {
+  const prefix = (base || '/images/camp/cut/') + (night ? 'night-' : '')
   return Object.keys(SCENE.cutouts).map((key) => {
     const c = SCENE.cutouts[key]
     const [l, t, r, b] = c.box
@@ -186,5 +189,5 @@ function cutoutViews(L, potLevel, base) {
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews, isNight,
 }

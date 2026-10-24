@@ -2,6 +2,7 @@
 
     python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出两块给 Codex：art/raw/cut/in-tent.png、in-pot.png（范围是 shared/camp.js 的 SCENE.cutouts）
     python3 scripts/camp/cutouts.py [--local]                           # 合成 art/cut/tent.png、pot-0.png～pot-3.png；--local 再写 1/4 小图到 miniprogram/images/camp/cut/
+    加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-tent.png、night-pot-N.png）
 
 Codex 在裁出来的块上用 edit 画（其他像素不动）：
     out-tent-removed.png   把帐篷整个去掉，补成草地和后面的树林       → 和 in 比对得到帐篷的范围 → tent.png
@@ -30,16 +31,16 @@ def scene():
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
-def crop(image):
+def crop(image, pfx):
     S = scene()
     img = Image.open(image).convert('RGB')
     k = img.width / S['W']
     os.makedirs(RAW, exist_ok=True)
     for key, c in S['cutouts'].items():
         l, t, r, b = c['box']
-        img.crop((round(l * k), round(t * k), round(r * k), round(b * k))).save(os.path.join(RAW, f'in-{key}.png'))
+        img.crop((round(l * k), round(t * k), round(r * k), round(b * k))).save(os.path.join(RAW, f'in-{pfx}{key}.png'))
     json.dump({'k': k, 'cutouts': S['cutouts']}, open(os.path.join(RAW, 'boxes.json'), 'w'), indent=1)
-    print(f'裁好 → {RAW}/in-tent.png、in-pot.png；Codex 画 out-*.png 后再跑 python3 scripts/camp/cutouts.py')
+    print(f'裁好 → {RAW}/in-{pfx}tent.png、in-{pfx}pot.png；Codex 画 out-{pfx}*.png 后再跑 python3 scripts/camp/cutouts.py' + (' --night' if pfx else ''))
 
 
 def mask_between(a, b):
@@ -66,28 +67,28 @@ def emit(rgb, alpha, name, local):
     print(f'  ✓  {name}  {rgba.width}×{rgba.height}')
 
 
-def build(local):
+def build(local, pfx):
     os.makedirs(OUT, exist_ok=True)
-    tent_in = load('in-tent.png')
-    tent_removed = load('out-tent-removed.png', tent_in.size) if tent_in else None
+    tent_in = load(f'in-{pfx}tent.png')
+    tent_removed = load(f'out-{pfx}tent-removed.png', tent_in.size) if tent_in else None
     if tent_in and tent_removed:
-        emit(tent_in, mask_between(tent_in, tent_removed), 'tent.png', local)
+        emit(tent_in, mask_between(tent_in, tent_removed), f'{pfx}tent.png', local)
     else:
-        print('  ·  帐篷：还没有 in-tent.png / out-tent-removed.png')
-    pot_in = load('in-pot.png')
-    pot_removed = load('out-pot-removed.png', pot_in.size) if pot_in else None
+        print(f'  ·  帐篷：还没有 in-{pfx}tent.png / out-{pfx}tent-removed.png')
+    pot_in = load(f'in-{pfx}pot.png')
+    pot_removed = load(f'out-{pfx}pot-removed.png', pot_in.size) if pot_in else None
     if not (pot_in and pot_removed):
-        print('  ·  锅：还没有 in-pot.png / out-pot-removed.png')
+        print(f'  ·  锅：还没有 in-{pfx}pot.png / out-{pfx}pot-removed.png')
         return
     pot_mask = mask_between(pot_in, pot_removed)
-    emit(pot_in, pot_mask, 'pot-0.png', local)
+    emit(pot_in, pot_mask, f'{pfx}pot-0.png', local)
     for n in (1, 2, 3):
-        out = load(f'out-pot-{n}.png', pot_in.size)
+        out = load(f'out-{pfx}pot-{n}.png', pot_in.size)
         if not out:
-            print(f'  ·  还没有 out-pot-{n}.png')
+            print(f'  ·  还没有 out-{pfx}pot-{n}.png')
             continue
         alpha = Image.fromarray(np.maximum(np.array(pot_mask), np.array(mask_between(pot_in, out))))
-        emit(out, alpha, f'pot-{n}.png', local)
+        emit(out, alpha, f'{pfx}pot-{n}.png', local)
     print(f'→ {OUT}；接着 npm run wx:art，把前缀填进 miniprogram/config.js 的 cutArt')
 
 
@@ -96,11 +97,13 @@ def main():
     ap.add_argument('image', nargs='?', default=os.path.join(REPO, 'art', 'raw', 'camp', 'camp-hd.png'))
     ap.add_argument('--crop', action='store_true')
     ap.add_argument('--local', action='store_true')
+    ap.add_argument('--night', action='store_true')
     a = ap.parse_args()
+    pfx = 'night-' if a.night else ''
     if a.crop:
-        crop(a.image)
+        crop(a.image if not a.night or a.image != ap.get_default('image') else os.path.join(REPO, 'art', 'raw', 'camp', 'night-hd.png'), pfx)
     else:
-        build(a.local)
+        build(a.local, pfx)
 
 
 if __name__ == '__main__':

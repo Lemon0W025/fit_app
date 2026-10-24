@@ -21,14 +21,18 @@
 ```
 你在仓库根目录，用你内置的图像生成能力做一张游戏主场景图。先读 docs/art/camp-art-pack.md 的第 0 节和第 1 节。
 按第 1 节的 PROMPT 生成 1024×1024 的正方形，画风用第 0 节的 UNIFIED STYLE，构图参考 Pokémon Sleep 的营地。
-硬要求只有几条（影响玩法）：正方形；约 45 度俯视、地面平；草坪占画面大部分、干净平整没有杂物；篝火上吊着的大陶锅在正中、
-是主角；帐篷在锅正后方、门朝前；两个空食盆在火的右下；没有水面；草坪里没有树（树林只在上缘），没有小路。
+硬要求只有几条（影响玩法）：正方形；约 45 度俯视、地面平；草坪占画面大部分、干净平整没有杂物；篝火上吊着的大陶锅在正中偏前一点、
+是主角；帐篷在草坪的最左上角（远离锅、门朝篝火）；两个空食盆在火的右下；没有水面；草坪里没有树（树林只在上缘），没有小路。
 其余随你发挥（帐篷样式、树林怎么框、火边的小道具、花、光线、天空），目标是好看、有「想住进去」的感觉。
 出 4 版各不相同，存 art/raw/camp/candidates/01.png～04.png，每张跑 python3 scripts/art/check_art.py 看比例，
 然后把 4 张发给我挑。我选定后你把那张复制成 art/raw/camp/camp.png，再做高清：
 python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块用第 1 节
 「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1024，16 块），python3 scripts/camp/merge_details.py
-得到 art/raw/camp/camp-hd.png。把 art/raw/camp/ 提交到新分支 codex/art-batch-1a 并推送，然后停下来等我。
+得到 art/raw/camp/camp-hd.png。
+再出夜景：以 camp.png 为底 image-to-image 按第 1c 节画同构图的夜景 art/raw/camp/night.png（所有东西位置不变），
+python3 scripts/camp/detail_crops.py art/raw/camp/night.png --cols 2 --dir night-detail，4 块各重绘成 out-*.png，
+python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/night-hd.png。
+把 art/raw/camp/ 提交到新分支 codex/art-batch-1a 并推送，然后停下来等我。
 ```
 
 **A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
@@ -43,6 +47,8 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
 3. 帐篷和锅的抠图 + 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-tent.png、in-pot.png，
    按第 1b 节用 edit 画 out-tent-removed.png（把帐篷整个去掉）、out-pot-removed.png（把锅和三脚架去掉）、
    out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），每张只改该改的地方，其他像素不动。
+   夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-tent.png、in-night-pot.png，
+   画 out-night-tent-removed.png、out-night-pot-removed.png、out-night-pot-1/2/3.png。
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
@@ -125,8 +131,8 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 **硬要求（影响玩法，只有这几条）**：
 - 正方形 1024×1024；约 45 度俯视，地面是平的，远近物体尺寸差别不大（草坪上到处要能放东西）
 - 草坪占画面大部分，**干净、平整、均匀**：允许零星小花和草的质感，不要小路、石头、水面、落叶堆，不要在远离营地的地方放杂物（装饰是游戏里玩家自己摆的）
-- 篝火 + 锅在正中，是整张画的主角：一圈石头围着小火，木头三脚架吊着一口圆滚滚的大陶锅，锅是空的，木盖靠在石头边
-- 帐篷在锅的正后方（画面里在它上方），门朝前对着锅，可爱、结实
+- 篝火 + 锅在正中**偏前一点**（稍微靠下），是整张画的主角：一圈石头围着小火，木头三脚架吊着一口圆滚滚的大陶锅，锅是空的，木盖靠在石头边
+- 帐篷在草坪的**最左上角**，远离锅，门朝篝火方向，可爱、结实；默认视角里看不到它（拖过去才看到），所以画面中间只有锅是主角
 - 两个空的小食盆在火的右下方草地上
 - 树林只在画面上缘当背景，草坪里没有树；没有文字、界面、人物
 - 自由发挥：帐篷的样式和颜色、树林怎么框住画面、火边的小道具（一两根木头、提灯、小凳子）、花、光线、天空、远山
@@ -134,10 +140,10 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 ```
 PROMPT: A finished main scene for a cozy mobile pet-camp game, square 1:1, in UNIFIED STYLE. Layout inspired by
 the camp in Pokémon Sleep: a wide, open grassy clearing seen from above at about 45 degrees, filling most of the
-image. At the very center a stone campfire ring with a small fire and a big round clay cooking pot hanging from a
-wooden tripod (the pot is the hero of the scene: empty, its wooden lid leaning against the stones). Directly
-behind the fire, higher in the image, a cute cozy camping tent facing the viewer with its door open toward the
-fire. Two small empty food bowls on the grass at the lower right of the fire. A soft band of round forest trees
+image. Slightly below the center a stone campfire ring with a small fire and a big round clay cooking pot hanging
+from a wooden tripod (the pot is the hero of the scene: empty, its wooden lid leaning against the stones). Far
+away in the upper-left corner of the meadow a cute cozy camping tent with its door open toward the fire. Two
+small empty food bowls on the grass at the lower right of the fire. A soft band of round forest trees
 along the top edge, gentle hills and sky beyond. The meadow itself stays clean, flat and even with only tiny
 flowers and grass texture, because the game pastes decorations onto it: no paths, no rocks, no water, no clutter
 away from the campsite; a log or two and a lantern right beside the fire are welcome. Warm morning light, calm
@@ -145,6 +151,19 @@ and inviting, polished like a premium game key visual. No text, no UI, no charac
 ```
 
 出 4 版各不相同（`art/raw/camp/candidates/01.png`～`04.png`），由人挑一张复制成 `camp.png`。
+
+### 1c. 夜景整图 `art/raw/camp/night.png`（以 `camp.png` 为底的同构图）
+
+夜里 19～6 点游戏整套换成夜景（底图 + 帐篷 / 锅的抠图），不是在白天图上盖一层蓝。以选定的 `camp.png` 做 image-to-image，**所有东西的位置、大小一点都不能变**，只改光：
+
+```
+PROMPT: Repaint this exact camp scene at night, keeping every object in exactly the same place and size: deep blue
+night sky with a few stars and a soft moon glow, dark cool meadow, the campfire the only warm light source
+casting a wide warm glow on the grass and the pot around it, a faint warm light inside the tent, forest dark
+against the sky. Calm, cozy, inviting. UNIFIED STYLE. No text, no UI, no characters.
+```
+
+高清粗一点就够：`detail_crops.py --cols 2 --dir night-detail`（4 块）→ `merge_details.py --dir night-detail --out art/raw/camp/night-hd.png`。
 
 **高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 16 块（正方形，带重叠）放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成同名 `out-*.png`（1024×1024），提示词：
 

@@ -14,6 +14,18 @@
       "minWidth": 3000
     },
     {
+      "file": "art/raw/camp/night.png",
+      "kind": "painting",
+      "aspect": 1.0,
+      "minWidth": 1000
+    },
+    {
+      "file": "art/raw/camp/night-hd.png",
+      "kind": "painting",
+      "aspect": 1.0,
+      "minWidth": 1900
+    },
+    {
       "file": "art/raw/cut/out-tent-removed.png",
       "kind": "painting"
     },
@@ -31,6 +43,26 @@
     },
     {
       "file": "art/raw/cut/out-pot-3.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-tent-removed.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-removed.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-1.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-2.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-3.png",
       "kind": "painting"
     },
     {

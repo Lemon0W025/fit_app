@@ -114,16 +114,18 @@ Page({
     const treats = view.term && view.term.treats.length ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
     if (view.daily !== undefined) this.potLevel = V.potLevel(view.daily)
     const potLevel = this.potLevel || 0
+    const night = V.isNight(this.nowHour())
+    if (!this.data.base.length || this.baseNight !== night) this.baseNight = night
     const patch = {
       loaded: true,
       beans: view.beans,
       canSpin: view.beans >= view.spinCost,
       world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
-      base: this.data.base.length ? this.data.base : V.baseTiles(L, config.campArt || ''),
+      base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, config.campArt || '', night),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
       bowls: V.bowlViews(view.bowls, L),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel),
-      cuts: V.cutoutViews(L, potLevel, config.cutArt || ''),
+      cuts: V.cutoutViews(L, potLevel, config.cutArt || '', night),
       tint: V.tintFor(this.nowHour()),
       peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
@@ -159,12 +161,12 @@ Page({
 
   onBaseError() {
     if (!config.campArt || !this.data.base.length || this.data.base[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ base: V.baseTiles(this.L, '') })
+    this.setData({ base: V.baseTiles(this.L, '', this.baseNight) })
   },
 
   onCutError() {
     if (!config.cutArt || !this.data.cuts.length || this.data.cuts[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '') })
+    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight) })
   },
 
   onDecorError() {

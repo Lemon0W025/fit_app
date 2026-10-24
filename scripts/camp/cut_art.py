@@ -1,6 +1,7 @@
 """把营地整图（正方形）缩放到指定宽度、切成 4×4 块，传云存储用
 
     python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png [--width 3072] [--local]
+    python3 scripts/camp/cut_art.py art/raw/camp/night-hd.png --prefix night-     # 夜景：同样切 16 块，文件名 night-t00.jpg…
 
 输出到 art/camp/t00.jpg … t33.jpg（npm run wx:art 上传到 camp/base/）；加 --local 则写到 miniprogram/images/camp/base/
 （替换白模占位，注意包大小，一般不用）。画必须是正方形（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
@@ -35,6 +36,7 @@ def main():
     ap.add_argument('image')
     ap.add_argument('--width', type=int, default=3072)
     ap.add_argument('--local', action='store_true')
+    ap.add_argument('--prefix', default='', help='输出文件名前缀，夜景用 night-')
     a = ap.parse_args()
     canvas = fit(Image.open(a.image).convert('RGB'), a.width)
     out = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'base') if a.local else os.path.join(REPO, 'art', 'camp')
@@ -44,7 +46,7 @@ def main():
     for row in range(SPLIT):
         for col in range(SPLIT):
             tile = canvas.crop((round(col * tw), round(row * th), round((col + 1) * tw), round((row + 1) * th)))
-            path = os.path.join(out, f't{row}{col}.jpg')
+            path = os.path.join(out, f'{a.prefix}t{row}{col}.jpg')
             tile.save(path, quality=85, optimize=True)
             total += os.path.getsize(path)
     print(f'{canvas.width}×{canvas.height} → {out}，16 块共 {total // 1024} KB')
