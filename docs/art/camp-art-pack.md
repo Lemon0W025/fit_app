@@ -20,7 +20,9 @@
 
 ```
 你在仓库根目录，用你内置的图像生成能力做一张游戏主场景图。先读 docs/art/camp-art-pack.md 的第 0 节和第 1 节。
-按第 1 节的 PROMPT 生成 1024×1024 的正方形，画风用第 0 节的 UNIFIED STYLE，构图参考 Pokémon Sleep 的营地。
+按第 1 节的 PROMPT 生成 1024×1024 的正方形。画风卡死：把 art/guide/style-camp.jpg 作为参考图传进去，提示词带第 0 节的
+UNIFIED STYLE，要手绘 2D 插画的感觉，不要 3D 渲染（塑料质感、强高光、景深都不要），出来有 3D 感就重出；参考图只参考画风，
+构图不照它。构图参考 Pokémon Sleep 的营地。
 硬要求只有几条（影响玩法）：正方形；约 45 度俯视、地面平；草坪占画面大部分、干净平整没有杂物；篝火上吊着的大陶锅在正中偏前一点、
 是主角；帐篷在草坪的最左上角（远离锅、门朝篝火）；两个空食盆在火的右下；没有水面；草坪里没有树（树林只在上缘），没有小路。
 其余随你发挥（帐篷样式、树林怎么框、火边的小道具、花、光线、天空），目标是好看、有「想住进去」的感觉。
@@ -88,11 +90,15 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
 **风格**（所有提示词都带上这段）：
 
 ```
-UNIFIED STYLE: premium cozy mobile-game look in the spirit of Pokémon Sleep: soft 3D-rendered cartoon,
-round chunky shapes, matte clay-like material with gentle subsurface softness, warm cheerful pastel
-colors, soft daylight from the upper left, gentle ambient occlusion, clean tidy edges, no hard black
-outlines, no text, no labels, no watermark, no UI, no borders. Everything is cute, friendly and calm.
+UNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style
+reference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified
+shapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean
+tidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,
+no lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is
+cute, friendly and calm.
 ```
+
+**画风卡死、构图放开**：Codex 一放开就往 3D 渲染跑，所以每张图都要把 `art/guide/style-camp.jpg` 作为参考图传进去（它是之前出的一张营地图，画风就是我们要的：手绘感、软、不是 3D），提示词里写「画风照参考图，构图按文字」。出来的图只要有 3D 渲染感（塑料质感、强高光、景深）就重出。
 
 **参考图**（都在仓库里，生成时作为参考图 / edit 输入；工具不支持传参考图就先用视觉能力看一遍，把看到的外形特征写进提示词）：
 
@@ -100,7 +106,8 @@ outlines, no text, no labels, no watermark, no UI, no borders. Everything is cut
 |---|---|
 | `art/guide/camp-blockout.jpg` | 营地布局示意（**不是底稿**，别拿它做 image-to-image）：看懂有哪些东西、大致在哪就行；画好以后代码按你的画重新量 |
 | `art/guide/camp-blockout-labels.jpg` | 同一张示意图加了名字 |
-| `art/guide/town/*.jpg` | 画风参考（小镇风格的柔和 3D 渲染）：营地、装饰都要这个味道 |
+| `art/guide/style-camp.jpg` | **画风基准**（每张图都带上它当参考图）：手绘 2D 插画、软、暖，不是 3D 渲染。只参考画风，**不参考它的布局** |
+| `art/guide/town/*.jpg` | 更早的画风参考（偏 3D），只在 style-camp 不够用时看一眼 |
 | `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
 
 **尺寸与格式**：
@@ -138,7 +145,9 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 - 自由发挥：帐篷的样式和颜色、树林怎么框住画面、火边的小道具（一两根木头、提灯、小凳子）、花、光线、天空、远山
 
 ```
-PROMPT: A finished main scene for a cozy mobile pet-camp game, square 1:1, in UNIFIED STYLE. Layout inspired by
+PROMPT: A finished main scene for a cozy mobile pet-camp game, square 1:1, painted in UNIFIED STYLE exactly like
+the attached style reference (same hand-painted 2D look, same softness and palette; do NOT copy its layout).
+Layout inspired by
 the camp in Pokémon Sleep: a wide, open grassy clearing seen from above at about 45 degrees, filling most of the
 image. Slightly below the center a stone campfire ring with a small fire and a big round clay cooking pot hanging
 from a wooden tripod (the pot is the hero of the scene: empty, its wooden lid leaning against the stones). Far
