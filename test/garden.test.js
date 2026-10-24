@@ -130,7 +130,7 @@ test('物件的地面和占格', () => {
   assert.deepEqual(itemById('cabbage').ground, ['soil', 'lawn'])
   assert.deepEqual(itemById('stool').ground, ['lawn', 'pave'])
   assert.deepEqual(itemById('pavilion').ground, ['lawn', 'pave'])
-  assert.deepEqual(itemById('koi_pond').ground, ['lawn'])
+  assert.deepEqual(itemById('koi_pond').ground, ['lawn', 'water'])
   assert.equal(itemById('pavilion').foot, 2)
   assert.equal(itemById('lotus_pond').foot, 2)
   assert.equal(itemById('daisy').foot, 1)

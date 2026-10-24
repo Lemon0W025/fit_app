@@ -7,7 +7,8 @@
         <image wx:for="{{art}}" wx:key="key" class="art" src="{{item.image}}" binderror="onArtError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <image wx:for="{{hints}}" wx:key="key" class="hint" src="/images/garden/tile-hint.png" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <block wx:for="{{sprites}}" wx:key="uid">
-          <view class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>
+          <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}"></view>
+          <view wx:if="{{item.ripple}}" class="ripple-item" style="left: {{item.ripple.left}}px; bottom: {{item.ripple.bottom}}px; width: {{item.ripple.width}}px; height: {{item.ripple.height}}px; z-index: {{item.z + 9}}"></view>
           <image class="sprite {{item.flip ? 'flip' : ''}} {{mode === 'view' ? '' : 'sprite-ghost'}}" src="{{item.image}}" mode="widthFix" data-uid="{{item.uid}}" catchtap="tapSprite" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}" />
         </block>
         <block wx:for="{{animals}}" wx:key="id">

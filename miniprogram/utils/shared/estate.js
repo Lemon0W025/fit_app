@@ -72,23 +72,23 @@ const SHELL = [
   { area: 'back', kind: 'water', what: 'stream', rect: [26, 8, 27, 9] },
 ]
 
-// 月亮门（两格宽），a、b 是它连着的两个院子
+// 月亮门（三格宽，洞开得大），a、b 是它连着的两个院子
 const GATES = [
-  { a: 'front', b: 'main', tiles: [[13, 18], [14, 18]] },
-  { a: 'front', b: 'orchard', tiles: [[9, 22], [9, 23]] },
-  { a: 'front', b: 'flower', tiles: [[18, 22], [18, 23]] },
-  { a: 'main', b: 'bamboo', tiles: [[9, 13], [9, 14]] },
-  { a: 'main', b: 'pond', tiles: [[18, 13], [18, 14]] },
-  { a: 'bamboo', b: 'orchard', tiles: [[4, 18], [5, 18]] },
-  { a: 'bamboo', b: 'farm', tiles: [[4, 9], [5, 9]] },
-  { a: 'pond', b: 'flower', tiles: [[22, 18], [23, 18]] },
-  { a: 'pond', b: 'tea', tiles: [[27, 13], [27, 14]] },
-  { a: 'pond', b: 'back', tiles: [[22, 9], [23, 9]] },
-  { a: 'flower', b: 'veg', tiles: [[27, 22], [27, 23]] },
-  { a: 'tea', b: 'veg', tiles: [[31, 18], [32, 18]] },
-  { a: 'tea', b: 'spring', tiles: [[31, 9], [32, 9]] },
-  { a: 'back', b: 'farm', tiles: [[9, 4], [9, 5]] },
-  { a: 'back', b: 'spring', tiles: [[27, 4], [27, 5]] },
+  { a: 'front', b: 'main', tiles: [[13, 18], [14, 18], [15, 18]] },
+  { a: 'front', b: 'orchard', tiles: [[9, 22], [9, 23], [9, 24]] },
+  { a: 'front', b: 'flower', tiles: [[18, 22], [18, 23], [18, 24]] },
+  { a: 'main', b: 'bamboo', tiles: [[9, 13], [9, 14], [9, 15]] },
+  { a: 'main', b: 'pond', tiles: [[18, 13], [18, 14], [18, 15]] },
+  { a: 'bamboo', b: 'orchard', tiles: [[4, 18], [5, 18], [6, 18]] },
+  { a: 'bamboo', b: 'farm', tiles: [[4, 9], [5, 9], [6, 9]] },
+  { a: 'pond', b: 'flower', tiles: [[22, 18], [23, 18], [24, 18]] },
+  { a: 'pond', b: 'tea', tiles: [[27, 13], [27, 14], [27, 15]] },
+  { a: 'pond', b: 'back', tiles: [[22, 9], [23, 9], [24, 9]] },
+  { a: 'flower', b: 'veg', tiles: [[27, 22], [27, 23], [27, 24]] },
+  { a: 'tea', b: 'veg', tiles: [[31, 18], [32, 18], [33, 18]] },
+  { a: 'tea', b: 'spring', tiles: [[31, 9], [32, 9], [33, 9]] },
+  { a: 'back', b: 'farm', tiles: [[9, 4], [9, 5], [9, 6]] },
+  { a: 'back', b: 'spring', tiles: [[27, 4], [27, 5], [27, 6]] },
 ]
 // 外墙上的大门：新住户从这里进来
 const DOOR = [[13, 27], [14, 27]]

@@ -5,8 +5,9 @@
 const { GRID, SHELL, GATES, DOOR, tileInfo } = require('./shared/estate')
 const { tileTop } = require('./iso')
 
-const WALL_H = 1.6
-const GATE_HOLE = { up: 0.55, radius: 0.9 }
+const WALL_H = 2.2
+// 月亮门洞：半径（格高），洞底贴地
+const GATE_HOLE = { radius: 1.1 }
 const DOOR_H = WALL_H * 1.3
 // 建筑：h 墙身高、roof 屋顶高、over 屋檐出挑（格）、inset 比格子缩进多少（格）
 const BUILDINGS = {
@@ -128,10 +129,11 @@ function piece(key, c, r, poly, L, hole) {
   return { key, c, r, z: depthZ(c, r), poly: hole ? withHole(padded, hole) : padded, outer: padded, box, hole: !!hole }
 }
 
-// 两格门洞的中心（和白模一样：两格合起来的中心点）
+// 几格门洞合起来的中心点（和白模一样）
 function pairCenter(tiles, L) {
-  const [[c0, r0], [c1, r1]] = tiles
-  return tileTop((c0 + c1 + 1) / 2, (r0 + r1 + 1) / 2, L)
+  const cs = tiles.map((t) => t[0])
+  const rs = tiles.map((t) => t[1])
+  return tileTop((Math.min(...cs) + Math.max(...cs) + 1) / 2, (Math.min(...rs) + Math.max(...rs) + 1) / 2, L)
 }
 
 // 所有会挡人的东西，每块一个多边形（世界坐标 px）。按格宽缓存
@@ -149,11 +151,14 @@ function pieces(L) {
     }
   }
   GATES.forEach((g) => {
-    const [[c0, r0], [c1, r1]] = g.tiles
-    const front = c1 + r1 >= c0 + r0 ? [c1, r1] : [c0, r0]
+    const cs = g.tiles.map((t) => t[0])
+    const rs = g.tiles.map((t) => t[1])
+    const [c0, r0] = g.tiles[0]
+    const front = g.tiles.reduce((best, t) => (t[0] + t[1] > best[0] + best[1] ? t : best), g.tiles[0])
     const center = pairCenter(g.tiles, L)
-    const hole = circle(center.x, center.y - WALL_H * GATE_HOLE.up * L.tileH, GATE_HOLE.radius * L.tileH)
-    out.push(piece(`g${c0}-${r0}`, front[0], front[1], prism(Math.min(c0, c1), Math.min(r0, r1), Math.max(c0, c1) + 1, Math.max(r0, r1) + 1, WALL_H, L), L, hole))
+    const r = GATE_HOLE.radius * L.tileH
+    const hole = circle(center.x, center.y - r, r)
+    out.push(piece(`g${c0}-${r0}`, front[0], front[1], prism(Math.min(...cs), Math.min(...rs), Math.max(...cs) + 1, Math.max(...rs) + 1, WALL_H, L), L, hole))
   })
   {
     const [[c0, r0], [c1, r1]] = DOOR

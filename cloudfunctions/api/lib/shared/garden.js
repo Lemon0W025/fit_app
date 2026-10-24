@@ -97,8 +97,8 @@ const GROUNDS = {
   plant: ['lawn', 'soil'],
   veg: ['soil', 'lawn'],
   furniture: ['lawn', 'pave'],
-  // 自带石头池边的水景，摆草地上
-  scape: ['lawn'],
+  // 自带石头池边的水景：草地上摆，也能放进池塘里
+  scape: ['lawn', 'water'],
   water: ['water'],
 }
 const ITEM_CLASS = {

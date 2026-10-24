@@ -35,7 +35,7 @@ function tileOf(s) {
   for (let c = -1; c <= L.cols; c++) {
     for (let r = -1; r <= L.rows; r++) {
       const center = tileCenter(c, r, L)
-      if (Math.abs(center.x - x) < 0.01 && Math.abs(L.height - (center.y + L.tileH * 0.18) - s.bottom) < 0.01) return { c, r }
+      if (Math.abs(center.x - x) < 0.01 && Math.abs(L.height - (center.y + L.tileH * 0.35) - s.bottom) < 0.01) return { c, r }
     }
   }
   return null
@@ -77,7 +77,7 @@ test('一开始站在家附近的空格，图、大小、影子都对', () => {
   assert.ok(!(t.c === 2 && t.r === 2) && !(t.c === 0 && t.r === 0))
   assert.notDeepEqual(tileOf(sprites[1]), t)
   assert.equal(panda.action, 'idle')
-  assert.ok(Math.abs(panda.shadow.width - panda.width * 0.7) < 0.01)
+  assert.ok(Math.abs(panda.shadow.width - panda.width * 0.55) < 0.01)
   assert.ok(Math.abs(panda.shadow.left + panda.shadow.width / 2 - (panda.left + panda.width / 2)) < 0.01)
 })
 

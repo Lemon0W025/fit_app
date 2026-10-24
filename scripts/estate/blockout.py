@@ -33,7 +33,8 @@ COLORS = {
 }
 WALL = (240, 238, 232)
 WALL_TOP = (72, 80, 96)
-WALL_H = TH * 1.6
+WALL_H = TH * 2.2
+GATE_R = TH * 1.1  # 月亮门洞半径（洞底贴地：圆心高 = 半径）
 WOOD = (150, 104, 64)
 
 
@@ -200,16 +201,18 @@ def standing():
                 add(c + r, lambda d, c=c, r=r: (box(d, c, r, c + 1, r + 1, WALL_H, WALL), d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)))
     # 月亮门：两格墙中间开一个圆洞（洞里露出对面的地）
     for g in LAYOUT['gates']:
-        (c0, r0), (c1, r1) = g['tiles']
-        x, y = top((c0 + c1 + 1) / 2, (r0 + r1 + 1) / 2)
-        rr = TH * 0.9
+        tiles = g['tiles']
+        cs = [t[0] for t in tiles]
+        rs = [t[1] for t in tiles]
+        x, y = top((min(cs) + max(cs) + 1) / 2, (min(rs) + max(rs) + 1) / 2)
+        rr = GATE_R
 
-        def gate(d, tiles=g['tiles'], x=x, y=y, rr=rr):
+        def gate(d, tiles=tiles, x=x, y=y, rr=rr):
             for c, r in tiles:
                 box(d, c, r, c + 1, r + 1, WALL_H, WALL)
                 d.polygon(raised(quad(c, r, c + 1, r + 1), WALL_H), fill=WALL_TOP)
-            d.ellipse([x - rr, y - WALL_H * 0.55 - rr, x + rr, y - WALL_H * 0.55 + rr], fill=COLORS['lawn'], outline=WALL_TOP, width=3)
-        add(max(c0 + r0, c1 + r1) + 0.1, gate)
+            d.ellipse([x - rr, y - rr - rr, x + rr, y], fill=COLORS['lawn'], outline=WALL_TOP, width=3)
+        add(max(c + r for c, r in tiles) + 0.1, gate)
     # 大门：比墙高一点的门楼，朱红双开门
     (c0, r0), (c1, r1) = LAYOUT['door']
     x, y = top((c0 + c1 + 1) / 2, (r0 + r1 + 1) / 2)

@@ -18,6 +18,8 @@ const TAP_MS = 600
 const HELLO_MS = 4000
 // 下水时露出的上半身比例（按动物本身算，不算图里头顶的空白）；气泡宽度是几格宽
 const WATER_LINE = 0.62
+// 脚底比格子中心往下多少（格高），和物件一样踩在菱形前半
+const ANIMAL_SINK = 0.35
 const BUBBLE_TILES = 5
 // 白天没事干时出门逛逛的概率
 const EXCURSION_CHANCE = 0.12
@@ -144,7 +146,7 @@ function createLife({
     } else {
       const center = tileCenter(a.c, a.r, L)
       x = center.x
-      y = center.y + L.tileH * 0.18
+      y = center.y + L.tileH * ANIMAL_SINK
       z = (a.c + a.r) * 10 + a.c + 5
     }
     // 下水时水面在身子的 62% 处，没有影子；气泡贴着头顶，别出花园左右边
