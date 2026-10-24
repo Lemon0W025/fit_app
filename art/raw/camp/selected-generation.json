@@ -1,0 +1,68 @@
+{
+  "status": "complete",
+  "selected_candidate": "03",
+  "mode": "Built-in image_gen",
+  "branch": "codex/art-batch-1a",
+  "style_reference": "art/guide/style-camp.jpg",
+  "deliverables": [
+    {
+      "file": "art/raw/camp/camp.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "d77cc8213899b9655670513baac092af9e4adb418620dbc076ee01080b6bf837"
+    },
+    {
+      "file": "art/raw/camp/camp-hd.png",
+      "size": [
+        3641,
+        3641
+      ],
+      "sha256": "f141a91307a0fa439a1fde0e2d5c9bab319783a4036e4cdfe8ccd4ec6f3d9b2d"
+    },
+    {
+      "file": "art/raw/camp/night.png",
+      "size": [
+        1024,
+        1024
+      ],
+      "sha256": "f98286fc1ac8be797642cb1bb9c61de6efae9bfb6f4a456109a2c5b0d3b156d1"
+    },
+    {
+      "file": "art/raw/camp/night-hd.png",
+      "size": [
+        1903,
+        1903
+      ],
+      "sha256": "43fb3f715becca2024f5bb18e7e02bb63b6256e5e49a42064d188f6fe01c00d5"
+    }
+  ],
+  "daylight_redraws": 16,
+  "night_redraws": 4,
+  "detail_tile_size": [
+    1024,
+    1024
+  ],
+  "native_originals_preserved": true,
+  "validation": {
+    "check_art": "4 / 4 formal paintings passed",
+    "detail_tiles": "20 / 20 exact 1024x1024 PNG and direct painting checks passed",
+    "crop_regression_cases": 64,
+    "npm_test": {
+      "tests": 233,
+      "pass": 233,
+      "fail": 0
+    },
+    "visual_review": "Both merged scenes inspected; complete object silhouettes, exactly two empty bowls, empty hanging pot, tent upper-left, no missing tiles or major seams."
+  },
+  "prompt_records": [
+    "art/raw/camp/candidates/generation.json",
+    "art/raw/camp/detail/generation.json",
+    "art/raw/camp/night-generation.json",
+    "art/raw/camp/night-detail/generation.json"
+  ],
+  "script_fix": "scripts/camp/detail_crops.py tolerates floating-point error before ceil so --cols 2 stays 2 rows.",
+  "night_detail_overlap": 0.14,
+  "next_step": "Stop after push; await updated scene data before Batch 1 B."
+}

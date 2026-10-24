@@ -1,0 +1,104 @@
+{
+  "date": "2026-10-24",
+  "mode": "Built-in image_gen",
+  "source_revision": "c85107f",
+  "branch": "codex/art-batch-1a",
+  "status": "Candidate 03 selected by user. Daylight and night HD sets completed and validated; see art/raw/camp/selected-generation.json.",
+  "spec_source": "docs/art/camp-art-pack.md sections 0, 1 and 1c; user instructions.",
+  "reference": "art/guide/style-camp.jpg",
+  "reference_role": "Style only; passed explicitly as a local input on every generation and edit; composition follows the text.",
+  "common_prompt": "Use case: illustration-story.\nAsset type: a finished main-scene background for a cozy mobile pet-camp game. Create ONE new full-bleed SQUARE illustration at exactly 1024 x 1024 pixels, opaque PNG, not a contact sheet.\n\nInput image 1 (art/guide/style-camp.jpg) is a STYLE REFERENCE ONLY. Match its softness, cheerful colors, rounded friendly design and painted illustration quality. DO NOT copy its portrait aspect ratio, composition, tree placements, tent placement or camera depth. Follow the new composition in the text below.\n\nUNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style\nreference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified\nshapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean\ntidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,\nno lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is\ncute, friendly and calm.\n\nPROMPT: A finished main scene for a cozy mobile pet-camp game, square 1:1, painted in UNIFIED STYLE exactly like\nthe attached style reference (same hand-painted 2D look, same softness and palette; do NOT copy its layout).\nLayout inspired by the camp in Pokémon Sleep: a wide, open grassy clearing seen from above at about 45 degrees, filling most of the\nimage. Slightly below the center a stone campfire ring with a small fire and a big round clay cooking pot hanging\nfrom a wooden tripod (the pot is the hero of the scene: empty, its wooden lid leaning against the stones). Far\naway in the upper-left corner of the meadow a cute cozy camping tent with its door open toward the fire. Two\nsmall empty food bowls on the grass at the lower right of the fire. A soft band of round forest trees\nalong the top edge, gentle hills and sky beyond. The meadow itself stays clean, flat and even with only tiny\nflowers and grass texture, because the game pastes decorations onto it: no paths, no rocks, no water, no clutter\naway from the campsite; a log or two and a lantern right beside the fire are welcome. Warm morning light, calm\nand inviting, polished like a premium game key visual. No text, no UI, no characters.\n\nGameplay-critical layout:\n- High 45-degree downward, almost orthographic view, tops of the pot and bowls plainly visible. Flat level continuous ground, consistent scale in all parts of the meadow. No raised islands, platforms, slopes or curved horizon lawn.\n- At least 80% of the square is an OPEN clean smooth even green lawn, reaching the left, right and bottom edges. Only very sparse tiny flowers and delicate uniform painted grass texture. No paths or trails, no exposed dirt patch, no water of any kind, no scattered rocks or clutter.\n- Trees are confined STRICTLY to a narrow background band at the TOP EDGE. Absolutely no freestanding trees in the lawn, along the side edges, or in the foreground.\n- The tent is fully visible in the FAR UPPER-LEFT CORNER of the lawn, around x=3–25%, y=12–30%, widely separated from the cooking pot by open grass. Its open doorway faces diagonally down-right toward the campfire. Never put the tent above the pot in the middle of the picture.\n- The hero clay pot is large, plump and ROUND, its opening clearly EMPTY with a dark painted interior, hanging by an iron bail from a visible wooden tripod over a SMALL fire within a ring of rounded stones. Pot belly centered around x=50%, y=58%, about 16–19% of image width. Wooden lid propped against the ring. Draw pot as matte painted earthenware with restrained broad cel shading, not glossy rendered pottery.\n- Exactly TWO small EMPTY food bowls rest on the lawn immediately LOWER-RIGHT of the fire. They are separate from each other and have clearly visible empty interiors.\n- Foreground and upper-middle remain empty and usable. Optional one small lantern and two short logs may sit right beside the fire.\n- Everything remains crisply illustrated in the same 2D painted visual language at every distance, no bokeh or blurred forest, no photographic or raytraced lighting, no CGI toy-diorama look, no plastic shine or strong specular highlights. No characters or animals. No grids, captions, inset images, borders or UI.\n\nMood: peaceful, warm and inviting, a place you want to live. One cohesive finished game illustration. Native square output size exactly 1024x1024.",
+  "requested_size": [
+    1024,
+    1024
+  ],
+  "native_size": [
+    1254,
+    1254
+  ],
+  "exported_size": [
+    1024,
+    1024
+  ],
+  "export": "User explicitly approved proportional 1024x1024 export while preserving native originals. Native PNGs copied byte-for-byte to candidates/native, exports use Pillow LANCZOS; no crop.",
+  "previous_candidates_preserved_at": "art/raw/camp/variants/pre-2d-c85107f-candidates",
+  "validation": {
+    "cli": "python scripts/art/check_art.py <candidate> run separately for every final candidate; python3 resolves to an inactive WindowsApps alias, so real Python 3.12 was used.",
+    "manifest_limitation": "Candidate paths are absent from art/manifest.json and therefore the script CLI skips its painting checker for them.",
+    "actual": "Also directly call check_art.py check_painting with aspect=1.0 and minWidth=1024; independently assert PNG format and exact dimensions 1024x1024, assert native source copy SHA-256 matches.",
+    "visual_review": "Open flat meadow occupies the majority of frame; no water or paths; no trees in lawn, forest confined to top edge; tent upper-left facing fire; empty hanging clay pot central slightly below middle; two empty bowls lower-right. Repainted reflective material patches toward softer matte 2D cel shading.",
+    "result": "4 / 4 passed all actual candidate checks"
+  },
+  "candidates": [
+    {
+      "id": "01",
+      "file": "art/raw/camp/candidates/01.png",
+      "native_file": "art/raw/camp/candidates/native/01.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-89e26224-cef2-4313-b1d9-f5eda5b282a5.png",
+      "initial_prompt": "VARIANT 01 — Sunny apricot canvas camp. A classic cream A-frame canvas tent with apricot-orange tied-open flaps at the far upper-left. A warm terracotta hero pot with a pale oatmeal rim. Fresh yellow-green lawn, softly painted linden and sage crowns across the top, a thin powder-blue hill and pale sky strip. Gentle clear morning sunshine from the upper left, small restrained painted shadows. A small warm ochre lantern directly beside the fire.",
+      "correction_prompt": "Use case: style-transfer.\nAsset type: same finished square cozy camp game background. Exactly 1024x1024 PNG.\nInput image 1 is the EDIT TARGET. Input image 2 is STYLE REFERENCE ONLY (art/guide/style-camp.jpg); do not copy its composition.\nUNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style\nreference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified\nshapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean\ntidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,\nno lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is\ncute, friendly and calm.\n\nPreserve the edit target's entire composition, all positions, sizes and silhouettes: tent in the far upper-left corner with door toward the fire, open flat clean lawn occupying most of the image, trees confined strictly to top band, large EMPTY round pot hanging from tripod slightly below center, small campfire and wooden lid, exactly TWO EMPTY bowls lower-right, no water and no paths.\nChange MATERIAL SHADING ONLY to unmistakable hand-painted 2D cel shading. Remove every shiny highlight patch or spot on the ceramic pot. Keep the pot's current color but paint its body as a flat matte base color with one broad soft-edged cel-shadow shape, no 3D spherical gradient and no bright patches. Do not add outlines. Simplify stone shading into broad flat painterly color shapes. Keep warm upper-left daylight and the illustrated friendly softness of the reference. No plastic, no glossy glaze, no CGI diorama or raytraced shading, no bokeh. Foreground and forest equally clearly drawn. Everything else stays the same. No additions or removals, no people or animals, no text or UI.",
+      "native_size": [
+        1254,
+        1254
+      ],
+      "sha256": "3fb1ea3744980ebfef30cae09768f2bafcee4ca27727ceb5a62e19f8de12bd31",
+      "validation": "PASS: 1024x1024 square PNG, painting checks, native source hash preserved"
+    },
+    {
+      "id": "02",
+      "file": "art/raw/camp/candidates/02.png",
+      "native_file": "art/raw/camp/candidates/native/02.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-5b6fbbc0-a6fa-45a0-87db-43f81fc45a5c.png",
+      "initial_prompt": "VARIANT 02 — Rose-and-mint bell-tent retreat. A charming cream and dusty-rose bell tent with a softly conical roof, peach tied-open entrance facing the fire, far upper-left. A large muted sage-jade earthenware hero pot with a cream rim. Smooth fresh mint-green lawn, compact eucalyptus and muted teal crowns only at the top, with one soft pink flowering crown mixed into that background band. A hint of lilac distant hills and airy peach-tinted morning light. Delicate painted cel shading, tranquil and dreamy.\nSTRICT STYLE CORRECTION: the pot has NO specular highlight anywhere, no shiny bright patch or small square reflection, no reflective glaze. Use a restrained flat gouache base color with only two or three broad painted cel-shadow values. Trees and stones likewise use flat painted shape layers rather than 3D sphere shading. Keep all background edges clearly drawn. This must read as an illustrated game painting, never a 3D-rendered diorama.",
+      "correction_prompt": "Use case: style-transfer.\nAsset type: same finished square cozy camp game background. Exactly 1024x1024 PNG.\nInput image 1 is the EDIT TARGET. Input image 2 is STYLE REFERENCE ONLY (art/guide/style-camp.jpg); do not copy its composition.\nUNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style\nreference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified\nshapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean\ntidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,\nno lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is\ncute, friendly and calm.\n\nPreserve the edit target's entire composition, all positions, sizes and silhouettes: tent in the far upper-left corner with door toward the fire, open flat clean lawn occupying most of the image, trees confined strictly to top band, large EMPTY round pot hanging from tripod slightly below center, small campfire and wooden lid, exactly TWO EMPTY bowls lower-right, no water and no paths.\nChange MATERIAL SHADING ONLY to unmistakable hand-painted 2D cel shading. Remove every shiny highlight patch or spot on the ceramic pot. Keep the pot's current color but paint its body as a flat matte base color with one broad soft-edged cel-shadow shape, no 3D spherical gradient and no bright patches. Do not add outlines. Simplify stone shading into broad flat painterly color shapes. Keep warm upper-left daylight and the illustrated friendly softness of the reference. No plastic, no glossy glaze, no CGI diorama or raytraced shading, no bokeh. Foreground and forest equally clearly drawn. Everything else stays the same. No additions or removals, no people or animals, no text or UI.",
+      "native_size": [
+        1254,
+        1254
+      ],
+      "sha256": "5accf39410d285371f4762a09846f67a4769844e75c26c7619cfbd9960172984",
+      "validation": "PASS: 1024x1024 square PNG, painting checks, native source hash preserved"
+    },
+    {
+      "id": "03",
+      "file": "art/raw/camp/candidates/03.png",
+      "native_file": "art/raw/camp/candidates/native/03.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-d5454489-83a5-4b9f-aa90-f591e83512b9.png",
+      "initial_prompt": "VARIANT 03 — Quiet woodland canvas cottage. A sturdy small sage-green cabin-shaped canvas tent with an oatmeal opening and soft rust edging in the far upper-left corner. A warm russet-brown round hero pot with a simple cream lip. Clean vivid spring-green grass with restrained fine painted texture. A low top-edge forest band of fern and moss green, irregular softly rounded crowns, narrow blue-green hills beyond. Soft diffuse late-morning daylight, calm woodland palette, rich clean illustration shapes.\nThe tent must be a rectangular ridge/cabin tent with a clearly elongated gabled roof, NOT a conical bell tent. Flat painted gouache/cel-shaded surfaces, no material reflections or bright pottery highlight.",
+      "correction_prompt": null,
+      "native_size": [
+        1254,
+        1254
+      ],
+      "sha256": "d77cc8213899b9655670513baac092af9e4adb418620dbc076ee01080b6bf837",
+      "validation": "PASS: 1024x1024 square PNG, painting checks, native source hash preserved"
+    },
+    {
+      "id": "04",
+      "file": "art/raw/camp/candidates/04.png",
+      "native_file": "art/raw/camp/candidates/native/04.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-fab0f5b9-8345-4435-b11f-9f23beb98bfa.png",
+      "initial_prompt": "VARIANT 04 — Butter-yellow storybook hideaway. A cozy butter-yellow rounded dome tent with brick-coral edging and an open doorway directed diagonally down-right, far upper-left. A plump matte slate-blue ceramic hero pot with an ivory rim and ochre handle mounts. A clean pistachio-green lawn, a narrow top-edge band of olive, lime and blue-green tree crowns, pale warm sky and softly painted distant hills. Gentle golden morning light from the upper left, a tiny lantern beside the fire, warm storybook color harmony.\nThe tent must be a low rounded dome/igloo shape with crossing fabric seams, NOT a conical bell tent. Flat painted gouache/cel-shaded surfaces, no material reflections or bright pottery highlight.",
+      "correction_prompt": "Use case: style-transfer.\nAsset type: exact same square cozy game camp illustration, 1024 x 1024 PNG.\nInput image 1 is the EDIT TARGET: preserve its entire composition, all object positions, silhouettes, scale, colors, the yellow dome tent far upper-left, hanging pot slightly below center, two empty bowls lower-right, open flat lawn, forest strictly at top, no paths and no water.\nInput image 2 is the STYLE REFERENCE ONLY, art/guide/style-camp.jpg.\n\nUNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style\nreference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified\nshapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean\ntidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,\nno lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is\ncute, friendly and calm.\n\nREPAINT MATERIALS ONLY into flatter hand-painted 2D cel shading. Remove the pale shiny highlight dot on the upper-right shoulder of the blue pot completely. No highlights or shiny reflections on the pot. Its main body should be a flat matte slate-blue painted shape, with one broad soft-edged dark blue cel-shadow area along its bottom-left, no 3D spherical gradient, no glow on the body. Simplify the stones into soft flat painted color shapes with subtle cel shadows. Keep all other details intact. The entire image should read as a carefully drawn storybook game illustration, with consistent crisp drawing in background and foreground. No CGI rendering, no plastic, no polished ceramics, no bokeh.\nKeep the pot clearly EMPTY and hanging from its wooden tripod. No additions or removals. One square image, exactly 1024x1024.",
+      "native_size": [
+        1254,
+        1254
+      ],
+      "sha256": "13fbc669d5e72234e70e75d704929910c08032ac4adeedb8739e0c41aa18c034",
+      "validation": "PASS: 1024x1024 square PNG, painting checks, native source hash preserved"
+    }
+  ],
+  "discarded_attempts": [
+    {
+      "source": "C:/Users/kejia/.codex/generated_images/01a16e8a-39d1-7870-b125-62fa79664749/exec-0eefe8db-ac04-4127-99e6-742b5c3a3b9d.png",
+      "reason": "Pot shoulder has a bright specular-looking highlight; redraw with flatter painted ceramic to satisfy the strict 2D requirement."
+    },
+    {
+      "source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-ce3e3432-5361-4b49-bc02-1c0e10214dc9.png",
+      "reason": "The blue pot has a bright specular dot and spherical gradient; repaint its surface and all materials as matte 2D cel shading."
+    }
+  ],
+  "next_steps": [
+    "Commit and push codex/art-batch-1a, then stop for updated scene data before Batch 1 B."
+  ],
+  "selected_candidate": "03"
+}

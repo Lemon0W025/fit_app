@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-24",
+  "mode": "Built-in image_gen",
+  "status": "Four candidates ready; waiting for the user's selection before camp.png replacement, 16-tile detail redraw, commit and push.",
+  "spec_source": "docs/art/camp-art-pack.md sections 0 and 1, with the current user's square composition requirements overriding the portrait blockout.",
+  "unified_style": "UNIFIED STYLE: premium cozy mobile-game look in the spirit of Pokémon Sleep: soft 3D-rendered cartoon, round chunky shapes, matte clay-like material with gentle subsurface softness, warm cheerful pastel colors, soft daylight from the upper left, gentle ambient occlusion, clean tidy edges, no hard black outlines, no text, no labels, no watermark, no UI, no borders. Everything is cute, friendly and calm.",
+  "common_prompt": "Use case: stylized-concept. Asset type: finished high-end cozy mobile-game main camp scene, one full square image, exact 1024 x 1024 pixels. UNIFIED STYLE: premium cozy mobile-game look in the spirit of Pokémon Sleep: soft 3D-rendered cartoon, round chunky shapes, matte clay-like material with gentle subsurface softness, warm cheerful pastel colors, soft daylight from the upper left, gentle ambient occlusion, clean tidy edges, no hard black outlines, no text, no labels, no watermark, no UI, no borders. Everything is cute, friendly and calm.\nAdapted section 1 scene PROMPT: A beautiful inviting camp in a wide, open, even meadow, composed with the welcoming spacious feeling of Pokémon Sleep's campsite. CAMERA IS HIGH ABOVE THE SCENE, tilted DOWNWARD a full 45 degrees, a mobile-game overhead map view, almost isometric orthographic perspective. The viewer sees a LOT of the tent roof and the circular opening of the pot, looks DOWN at the lawn rather than across it. No low eye-level camera. Consistent object scale. The ground is one completely FLAT continuous plane, extending uninterrupted to the left, right and bottom frame edges. Lawn occupies at least three quarters of the image. No island, no raised mound, no platform, no slope or terraces. Grass has a uniform soft velvety texture and only a very few tiny white flowers near the periphery; immense usable clean lawn, no scattered objects.\nMANDATORY COMPOSITION: One LARGE round earthenware cooking pot is the main character and strongest visual focal point, its belly centered at exactly 50% of the image width and 50% of the image height. It hangs visibly by its handle and a short chain from a rustic wooden cooking tripod directly over a small campfire inside a neat low ring of rounded stones. Pot alone about 18% of total image width, plump lovable ceramic form, thick rim, visible overhead suspension, not resting on the flames, not a metal cauldron. Tiny modest fire flames under the hanging pot (game will overlay animation). One big cozy tent is DIRECTLY BEHIND the pot on the SAME vertical center axis, upper center, roughly one third of image width, front entrance clearly facing the viewer and the pot, cozy open tied-back flaps. Tent, pot/fire and bowls form ONE close campsite group, but pot silhouette and front of tent remain readable. Exactly TWO EMPTY pet food bowls are together on the grass at the LOWER RIGHT of the fire, smaller than the pot, visibly hollow, no food. No other bowls. A couple of small split firewood logs may stay tucked next to the fire only.\nForest of round fluffy tree crowns restricted to the TOPMOST 15% of the canvas, their crowns partly cropped by the upper edge. Only the tiniest optional suggestion of distant hill or sky at the very top. The scene is viewed from high above, the ground is a huge flat lawn, not a landscape at eye level. No tree trunks or canopies in the open lawn, no trees framing the sides or bottom. Calm luminous morning atmosphere, gentle soft shadows, wonderfully comfortable 'I want to live here' quality.\nHard exclusions: no water anywhere (no creek, pond, lake, sea or fountain), no roads, no paths, no stepping stones, no bare soil trails or big color patches in lawn, no stones except the campfire ring, no large lawn decorations, no people, no animals, no extra houses, no text, no collage or multi-panel layout. Single finished scene, full bleed square PNG.\nCRITICAL SCALE / LAYOUT MAP: Tent footprint inside x=34–66%, y=18–37%. Pot body inside x=41–59%, y=43–57%, EXACT image center (50%,50%). The entire fire-and-tripod footprint stays inside x=35–65%, y=35–65%; fire below pot at y=61%. Two bowls at x=68–78%, y=64–70%. Keep the entire lower 28% as empty clean lawn. Camera is high 45-degree isometric overhead game view. Every item is fully visible and nothing is cut off. Lovely appealing game-ready composition, grass visually dominates.",
+  "export": {
+    "native_size": [
+      1254,
+      1254
+    ],
+    "delivered_size": [
+      1024,
+      1024
+    ],
+    "method": "Uniform LANCZOS export; no crop or aspect distortion. Original generations preserved at native paths."
+  },
+  "validation": {
+    "requested_check_script": "scripts/art/check_art.py was run separately on each candidate.",
+    "manifest_limitation": "Candidate filenames are not present in art/manifest.json, so its CLI alone does not validate them.",
+    "supplement": "Additionally called the same script's check_painting function with aspect=1.0 and minWidth=1024, and asserted exact PNG dimensions 1024x1024 for each candidate.",
+    "result": "All four candidates passed."
+  },
+  "candidates": [
+    {
+      "id": "01",
+      "file": "art/raw/camp/candidates/01.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e6a-4079-7d11-92a8-4ef586d1f600\\exec-c012679e-82c1-487a-91e2-ceef84fcf332.png",
+      "variant_prompt": "VARIANT 01 — Classic honey-orange camp. A delightful cream canvas A-frame ridge tent with thick apricot-orange edging and a softly curved roof, warm honey-colored interior and a small folded blanket visible INSIDE. The central hero is a rich terracotta-brown earthenware pot with a warm cream rim and two chunky little ears, lovely matte ceramic glaze. Fresh pistachio-green lawn, a tidy upper band of moss and sage round trees, pale blue distant hills. Clear gentle morning light from upper left, creamy highlights, very soft short shadows. Cheerful balanced colors, polished handcrafted 3D toy-like details."
+    },
+    {
+      "id": "02",
+      "file": "art/raw/camp/candidates/02.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e6a-4079-7d11-92a8-4ef586d1f600\\exec-fa896586-74ee-4537-85d9-1280ed2ceeae.png",
+      "variant_prompt": "VARIANT 02 — Dreamy cream bell tent. A cozy round cream-and-peach canvas bell tent with a softly pointed roof and open front, terracotta fabric ties, plush cushion visible INSIDE. The central hero is a large jade-green earthenware pot with an ivory ceramic rim and rounded handle mounts, suspended over tiny fire. Smooth light meadow-green lawn, a narrow upper forest of plump mint and eucalyptus crowns with just one pale blush blossoming crown in that upper tree band. Very soft peach-tinted early-morning light from upper left, subtle mist between far hills, airy powder-blue sky, intimate inviting fairytale glamping charm."
+    },
+    {
+      "id": "03",
+      "file": "art/raw/camp/candidates/03.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e6a-4079-7d11-92a8-4ef586d1f600\\exec-3bb6804e-f066-48c1-a94e-9700c1d10508.png",
+      "variant_prompt": "VARIANT 03 — Quiet sage dome camp. A substantial rounded dome tent in muted sage-green fabric, cream doorway with pumpkin-orange piping, open flaps and a warm cream sleeping roll visible INSIDE. The central hero is a plump deep warm russet earthenware pot with a pale oatmeal lip and small simple decorative glaze band, hanging from a sturdy light-birch tripod. Soft lime-and-pistachio velvety lawn, rounded layered evergreen and fern-green forest band only at the top, lavender distant hills, a small pale cloud in narrow sky. Bright clean late-morning upper-left light, soft warm highlights, peaceful woodland retreat, exceptionally clean spacious flat lawn."
+    },
+    {
+      "id": "04",
+      "file": "art/raw/camp/candidates/04.png",
+      "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e6a-4079-7d11-92a8-4ef586d1f600\\exec-609028bf-d244-4499-8ef8-1582723b1d0e.png",
+      "variant_prompt": "VARIANT 04 — Butter-yellow woodland hideaway. A charming roomy little cabin-shaped canvas tent with a rounded gabled silhouette, butter-yellow cloth and brick-coral trim, front flaps tied open with a cozy salmon blanket visible INSIDE. The central hero is a big round muted slate-blue ceramic cooking pot with a creamy thick rim, warm ochre handle mounts and a generous lovable belly, visibly hanging over a small fire. A rich but gentle spring-green lawn, compact rounded top-edge trees in linden, olive and teal with a few golden sunlit crowns, lilac-blue rolling hills and a soft warm clear sky above. Delicate golden morning upper-left light with very soft shadows, storybook warmth, high-end polished clay miniature feel."
+    }
+  ],
+  "next_steps": {
+    "after_user_selection": "Copy selected PNG to art/raw/camp/camp.png; generate 16 overlapping square crops; redraw each crop with built-in image_gen at 1024x1024, preserve composition and colors; merge to camp-hd.png; commit art/raw/camp/ on codex/art-batch-1a and push.",
+    "square_crop_note": "The existing detail_crops.py hardcodes ASPECT=2/3 and would produce 12 crops for a square base. Adapt its in-memory ASPECT to 1 for the user's 16 square crops, without editing tracked scripts.",
+    "detail_prompt": "Redraw this crop of the camp scene at much higher detail in the same UNIFIED STYLE: identical composition and colors, every object in the same place, crisper edges and richer material detail. Do not add or remove anything. Same lighting."
+  }
+}

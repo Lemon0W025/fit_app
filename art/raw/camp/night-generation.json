@@ -1,0 +1,43 @@
+{
+  "mode": "Built-in image_gen",
+  "selected_candidate": "03",
+  "source": "art/raw/camp/camp.png",
+  "native_source": "C:\\Users\\kejia\\.codex\\generated_images\\01a16e8a-39d1-7870-b125-62fa79664749\\exec-e72536ed-c60b-4b37-b956-2b9c3498e87e.png",
+  "prompt": "Use case: lighting-weather.\nAsset type: SAME game main scene repainted for nighttime. One square opaque PNG, exactly 1024x1024.\nInput image 1 is the EDIT TARGET, the selected finished day camp.png. Input image 2 is a STYLE REFERENCE ONLY (art/guide/style-camp.jpg): use only its hand-painted visual language, never its composition.\n\nPROMPT: Repaint this exact camp scene at night, keeping every object in exactly the same place and size: deep blue\nnight sky with a few stars and a soft moon glow, dark cool meadow, the campfire the only warm light source\ncasting a wide warm glow on the grass and the pot around it, a faint warm light inside the tent, forest dark\nagainst the sky. Calm, cozy, inviting. UNIFIED STYLE. No text, no UI, no characters.\n\nUNIFIED STYLE: hand-painted 2D game illustration, NOT a 3D render — the exact look of the attached style\nreference (art/guide/style-camp.jpg): soft painterly cel shading with gentle gradients, rounded simplified\nshapes, warm cheerful pastel colors, soft daylight from the upper left, only light ambient occlusion, clean\ntidy edges, no hard black outlines. No glossy or plastic materials, no photoreal lighting, no depth of field,\nno lens effects, no visible brush texture. No text, no labels, no watermark, no UI, no borders. Everything is\ncute, friendly and calm.\n\nNight lighting overrides only the daylight clause in UNIFIED STYLE. Keep the exact same 2D painted shapes, flat cel shading with soft broad light transitions, matte materials, no CGI or glossy plastic, no hard shiny spots, no lens bloom, no bokeh or depth of field.\n\nGEOMETRY LOCK: identical crop, perspective, camera, object outlines and normalized positions. The sage ridge/cabin tent remains at FAR UPPER-LEFT and its doorway faces down-right; the EMPTY terracotta pot remains hanging from the same tripod at center slightly below middle; same wooden lid at left of fire ring; same lantern on stump immediately right; exactly the same TWO EMPTY cream bowls lower-right. Every tree, flower, grass clump, stone, rope and log stays where it was and the same size. Change only local illumination and colors. Do not pan, zoom, rotate, simplify, enlarge or move objects. No food or steam. No new objects, trees, paths or water. Do not introduce a full visible moon if it would require more sky: use faint off-frame moonlight and a few stars inside the existing sky areas only.\n\nLighting: cool deep indigo-blue sky, muted teal-blue meadow and dark blue-green forest. Broad soft painted amber firelight pool around the central pot and fire, making its matte terracotta warmly legible; faint amber light inside tent without altering fabric or doorway shapes. Keep the existing lantern in place, but make it dim so it does not compete with the campfire. The lawn stays clean, flat and readable, not pitch black. Calm welcoming night, a place to stay and sleep.",
+  "reference": "art/guide/style-camp.jpg",
+  "file": "art/raw/camp/night.png",
+  "native_file": "art/raw/camp/native/night.png",
+  "native_size": [
+    1254,
+    1254
+  ],
+  "exported_size": [
+    1024,
+    1024
+  ],
+  "alignment_check": {
+    "tent": {
+      "best_translation_px": [
+        0,
+        0
+      ],
+      "gradient_correlation": 0.8605
+    },
+    "pot_and_fire": {
+      "best_translation_px": [
+        0,
+        0
+      ],
+      "gradient_correlation": 0.8524
+    },
+    "bowls": {
+      "best_translation_px": [
+        0,
+        0
+      ],
+      "gradient_correlation": 0.9027
+    }
+  },
+  "night_detail_command": "python scripts/camp/detail_crops.py art/raw/camp/night.png --cols 2 --overlap 0.14 --dir night-detail",
+  "overlap_note": "14% overlap gives a 2x2 genuine-detail output above the manifest minimum 1900px; default 15% produces only about 1893px with 1024px output tiles."
+}
