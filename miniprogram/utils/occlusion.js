@@ -5,9 +5,9 @@
 const { GRID, SHELL, GATES, DOOR, tileInfo } = require('./shared/estate')
 const { tileTop } = require('./iso')
 
-const WALL_H = 2.2
-// 月亮门洞：半径（格高），洞底贴地
-const GATE_HOLE = { radius: 1.1 }
+// 墙高（格高）和月亮门洞（圆心离地 = up × 墙高，半径按格高）。和现在这张原画对过（把 pieces 画在切块上看）；Codex 重画后要重新对
+const WALL_H = 1.6
+const GATE_HOLE = { up: 0.55, radius: 0.9 }
 const DOOR_H = WALL_H * 1.3
 // 建筑：h 墙身高、roof 屋顶高、over 屋檐出挑（格）、inset 比格子缩进多少（格）
 const BUILDINGS = {
@@ -19,8 +19,9 @@ const BUILDINGS = {
   trellis: { h: 1.6, inset: 0.1 },
   rockery: { h: 2.2, inset: 0.3 },
 }
-// 抠图比几何稍微宽一点，免得画里的墙边露出一条缝
+// 抠图左右比几何稍微宽一点，免得画里的墙边露出一条缝；上边反而收一点点：宁可让后面的东西从墙头露出一丝，也别用一条地面把它拦腰切断
 const PAD = 0.04
+const TRIM_TOP = 0.05
 
 // 块的 z-index（节点用的值）：物件节点是 (c+r)*10 + c + 10、小动物是 +15；后面一格的东西最多到 +15、前面一格的东西最少 +20，取 +17 夹在中间
 const depthZ = (c, r) => (c + r) * 10 + c + 17
@@ -64,14 +65,13 @@ function prism(c0, r0, c1, r1, h, L, over = 0, roof = 0) {
   return hull(pts)
 }
 
-function pad(poly, px) {
+function pad(poly, px, trim) {
   const cx = poly.reduce((s, p) => s + p[0], 0) / poly.length
   const cy = poly.reduce((s, p) => s + p[1], 0) / poly.length
   return poly.map(([x, y]) => {
     const dx = x - cx
-    const dy = y - cy
-    const d = Math.hypot(dx, dy) || 1
-    return [x + (dx / d) * px, y + (dy / d) * px]
+    const d = Math.abs(dx) || 1
+    return [x + (dx / d) * px, y < cy ? y + trim : y]
   })
 }
 
@@ -124,7 +124,7 @@ function withHole(outer, inner) {
 }
 
 function piece(key, c, r, poly, L, hole) {
-  const padded = pad(poly, L.tileW * PAD)
+  const padded = pad(poly, L.tileW * PAD, L.tileH * TRIM_TOP)
   const box = bboxOf(padded)
   return { key, c, r, z: depthZ(c, r), poly: hole ? withHole(padded, hole) : padded, outer: padded, box, hole: !!hole }
 }
@@ -156,8 +156,7 @@ function pieces(L) {
     const [c0, r0] = g.tiles[0]
     const front = g.tiles.reduce((best, t) => (t[0] + t[1] > best[0] + best[1] ? t : best), g.tiles[0])
     const center = pairCenter(g.tiles, L)
-    const r = GATE_HOLE.radius * L.tileH
-    const hole = circle(center.x, center.y - r, r)
+    const hole = circle(center.x, center.y - WALL_H * GATE_HOLE.up * L.tileH, GATE_HOLE.radius * L.tileH)
     out.push(piece(`g${c0}-${r0}`, front[0], front[1], prism(Math.min(...cs), Math.min(...rs), Math.max(...cs) + 1, Math.max(...rs) + 1, WALL_H, L), L, hole))
   })
   {

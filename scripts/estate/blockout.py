@@ -1,6 +1,7 @@
 """园林大宅院的白模：按 shared/estate.js 的布局画整张底图，切成 4×4 块给小程序当占位底图；整图另存给即梦当参考
 
-    python3 scripts/estate/blockout.py
+    python3 scripts/estate/blockout.py          # 按线上数据画：兜底切块 + art/guide 参考图
+    python3 scripts/estate/blockout.py --wide   # 只画 art/guide 参考图，月亮门三格宽、墙更高（给 Codex 重画用；新画到了再把数据切过去）
 
 输出：miniprogram/images/garden/estate/t00.jpg … t33.jpg（底图切块）、
      art/guide/estate-blockout.jpg（整图）、art/guide/estate-blockout-3x2.jpg（上下补成 3:2，给 Codex 当重绘底稿）、
@@ -12,6 +13,7 @@ import math
 import os
 import random
 import subprocess
+import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -33,8 +35,9 @@ COLORS = {
 }
 WALL = (240, 238, 232)
 WALL_TOP = (72, 80, 96)
-WALL_H = TH * 2.2
-GATE_R = TH * 1.1  # 月亮门洞半径（洞底贴地：圆心高 = 半径）
+WIDE = '--wide' in sys.argv
+WALL_H = TH * (2.2 if WIDE else 1.6)
+GATE_R = TH * (1.1 if WIDE else 0.9)  # 月亮门洞半径（洞底贴地：圆心高 = 半径）
 WOOD = (150, 104, 64)
 
 
@@ -50,6 +53,12 @@ def load_layout():
 LAYOUT = load_layout()
 COLS, ROWS = LAYOUT['grid']['cols'], LAYOUT['grid']['rows']
 KINDS = LAYOUT['kinds']
+if WIDE:
+    for g in LAYOUT['gates']:
+        (c0, r0), (c1, r1) = g['tiles']
+        third = [max(c0, c1) + 1, r0] if r0 == r1 else [c0, max(r0, r1) + 1]
+        g['tiles'].append(third)
+        KINDS[third[1]][third[0]] = 'gate'
 TOP = TW * 1.3
 DEPTH = TH * 0.4
 W = int((COLS + ROWS) * TW / 2)
@@ -326,16 +335,17 @@ def main():
     img = draw_estate()
     tw, th = W / SPLIT, H / SPLIT
     total = 0
-    for row in range(SPLIT):
-        for col in range(SPLIT):
-            tile = img.crop((round(col * tw), round(row * th), round((col + 1) * tw), round((row + 1) * th)))
-            path = os.path.join(OUT, 'estate', f't{row}{col}.jpg')
-            tile.save(path, quality=JPEG_QUALITY, optimize=True)
-            total += os.path.getsize(path)
+    if not WIDE:
+        for row in range(SPLIT):
+            for col in range(SPLIT):
+                tile = img.crop((round(col * tw), round(row * th), round((col + 1) * tw), round((row + 1) * th)))
+                path = os.path.join(OUT, 'estate', f't{row}{col}.jpg')
+                tile.save(path, quality=JPEG_QUALITY, optimize=True)
+                total += os.path.getsize(path)
     img.save(os.path.join(GUIDE, 'estate-blockout.jpg'), quality=88, optimize=True)
     pad32(img).save(os.path.join(GUIDE, 'estate-blockout-3x2.jpg'), quality=88, optimize=True)
     draw_labels(img).save(os.path.join(GUIDE, 'estate-blockout-labels.jpg'), quality=88, optimize=True)
-    print(f'底图 {W}×{H}，16 块共 {total // 1024} KB；整图、3:2 底稿和标注图已写入')
+    print(f'底图 {W}×{H}' + ('（--wide：只写参考图）' if WIDE else f'，16 块共 {total // 1024} KB') + '；整图、3:2 底稿和标注图已写入')
 
 
 if __name__ == '__main__':
