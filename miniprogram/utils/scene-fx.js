@@ -24,11 +24,11 @@ function fxViews(L, hour, placed) {
   const [fx, fy] = SCENE.fire
   const fireZ = zOf(fy) + 5
   for (let i = 0; i < 3; i++) {
-    const w = 260 - i * 50
+    const w = 320 - i * 60
     out.push({ key: `flame-${i}`, kind: 'flame', ...at(fx + (i - 1) * 30, fy - 20, w, w * 1.3, L), z: fireZ + i, delay: fmt(i * 0.3) })
   }
   for (let i = 0; i < 3; i++) {
-    out.push({ key: `smoke-${i}`, kind: 'smoke', ...at(fx + (i - 1) * 40, fy - 240, 200, 200, L), z: fireZ + 4, delay: fmt(i * 1.4) })
+    out.push({ key: `smoke-${i}`, kind: 'smoke', ...at(fx + (i - 1) * 40, fy - 300, 240, 240, L), z: fireZ + 4, delay: fmt(i * 1.4) })
   }
   if (night) {
     // 帐篷里亮着灯

@@ -14,12 +14,11 @@ test('画的尺寸和远近缩放', () => {
 test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', () => {
   const inside = ([x, y]) => x >= 0 && x <= C.W && y >= 0 && y <= C.H
   assert.ok(C.SCENE.grass.length >= 4 && C.SCENE.grass.every(inside))
-  assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['fire', 'tent', 'trees'])
-  assert.equal(C.SCENE.nogo.trees.length, 6)
+  assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['fire', 'tent'])
   assert.equal(C.SCENE.seats.length, 12)
   assert.equal(C.SCENE.bowls.length, 2)
   assert.equal(C.SCENE.entries.length, 3)
-  assert.equal(C.SCENE.shade.length, 6)
+  assert.equal(C.SCENE.shade.length, 4)
   assert.equal(C.SCENE.tent.spots.length, 3)
   assert.equal(C.SCENE.sun.length, 3)
   // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地
@@ -48,14 +47,14 @@ test('多边形命中', () => {
   assert.equal(C.ellipse(0, 0, 10, 5, 8).length, 8)
 })
 
-test('inGrass / hitsNogo：篝火中心、帐篷、树干不是草地；margin 和 names 管用', () => {
+test('inGrass / hitsNogo：篝火中心、帐篷不是草地；margin 和 names 管用', () => {
   assert.equal(C.inGrass(1536, 2000), true)
-  assert.equal(C.inGrass(1536, 2500), false) // 篝火
+  assert.equal(C.inGrass(1536, 2680), false) // 篝火
   assert.equal(C.inGrass(1000, 1850), false) // 大帐篷
-  assert.equal(C.inGrass(640, 900), false) // 树干
-  assert.equal(C.inGrass(300, 2500), true) // 左边没有小溪了，是草地
+  assert.equal(C.inGrass(640, 900), true) // 草坪里没有树
+  assert.equal(C.inGrass(300, 2500), true) // 也没有小溪
   assert.equal(C.inGrass(1536, 300), false) // 树林
-  const near = { left: 1320, top: 1800, right: 1390, bottom: 1860 } // 帐篷右边 20px
+  const near = { left: 1420, top: 1800, right: 1490, bottom: 1860 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
   assert.equal(C.hitsNogo(near, 40, ['tent']), true)
   assert.equal(C.hitsNogo(near, 40, ['fire']), false)

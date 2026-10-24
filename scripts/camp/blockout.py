@@ -1,4 +1,4 @@
-"""按 shared/camp.js 的 SCENE 画营地白模（草地、篝火、大帐篷、食盆、六棵树、树林边）：包里的占位底图（切 16 块）+ 给 Codex 的底稿和标注图
+"""按 shared/camp.js 的 SCENE 画营地白模（空旷草坪、后面一片树林、大帐篷 + 篝火 + 食盆一组）：包里的占位底图（切 16 块）+ 给 Codex 的底稿和标注图
 
     python3 scripts/camp/blockout.py
 
@@ -44,30 +44,29 @@ def draw(width, labels=False):
     img = Image.new('RGB', (width, height), SKY)
     d = ImageDraw.Draw(img)
     P = lambda pts: [(x * k, y * k) for x, y in pts]
-    # 远山、树林边缘、草地
+    # 远山、后面一片树林（只当背景，草坪里不放树）、草地
     d.polygon(P([[0, 0], [S['width'], 0], [S['width'], 520], [2400, 300], [1600, 420], [900, 280], [0, 480]]), fill=MOUNTAIN)
-    d.rectangle([0, 420 * k, width, 760 * k], fill=FOREST)
+    d.rectangle([0, 360 * k, width, 720 * k], fill=FOREST)
+    for i in range(14):
+        cx = (i + 0.5) * S['width'] / 14
+        r = 150 if i % 2 else 120
+        d.ellipse([(cx - r) * k, (560 - r) * k, (cx + r) * k, (560 + r) * k], fill=CANOPY if i % 3 else FOREST)
     d.rectangle([0, 700 * k, width, height], fill=GRASS_DARK)
     d.polygon(P(S['grass']), fill=GRASS)
     # 大帐篷：地面占位是 nogo.tent，帐篷本身往上立起来；左面背光、右面受光，门朝篝火（右下）
     (tx0, ty0), (tx1, _), (_, ty1) = S['nogo']['tent'][0], S['nogo']['tent'][1], S['nogo']['tent'][2]
     tmx = (tx0 + tx1) / 2
-    apex = ty0 - 300
+    apex = ty0 - 520
     d.polygon(P([[tx0, ty1], [tmx, ty1], [tmx, apex], [tx0, ty0]]), fill=TENT_DARK)
     d.polygon(P([[tmx, ty1], [tx1, ty1], [tx1, ty0], [tmx, apex]]), fill=TENT)
     d.polygon(P([[tmx + 60, ty1], [tx1 - 60, ty1], [tmx + 150, ty0 + 60]]), fill=TENT_DOOR)
     # 篝火、食盆
     fx, fy = S['fire']
-    d.ellipse([(fx - 220) * k, (fy - 140) * k, (fx + 220) * k, (fy + 140) * k], fill=STONE)
-    d.ellipse([(fx - 120) * k, (fy - 90) * k, (fx + 120) * k, (fy + 60) * k], fill=FIRE)
+    d.ellipse([(fx - 260) * k, (fy - 170) * k, (fx + 260) * k, (fy + 170) * k], fill=STONE)
+    d.ellipse([(fx - 150) * k, (fy - 110) * k, (fx + 150) * k, (fy + 80) * k], fill=FIRE)
+    d.rectangle([(fx + 300) * k, (fy + 120) * k, (fx + 560) * k, (fy + 190) * k], fill=TRUNK)   # 旁边一根木头
     for bx, by in S['bowls']:
-        d.ellipse([(bx - 70) * k, (by - 45) * k, (bx + 70) * k, (by + 45) * k], fill=BOWL, outline=STONE, width=max(1, int(4 * k)))
-    # 树：树干圆 + 树冠
-    for tree in S['nogo']['trees']:
-        cx = sum(p[0] for p in tree) / len(tree)
-        cy = sum(p[1] for p in tree) / len(tree)
-        d.rectangle([(cx - 40) * k, (cy - 60) * k, (cx + 40) * k, (cy + 80) * k], fill=TRUNK)
-        d.ellipse([(cx - 260) * k, (cy - 520) * k, (cx + 260) * k, (cy - 40) * k], fill=CANOPY)
+        d.ellipse([(bx - 100) * k, (by - 65) * k, (bx + 100) * k, (by + 65) * k], fill=BOWL, outline=STONE, width=max(1, int(5 * k)))
     if labels:
         font = ImageFont.load_default()
         def tag(x, y, text):
@@ -76,6 +75,7 @@ def draw(width, labels=False):
         tag(tx0, ty1 + 20, 'tent 大帐篷')
         tag(S['bowls'][0][0], S['bowls'][0][1] - 120, 'bowls 食盆')
         tag(S['sun'][0][0], S['sun'][0][1], 'sun 晒太阳')
+        tag(60, 400, 'forest 树林（只在后面当背景）')
         for i, (ex, ey) in enumerate(S['entries']):
             tag(ex, ey, f'entry {i + 1}')
         for sx, sy in S['seats']:

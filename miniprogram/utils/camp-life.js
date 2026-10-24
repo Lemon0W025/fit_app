@@ -64,7 +64,7 @@ function createLife({
 
   function nogoPolys() {
     const n = SCENE.nogo
-    return [n.tent, n.fire].concat(n.trees)
+    return [n.tent, n.fire]
   }
 
   // 装饰上的点：{ x, y, action, uid, name }
@@ -91,13 +91,10 @@ function createLife({
     return spots.filter((s) => !taken(s, self))
   }
 
-  function sleepSpot(self) {
-    const beds = free(decorSpots('sleep'), self)
-    if (beds.length) return beds[0]
-    const shade = free(SCENE.shade.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
-    if (shade.length) return shade[0]
-    const tent = free(SCENE.tent.spots.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
-    return tent[0] || null
+  // 睡觉的地方，按先后：窝 → 树荫 → 帐篷门口（都只算空着的）；走不到第一个就试下一个
+  function sleepSpots(self) {
+    const spots = (list) => free(list.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
+    return free(decorSpots('sleep'), self).concat(spots(SCENE.shade), spots(SCENE.tent.spots))
   }
 
   function awayFromOthers(x, y, self) {
@@ -117,7 +114,7 @@ function createLife({
   function nearFire(self) {
     for (let i = 0; i < 30; i++) {
       const a = random() * Math.PI * 2
-      const r = 320 + random() * 260
+      const r = 380 + random() * 300
       const x = SCENE.fire[0] + r * Math.cos(a)
       const y = SCENE.fire[1] + r * Math.sin(a) * 0.6
       if (inGrass(x, y) && awayFromOthers(x, y, self)) return { x, y, action: 'idle' }
@@ -192,9 +189,8 @@ function createLife({
     const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
     const vias = []
     for (const side of [1, -1, 2, -2]) vias.push({ x: mid.x + ((-dy / len) * DETOUR) * side, y: mid.y + ((dx / len) * DETOUR) * side })
-    // 大障碍（帐篷）光往旁边挪一下绕不过去：再试挡路多边形外框的四个角外面一点
+    // 大东西（帐篷、篝火圈）光往旁边挪一下绕不过去：再试每个障碍外框四个角外面一点
     polys.forEach((poly) => {
-      if (!segmentHitsPoly([from.x, from.y], [to.x, to.y], poly)) return
       const xs = poly.map((p) => p[0])
       const ys = poly.map((p) => p[1])
       const l = Math.min(...xs) - CORNER
@@ -203,13 +199,26 @@ function createLife({
       const b = Math.max(...ys) + CORNER
       vias.push({ x: l, y: t }, { x: r, y: t }, { x: l, y: b }, { x: r, y: b })
     })
+    const ok = vias.filter((v) => inGrass(v.x, v.y))
     let best = null
-    for (const via of vias) {
-      if (!inGrass(via.x, via.y) || blocked(from, via) || blocked(via, to)) continue
-      const d = dist(from.x, from.y, via.x, via.y) + dist(via.x, via.y, to.x, to.y)
-      if (!best || d < best.d) best = { via, d }
+    const consider = (path, d) => {
+      if (!best || d < best.d) best = { path, d }
     }
-    return best ? [best.via, to] : null
+    ok.forEach((v) => {
+      if (blocked(from, v) || blocked(v, to)) return
+      consider([v, to], dist(from.x, from.y, v.x, v.y) + dist(v.x, v.y, to.x, to.y))
+    })
+    if (!best) {
+      // 一个拐点不够就两个：先绕过一个障碍再绕另一个
+      ok.forEach((v1) => {
+        if (blocked(from, v1)) return
+        ok.forEach((v2) => {
+          if (v1 === v2 || blocked(v1, v2) || blocked(v2, to)) return
+          consider([v1, v2, to], dist(from.x, from.y, v1.x, v1.y) + dist(v1.x, v1.y, v2.x, v2.y) + dist(v2.x, v2.y, to.x, to.y))
+        })
+      })
+    }
+    return best ? best.path : null
   }
 
   function walkTo(a, spot, then) {
@@ -280,8 +289,10 @@ function createLife({
     const period = periodOf(hour())
     if (period === 'night') {
       if (a.action === 'sleep') return doFor(a, 'sleep', between(NIGHT_MS))
-      const bed = sleepSpot(a)
-      if (bed && walkTo(a, bed, (b) => { b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'; doFor(b, 'sleep', between(NIGHT_MS)) })) return
+      const tuckIn = (b) => { b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'; doFor(b, 'sleep', between(NIGHT_MS)) }
+      for (const bed of sleepSpots(a)) {
+        if (walkTo(a, bed, tuckIn)) return
+      }
       return doFor(a, 'sleep', between(NIGHT_MS))
     }
     if (period === 'dusk') {

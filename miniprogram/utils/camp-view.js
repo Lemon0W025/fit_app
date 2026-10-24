@@ -9,7 +9,7 @@ const { SCENE } = require('./shared/camp')
 
 const Z_DECOR = 100
 const MARGIN_RATIO = 0.6
-const BOWL_PX = 150 // 食盆在画上的直径（像素）
+const BOWL_PX = 200 // 食盆在画上的直径（像素）
 
 const fmt = (n) => Math.round(n * 100) / 100
 

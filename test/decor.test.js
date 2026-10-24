@@ -40,8 +40,8 @@ test('placeProblem：每种不能放的原因', () => {
   assert.equal(P('ball', 40, 2000), '只能放在草地上')
   assert.equal(P('ball', 1536, 2520), '这儿放不下，挪开一点') // 篝火
   assert.equal(P('ball', 1000, 1900), '这儿放不下，挪开一点') // 大帐篷
-  assert.equal(P('ball', 700, 900), '这儿放不下，挪开一点') // 树干
-  assert.equal(P('ball', 500, 2100), '') // 左边没有小溪了
+  assert.equal(P('ball', 500, 2100), '这儿放不下，挪开一点') // 还是大帐篷
+  assert.equal(P('ball', 700, 900), '') // 草坪里没有树、没有小溪
   assert.equal(P('ball', 1520, 1810), '和别的东西挤着了')
   assert.equal(P('ball', 1520, 1810, 'd1'), '')
   assert.equal(P('tent', 2000, 1800), '')
