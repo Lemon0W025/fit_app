@@ -22,9 +22,9 @@ const JUMP_MS = 3000
 const HELLO_MS = 4000
 const PAIR_MS = 5000
 const DETOUR = 360
+const CORNER = 140 // 绕障碍物四角时离外框多远
 const BODY_GAP = 1.1 // 目标点离别的宠物至少几个身位
 const SUN_LOVERS = ['jutuan', 'guigui']
-const SWIMMERS = ['lianlian', 'guigui']
 const PAIR_CHANCE = 0.08
 const PLAY_CHANCE = 0.35
 const SHADOW_RATIO = 0.6
@@ -35,7 +35,7 @@ const PAIRS = [
   { a: 'qiqi', b: 'shushu', aLine: '嘿嘿，往碗里塞了一颗', bLine: '咦？我碗里怎么多了颗枸杞', aEmoji: '😏', bEmoji: '❓' },
   { a: 'doudou', b: 'shishi', aLine: '柿柿，带我一程！', bLine: '坐稳了，别掉下去', aEmoji: '🎵', bEmoji: '💪' },
   { a: 'huahua', b: 'nuonuo', aLine: '蝴蝶…又飞走了', bLine: '（吓了一跳）', aEmoji: '🦋', bEmoji: '❗' },
-  { a: 'lianlian', b: 'guigui', aLine: '嘎，一起泡会儿', bLine: '慢…慢…来', aEmoji: '💧', bEmoji: '💧' },
+  { a: 'lianlian', b: 'guigui', aLine: '嘎，一起晒会儿', bLine: '慢…慢…来', aEmoji: '☀️', bEmoji: '☀️' },
   { a: 'sunbao', b: 'nuonuo', aLine: '挤一挤，暖和', bLine: '好、好暖和', aEmoji: '💤', bEmoji: '💤' },
 ]
 
@@ -64,7 +64,7 @@ function createLife({
 
   function nogoPolys() {
     const n = SCENE.nogo
-    return [n.stream, n.pond, n.deck, n.fire].concat(n.trees)
+    return [n.tent, n.fire].concat(n.trees)
   }
 
   // 装饰上的点：{ x, y, action, uid, name }
@@ -96,8 +96,8 @@ function createLife({
     if (beds.length) return beds[0]
     const shade = free(SCENE.shade.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
     if (shade.length) return shade[0]
-    const deck = free(SCENE.deck.spots.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
-    return deck[0] || null
+    const tent = free(SCENE.tent.spots.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
+    return tent[0] || null
   }
 
   function awayFromOthers(x, y, self) {
@@ -190,11 +190,26 @@ function createLife({
     const dy = to.y - from.y
     const len = Math.hypot(dx, dy) || 1
     const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
-    for (const side of [1, -1, 2, -2]) {
-      const via = { x: mid.x + ((-dy / len) * DETOUR) * side, y: mid.y + ((dx / len) * DETOUR) * side }
-      if (inGrass(via.x, via.y) && !blocked(from, via) && !blocked(via, to)) return [via, to]
+    const vias = []
+    for (const side of [1, -1, 2, -2]) vias.push({ x: mid.x + ((-dy / len) * DETOUR) * side, y: mid.y + ((dx / len) * DETOUR) * side })
+    // 大障碍（帐篷）光往旁边挪一下绕不过去：再试挡路多边形外框的四个角外面一点
+    polys.forEach((poly) => {
+      if (!segmentHitsPoly([from.x, from.y], [to.x, to.y], poly)) return
+      const xs = poly.map((p) => p[0])
+      const ys = poly.map((p) => p[1])
+      const l = Math.min(...xs) - CORNER
+      const r = Math.max(...xs) + CORNER
+      const t = Math.min(...ys) - CORNER
+      const b = Math.max(...ys) + CORNER
+      vias.push({ x: l, y: t }, { x: r, y: t }, { x: l, y: b }, { x: r, y: b })
+    })
+    let best = null
+    for (const via of vias) {
+      if (!inGrass(via.x, via.y) || blocked(from, via) || blocked(via, to)) continue
+      const d = dist(from.x, from.y, via.x, via.y) + dist(via.x, via.y, to.x, to.y)
+      if (!best || d < best.d) best = { via, d }
     }
-    return null
+    return best ? [best.via, to] : null
   }
 
   function walkTo(a, spot, then) {
@@ -289,12 +304,8 @@ function createLife({
       if (walkTo(a, spot, (b) => doFor(b, spot.action, between(DO_MS), '🎵'))) return
     }
     if (SUN_LOVERS.indexOf(a.id) !== -1 && random() < 0.5) {
-      const sun = free(SCENE.deck.spots.map(([x, y]) => ({ x, y, action: 'sun' })), a)
+      const sun = free(SCENE.sun.map(([x, y]) => ({ x, y, action: 'sun' })), a)
       if (sun.length && walkTo(a, pick(sun), (b) => doFor(b, 'sun', between(NAP_MS), '☀️'))) return
-    }
-    if (SWIMMERS.indexOf(a.id) !== -1 && random() < 0.3) {
-      const water = free(SCENE.pond.spots.map(([x, y]) => ({ x, y, action: 'soak' })), a)
-      if (water.length && walkTo(a, pick(water), (b) => doFor(b, 'soak', between(DO_MS), '💧'))) return
     }
     if (random() < 0.15) return doFor(a, 'fidget', 1500)
     const spot = randomGrass(a)

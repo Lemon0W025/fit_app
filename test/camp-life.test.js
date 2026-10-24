@@ -55,7 +55,7 @@ test('白天：开始后会走动，每一步都落在草地上、不穿禁区�
         assert.ok(s.duration > 0)
       }
     })
-    life.whereIs().forEach((w) => assert.ok(inGrass(w.x, w.y) || w.action === 'sun' || w.action === 'soak' || w.action === 'sit', `${w.id} 站到了 ${w.x},${w.y}`))
+    life.whereIs().forEach((w) => assert.ok(inGrass(w.x, w.y) || w.action === 'sun' || w.action === 'sit', `${w.id} 站到了 ${w.x},${w.y}`))
   }
   assert.ok(walked > 0)
   life.stop()
@@ -79,7 +79,7 @@ test('傍晚全员围着篝火坐；夜里去睡：有草窝睡草窝，没有�
   const inBed = where.filter((w) => w.text === '在草窝里睡觉')
   assert.equal(inBed.length, 1)
   const shade = where.find((w) => w.text === '在睡觉')
-  assert.ok(SCENE.shade.some(([x, y]) => Math.hypot(x - shade.x, y - shade.y) < 1) || pointInPoly(shade.x, shade.y, SCENE.nogo.deck))
+  assert.ok(SCENE.shade.concat(SCENE.tent.spots).some(([x, y]) => Math.hypot(x - shade.x, y - shade.y) < 1))
 })
 
 test('鹤鹤只在 5～9 点出现', () => {

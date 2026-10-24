@@ -14,21 +14,22 @@ test('画的尺寸和远近缩放', () => {
 test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', () => {
   const inside = ([x, y]) => x >= 0 && x <= C.W && y >= 0 && y <= C.H
   assert.ok(C.SCENE.grass.length >= 4 && C.SCENE.grass.every(inside))
-  assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['deck', 'fire', 'pond', 'stream', 'trees'])
-  assert.equal(C.SCENE.nogo.trees.length, 5)
+  assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['fire', 'tent', 'trees'])
+  assert.equal(C.SCENE.nogo.trees.length, 6)
   assert.equal(C.SCENE.seats.length, 12)
   assert.equal(C.SCENE.bowls.length, 2)
   assert.equal(C.SCENE.entries.length, 3)
-  assert.equal(C.SCENE.shade.length, 4)
-  assert.equal(C.SCENE.deck.spots.length, 3)
-  assert.equal(C.SCENE.pond.spots.length, 2)
-  // 坐点、食盆、树荫、木台点都是能站的草地（或木台）
+  assert.equal(C.SCENE.shade.length, 6)
+  assert.equal(C.SCENE.tent.spots.length, 3)
+  assert.equal(C.SCENE.sun.length, 3)
+  // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地
   C.SCENE.seats.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `seat ${x},${y}`))
   C.SCENE.bowls.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `bowl ${x},${y}`))
   C.SCENE.shade.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `shade ${x},${y}`))
   C.SCENE.entries.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `entry ${x},${y}`))
-  C.SCENE.deck.spots.forEach(([x, y]) => assert.ok(C.pointInPoly(x, y, C.SCENE.nogo.deck), `deck ${x},${y}`))
-  C.SCENE.pond.spots.forEach(([x, y]) => assert.ok(C.pointInPoly(x, y, C.SCENE.nogo.pond), `pond ${x},${y}`))
+  C.SCENE.tent.spots.concat(C.SCENE.sun).forEach(([x, y]) => assert.ok(C.inGrass(x, y), `spot ${x},${y}`))
+  // 帐篷门口的点就在帐篷外面一点
+  C.SCENE.tent.spots.forEach(([x, y]) => assert.ok(y > C.SCENE.nogo.tent[2][1] && y < C.SCENE.nogo.tent[2][1] + 200, `tent spot ${x},${y}`))
 })
 
 test('多边形命中', () => {
@@ -47,15 +48,17 @@ test('多边形命中', () => {
   assert.equal(C.ellipse(0, 0, 10, 5, 8).length, 8)
 })
 
-test('inGrass / hitsNogo：篝火中心不是草地，溪边 40px 内算水边', () => {
+test('inGrass / hitsNogo：篝火中心、帐篷、树干不是草地；margin 和 names 管用', () => {
   assert.equal(C.inGrass(1536, 2000), true)
   assert.equal(C.inGrass(1536, 2500), false) // 篝火
-  assert.equal(C.inGrass(1200, 3000), false) // 木台
-  assert.equal(C.inGrass(560, 3600), false) // 水塘
+  assert.equal(C.inGrass(1000, 1850), false) // 大帐篷
+  assert.equal(C.inGrass(640, 900), false) // 树干
+  assert.equal(C.inGrass(300, 2500), true) // 左边没有小溪了，是草地
   assert.equal(C.inGrass(1536, 300), false) // 树林
-  const near = { left: 420, top: 2000, right: 490, bottom: 2060 } // 溪边在 x≈396～403
+  const near = { left: 1320, top: 1800, right: 1390, bottom: 1860 } // 帐篷右边 20px
   assert.equal(C.hitsNogo(near, 0), false)
-  assert.equal(C.hitsNogo(near, 40, ['stream', 'pond']), true)
+  assert.equal(C.hitsNogo(near, 40, ['tent']), true)
+  assert.equal(C.hitsNogo(near, 40, ['fire']), false)
   assert.equal(C.hitsNogo({ left: 1500, top: 2400, right: 1560, bottom: 2460 }, 0), true)
 })
 

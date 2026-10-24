@@ -14,7 +14,6 @@ const CATEGORIES = [
 const SIZES = { s: { w: 240, h: 200 }, m: { w: 360, h: 300 }, l: { w: 520, h: 420 } }
 const FOOT_RATIO = 0.6
 const OVERLAP_MARGIN = 16
-const WATER_MARGIN = 40
 const GOLD_TENT = 'gold_tent'
 
 // 一个块：size 小中大；spots 按块的比例给（x 从左、y 从上），下面展开成像素
@@ -81,7 +80,6 @@ function placeProblem(placed, decorId, x, y, ignoreUid) {
   const foot = footRect(decorId, x, y)
   if (!rectInPoly(foot, SCENE.grass)) return '只能放在草地上'
   if (hitsNogo(foot, 0)) return '这儿放不下，挪开一点'
-  if (hitsNogo(foot, WATER_MARGIN, ['stream', 'pond'])) return '离水边远一点'
   const mine = expand(foot, OVERLAP_MARGIN)
   for (const p of placed) {
     if (p.uid === ignoreUid || !decorById(p.id)) continue

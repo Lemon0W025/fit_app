@@ -28,8 +28,7 @@ function describe(state) {
     case 'walk': case 'fly': return '在溜达'
     case 'play': case 'climb': return d ? `在玩${d}` : '在玩'
     case 'sit': return d ? `坐在${d}上` : '围着篝火坐着'
-    case 'sun': return '在木台上晒太阳'
-    case 'soak': return '在水塘里泡着'
+    case 'sun': return '在晒太阳'
     case 'eat': return '在吃东西'
     case 'away': return '要清晨才来'
     case 'gift': return '叼着礼物找你'
@@ -41,7 +40,7 @@ function describe(state) {
 // 单张图时每个动作挂的 CSS 类（camp.wxss）
 const CSS_ACTIONS = {
   walk: 'act-walk', fly: 'act-fly', idle: 'act-idle', sleep: 'act-sleep', eat: 'act-eat', fidget: 'act-idle', happy: 'act-happy',
-  roll: 'act-roll', pet: 'act-pet', gift: 'act-walk', jump: 'act-jump', special: 'act-happy', sit: 'act-sit', soak: 'act-soak',
+  roll: 'act-roll', pet: 'act-pet', gift: 'act-walk', jump: 'act-jump', special: 'act-happy', sit: 'act-sit',
   sun: 'act-sleep', play: 'act-happy', climb: 'act-idle', perch: 'act-idle', dislike: 'act-dislike', away: '', look: 'act-idle',
 }
 

@@ -1,4 +1,4 @@
-// 让营地自己动起来：篝火火苗和烟、溪流和水塘的波光、涟漪、夜里的萤火虫、水壶炉的热气、花坛的蝴蝶、灯的光晕。全是 CSS 动画，不占包
+// 让营地自己动起来：篝火火苗和烟、夜里帐篷里的暖光和萤火虫、水壶炉的热气、花坛的蝴蝶、灯的光晕。全是 CSS 动画，不占包
 // 纯函数，有单测；坐标是屏幕像素（画的像素 × L.k）
 
 const { SCENE, scaleAt } = require('./shared/camp')
@@ -12,16 +12,6 @@ const fmt = (n) => Math.round(n * 10) / 10
 function noise(n) {
   const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453
   return x - Math.floor(x)
-}
-
-// 一个多边形在屏幕上的外框 + 相对外框的 clip-path
-function polyBox(poly, L) {
-  const xs = poly.map((p) => p[0] * L.k)
-  const ys = poly.map((p) => p[1] * L.k)
-  const left = Math.min(...xs)
-  const top = Math.min(...ys)
-  const clip = `polygon(${poly.map((p) => `${fmt(p[0] * L.k - left)}px ${fmt(p[1] * L.k - top)}px`).join(', ')})`
-  return { left: fmt(left), top: fmt(top), width: fmt(Math.max(...xs) - left), height: fmt(Math.max(...ys) - top), clip }
 }
 
 function at(x, y, w, h, L) {
@@ -40,13 +30,10 @@ function fxViews(L, hour, placed) {
   for (let i = 0; i < 3; i++) {
     out.push({ key: `smoke-${i}`, kind: 'smoke', ...at(fx + (i - 1) * 40, fy - 240, 200, 200, L), z: fireZ + 4, delay: fmt(i * 1.4) })
   }
-  ;[['stream', SCENE.nogo.stream], ['pond', SCENE.nogo.pond]].forEach(([name, poly], i) => {
-    out.push({ key: `shimmer-${name}`, kind: 'shimmer', ...polyBox(poly, L), z: 2, delay: fmt(i * 2.1) })
-  })
-  SCENE.pond.spots.forEach(([x, y], i) => {
-    out.push({ key: `ripple-${i}`, kind: 'ripple', ...at(x, y + 30, 260, 90, L), z: 3, delay: fmt(i * 1.1) })
-  })
   if (night) {
+    // 帐篷里亮着灯
+    const t = SCENE.nogo.tent
+    out.push({ key: 'tent-glow', kind: 'glow', ...at((t[0][0] + t[1][0]) / 2, t[2][1] + 40, 900, 620, L), z: zOf(t[2][1]) + 2, delay: 0 })
     for (let i = 0; i < FIREFLY_COUNT; i++) {
       const x = 400 + noise(i * 3 + 1) * (SCENE.width - 800)
       const y = 900 + noise(i * 3 + 2) * (SCENE.height - 1500)

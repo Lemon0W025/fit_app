@@ -108,24 +108,24 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 这是整个游戏的舞台，值得多生成几轮挑最好的。
 
 - **尺寸**：工具只出 1024×1536（2:3），先 `python3 scripts/camp/pad23.py art/guide/camp-blockout.jpg -o art/raw/camp/blockout-23.png` 把白模补成 2:3（上面多一条天、下面多一条草），用这张做底稿；生成结果存 `art/raw/camp/camp-23.png`，再 `python3 scripts/camp/pad23.py --crop art/raw/camp/camp-23.png -o art/raw/camp/camp.png` 裁回 3:4。补出来的上下两条随便画（会裁掉），中间那块的布局必须和白模一一对应
-- **布局底稿**：`art/guide/camp-blockout.jpg`（补成 2:3 的那张），image-to-image，相似度调高，**布局一点都不能动**：草地的范围、小溪的位置（沿左侧流到左下的水塘）、篝火在正中、营地木台在篝火左下、两个食盆在木台右边、五棵树的位置、上缘的树林边缘。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
+- **布局底稿**：`art/guide/camp-blockout.jpg`（补成 2:3 的那张），image-to-image，相似度调高，**布局一点都不能动**：草地的范围、篝火在正中、大帐篷在篝火左上（门朝篝火）、两个食盆在篝火右下、六棵树的位置（上面两棵在树林边、左右各两棵，中间空着）、上缘的树林边缘。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
 - **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
 - **必须画成这样**：
   - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
   - 篝火：一圈石头围着的篝火，有火苗（游戏里会叠动画，画小一点的火就好），旁边一两根木头
-  - 营地木台：矮矮的木板平台，边缘有一级小台阶
+  - 大帐篷：一顶暖色帆布的露营帐篷（米白帆布、橙色边），门帘掀开朝着篝火，门口一小块踩平的草地；它是营地唯一的「房子」，画得可爱一点
   - 两个食盆：木头或陶的小碗，空着
-  - 小溪：清澈见底，溪边几块圆石头，流进左下的小水塘，水塘里一两片荷叶
-  - 树：五棵圆圆的大树，树冠蓬松，树下有一圈柔和的树荫；上缘一排树林（深一点的绿）做背景，再远处是柔和的山和天空
+  - **不要水**：没有小溪、水塘、石头堆、木台，草地一直铺到画框
+  - 树：六棵圆圆的大树，树冠蓬松，树下有一圈柔和的树荫；上缘一排树林（深一点的绿）做背景，再远处是柔和的山和天空
   - 整体像清晨到上午的柔和光线，没有强烈的投影
 
 ```
 PROMPT: Repaint reference image 1 (a rough blockout of a camp) as a finished, high-end mobile-game main
 scene in UNIFIED STYLE, portrait 3:4, camera tilted about 45–50 degrees looking down. Keep the layout
-EXACTLY as in the blockout: the meadow shape, the stream running down the left side into a small pond at
-the lower left, the campfire ring at the center, the low wooden deck at the lower left of the fire, two
-empty food bowls to the right of the deck, five round trees at the marked positions, a line of forest
-along the top edge with soft hills and sky beyond. The meadow must be a clean, even, uniform lawn with
+EXACTLY as in the blockout: the meadow shape, the campfire ring at the center, one cozy camping tent at the
+upper left of the fire with its door open toward the fire, two empty food bowls at the lower right of the
+fire, six round trees at the marked positions around the edge of the meadow (the middle stays open), a line
+of forest along the top edge with soft hills and sky beyond. No stream, no pond, no deck, no rocks. The meadow must be a clean, even, uniform lawn with
 only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no clutter (decorations will
 be pasted on it later). Soft morning light, gentle shadows under the trees, calm and cozy.
 ```
@@ -162,7 +162,7 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 
 | id | 名字（中文） | 画什么（英文填进 `<装饰>`） | 块大小 |
 |---|---|---|---|
-| tent | 小帐篷 | a small cozy camping tent, cream canvas with a warm orange trim, door flap tied open | 大 |
+| tent | 小帐篷 | a small pastel-green pup tent, clearly smaller and a different color than the big camp tent already in the scene, door flap tied open | 大 |
 | hammock | 吊床 | a striped fabric hammock slung between two slim young trees | 大 |
 | treehouse | 树洞小屋 | a tiny house built into a short hollow tree stump, round door, tiny windows | 大 |
 | strawbed | 草窝 | a round nest bed of golden straw | 小 |
