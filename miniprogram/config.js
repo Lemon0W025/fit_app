@@ -7,5 +7,7 @@ module.exports = {
   estateArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/estate/',
   // 小动物动画拼图在云存储里的 fileID 前缀（同样由 npm run wx:art 上传并打印，形如 cloud://环境ID.桶名/garden/anim/）
   // 留空用单张图 + CSS 步态
+  // 临时：底图读不到时弹出云存储的错误原因（定位完就删）
+  artDebug: true,
   animArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/anim/',
 }

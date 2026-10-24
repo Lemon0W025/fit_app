@@ -161,12 +161,30 @@ Page({
   },
 
   // 云存储的底图加载失败（没传、没权限、断网）：退回包里的白模
-  onArtError() {
+  onArtError(e) {
     if (!this.data.artBase) return
+    const first = `${this.data.artBase}t00.jpg`
+    const detail = (e && e.detail && e.detail.errMsg) || ''
     this.setData({ artBase: '', art: W.artTiles(this.L, '') })
     this.occViews = {}
     this.occKey = ''
     this.syncOcc()
+    // 调试：把云存储为什么读不到直接弹出来（config.artDebug 打开时）
+    if (config.artDebug) {
+      const show = (extra) => wx.showModal({ title: '底图加载失败（调试）', content: `${detail}\n${extra}`, showCancel: false })
+      if (wx.cloud && wx.cloud.getTempFileURL) {
+        wx.cloud.getTempFileURL({
+          fileList: [first],
+          success: (res) => {
+            const f = res.fileList && res.fileList[0]
+            show(f ? `status ${f.status}: ${f.errMsg || ''}\n${(f.tempFileURL || '').slice(0, 80)}` : JSON.stringify(res).slice(0, 200))
+          },
+          fail: (err) => show(`getTempFileURL 失败: ${err && err.errMsg}`),
+        })
+      } else {
+        show('wx.cloud.getTempFileURL 不可用')
+      }
+    }
   },
 
   // 小动物的动画拼图加载失败（没传、断网）：这只退回单张图
