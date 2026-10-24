@@ -8,7 +8,9 @@ const COURT_SCREEN = 0.96
 const MARGIN_SCREEN = 0.5
 // 底图切成 ART_SPLIT × ART_SPLIT 块
 const ART_SPLIT = 4
-const CLOUD_IMAGE = '/images/garden/cloud.png'
+// 云朵有 9 种形状（images/garden/clouds/c1～c9.png）
+const CLOUD_KINDS = 9
+const cloudImage = (n) => `/images/garden/clouds/c${1 + (n % CLOUD_KINDS)}.png`
 
 function estateLayout(windowWidth) {
   const tileW = (windowWidth * COURT_SCREEN) / 9
@@ -77,22 +79,23 @@ function cloudViews(areas, L) {
       const v = 0.18 + 0.64 * noise(ai * 100 + i * 3 + 2)
       const p = tileTop(c0 + u * (c1 - c0), r0 + v * (r1 - r0), L)
       const width = L.tileW * (1.5 + 1.0 * noise(ai * 100 + i * 3 + 3))
-      out.push({ key: `${a.id}-${i}`, area: a.id, image: CLOUD_IMAGE, left: p.x - width / 2, top: p.y - width * 0.3, width, delay: Math.round(i * 7) / 10 })
+      const kind = Math.floor(noise(ai * 100 + i * 3 + 4) * CLOUD_KINDS)
+      out.push({ key: `${a.id}-${i}`, area: a.id, image: cloudImage(kind), left: p.x - width / 2, top: p.y - width * 0.3, width, delay: Math.round(i * 7) / 10 })
     }
   })
   return out
 }
 
-// 能修的院子：门里侧立木牌
+// 能修的院子：门里侧立木牌。字号跟着木牌大小走（木牌在地图里会缩放）
 function signViews(areas, opened, L) {
-  const signWidth = L.tileW * 1.6
+  const signWidth = L.tileW * 2.2
   const out = []
   areas.forEach((a) => {
     if (!a.unlockable) return
     const t = signTile(opened, a.id)
     if (!t) return
     const p = tilePoint(t.c, t.r, L)
-    out.push({ key: a.id, left: p.x - signWidth / 2, bottom: L.height - p.y, width: signWidth, name: a.name, cost: a.cost })
+    out.push({ key: a.id, left: p.x - signWidth / 2, bottom: L.height - p.y, width: signWidth, fontSize: Math.round(signWidth * 0.115 * 10) / 10, name: a.name, cost: a.cost })
   })
   return out
 }

@@ -2,7 +2,7 @@
 
     python3 scripts/estate/blockout.py
 
-输出：miniprogram/images/garden/estate/t00.jpg … t33.jpg（底图切块）、miniprogram/images/garden/cloud.png（云朵）、
+输出：miniprogram/images/garden/estate/t00.jpg … t33.jpg（底图切块）、
      art/guide/estate-blockout.jpg（整图）、art/guide/estate-blockout-3x2.jpg（上下补成 3:2，给 Codex 当重绘底稿）、
      art/guide/estate-blockout-labels.jpg（带院子名字，给人看）
 需要 Pillow。布局数据直接从 estate.js 读（用 node 跑一下），改布局只改 JS 这一处。
@@ -317,21 +317,6 @@ def draw_labels(img):
     return out
 
 
-def draw_cloud():
-    """一朵蓬松的云，透明底"""
-    S = 2
-    img = Image.new('RGBA', (360 * S, 200 * S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    blobs = ((90, 130, 60), (160, 100, 80), (240, 125, 70), (290, 150, 50), (180, 150, 70))
-    for x, y, r in blobs:
-        d.ellipse([(x - r) * S, (y - r * 0.8 + 14) * S, (x + r) * S, (y + r * 0.8 + 14) * S], fill=(196, 212, 230, 255))
-    for x, y, r in blobs:
-        d.ellipse([(x - r) * S, (y - r * 0.8) * S, (x + r) * S, (y + r * 0.8) * S], fill=(255, 255, 255, 255))
-    img = img.resize((360, 200), Image.LANCZOS)
-    path = os.path.join(OUT, 'cloud.png')
-    img.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(path, optimize=True)
-
-
 def main():
     os.makedirs(os.path.join(OUT, 'estate'), exist_ok=True)
     os.makedirs(GUIDE, exist_ok=True)
@@ -347,8 +332,7 @@ def main():
     img.save(os.path.join(GUIDE, 'estate-blockout.jpg'), quality=88, optimize=True)
     pad32(img).save(os.path.join(GUIDE, 'estate-blockout-3x2.jpg'), quality=88, optimize=True)
     draw_labels(img).save(os.path.join(GUIDE, 'estate-blockout-labels.jpg'), quality=88, optimize=True)
-    draw_cloud()
-    print(f'底图 {W}×{H}，16 块共 {total // 1024} KB；云朵、整图、3:2 底稿和标注图已写入')
+    print(f'底图 {W}×{H}，16 块共 {total // 1024} KB；整图、3:2 底稿和标注图已写入')
 
 
 if __name__ == '__main__':

@@ -54,19 +54,31 @@ page {
 
 .sign-text {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 14%;
+  left: 6%;
+  right: 6%;
+  top: 29%;
+  height: 31%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
-  font-size: 22rpx;
   font-weight: 700;
-  line-height: 1.3;
-  color: #5a3a1a;
+  line-height: 1.1;
+  color: #4a2e14;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .sign-cost {
-  display: block;
-  font-size: 24rpx;
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  top: 64%;
+  padding: 2% 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.2;
   color: #b8461e;
 }
 
@@ -678,6 +690,15 @@ button.btn-small {
   animation: float 1.6s ease-in-out infinite;
 }
 
+.act-fx {
+  position: absolute;
+  right: -18%;
+  top: -22%;
+  width: 44rpx;
+  height: 44rpx;
+  animation: float 1.6s ease-in-out infinite;
+}
+
 @keyframes float {
   0%,
   100% {
@@ -692,7 +713,8 @@ button.btn-small {
   position: absolute;
   left: 50%;
   top: -20%;
-  font-size: 32rpx;
+  width: 44rpx;
+  height: 44rpx;
   animation: rise 0.9s ease-out forwards;
 }
 
@@ -844,7 +866,9 @@ button.btn-small {
 }
 
 .checkin-icon {
-  font-size: 44rpx;
+  width: 52rpx;
+  height: 52rpx;
+  margin-right: 10rpx;
 }
 
 /* ---------------------------------------------------------------- 宅院 */

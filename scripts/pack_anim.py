@@ -69,12 +69,16 @@ def pack(src):
             moved.paste(cell, (round(dx), round(dy)))
             small = moved.resize((CELL, CELL), Image.LANCZOS)
             out.paste(small, (c * CELL, r * CELL))
-    idle = cells[12][1]
-    top = (idle[1] / ch) if idle else 0.1
+    # 头顶空白按对齐之后的发呆帧（第 13 格）量
+    idle = bbox(np.array(out.crop((0, 2 * CELL, CELL, 3 * CELL)))[:, :, 3] >= ALPHA_MIN)
+    top = (idle[1] / CELL) if idle else 0.1
     return out, round(float(top), 2)
 
 
 def save(img, path):
+    a = np.array(img)
+    a[:, :, 3][a[:, :, 3] < ALPHA_MIN] = 0
+    img = Image.fromarray(a)
     img.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(path, optimize=True)
     return os.path.getsize(path)
 

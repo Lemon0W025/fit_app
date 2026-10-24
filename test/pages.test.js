@@ -232,7 +232,8 @@ test('园林大宅院首页：今日暖豆、底图云朵木牌、扭蛋、背�
   assert.equal(garden.data.daily.title, '今天得了 20 暖豆')
   assert.deepEqual(garden.data.daily.stamps.map((s) => s.cls), ['stamp-green', 'stamp-green', 'stamp-none'])
   assert.equal(garden.data.art.length, 16)
-  assert.equal(garden.data.art[0].image, '/images/garden/estate/t00.jpg')
+  // 默认用 config.estateArt（云存储）的切块
+  assert.match(garden.data.art[0].image, /^cloud:\/\/.*\/garden\/estate\/t00\.jpg$/)
   // 云存储的图加载失败：退回本地白模
   garden.setData({ artBase: 'cloud://x/', art: [] })
   garden.render(garden.garden)

@@ -27,14 +27,14 @@ const SHELL = [
   { area: 'front', kind: 'path', rect: [12, 23, 16, 27] },
   { area: 'front', kind: 'path', rect: [13, 19, 15, 23] },
   { area: 'front', kind: 'path', rect: [10, 22, 18, 24] },
-  { area: 'front', kind: 'block', what: 'screen', rect: [13, 24, 15, 25] },
+  { area: 'front', kind: 'block', what: 'screen', rect: [12, 23, 14, 25] },
   // 正院：正房占后三行，门前甬道和横路
   { area: 'main', kind: 'block', what: 'hall', rect: [10, 10, 18, 13] },
   { area: 'main', kind: 'path', rect: [13, 13, 15, 18] },
   { area: 'main', kind: 'path', rect: [10, 13, 18, 15] },
-  // 荷塘院：靠正院一侧的水榭平台，中间一大片水
-  { area: 'pond', kind: 'pave', what: 'deck', rect: [19, 12, 20, 16] },
+  // 荷塘院：中间一大片水，池子北边一座木桥（原画里画的，只能摆家具）
   { area: 'pond', kind: 'water', what: 'pond', rect: [20, 11, 26, 16] },
+  { area: 'pond', kind: 'pave', what: 'bridge', rect: [21, 10, 25, 11] },
   // 花圃院：三条花坛，两条小径
   { area: 'flower', kind: 'soil', rect: [19, 20, 21, 26] },
   { area: 'flower', kind: 'path', rect: [21, 19, 22, 27] },
@@ -58,10 +58,12 @@ const SHELL = [
   // 动物小院：鸡舍
   { area: 'farm', kind: 'block', what: 'coop', rect: [1, 1, 3, 3] },
   // 温泉院：更衣木屋和温泉池
-  { area: 'spring', kind: 'block', what: 'cabin', rect: [28, 1, 30, 3] },
+  { area: 'spring', kind: 'block', what: 'cabin', rect: [27, 1, 29, 3] },
   { area: 'spring', kind: 'water', what: 'spring', rect: [30, 2, 35, 6] },
-  // 后花园：假山瀑布、水潭、一条小溪（中间一块石板能踩着过）
-  { area: 'back', kind: 'block', what: 'rockery', rect: [15, 1, 22, 3] },
+  // 后花园：沿后墙一长排假山，瀑布在偏左处落进水潭，小溪往右下流（中间一块石板能踩着过）
+  { area: 'back', kind: 'block', what: 'rockery', rect: [9, 1, 22, 3] },
+  { area: 'back', kind: 'water', what: 'falls', rect: [13, 2, 15, 4] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [15, 3, 17, 4] },
   { area: 'back', kind: 'water', what: 'pool', rect: [17, 3, 20, 5] },
   { area: 'back', kind: 'water', what: 'stream', rect: [20, 5, 22, 6] },
   { area: 'back', kind: 'water', what: 'stream', rect: [22, 6, 24, 7] },

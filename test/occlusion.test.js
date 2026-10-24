@@ -38,7 +38,7 @@ test('只在有东西站在后面、又碰到的时候才生成：果园里靠�
   assert.deepEqual(O.occludersFor(all, []), [])
   // 前院草地中间什么都碰不到；影壁后面那格会被影壁挡住
   assert.deepEqual(O.occludersFor(all, [animalAt(13, 20)]), [])
-  assert.ok(O.occludersFor(all, [animalAt(14, 23)]).some((p) => p.key.indexOf('bscreen') === 0))
+  assert.ok(O.occludersFor(all, [animalAt(12, 22)]).some((p) => p.key.indexOf('bscreen') === 0))
 })
 
 test('正房按竖条切：后花园里的动物被屋顶挡住，正院门前的动物不被挡', () => {

@@ -14,8 +14,9 @@
           <view wx:if="{{item.shadow}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z + 9}}; transition-duration: {{item.duration}}ms"></view>
           <view wx:if="{{!item.hidden}}" class="animal {{mode === 'view' ? '' : 'animal-ghost'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z + 10}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapAnimal">
             <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
-            <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
-            <view wx:if="{{item.tapping}}" class="heart">❤️</view>
+            <image wx:if="{{item.emoji && fx[item.emoji]}}" class="act-fx" src="/images/garden/fx/{{fx[item.emoji]}}.png" mode="aspectFit" />
+            <view wx:elif="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
+            <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
             <view class="animal-body {{item.flip ? 'flip' : ''}} {{item.bodyHeight < item.width ? 'in-water' : ''}}" style="height: {{item.bodyHeight}}px">
               <view wx:if="{{item.sheet}}" class="anim-frame {{item.tapping ? 'tap' : ''}}" style="width: {{item.width}}px; height: {{item.width}}px">
                 <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: -{{item.anim.col * 100}}%; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms" />
@@ -31,7 +32,8 @@
         <block wx:for="{{signs}}" wx:key="key">
           <view class="sign" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px" data-key="{{item.key}}" catchtap="tapSign">
             <image class="sign-img" src="/images/garden/sign.png" mode="widthFix" />
-            <view class="sign-text">修整{{item.name}}<text class="sign-cost">{{item.cost}} 暖豆</text></view>
+            <view class="sign-text" style="font-size: {{item.fontSize}}px">修整{{item.name}}</view>
+            <view class="sign-cost" style="font-size: {{item.fontSize}}px">{{item.cost}} 暖豆</view>
           </view>
         </block>
         <image wx:for="{{clouds}}" wx:key="key" class="cloud" src="{{item.image}}" mode="widthFix" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; animation-delay: {{item.delay}}s" />
@@ -86,7 +88,7 @@
         <view wx:if="{{bagCount}}" class="badge">{{bagCount}}</view>
       </view>
       <view class="side-btn" bindtap="openResidents">
-        <text class="side-emoji">🐾</text>
+        <image class="side-icon" src="/images/garden/ui/paw.png" mode="aspectFit" />
         <text class="side-label">住户</text>
       </view>
     </view>
@@ -95,7 +97,7 @@
       <image class="recenter-icon" src="/images/garden/ui/home.png" mode="aspectFit" />
     </view>
     <view wx:if="{{mode === 'view'}}" class="checkin-btn" bindtap="goCheckin">
-      <text class="checkin-icon">📷</text>
+      <image class="checkin-icon" src="/images/garden/ui/camera.png" mode="aspectFit" />
       <text>拍一拍这一餐</text>
     </view>
 

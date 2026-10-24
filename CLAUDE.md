@@ -12,7 +12,7 @@
 - 云函数响应统一 `{ ok, data }` / `{ ok: false, code, message }`，message 直接展示给用户，用中文
 - services 通过依赖注入拿 repo / chat / forest，测试用 `test/helpers/fake-repo.js`；端到端用 `test/helpers/fake-cloud.js` 加载真实 `index.js`；页面用 `test/helpers/page-harness.js` 跑
 - 页面面向长辈：字号偏大、文案口语化
-- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成物件和界面图；`scripts/draw-images.py` 画 tab 图标、木牌、亮格和缺图时的占位图；`scripts/estate/blockout.py` 按 `shared/estate.js` 画宅院白模（底图切块、云朵、给即梦的整图）。主包上限 2MB（现在约 1.5MB，用 `du -sh --apparent-size miniprogram` 看）
+- 图片：美术原图在 `art/raw/`，`python3 scripts/slice-art.py` 切成物件和界面图；`scripts/draw-images.py` 画 tab 图标、木牌、亮格和缺图时的占位图；`scripts/estate/blockout.py` 按 `shared/estate.js` 画宅院白模（兜底的底图切块、给 Codex 的 3:2 底稿）。主包上限 2MB（**现在约 1.93MB，很满了**，再往包里加图先用 `du -sb miniprogram` 看字节数；大图一律走云存储）
 
 ## 从云端部署（miniprogram-ci）
 
@@ -53,7 +53,8 @@
 - 2026-10-23：小岛花园上线，取代 3×3 大地图：花园做首页（tab 第一个，没建档跳去建档），12×12 小岛 = 中间花园 + 四个修整角落（200/300/400/500，自带风景，风景也引小动物）+ 四个花坛；十字小路不能摆；底部大按钮去打卡；旧数据自动迁移（大地图坐标 −3、开荒暖豆退回）。（已被园林大宅院取代）
 - 2026-10-23：园林大宅院上线（第一步）：37×28 格、11 个院子（开局前院 + 正院，其余挨着修，共 3500 暖豆），`shared/estate.js` 管布局和规则；物件按地面摆、2×2、flip、影子；小动物跨院走动、作息、小事、「找它」；旧数据迁移（物件收回背包、暖豆退回、`estate: 1`）。底图是白模切块（jpg），正式原画等用户按 `docs/art/garden-estate-art-brief.md` 出；第二步换原画（切块传云存储）、第三步新物件 18 件 + 小鸟蝴蝶，见设计文档「上线节奏」
 - 2026-10-23：第三步上线：步态（`gait`：四条腿踱步 / 摇摆 / 蹦 / 爬 / 迈步 / 飞 / 扑棱）+ 小段散步；18 件新物件（水生 6、家具 11、稻草人）、`likesAny`；小鸟（树 3 棵或喂鸟台）和蝴蝶（花 3 丛或花架）会飞、不占格、夜里 / 非时段藏起来；图鉴 68。新图是 emoji 占位，出图说明第 4～6 张。原画工具链 `cut_art.py` → `wx:art` 已用白模验证上传成功，fileID 前缀 `cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/estate/`；`config.estateArt` 仍为空、页面用本地白模，真机看过云存储的图再切换
-- 2026-10-23：第四步上线：遮挡（`utils/occlusion.js`：墙 / 月亮门 / 大门 / 建筑按多边形从底图抠块盖在后面的东西上，只在需要时生成；木牌云朵彩带 z 2000+）；逐帧动画引擎（`utils/anim.js` + `anim-sheets.js`，6×4 拼图、steps 跳帧、朝向分正背面、没图退回单张图；`config.animArt` 仍为空）；给 Codex 的出图工单 `docs/art/codex-art-pack.md`（18 张）+ `art/manifest.json` + `scripts/art/check_art.py`；第二轮高清工具 `detail_crops.py` / `merge_details.py`；`cut_art.py --pad32`。**用户用 Codex 出图后**：先 `check_art.py`，宅院 → `cut_art.py --pad32` + `wx:art`，物件/图标/表情/云 → `slice-art.py`（SHEETS 已写好 09～11、ui、fx、clouds；云朵切到 `images/garden/clouds/` 后要改 `world.js` 的 CLOUD_IMAGE 轮换），动画 → `pack_anim.py` + `wx:art` + `config.animArt`；然后真机看遮挡多边形和原画对不对，调 `occlusion.js` 的常数
+- 2026-10-23：第四步上线：遮挡（`utils/occlusion.js`：墙 / 月亮门 / 大门 / 建筑按多边形从底图抠块盖在后面的东西上，只在需要时生成；木牌云朵彩带 z 2000+）；逐帧动画引擎（`utils/anim.js` + `anim-sheets.js`，6×4 拼图、steps 跳帧、朝向分正背面、没图退回单张图；`config.animArt` 仍为空）；给 Codex 的出图工单 `docs/art/codex-art-pack.md`（18 张）+ `art/manifest.json` + `scripts/art/check_art.py`；第二轮高清工具 `detail_crops.py` / `merge_details.py`；`cut_art.py --pad32`。
+- 2026-10-24：Codex 出的 18 张图全部接入：宅院原画（自动对齐 scale 0.99 / dy −3，`cut_art.py --pad32 --width 3072`）和 11 张动画拼图已传云存储，`config.estateArt` / `animArt` 都已填（前缀 `cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/garden/estate/` 和 `…/garden/anim/`）；18 件新物件、小鸟蝴蝶单张、木牌、背包/日历/回家/住户/相机图标、9 朵云（`images/garden/clouds/`，`world.js` 轮换）、9 个表情（`images/garden/fx/`，页面 `fx` 表把常用 emoji 换成图）都进了包。壳数据按原画微调：荷塘院水榭平台去掉、池北加木桥 `pave`，后花园假山改成 `[9,1,22,3]` 一长排、瀑布水潭 `[13,2,15,4]`+`[15,3,17,4]`，温泉木屋 `[27,1,29,3]`，影壁 `[12,23,14,25]`。木牌文字按木牌宽度定字号、价钱放板子下面的白条。**待办**：真机核对遮挡多边形和原画（尤其正房屋顶、月亮门洞）；原画只有 1536 宽，想更清楚就做第二轮高清（`detail_crops.py` → Codex 逐块重绘 → `merge_details.py` → 重新 `cut_art.py`，这次不用 `--pad32`）
 - 2026-10-23：测试福利 `config.testGrant`（5000 暖豆，10/26 前打开花园的账号各送一次）给用户试修整角落和扭蛋。**上传体验版给妈妈之前把 `testGrant` 改成 `null` 并重新部署云函数**
 - 2026-10-23：`api` 已由用户在开发者工具里创建、超时改为 60 秒；之后用 `npm run wx:function` 从云端更新成功；`npm run wx:preview` 生成预览二维码成功，已发给用户试用
 

@@ -45,6 +45,8 @@ Page({
     artBase: config.estateArt || '',
     animBase: config.animArt || '',
     occluders: [],
+    // 小动物头上的表情：有正式图的用图，其他还是 emoji
+    fx: { '💤': 'zzz', '❤️': 'heart', '🎵': 'note', '✨': 'sparkle', '💧': 'drop', '♨️': 'steam', '☀️': 'sun', '🌾': 'grain', '👀': 'bang' },
     clouds: [],
     signs: [],
     sprites: [],

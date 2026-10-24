@@ -57,7 +57,8 @@ test('cloudViews：只有没修的院子有云，每个 6～9 朵，位置固定
     const mid = c.left + c.width / 2
     assert.ok(mid > box.left && mid < box.left + box.width, c.key)
     assert.ok(c.top > box.top - c.width && c.top < box.top + box.height, c.key)
-    assert.ok(c.image === '/images/garden/cloud.png' && c.width > 0 && c.delay >= 0)
+    assert.match(c.image, /^\/images\/garden\/clouds\/c[1-9]\.png$/)
+    assert.ok(c.width > 0 && c.delay >= 0)
   })
 })
 

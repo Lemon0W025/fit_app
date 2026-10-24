@@ -41,7 +41,7 @@ test('朝向：+c 朝观众往右、+r 朝观众往左、−c 背对往左、−
 test('每只动物都有拼图参数，专属动作是它真会做的', () => {
   Object.keys(ANIMAL_INFO).forEach((id) => {
     assert.ok(SHEETS[id], id)
-    assert.ok(SHEETS[id].top >= 0 && SHEETS[id].top < 0.5)
+    assert.ok(SHEETS[id].top >= 0 && SHEETS[id].top < 0.7)
   })
   assert.equal(Object.keys(SHEETS).length, Object.keys(ANIMAL_INFO).length)
 })

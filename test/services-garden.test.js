@@ -282,7 +282,7 @@ test('place / move：按地面规矩和占格校验', async () => {
   await reject('daisy', 13, 15, '小路上不能摆东西')
   await reject('daisy', 22, 13, '这是水里，放不了它')
   await reject('stool', 19, 22, '土里只能种花种菜')
-  await reject('daisy', 19, 13, '石板地上种不了，换块草地')
+  await reject('daisy', 22, 10, '石板地上种不了，换块草地')
   await reject('daisy', 11, 16, '这块地上已经有东西了')
   await reject('pavilion', 12, 17, '这里放不下它')
   const view = await service.place('u1', { itemId: 'pavilion', c: 16, r: 16, flip: true })
