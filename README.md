@@ -87,7 +87,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、食盆、喂、商店、摆放、礼物、图册）
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
-scripts/camp/               营地白模 blockout.py、占位图 placeholders.py、原画切块 cut_art.py、高清 detail_crops / merge_details、3:4↔2:3 pad23、装饰原地重绘 decor_crop / decor_patch
+scripts/camp/               营地白模 blockout.py、占位图 placeholders.py、原画切块 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、抠图 cutouts、装饰原地重绘 decor_crop / decor_patch
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
 art/guide/camp-blockout.jpg 营地白模（blockout.py 生成，给 Codex 当重绘底稿）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
