@@ -16,18 +16,30 @@
 
 **准备（一次）**：在仓库根目录打开 Codex，环境里要有 `python3`（`pip install pillow numpy`）和 `node`。每一批开一个新对话，把下面对应的开场指令整段粘进去。Codex 中途会停下来给你看图（营地整图、宠物定稿），你回「可以」或者写改意见，它再往下做。
 
-**第 1 批开场指令**（整段粘给 Codex）：
+**第 1 批 A：营地整图**（整段粘给 Codex）。这一步给 Codex 自由：不用白模做底图，只给画风、参考和几条硬要求，让它出几版好看的，你挑一张。选定后我照这张画量场景数据（草地范围、帐篷脚、篝火、锅、食盆、遮挡块），所以 **A 做完要停**，等我推送新的 `shared/camp.js` 再做 B。
 
 ```
-你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批」。先把这个文件和
+你在仓库根目录，用你内置的图像生成能力做一张游戏主场景图。先读 docs/art/camp-art-pack.md 的第 0 节和第 1 节。
+按第 1 节的 PROMPT 生成 1024×1024 的正方形，画风用第 0 节的 UNIFIED STYLE，构图参考 Pokémon Sleep 的营地。
+硬要求只有几条（影响玩法）：正方形；约 45 度俯视、地面平；草坪占画面大部分、干净平整没有杂物；篝火上吊着的大陶锅在正中、
+是主角；帐篷在锅正后方、门朝前；两个空食盆在火的右下；没有水面；草坪里没有树（树林只在上缘），没有小路。
+其余随你发挥（帐篷样式、树林怎么框、火边的小道具、花、光线、天空），目标是好看、有「想住进去」的感觉。
+出 4 版各不相同，存 art/raw/camp/candidates/01.png～04.png，每张跑 python3 scripts/art/check_art.py 看比例，
+然后把 4 张发给我挑。我选定后你把那张复制成 art/raw/camp/camp.png，再做高清：
+python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块用第 1 节
+「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1024，16 块），python3 scripts/camp/merge_details.py
+得到 art/raw/camp/camp-hd.png。把 art/raw/camp/ 提交到新分支 codex/art-batch-1a 并推送，然后停下来等我。
+```
+
+**A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
+
+**第 1 批 B：其余**（整段粘给 Codex）：
+
+```
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。先把这个文件和
 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带
 SHEET RULES / ANIMATION SHEET RULES）；输出路径和 art/manifest.json 里的一致；每出一张就跑
 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
-1. 营地整图：以 art/guide/camp-blockout.jpg 为底 image-to-image 按第 1 节的 PROMPT 生成 1024×1024（正方形，直接出），
-   出 3 版，挑草地最干净均匀、布局最贴白模的一张存 art/raw/camp/camp.png。把它发给我看，我说可以再往下。
-2. 高清：python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块，
-   用第 1 节「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1024，16 块），
-   然后 python3 scripts/camp/merge_details.py 得到 art/raw/camp/camp-hd.png。
 3. 帐篷和锅的抠图 + 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-tent.png、in-pot.png，
    按第 1b 节用 edit 画 out-tent-removed.png（把帐篷整个去掉）、out-pot-removed.png（把锅和三脚架去掉）、
    out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），每张只改该改的地方，其他像素不动。
@@ -80,8 +92,8 @@ outlines, no text, no labels, no watermark, no UI, no borders. Everything is cut
 
 | 文件 | 用途 |
 |---|---|
-| `art/guide/camp-blockout.jpg` | 营地白模：第 1 张图直接以它为底重绘，**布局一点都不能动** |
-| `art/guide/camp-blockout-labels.jpg` | 同一张白模加了名字，只给你看懂布局用，不要作为生成输入 |
+| `art/guide/camp-blockout.jpg` | 营地布局示意（**不是底稿**，别拿它做 image-to-image）：看懂有哪些东西、大致在哪就行；画好以后代码按你的画重新量 |
+| `art/guide/camp-blockout-labels.jpg` | 同一张示意图加了名字 |
 | `art/guide/town/*.jpg` | 画风参考（小镇风格的柔和 3D 渲染）：营地、装饰都要这个味道 |
 | `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
 
@@ -106,32 +118,33 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 ## 1. 营地整图 `art/raw/camp/camp.png`（1:1 正方形）
 
-这是整个游戏的舞台，值得多生成几轮挑最好的。
+这是整个游戏的舞台，值得多生成几版挑最好的。**不要用白模做底图**：白模只是告诉你有哪些东西、大致在哪；构图、细节、氛围以好看为准，画完代码照你的画来量。
 
-- **布局底稿**：`art/guide/camp-blockout.jpg`（正方形），image-to-image，相似度调高，**布局一点都不能动**：篝火和火上的暖暖锅在正中、大帐篷在锅的正后方（上方，门朝前对着锅）、两个食盆在篝火右下、三样东西的大小、上缘的树林边缘（**草坪里一棵树都没有**）。手机上默认只看到中间一半宽、锅在屏幕正中，所以营地是「比屏幕大一圈的大草坪」，四周的空草坪是拖着看的。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
-- **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
-- **必须画成这样**：
-  - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
-  - 篝火里的火苗画小一点（游戏里会叠火苗动画）
-  - 大帐篷：一顶暖色帆布的露营帐篷（米白帆布、橙色边），**按白模的大小画，约占画宽 1/4**，门帘掀开朝着篝火（3/4 视角、斜着放都行），门口一小块踩平的草地；它是营地唯一的「房子」，画得可爱、画得大
-  - 篝火 + 暖暖锅：石头圈约占画宽 1/8，火上用三根木棍搭的三脚架吊着一口圆滚滚的大陶锅（深褐色、锅口朝上、里面是空的，木盖掀开靠在火边），旁边一两根木头。这口锅是整个营地的中心（相当于 Pokémon Sleep 的卡比兽），画得结实、可爱、显眼
-  - 两个食盆：木头或陶的小碗，空着
-  - **不要水、不要树**：草坪里没有小溪、水塘、石头堆、木台，也没有一棵树，草地一直铺到左右和下面的画框
-  - 树林只在上缘：一排蓬松的圆树冠（深一点的绿）做背景，边缘整齐，再远处是柔和的山和天空
-  - 整体像清晨到上午的柔和光线，没有强烈的投影
+**参考**：Pokémon Sleep 的营地（一片开阔的草地俯视，帐篷在后、卡比兽在中间、周围是树）。我们把中间换成「篝火上吊着的大陶锅」。
+
+**硬要求（影响玩法，只有这几条）**：
+- 正方形 1024×1024；约 45 度俯视，地面是平的，远近物体尺寸差别不大（草坪上到处要能放东西）
+- 草坪占画面大部分，**干净、平整、均匀**：允许零星小花和草的质感，不要小路、石头、水面、落叶堆，不要在远离营地的地方放杂物（装饰是游戏里玩家自己摆的）
+- 篝火 + 锅在正中，是整张画的主角：一圈石头围着小火，木头三脚架吊着一口圆滚滚的大陶锅，锅是空的，木盖靠在石头边
+- 帐篷在锅的正后方（画面里在它上方），门朝前对着锅，可爱、结实
+- 两个空的小食盆在火的右下方草地上
+- 树林只在画面上缘当背景，草坪里没有树；没有文字、界面、人物
+- 自由发挥：帐篷的样式和颜色、树林怎么框住画面、火边的小道具（一两根木头、提灯、小凳子）、花、光线、天空、远山
 
 ```
-PROMPT: Repaint reference image 1 (a rough blockout of a camp) as a finished, high-end mobile-game main
-scene in UNIFIED STYLE, portrait 3:4, camera tilted about 45–50 degrees looking down. Keep the layout
-EXACTLY as in the blockout, at the SAME sizes: at the very center a stone campfire ring with a big round clay
-cooking pot (empty, lid leaning beside the fire) hanging from a wooden tripod over the fire; directly behind the
-fire (above it in the image) one big cozy camping tent facing the viewer with its door open toward the fire; two
-empty food bowls at the lower right of the fire. Everything else is one wide, open, even meadow reaching the left, right and
-bottom edges. A band of round forest trees only along the top edge, with soft hills and sky beyond. No trees
-inside the meadow, no stream, no pond, no deck, no rocks, no paths. The meadow must be a clean, even, uniform lawn with
-only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no clutter (decorations will
-be pasted on it later). Soft morning light, gentle shadows under the trees, calm and cozy.
+PROMPT: A finished main scene for a cozy mobile pet-camp game, square 1:1, in UNIFIED STYLE. Layout inspired by
+the camp in Pokémon Sleep: a wide, open grassy clearing seen from above at about 45 degrees, filling most of the
+image. At the very center a stone campfire ring with a small fire and a big round clay cooking pot hanging from a
+wooden tripod (the pot is the hero of the scene: empty, its wooden lid leaning against the stones). Directly
+behind the fire, higher in the image, a cute cozy camping tent facing the viewer with its door open toward the
+fire. Two small empty food bowls on the grass at the lower right of the fire. A soft band of round forest trees
+along the top edge, gentle hills and sky beyond. The meadow itself stays clean, flat and even with only tiny
+flowers and grass texture, because the game pastes decorations onto it: no paths, no rocks, no water, no clutter
+away from the campsite; a log or two and a lantern right beside the fire are welcome. Warm morning light, calm
+and inviting, polished like a premium game key visual. No text, no UI, no characters.
 ```
+
+出 4 版各不相同（`art/raw/camp/candidates/01.png`～`04.png`），由人挑一张复制成 `camp.png`。
 
 **高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 16 块（正方形，带重叠）放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成同名 `out-*.png`（1024×1024），提示词：
 
