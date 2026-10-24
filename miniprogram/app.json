@@ -1,13 +1,14 @@
 {
   "pages": [
-    "pages/garden/garden",
+    "pages/camp/camp",
     "pages/today/today",
     "pages/weight/weight",
     "pages/profile/profile",
     "pages/checkin/checkin",
     "pages/meal/meal",
     "pages/gacha/gacha",
-    "pages/collection/collection",
+    "pages/shop/shop",
+    "pages/album/album",
     "pages/forest/forest"
   ],
   "window": {
@@ -24,8 +25,8 @@
     "borderStyle": "white",
     "list": [
       {
-        "pagePath": "pages/garden/garden",
-        "text": "花园",
+        "pagePath": "pages/camp/camp",
+        "text": "营地",
         "iconPath": "images/tab-forest.png",
         "selectedIconPath": "images/tab-forest-on.png"
       },

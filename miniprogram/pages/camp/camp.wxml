@@ -1,0 +1,165 @@
+<view class="screen">
+  <view wx:if="{{!loaded}}" class="loading">正在走进营地…</view>
+
+  <movable-area wx:if="{{loaded}}" class="map-area">
+    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.8" scale-max="2.5" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
+      <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px">
+        <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+        <block wx:for="{{fx}}" wx:key="key">
+          <view wx:if="{{item.kind === 'shimmer'}}" class="fx-shimmer" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}; animation-delay: -{{item.delay}}s"></view>
+          <image wx:elif="{{item.kind === 'steam'}}" class="fx-steam" src="{{item.image}}" mode="aspectFit" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s" />
+          <view wx:else class="fx-{{item.kind}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
+        </block>
+        <image wx:for="{{decor}}" wx:key="uid" class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
+        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.size}}px; height: {{item.size}}px; z-index: {{item.z}}">
+          <image wx:if="{{item.foodImage}}" class="bowl-food" src="{{item.foodImage}}" mode="aspectFit" />
+          <image wx:if="{{item.peekImage}}" class="bowl-peek" src="{{item.peekImage}}" mode="aspectFit" />
+        </view>
+        <block wx:for="{{pets}}" wx:key="id">
+          <view wx:if="{{!item.hidden}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
+          <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
+            <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
+            <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
+            <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
+            <view class="pet-body {{item.flip ? 'flip' : ''}}" style="height: {{item.width}}px">
+              <view wx:if="{{item.sheet}}" class="anim-frame" style="width: {{item.width}}px; height: {{item.width}}px">
+                <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms" />
+              </view>
+              <image wx:else class="pet-img {{item.cssAction}} gait-{{item.action === 'walk' || item.action === 'fly' || item.action === 'gift' ? 'on' : 'off'}}" src="{{item.image}}" mode="widthFix" />
+            </view>
+          </view>
+        </block>
+        <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
+      </view>
+      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
+        <view wx:if="{{drag && drag.foot}}" class="drag-foot {{drag.ok ? 'ok' : 'bad'}}" style="left: {{drag.foot.left}}px; top: {{drag.foot.top}}px; width: {{drag.foot.width}}px; height: {{drag.foot.height}}px"></view>
+        <image wx:if="{{drag}}" class="drag-ghost {{drag.ok ? '' : 'bad'}}" src="{{drag.image}}" mode="scaleToFill" style="left: {{drag.left}}px; top: {{drag.top}}px; width: {{drag.width}}px; height: {{drag.height}}px" />
+      </view>
+    </movable-view>
+  </movable-area>
+
+  <block wx:if="{{loaded}}">
+    <view class="hud-res" style="top: {{hud.top}}px; height: {{hud.height}}px">
+      <image class="res-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
+      <text class="res-num">{{beans}}</text>
+    </view>
+    <view wx:if="{{daily}}" class="hud-today" style="top: {{hud.below}}px">
+      <text class="hud-today-text">{{daily.title}}</text>
+      <view class="stamps stamps-mini">
+        <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="hud-notes" style="top: {{hud.below + 50}}px">
+      <view wx:if="{{termText}}" class="hud-note">🍂 {{termText}}</view>
+      <view wx:if="{{peekText}}" class="hud-note hud-note-green">{{peekText}}</view>
+      <view wx:if="{{giftReady}}" class="hud-note hud-note-gold">🎁 有小动物叼着礼物来了，点它收下</view>
+    </view>
+
+    <view wx:if="{{mode === 'view'}}" class="side side-left">
+      <view class="side-btn" bindtap="goAlbum">
+        <image class="side-icon" src="/images/garden/ui/book.png" mode="aspectFit" />
+        <text class="side-label">图册</text>
+      </view>
+      <view class="side-btn" bindtap="goCalendar">
+        <image class="side-icon" src="/images/garden/ui/calendar.png" mode="aspectFit" />
+        <text class="side-label">日历</text>
+      </view>
+    </view>
+    <view wx:if="{{mode === 'view'}}" class="side side-right">
+      <view class="side-btn" bindtap="goGacha">
+        <image class="side-icon" src="/images/garden/ui/gacha.png" mode="aspectFit" />
+        <text class="side-label">扭蛋</text>
+        <view wx:if="{{canSpin}}" class="dot"></view>
+      </view>
+      <view class="side-btn" bindtap="goShop">
+        <image class="side-icon" src="/images/garden/ui/tools.png" mode="aspectFit" />
+        <text class="side-label">商店</text>
+      </view>
+      <view class="side-btn" bindtap="openBag">
+        <image class="side-icon" src="/images/garden/ui/basket.png" mode="aspectFit" />
+        <text class="side-label">背包</text>
+        <view wx:if="{{bagCount}}" class="badge">{{bagCount}}</view>
+      </view>
+      <view class="side-btn" bindtap="openResidents">
+        <image class="side-icon" src="/images/garden/ui/paw.png" mode="aspectFit" />
+        <text class="side-label">住户</text>
+      </view>
+    </view>
+
+    <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">
+      <image class="recenter-icon" src="/images/garden/ui/home.png" mode="aspectFit" />
+    </view>
+    <view wx:if="{{mode === 'view'}}" class="checkin-btn" bindtap="goCheckin">
+      <image class="checkin-icon" src="/images/garden/ui/camera.png" mode="aspectFit" />
+      <text>拍一拍这一餐</text>
+    </view>
+
+    <view wx:if="{{mode !== 'view'}}" class="placing">
+      <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖到小动物身上喂它，或者拖进食盆引新住户' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
+      <view class="placing-btns">
+        <button class="btn-plain btn-small" bindtap="cancel">取消</button>
+      </view>
+    </view>
+
+    <view wx:if="{{bagOpen}}" class="drawer-mask" catchtap="closeBag"></view>
+    <view class="drawer {{bagOpen ? 'drawer-open' : ''}}">
+      <view class="drawer-head">
+        <view class="bag-tabs">
+          <text class="bag-tab {{bagTab === 'food' ? 'on' : ''}}" data-tab="food" catchtap="switchBag">食物</text>
+          <text class="bag-tab {{bagTab === 'decor' ? 'on' : ''}}" data-tab="decor" catchtap="switchBag">装饰</text>
+        </view>
+        <text class="drawer-close" catchtap="closeBag">✕</text>
+      </view>
+      <block wx:if="{{bagTab === 'food'}}">
+        <scroll-view wx:if="{{foodBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
+          <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood">
+            <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
+            <view class="bag-name">{{item.name}}</view>
+            <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
+          </view>
+        </scroll-view>
+        <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
+        <view class="muted small bag-hint">点一样拿在手里：拖到小动物身上喂它，拖进食盆引新住户</view>
+      </block>
+      <block wx:else>
+        <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
+          <view wx:for="{{decorBag}}" wx:key="id" class="bag-item" data-id="{{item.id}}" bindtap="pickDecor">
+            <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
+            <view class="bag-name">{{item.name}}</view>
+            <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
+          </view>
+        </scroll-view>
+        <view wx:else class="muted small">没有待摆的装饰，去商店挑一件吧～</view>
+      </block>
+    </view>
+
+    <view wx:if="{{residentsOpen}}" class="drawer-mask" catchtap="closeResidents"></view>
+    <view class="drawer {{residentsOpen ? 'drawer-open' : ''}}">
+      <view class="drawer-head">
+        <text class="drawer-title">住户（点一下，带你去找它）</text>
+        <text class="drawer-close" catchtap="closeResidents">✕</text>
+      </view>
+      <view wx:if="{{residents.length}}" class="res-list">
+        <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
+          <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
+          <view class="res-body">
+            <view class="res-name">{{item.name}}</view>
+            <view class="res-text">{{item.text}}</view>
+          </view>
+          <text class="res-go">去看看 ›</text>
+        </view>
+      </view>
+      <view wx:else class="muted small">还没有小动物住进来。把食物放进食盆，下次打卡就会来～</view>
+    </view>
+  </block>
+
+  <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">
+    <view class="welcome" catchtap="noop">
+      <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
+      <view class="welcome-title">欢迎来到暖暖营地！</view>
+      <view class="welcome-text">豆豆已经在篝火边等你了。送你 {{welcome.beans}} 暖豆：每天好好吃饭打卡攒暖豆，扭蛋抽食物放进食盆，爱吃的小动物就会搬来；每次打卡都算喂它们一顿，越喂越亲～</view>
+      <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
+      <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
+    </view>
+  </view>
+</view>

@@ -4,11 +4,10 @@ const assert = require('node:assert/strict')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
 const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
-const { tileCenter } = require('../miniprogram/utils/iso')
-const { placeableTiles } = require('../miniprogram/utils/shared/estate')
+const { SCENE } = require('../miniprogram/utils/shared/camp')
 const { manualClock } = require('./helpers/manual-clock')
 
-const PAGES = ['today', 'garden', 'gacha', 'collection', 'forest', 'checkin', 'meal', 'weight', 'profile']
+const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile']
 
 test('app.json 里的页面文件和 tabBar 图标都存在', () => {
   const fs = require('node:fs')
@@ -212,201 +211,56 @@ test('云函数报错时页面给出提示：短消息用 toast，长消息用�
   assert.match(wx2.log.modals[0], /超时时间调到 60 秒/)
 })
 
-test('园林大宅院首页：今日暖豆、底图云朵木牌、扭蛋、背包摆放、各种不能摆、换方向、移动、收回、修整、找它、去打卡', async () => {
-  const green = analysisJson({ rating: 'green' })
-  const cloud = createFakeCloud({ replies: [green, green] })
-  const { main } = loadCloudFunction(cloud)
-  const wx = createWx(main)
-  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
-  await main({ action: 'meal.analyze', data: { mealType: 'breakfast', note: '粥' } })
-  await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '面' } })
-
-  const garden = loadPage('garden', wx)
-  garden.hour = () => 15
-  garden.onLoad()
-  garden.onShow()
-  await settle()
-  assert.equal(garden.data.welcome.beans, 60)
-  assert.equal(garden.data.beans, 80)
-  assert.equal(garden.data.canSpin, true)
-  assert.equal(garden.data.daily.title, '今天得了 20 暖豆')
-  assert.deepEqual(garden.data.daily.stamps.map((s) => s.cls), ['stamp-green', 'stamp-green', 'stamp-none'])
-  assert.equal(garden.data.art.length, 16)
-  // 默认用 config.estateArt（云存储）的切块
-  assert.match(garden.data.art[0].image, /^cloud:\/\/.*\/garden\/estate\/t00\.jpg$/)
-  // 云存储的图加载失败：退回本地白模
-  garden.setData({ artBase: 'cloud://x/', art: [] })
-  garden.render(garden.garden)
-  assert.equal(garden.data.art[0].image, 'cloud://x/t00.jpg')
-  garden.onArtError()
-  assert.equal(garden.data.art[0].image, '/images/garden/estate/t00.jpg')
-  assert.equal(garden.data.artBase, '')
-  assert.deepEqual(garden.data.signs.map((s) => s.key), ['pond', 'orchard', 'bamboo', 'farm', 'back'])
-  assert.ok(garden.data.clouds.length >= 9 * 6)
-  assert.ok(!garden.data.clouds.some((c) => c.area === 'front' || c.area === 'main'))
-  assert.deepEqual([garden.data.sprites[0].c, garden.data.sprites[0].r], [15, 18])
-  assert.ok(garden.data.sprites[0].shadow.width > 0)
-  garden.goGacha()
-  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/gacha/gacha'])
-
-  const gacha = loadPage('gacha', wx)
-  gacha.shakeMs = 0
-  gacha.onShow()
-  await settle()
-  gacha.spin()
-  await settle()
-  gacha.openCapsule()
-  const itemId = gacha.data.result.itemId
-  gacha.goPlace()
-
-  // 背包 → 摆放；地图拖动并缩小到 0.8 倍
-  garden.onShow()
-  await settle()
-  garden.openBag()
-  garden.pickInventory(event({ id: itemId }))
-  assert.equal(garden.data.mode, 'place')
-  const opened = ['front', 'main']
-  assert.equal(garden.data.hints.length, placeableTiles(opened, garden.garden.placed, itemId).length)
-  assert.ok(garden.data.hints.length > 0)
-  wx.worldRect = { left: -420, top: -260, width: garden.L.width * 0.8 }
-  const tap = (c, r) => {
-    const p = tileCenter(c, r, garden.L)
-    return { changedTouches: [{ clientX: wx.worldRect.left + p.x * 0.8, clientY: wx.worldRect.top + p.y * 0.8 }] }
-  }
-  garden.tapLand(tap(15, 18))
-  assert.equal(wx.log.toasts.pop(), '这块地上已经有东西了')
-  garden.tapLand(tap(14, 15))
-  assert.equal(wx.log.toasts.pop(), '小路上不能摆东西')
-  garden.tapLand(tap(22, 14))
-  assert.equal(wx.log.toasts.pop(), '这个院子还没修整呢')
-  garden.tapLand(tap(0, 0))
-  assert.equal(wx.log.toasts.pop(), '放不到这里哦')
-  // 换个方向再摆
-  garden.toggleFlip()
-  assert.equal(garden.data.placingFlip, true)
-  const spot = garden.data.hints[0]
-  garden.tapLand(tap(spot.c, spot.r))
-  await settle()
-  assert.equal(garden.data.mode, 'view')
-  const mine = garden.data.sprites.find((x) => x.itemId === itemId)
-  assert.deepEqual([mine.c, mine.r, mine.flip], [spot.c, spot.r, true])
-
-  // 移动：换到另一块亮着的地；移动中换方向直接存
-  wx.actionSheetChoice = 0
-  garden.tapSprite(event({ uid: mine.uid }))
-  assert.equal(garden.data.mode, 'move')
-  const other = garden.data.hints.find((t) => t.c !== mine.c || t.r !== mine.r)
-  garden.toggleFlip()
-  await settle()
-  assert.equal(garden.data.sprites.find((x) => x.uid === mine.uid).flip, false)
-  garden.tapLand(tap(other.c, other.r))
-  await settle()
-  assert.deepEqual((({ c, r }) => [c, r])(garden.data.sprites.find((x) => x.uid === mine.uid)), [other.c, other.r])
-
-  // 拖动：长按拎起 → 拖到小路上幽灵变红 → 拖到亮着的空地松手就落下；拖动层上点一下也算
-  const touch = (c, r) => {
-    const p = tileCenter(c, r, garden.L)
-    const t = { clientX: wx.worldRect.left + p.x * 0.8, clientY: wx.worldRect.top + p.y * 0.8 }
-    return { touches: [t], changedTouches: [t] }
-  }
-  garden.liftSprite(event({ uid: mine.uid }))
-  assert.equal(garden.data.mode, 'move')
-  garden.onDragStart(touch(13, 15))
-  assert.equal(garden.data.target.ok, false)
-  assert.equal(garden.data.drag.ok, false)
-  assert.equal(garden.data.drag.image, `/images/garden/items/${itemId}.png`)
-  const dest = garden.data.hints.find((t) => t.c !== other.c || t.r !== other.r)
-  garden.onDragMove(touch(dest.c, dest.r))
-  assert.equal(garden.data.target.ok, true)
-  assert.ok(garden.data.drag.ok)
-  assert.ok(garden.data.drag.bottom > garden.L.height - tileCenter(dest.c, dest.r, garden.L).y, '幽灵图在手指上方')
-  garden.onDragEnd(touch(dest.c, dest.r))
-  await settle()
-  assert.equal(garden.data.mode, 'view')
-  assert.equal(garden.data.drag, null)
-  assert.deepEqual((({ c, r }) => [c, r])(garden.data.sprites.find((x) => x.uid === mine.uid)), [dest.c, dest.r])
-  // 松手在放不了的地方：提示，还在移动模式
-  garden.liftSprite(event({ uid: mine.uid }))
-  garden.onDragEnd(touch(0, 0))
-  assert.equal(wx.log.toasts.pop(), '放不到这里哦')
-  assert.equal(garden.data.mode, 'move')
-  garden.cancel()
-  assert.equal(garden.data.mode, 'view')
-  wx.actionSheetChoice = 1
-  garden.tapSprite(event({ uid: mine.uid }))
-  await settle()
-  assert.match(wx.log.toasts.pop(), /收进背包了/)
-
-  // 修整荷塘院：豆不够先提示；攒够了确认后云散开、木牌换位置、屏幕滑过去
-  garden.tapSign(event({ key: 'pond' }))
-  assert.equal(wx.log.toasts.pop(), '修整要 200 暖豆，再攒攒')
-  const toastCount = wx.log.toasts.length
-  garden.tapSign(event({ key: 'spring' }))
-  assert.equal(wx.log.toasts.length, toastCount)
-  const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, beans: { ...doc.beans, bonus: doc.beans.bonus + 300 } })
-  garden.onShow()
-  await settle()
-  assert.equal(garden.data.beans, 350)
-  const before = garden.data.view
-  garden.tapSign(event({ key: 'pond' }))
-  await settle()
-  assert.match(wx.log.modals.pop(), /花 200 暖豆修整荷塘院/)
-  assert.deepEqual(garden.data.signs.map((s) => s.key), ['flower', 'orchard', 'bamboo', 'tea', 'farm', 'back'])
-  assert.ok(!garden.data.clouds.some((c) => c.area === 'pond'))
-  assert.equal(garden.data.beans, 150)
-  assert.equal(garden.data.justOpened, 'pond')
-  assert.ok(garden.data.burst)
-  assert.equal(wx.log.toasts.pop(), '荷塘院修整好啦！')
-  assert.notDeepEqual(garden.data.view, before)
-
-  // 还没有住户时的「找它」
-  garden.openResidents()
-  assert.deepEqual(garden.data.residents, [])
-  assert.equal(garden.data.residentsOpen, true)
-  garden.closeResidents()
-  assert.equal(garden.data.residentsOpen, false)
-
-  const centered = garden.data.view
-  garden.recenter()
-  assert.notDeepEqual(garden.data.view, centered)
-  garden.goCheckin()
-  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/checkin/checkin'])
-  garden.onUnload()
-})
-
-test('花园首页：还没建档时先去建档', async () => {
-  const cloud = createFakeCloud({ replies: [] })
-  const { main } = loadCloudFunction(cloud)
-  const wx = createWx(main)
-  const garden = loadPage('garden', wx)
-  garden.onLoad()
-  garden.onShow()
-  await settle()
-  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/profile/profile'])
-  garden.onUnload()
-})
-
-test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横幅 → 走进庭院、点一下说话 → 离开页面停下', async () => {
+test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡后搬来 → 喂 → 商店买装饰摆放 → 找它', async () => {
   const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
   const { main } = loadCloudFunction(cloud)
   const wx = createWx(main)
   await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
-  await main({ action: 'garden.get' })
-  const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 14, r: 19 }) })
 
-  const garden = loadPage('garden', wx)
-  garden.clock = manualClock()
-  garden.hour = () => 15
-  garden.onLoad()
-  garden.onShow()
+  const camp = loadPage('camp', wx)
+  camp.clock = manualClock()
+  camp.hour = () => 10
+  camp.onLoad()
+  camp.onShow()
   await settle()
-  assert.equal(garden.data.waitingText, '👀 有小动物在院子外张望…下次打卡它就来了')
-  assert.deepEqual(garden.data.animals, [])
-  garden.onHide()
+  assert.equal(camp.data.loaded, true)
+  assert.deepEqual(camp.data.welcome, { beans: 60, petId: 'doudou' })
+  assert.equal(camp.data.beans, 60)
+  assert.equal(camp.data.base.length, 16)
+  assert.equal(camp.data.base[0].image, '/images/camp/base/t00.jpg')
+  assert.equal(camp.data.bowls.length, 2)
+  assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou'])
+  assert.ok(camp.data.fx.some((f) => f.kind === 'flame'))
+  assert.equal(camp.data.tint, '')
+  camp.closeWelcome()
+  camp.clock.advance(5000)
+  assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
 
-  // 打卡午餐
+  // 食盆空的：提示去扭蛋；塞一份胡萝卜后能放
+  camp.tapBowl(event({ index: 0 }))
+  assert.equal(wx.log.toasts.pop(), '背包里没有吃的，去扭蛋机抽一个吧')
+  const doc = cloud.db.collections.get('gardens').get('u1')
+  cloud.db.collections.get('gardens').set('u1', { ...doc, foods: { huluobo: 1, xiaomi: 1 } })
+  camp.onShow()
+  await settle()
+  assert.equal(camp.data.bagCount, 2)
+  camp.openBag()
+  camp.pickFood(event({ id: 'huluobo' }))
+  assert.equal(camp.data.mode, 'feed')
+  wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
+  camp.worldRect = wx.worldRect
+  const bowl = camp.data.bowls[0]
+  const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
+  camp.onDragStart(touchAt(bowl.left + bowl.size / 2, bowl.top + bowl.size / 2))
+  await settle()
+  assert.equal(camp.data.drag.ok, true)
+  camp.onDragEnd(touchAt(bowl.left + bowl.size / 2, bowl.top + bowl.size / 2))
+  await settle()
+  assert.equal(camp.data.mode, 'view')
+  assert.equal(camp.data.bowls[0].peeking, 'nuonuo')
+  assert.match(camp.data.peekText, /糯糯/)
+
+  // 打卡 → 糯糯搬来；回到营地先庆祝
   const checkin = loadPage('checkin', wx)
   checkin.onLoad()
   checkin.pickMealType(event({ value: 'lunch' }))
@@ -414,51 +268,67 @@ test('庭院小动物：张望提示 → 打卡后熊猫搬来 → 结果页横�
   checkin.submit()
   await settle()
   const mealId = wx.log.nav.pop()[1].split('id=')[1]
-  assert.deepEqual(wx.app.globalData.lastGain.arrival, { id: 'panda', name: '大熊猫' })
-
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
-  assert.deepEqual(meal.data.arrival, { id: 'panda', name: '大熊猫', image: '/images/garden/items/panda.png', text: '大熊猫闻着竹子香，搬进花园啦！' })
-  meal.goGarden()
-  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/garden/garden'])
-
-  // 回到花园：熊猫从大门走进来
-  garden.onShow()
+  assert.match(meal.data.arrival.text, /糯糯/)
+  wx.app.globalData.celebrate = true
+  camp.onShow()
   await settle()
-  assert.equal(garden.data.waitingText, '')
-  assert.equal(garden.data.animals.length, 1)
-  assert.equal(garden.data.animals[0].id, 'panda')
-  assert.equal(garden.data.animals[0].bubble, '我是大熊猫，以后就住这儿啦！')
-  // 等距格子里不同的格子可能左右位置一样，所以比较左右 + 上下
-  const where = (a) => `${a.left},${a.bottom}`
-  const outside = where(garden.data.animals[0])
-  garden.clock.advance(20000)
-  assert.ok(Number.isFinite(garden.data.animals[0].left) && Number.isFinite(garden.data.animals[0].bottom))
-  assert.notEqual(where(garden.data.animals[0]), outside)
-  assert.equal(garden.data.animals[0].bubble, '')
-  // 找它：列表里有它、写着在哪在干嘛；点一下屏幕滑过去
-  garden.openResidents()
-  assert.equal(garden.data.residents.length, 1)
-  assert.equal(garden.data.residents[0].name, '大熊猫')
-  assert.match(garden.data.residents[0].text, /^(在.+|正往.+走|溜达)$/)
-  const viewBefore = garden.data.view
-  garden.findResident(event({ index: 0 }))
-  assert.equal(garden.data.residentsOpen, false)
-  assert.notDeepEqual(garden.data.view, viewBefore)
-  assert.equal(garden.data.animals[0].tapping, true)
-  garden.clock.advance(700)
-  garden.tapAnimal(event({ index: 0 }))
-  assert.ok(garden.data.animals[0].bubble)
-  assert.equal(garden.data.animals[0].tapping, true)
+  assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou', 'nuonuo'])
+  camp.clock.advance(50)
+  assert.ok(camp.data.pets.some((p) => p.action === 'walk' || p.action === 'jump'))
 
-  garden.onHide()
-  assert.equal(garden.clock.count(), 0)
-
-  // 再进来不会重复走进来
-  garden.onShow()
+  // 直接喂：小米拖到豆豆身上
+  camp.openBag()
+  camp.pickFood(event({ id: 'xiaomi' }))
+  const dd = camp.data.pets[0]
+  const px = dd.left + dd.width / 2
+  const py = camp.L.height - dd.bottom - dd.width / 2
+  camp.onDragStart(touchAt(px, py))
   await settle()
-  assert.notEqual(garden.data.animals[0].bubble, '我是大熊猫，以后就住这儿啦！')
-  garden.onUnload()
-  assert.equal(garden.clock.count(), 0)
+  camp.onDragEnd(touchAt(px, py))
+  await settle()
+  assert.match(wx.log.toasts.pop(), /豆豆吃得很开心，亲密 \+3/)
+  assert.equal(camp.data.pets[0].action, 'eat')
+
+  // 商店买滚球，摆到草地上，再收回
+  const after = cloud.db.collections.get('gardens').get('u1')
+  cloud.db.collections.get('gardens').set('u1', { ...after, beans: { ...after.beans, bonus: after.beans.bonus + 300 } })
+  const shop = loadPage('shop', wx)
+  shop.onShow()
+  await settle()
+  shop.buy(event({ id: 'ball' }))
+  await settle()
+  assert.equal(wx.log.toasts.pop(), '买好了，去营地摆上吧')
+  camp.onShow()
+  await settle()
+  camp.openBag()
+  camp.switchBag(event({ tab: 'decor' }))
+  camp.pickDecor(event({ id: 'ball' }))
+  assert.equal(camp.data.mode, 'place')
+  const g = (x, y) => touchAt(x * camp.L.k, y * camp.L.k)
+  camp.onDragStart(g(SCENE.fire[0], SCENE.fire[1]))
+  await settle()
+  assert.equal(camp.data.drag.ok, false)
+  camp.onDragEnd(g(SCENE.fire[0], SCENE.fire[1]))
+  await settle()
+  assert.equal(wx.log.toasts.pop(), '这儿放不下，挪开一点')
+  camp.onDragEnd(g(1500, 1800))
+  await settle()
+  assert.equal(camp.data.decor.length, 1)
+  assert.equal(camp.data.mode, 'view')
+  wx.actionSheetChoice = 1
+  camp.tapDecor(event({ uid: camp.data.decor[0].uid }))
+  await settle()
+  assert.equal(camp.data.decor.length, 0)
+  assert.equal(camp.data.decorBag[0].id, 'ball')
+
+  // 找它
+  camp.openResidents()
+  assert.deepEqual(camp.data.residents.map((r) => r.name), ['豆豆', '糯糯'])
+  camp.findResident(event({ index: 1 }))
+  assert.equal(camp.data.residentsOpen, false)
+  camp.onUnload()
+  assert.equal(camp.clock.count(), 0)
 })

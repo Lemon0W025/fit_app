@@ -28,15 +28,6 @@ page {
   position: absolute;
 }
 
-/* 修整角落的木牌 */
-.sign {
-  position: absolute;
-  /* 木牌、云朵、彩带都压在物件、小动物和遮挡块（z 几百）上面 */
-  z-index: 2100;
-  transform-origin: 50% 100%;
-  animation: sway 2.6s ease-in-out infinite;
-}
-
 @keyframes sway {
   0%,
   100% {
@@ -45,56 +36,6 @@ page {
   50% {
     transform: rotate(3deg);
   }
-}
-
-.sign-img {
-  display: block;
-  width: 100%;
-}
-
-.sign-text {
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  top: 29%;
-  height: 31%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-weight: 700;
-  line-height: 1.1;
-  color: #4a2e14;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-}
-
-.sign-cost {
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 64%;
-  padding: 2% 0;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  text-align: center;
-  font-weight: 700;
-  line-height: 1.2;
-  color: #b8461e;
-}
-
-/* ---------------------------------------------------------------- 浮在地图上的按钮 */
-
-.hud-collect {
-  position: absolute;
-  right: 24rpx;
-  z-index: 50;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--primary);
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 32rpx;
-  padding: 10rpx 24rpx;
-  box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.12);
 }
 
 .hud-notes {
@@ -217,27 +158,6 @@ page {
   padding: 0 8rpx;
 }
 
-.hint {
-  position: absolute;
-  z-index: 5;
-  animation: hint-pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes hint-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.sprite {
-  position: absolute;
-  filter: drop-shadow(0 2rpx 2rpx rgba(60, 50, 30, 0.2));
-}
-
 /* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
 .drag-layer {
   position: absolute;
@@ -260,23 +180,6 @@ page {
 .drag-ghost.bad {
   opacity: 0.6;
   filter: grayscale(0.5) drop-shadow(0 14rpx 12rpx rgba(40, 30, 10, 0.35));
-}
-
-.drag-target {
-  position: absolute;
-  pointer-events: none;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  -webkit-clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  background: rgba(120, 220, 110, 0.55);
-}
-
-.drag-target.bad {
-  background: rgba(230, 90, 70, 0.5);
-}
-
-.sprite-ghost {
-  pointer-events: none;
-  opacity: 0.85;
 }
 
 .placing-text {
@@ -388,38 +291,9 @@ button.btn-small {
   margin-top: 4rpx;
 }
 
-/* ---------------------------------------------------------------- 小动物 */
-
-.animal {
-  position: absolute;
-  transition-property: left, bottom;
-  transition-timing-function: linear;
-}
-
-.animal-ghost {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-.animal-body {
-  position: relative;
-}
-
 /* 镜像放在外层，里面的图片还能做自己的动画 */
 .flip {
   transform: scaleX(-1);
-}
-
-/* 下水：只露出上半身 */
-.in-water {
-  overflow: hidden;
-}
-
-.animal-img {
-  display: block;
-  width: 100%;
-  transform-origin: 50% 100%;
-  filter: drop-shadow(0 4rpx 3rpx rgba(60, 50, 30, 0.25));
 }
 
 /* 逐帧动画：一张 6×4 的拼图，外框只露一格，里面的长条按帧数一格一格跳（steps），行、起始列用 margin 挪 */
@@ -471,237 +345,9 @@ button.btn-small {
   }
 }
 
-/* 走路的步态：四条腿的左右踱步，不蹦；鸭子小鸡摇摇摆摆；兔子蹦；乌龟慢慢爬；仙鹤迈大步 */
-.gait-pad {
-  animation: pad 0.56s ease-in-out infinite;
-}
-
-.gait-waddle {
-  animation: waddle 0.36s ease-in-out infinite;
-}
-
-.gait-hop {
-  animation: hop 0.45s ease-in-out infinite;
-}
-
-.gait-crawl {
-  animation: crawl 1.4s ease-in-out infinite;
-}
-
-.gait-stride {
-  animation: stride 0.9s ease-in-out infinite;
-}
-
-/* 会飞的：上下起伏地飞；蝴蝶扑棱翅膀 */
-.gait-fly {
-  animation: fly 0.8s ease-in-out infinite;
-}
-
-.gait-flutter {
-  animation: flutter 0.24s ease-in-out infinite;
-}
-
-@keyframes pad {
-  0%,
-  100% {
-    transform: rotate(-3deg) scale(1, 0.985);
-  }
-  50% {
-    transform: rotate(3deg) scale(1, 1);
-  }
-}
-
-@keyframes waddle {
-  0%,
-  100% {
-    transform: rotate(-7deg);
-  }
-  50% {
-    transform: rotate(7deg);
-  }
-}
-
-@keyframes crawl {
-  0%,
-  100% {
-    transform: scale(1, 1) rotate(-1.5deg);
-  }
-  50% {
-    transform: scale(1.04, 0.97) rotate(1.5deg);
-  }
-}
-
-@keyframes stride {
-  0%,
-  100% {
-    transform: rotate(-2deg) translateY(0);
-  }
-  50% {
-    transform: rotate(2deg) translateY(-2%);
-  }
-}
-
-@keyframes fly {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-3deg);
-  }
-  50% {
-    transform: translateY(-14%) rotate(3deg);
-  }
-}
-
-@keyframes flutter {
-  0%,
-  100% {
-    transform: scale(1, 1) translateY(0);
-  }
-  50% {
-    transform: scale(0.55, 1.05) translateY(-6%);
-  }
-}
-
-.act-idle,
-.act-bask,
-.act-warm {
-  animation: breathe 2.4s ease-in-out infinite;
-}
-
-.act-sleep,
-.act-perch {
-  animation: breathe 3.6s ease-in-out infinite;
-}
-
-.act-eat {
-  animation: chomp 0.5s ease-in-out infinite;
-}
-
-.act-peck {
-  animation: peck 0.3s ease-in-out infinite;
-}
-
-.act-swim {
-  animation: bob 1.6s ease-in-out infinite;
-}
-
-.act-swing {
-  transform-origin: 50% -40%;
-  animation: swing 1.8s ease-in-out infinite;
-}
-
-/* 小黄鸭在池子里来回划水 */
-.paddle {
-  animation: paddle 4s ease-in-out infinite;
-}
-
-@keyframes paddle {
-  0%,
-  100% {
-    transform: translateX(-18%) translateY(0);
-  }
-  50% {
-    transform: translateX(18%) translateY(4%);
-  }
-}
-
 /* 放在各种动作后面：点一下的跳跃优先 */
 .tap {
   animation: jump 0.6s ease-out;
-}
-
-@keyframes hop {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-12%);
-  }
-}
-
-@keyframes breathe {
-  0%,
-  100% {
-    transform: scale(1, 1);
-  }
-  50% {
-    transform: scale(1.02, 0.97);
-  }
-}
-
-@keyframes chomp {
-  0%,
-  100% {
-    transform: rotate(0) translateY(0);
-  }
-  50% {
-    transform: rotate(-6deg) translateY(4%);
-  }
-}
-
-@keyframes peck {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  50% {
-    transform: rotate(18deg) translateY(6%);
-  }
-}
-
-@keyframes bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(5%);
-  }
-}
-
-@keyframes swing {
-  0%,
-  100% {
-    transform: rotate(-14deg);
-  }
-  50% {
-    transform: rotate(14deg);
-  }
-}
-
-@keyframes jump {
-  0%,
-  100% {
-    transform: translateY(0) scale(1, 1);
-  }
-  30% {
-    transform: translateY(-30%) scale(1.05, 0.95);
-  }
-  60% {
-    transform: translateY(0) scale(1.08, 0.92);
-  }
-}
-
-.ripple {
-  position: absolute;
-  left: 10%;
-  bottom: -8%;
-  width: 80%;
-  height: 24%;
-  border: 3rpx solid rgba(255, 255, 255, 0.9);
-  border-radius: 50%;
-  animation: ripple 1.8s ease-out infinite;
-}
-
-@keyframes ripple {
-  0% {
-    transform: scale(0.5);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1.4);
-    opacity: 0;
-  }
 }
 
 .bubble {
@@ -716,23 +362,6 @@ button.btn-small {
   text-align: center;
   box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.18);
   z-index: 2;
-}
-
-.act-emoji {
-  position: absolute;
-  right: -10%;
-  top: -10%;
-  font-size: 30rpx;
-  animation: float 1.6s ease-in-out infinite;
-}
-
-.act-fx {
-  position: absolute;
-  right: -18%;
-  top: -22%;
-  width: 44rpx;
-  height: 44rpx;
-  animation: float 1.6s ease-in-out infinite;
 }
 
 @keyframes float {
@@ -907,13 +536,6 @@ button.btn-small {
   margin-right: 10rpx;
 }
 
-/* ---------------------------------------------------------------- 宅院 */
-
-.art {
-  position: absolute;
-  z-index: 1;
-}
-
 /* 物件、小动物脚下的影子 */
 /* ---------------------------------------------------------------- 壳上的小动静（全是 CSS，不占包） */
 
@@ -921,7 +543,7 @@ button.btn-small {
 .fx-shimmer {
   position: absolute;
   pointer-events: none;
-  opacity: 0.16;
+  opacity: 0.22;
   background-image: radial-gradient(ellipse 34px 14px at 50% 50%, rgba(255, 255, 255, 0.9) 0, rgba(255, 255, 255, 0) 70%), radial-gradient(ellipse 26px 11px at 30% 60%, rgba(255, 255, 255, 0.8) 0, rgba(255, 255, 255, 0) 70%);
   background-size: 96px 52px, 70px 44px;
   animation: caustics 14s linear infinite;
@@ -933,27 +555,6 @@ button.btn-small {
   }
   to {
     background-position: 96px 52px, -70px 44px;
-  }
-}
-
-/* 星光：一闪一闪 */
-.fx-sparkle {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0;
-  animation: twinkle 3s ease-in-out infinite;
-}
-
-@keyframes twinkle {
-  0%,
-  60%,
-  100% {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  75% {
-    opacity: 0.95;
-    transform: scale(1);
   }
 }
 
@@ -980,70 +581,6 @@ button.btn-small {
   }
 }
 
-/* 瀑布：一条往下流的白练 */
-.fx-falls {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0.55;
-  border-radius: 40%;
-  background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.6) 6px, rgba(255, 255, 255, 0) 14px);
-  background-size: 100% 28px;
-  animation: falls 0.7s linear infinite;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 25%, #000 85%, transparent 100%);
-  mask-image: linear-gradient(180deg, transparent 0, #000 25%, #000 85%, transparent 100%);
-}
-
-@keyframes falls {
-  from {
-    background-position: 0 0;
-  }
-  to {
-    background-position: 0 28px;
-  }
-}
-
-/* 花瓣：粉色小瓣飘下来，边飘边转 */
-.fx-petal {
-  position: absolute;
-  pointer-events: none;
-  border-radius: 100% 0 100% 0;
-  background: linear-gradient(135deg, #ffd3e0, #ff9fbd);
-  opacity: 0;
-  animation: petal 7s ease-in-out infinite;
-}
-
-@keyframes petal {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(0deg);
-  }
-  10% {
-    opacity: 0.95;
-  }
-  50% {
-    transform: translate(-30px, 40px) rotate(200deg);
-  }
-  90% {
-    opacity: 0.9;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(10px, 90px) rotate(420deg);
-  }
-}
-
-/* 遮挡块：从底图上抠下来的墙 / 门 / 建筑，盖在站在它后面的东西上；点击穿透 */
-.occ {
-  position: absolute;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.occ-img {
-  position: absolute;
-  display: block;
-}
-
 .shadow {
   position: absolute;
   border-radius: 50%;
@@ -1054,91 +591,17 @@ button.btn-small {
   transition-timing-function: linear;
 }
 
-/* 水里的东西：脚下一圈一圈慢慢散开的涟漪 */
-.ripple-item {
-  position: absolute;
-  border-radius: 50%;
-  border: 2rpx solid rgba(255, 255, 255, 0.75);
-  box-shadow: inset 0 0 6rpx rgba(255, 255, 255, 0.35);
-  pointer-events: none;
-  animation: ripple 2.6s ease-out infinite;
-}
-
-.sprite.flip {
-  transform: scaleX(-1);
-}
-
-/* 没修的院子上的云，慢慢飘 */
-.cloud {
-  position: absolute;
-  z-index: 2000;
-  pointer-events: none;
-  opacity: 0.96;
-  animation: drift 7s ease-in-out infinite alternate;
-}
-
-@keyframes drift {
-  0% {
-    transform: translate(-4%, 0);
-  }
-  100% {
-    transform: translate(4%, -3%);
-  }
-}
-
-/* 修好院子时冒的一把彩带 */
-.confetti {
-  position: absolute;
-  z-index: 2200;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.confetti-bit {
-  position: absolute;
-  width: 16rpx;
-  height: 24rpx;
-  border-radius: 4rpx;
-  animation: toss 1.1s ease-out forwards;
-}
-
 .b1 { background: #f4b740; --dx: -120rpx; --dy: -200rpx; }
+
 .b2 { background: #e8553b; --dx: 90rpx; --dy: -240rpx; animation-delay: 0.05s; }
+
 .b3 { background: #6fcf5a; --dx: -170rpx; --dy: -110rpx; animation-delay: 0.1s; }
+
 .b4 { background: #3577c0; --dx: 160rpx; --dy: -140rpx; animation-delay: 0.08s; }
+
 .b5 { background: #ff8ab8; --dx: -40rpx; --dy: -260rpx; animation-delay: 0.12s; }
+
 .b6 { background: #ffd34d; --dx: 50rpx; --dy: -90rpx; animation-delay: 0.15s; }
-
-@keyframes toss {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--dx), var(--dy)) rotate(540deg);
-    opacity: 0;
-  }
-}
-
-/* 做小事：轻轻扭一扭；泡在水里：上下浮 */
-.act-trick {
-  animation: wiggle 0.8s ease-in-out infinite;
-}
-
-@keyframes wiggle {
-  0%,
-  100% {
-    transform: rotate(-6deg);
-  }
-  50% {
-    transform: rotate(6deg);
-  }
-}
-
-.act-soak {
-  animation: bob 2s ease-in-out infinite;
-}
 
 /* 摆放时的两个按钮 */
 .placing-btns {
@@ -1195,4 +658,77 @@ button.btn-small {
 .res-go {
   font-size: 28rpx;
   color: var(--primary);
+}
+
+/* ---- 营地专用 ---- */
+.base { position: absolute; display: block; }
+.decor { position: absolute; display: block; }
+.ghosted { opacity: 0.6; }
+.bowl { position: absolute; }
+.bowl-food { position: absolute; left: 25%; top: 10%; width: 50%; height: 50%; }
+.bowl-peek { position: absolute; left: 60%; top: -70%; width: 70%; height: 70%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); animation: float 1.6s ease-in-out infinite; }
+.hud-note-gold { background: rgba(255, 244, 214, 0.95); color: #9a6b12; }
+.bag-tabs { display: flex; gap: 24rpx; }
+.bag-tab { padding: 8rpx 24rpx; border-radius: 999rpx; font-size: 30rpx; color: var(--muted); }
+.bag-tab.on { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.bag-hint { margin-top: 8rpx; }
+
+/* 宠物：单张图时按动作挂动画；走路 gait-on 时上下颠 */
+.pet { position: absolute; transition-property: left, bottom; transition-timing-function: linear; }
+.pet-body { position: relative; width: 100%; }
+.pet-body.flip { transform: scaleX(-1); }
+.pet-img { display: block; width: 100%; transform-origin: 50% 100%; }
+.pet-img.gait-on { animation: trot 0.42s ease-in-out infinite; }
+@keyframes trot { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-6%) rotate(2deg); } }
+.act-idle { animation: breathe 2.4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.03); } }
+.act-sleep { animation: snooze 3s ease-in-out infinite; }
+@keyframes snooze { 0%, 100% { transform: scale(1, 0.92) translateY(4%); } 50% { transform: scale(1.03, 0.9) translateY(5%); } }
+.act-eat { animation: chomp 0.5s ease-in-out infinite; }
+@keyframes chomp { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg) translateY(3%); } }
+.act-happy { animation: wiggle 0.5s ease-in-out infinite; }
+@keyframes wiggle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+.act-roll { animation: roll 1.2s linear 1; }
+@keyframes roll { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
+.act-pet { animation: purr 0.3s ease-in-out infinite; }
+@keyframes purr { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04, 0.97); } }
+.act-jump { animation: hop 0.6s ease-out infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-30%); } }
+.act-sit { transform: scaleY(0.9) translateY(5%); }
+.act-soak { clip-path: inset(0 0 38% 0); -webkit-clip-path: inset(0 0 38% 0); transform: translateY(38%); animation: bob 2s ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(38%); } 50% { transform: translateY(41%); } }
+.act-dislike { animation: shake 0.4s ease-in-out 3; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
+
+/* 拖拽：装饰的幽灵块 + 落脚框 */
+.drag-foot { position: absolute; border-radius: 12rpx; border: 4rpx dashed rgba(255, 255, 255, 0.9); box-sizing: border-box; }
+.drag-foot.ok { background: rgba(120, 220, 120, 0.35); }
+.drag-foot.bad { background: rgba(230, 90, 70, 0.35); }
+
+/* 一天的光 */
+.tint { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1700; }
+.tint-dusk { background: linear-gradient(180deg, rgba(255, 150, 60, 0.18), rgba(255, 120, 80, 0.26)); }
+.tint-night { background: radial-gradient(circle at 50% 61%, rgba(255, 170, 60, 0) 0, rgba(255, 170, 60, 0) 9%, rgba(20, 30, 80, 0.45) 30%, rgba(14, 22, 70, 0.6) 100%); }
+
+/* 篝火、烟、涟漪、萤火虫、蝴蝶、光晕 */
+.fx-flame { position: absolute; border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%; background: radial-gradient(ellipse at 50% 80%, #fff3b0 0%, #ffb037 35%, rgba(255, 90, 30, 0.9) 70%, rgba(255, 60, 20, 0) 100%); transform-origin: 50% 100%; animation: flicker 0.35s ease-in-out infinite alternate; mix-blend-mode: screen; }
+@keyframes flicker { 0% { transform: scale(1, 1) skewX(-3deg); opacity: 0.85; } 100% { transform: scale(1.08, 1.15) skewX(3deg); opacity: 1; } }
+.fx-smoke { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 70%); animation: puff 4.2s ease-out infinite; }
+@keyframes puff { 0% { transform: translateY(0) scale(0.5); opacity: 0; } 20% { opacity: 0.7; } 100% { transform: translateY(-120%) scale(1.6); opacity: 0; } }
+.fx-ripple { position: absolute; border: 3rpx solid rgba(255, 255, 255, 0.8); border-radius: 50%; animation: spread 3.3s ease-out infinite; }
+@keyframes spread { 0% { transform: scale(0.2); opacity: 0.9; } 100% { transform: scale(1.2); opacity: 0; } }
+.fx-firefly { position: absolute; border-radius: 50%; background: radial-gradient(circle, #fff7a8 0%, rgba(255, 240, 120, 0.6) 40%, rgba(255, 240, 120, 0) 70%); animation: glimmer 4s ease-in-out infinite; }
+@keyframes glimmer { 0%, 100% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 1; } 60% { opacity: 0.3; transform: translate(14px, -18px); } 80% { opacity: 1; } }
+.fx-butterfly { position: absolute; background: radial-gradient(circle at 30% 50%, #ffd36b 0 45%, transparent 46%), radial-gradient(circle at 70% 50%, #ffd36b 0 45%, transparent 46%); animation: flit 5s ease-in-out infinite; }
+@keyframes flit { 0%, 100% { transform: translate(0, 0) scaleX(1); } 25% { transform: translate(30px, -20px) scaleX(0.4); } 50% { transform: translate(10px, -40px) scaleX(1); } 75% { transform: translate(-25px, -15px) scaleX(0.4); } }
+.fx-glow { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255, 220, 120, 0.55) 0%, rgba(255, 200, 80, 0) 70%); animation: pulse 2.6s ease-in-out infinite; mix-blend-mode: screen; }
+@keyframes pulse { 0%, 100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+
+/* 宠物头上的表情 */
+.act-emoji {
+  position: absolute;
+  right: -10%;
+  top: -10%;
+  font-size: 30rpx;
+  animation: float 1.6s ease-in-out infinite;
 }
