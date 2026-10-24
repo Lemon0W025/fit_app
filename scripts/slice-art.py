@@ -1,12 +1,11 @@
-"""把 Codex 出的美术整图（透明底，3×3 格）切成小程序用的单张图。
+"""切界面图标和表情（art/raw/ui/icons.png、fx.png，透明底 3×3 格）成小程序用的单张图。
 
     python3 scripts/slice-art.py
 
-原图在 art/raw/（格子顺序见 art/raw/中文物件索引.txt），每格对应的图片名写在下面的 SHEETS 里。
-切出来的图覆盖 miniprogram/images/ 下同名的占位图，代码不用改。需要 Pillow 和 numpy。
+宠物、装饰、食物的正式图各有自己的脚本（见 docs/art/camp-art-pack.md）。需要 Pillow 和 numpy。
 
 物件偶尔会稍微越过格子线，所以不是按格子硬切：先找出一块块连在一起的图形，
-每块归到它大部分像素所在的格子，同一格的几块（比如蒲公英飘出去的种子）合成一个物件。
+每块归到它大部分像素所在的格子，同一格的几块合成一个物件。
 """
 import os
 import sys
@@ -23,43 +22,17 @@ GRID = 3
 ALPHA_MIN = 4     # 低于这个透明度算背景
 NOISE_PX = 120    # 比这还小的孤立碎点当噪点丢掉
 
-ITEM_PX = 240     # 庭院物件：正方形画布，物体贴底居中（庭院里底边对齐格子）
 UI_PX = {'bean': 120, 'gacha': 420, 'gift': 280, 'book': 240, 'shovel': 200,
          'capsule-common': 300, 'capsule-rare': 300, 'capsule-epic': 300, 'capsule-legendary': 300,
          'basket': 160, 'calendar': 160, 'home': 160, 'paw': 160, 'camera': 160, 'tools': 160, 'finder': 160, 'confetti': 240}
 FX_PX = 96        # 动物头上的表情 / 特效
-CLOUD_PX = 360    # 云朵（宽）
 
 # (文件名, 种类, 九个格子的输出名)；None 是空格或不用的格子
 SHEETS = [
-    ('01-界面元素.png', 'ui', ['bean', 'gacha', 'capsule-common', 'capsule-rare', 'capsule-epic',
-                           'capsule-legendary', 'gift', 'book', 'shovel']),
-    # 每天的树已经不用了；这张图只取「大树」给院子中间的新手大树（见 EXTRA_ITEMS）
-    ('02-每天的树.png', 'source', [None, None, None, None, 'big', None, None, None, None]),
-    ('03-普通-花草.png', 'item', ['daisy', 'chrysanthemum', 'orchid', 'pothos', 'sunflower', 'bamboo',
-                              'dandelion', 'grass', 'mushroom']),
-    ('04-普通-田园.png', 'item', ['cabbage', 'radish', 'pumpkin', 'pebbles', 'fence', 'stool', None, None, None]),
-    ('05-稀有-树与摆件.png', 'item', ['osmanthus', 'orange_tree', 'persimmon_tree', 'gourd_rack', 'goji_tray',
-                                'tea_table', 'wood_bridge', 'lantern', 'stone_table']),
-    ('06-稀有-小动物.png', 'item', ['chick', 'rabbit', 'duck', 'koi_pond', 'turtle', 'tabby_cat', None, None, None]),
-    ('07-珍稀.png', 'item', ['panda', 'ginger_cat', 'plum_tree', 'lotus_pond', 'pavilion', 'arch_bridge',
-                          'crane', 'swing_tree', 'waterwheel']),
-    ('08-传说与节气限定.png', 'item', ['teahouse', 'zigzag_bridge', 'panda_family', 'golden_ginkgo',
-                                 'dried_persimmon', 'sweet_potato_stove', 'snowman', 'wintersweet',
-                                 'dumpling_steamer']),
-    # 第四步（docs/art/codex-art-pack.md）：新物件、小鸟蝴蝶的单张图、界面图标、表情特效、云朵
-    ('09-水生与小摆件.png', 'item', ['lotus_clump', 'water_lily', 'reeds', 'stepping_stones', 'koi_school', 'plank_bridge',
-                                 'bamboo_blind', 'straw_nest', 'feed_trough']),
-    ('10-院子家具.png', 'item', ['haystack', 'scarecrow', 'ladder', 'fruit_basket', 'tea_stove', 'bath_tub', 'flower_rack',
-                             'bench', 'bird_feeder']),
-    ('11-会飞的.png', 'item', ['bird', 'butterfly', None, None, None, None, None, None, None]),
-    ('ui/icons.png', 'ui', ['sign', 'basket', 'calendar', 'home', 'paw', 'camera', 'tools', 'finder', 'confetti']),
+    ('ui/icons.png', 'ui', [None, 'basket', 'calendar', 'home', 'paw', 'camera', 'tools', 'finder', 'confetti']),
     ('ui/fx.png', 'fx', ['zzz', 'heart', 'note', 'sparkle', 'drop', 'steam', 'sun', 'bang', 'grain']),
-    ('estate/clouds.png', 'cloud', ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9']),
 ]
 
-# 院子中间送的那棵大树，用每日树里的「大树」
-EXTRA_ITEMS = {'starter_tree': ('02-每天的树.png', 'big')}
 
 
 def label(mask):
@@ -151,26 +124,13 @@ def main():
         cut[name] = objs
         if kind == 'source':
             pass
-        elif kind == 'item':
-            for out, o in objs.items():
-                total += save(fit(o, ITEM_PX), 'garden', 'items', f'{out}.png')
         elif kind == 'fx':
             for out, o in objs.items():
                 total += save(fit(o, FX_PX, margin=2, anchor='center'), 'garden', 'fx', f'{out}.png')
-        elif kind == 'cloud':
-            for out, o in objs.items():
-                total += save(fit(o, CLOUD_PX, margin=2, anchor='center'), 'garden', 'clouds', f'{out}.png')
         else:
             for out, o in objs.items():
-                # 修整木牌单独放在 garden/ 下（页面路径 /images/garden/sign.png）
-                if out == 'sign':
-                    total += save(fit(o, 240, margin=2, anchor='center'), 'garden', 'sign.png')
-                else:
-                    total += save(fit(o, UI_PX[out], margin=2, anchor='center'), 'garden', 'ui', f'{out}.png')
+                total += save(fit(o, UI_PX[out], margin=2, anchor='center'), 'garden', 'ui', f'{out}.png')
         print(f'{name}: {"、".join(objs)}')
-    for item_id, (sheet, piece) in EXTRA_ITEMS.items():
-        if sheet in cut:
-            total += save(fit(cut[sheet][piece], ITEM_PX), 'garden', 'items', f'{item_id}.png')
     print(f'共写入 {total // 1024} KB')
 
 
