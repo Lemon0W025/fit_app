@@ -32,6 +32,7 @@ Page({
     hud: { top: 28, height: 32, below: 72 },
     world: null,
     view: { x: 0, y: 0, scale: 1 },
+    backdrop: '/images/camp/base/backdrop.jpg',
     base: [],
     decor: [],
     pets: [],
@@ -121,9 +122,10 @@ Page({
       beans: view.beans,
       canSpin: view.beans >= view.spinCost,
       world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
-      base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, config.campArt || '', night),
-      decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
-      bowls: V.bowlViews(view.bowls, L),
+      backdrop: V.backdropImage(night),
+      base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
+      decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night),
+      bowls: V.bowlViews(view.bowls, L, night),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
@@ -159,9 +161,11 @@ Page({
     this.nudgeView(V.homeView(this.L, this.win()))
   },
 
+  // 云端高清切块加载失败：不再铺切块，只剩包里的垫图（整张画的低清版）
   onBaseError() {
-    if (!config.campArt || !this.data.base.length || this.data.base[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ base: V.baseTiles(this.L, '', this.baseNight) })
+    if (this.baseFailed || !this.data.base.length) return
+    this.baseFailed = true
+    this.setData({ base: [] })
   },
 
   // 帐篷 / 锅的抠图层和火苗逐帧图的前缀；云存储的图加载失败过一次就一直用包里的
@@ -178,7 +182,7 @@ Page({
 
   onDecorError() {
     if (!config.decorArt || !this.camp) return
-    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '') })
+    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '', this.baseNight) })
   },
 
   onAnimError(e) {
@@ -207,6 +211,7 @@ Page({
       arrivals: view.arrivals || [],
       hour: this.hour || undefined,
       clock: this.clock || undefined,
+      random: this.random || undefined,
       sheets: SHEETS,
       animBase: config.animArt || '',
       bad: this.badSheets,

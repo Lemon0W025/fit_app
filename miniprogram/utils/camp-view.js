@@ -6,6 +6,7 @@ const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { DECOR, CATEGORIES, decorById, footRect } = require('./shared/decor')
 const { SCENE } = require('./shared/camp')
+const { nightLook, nightFilter } = require('./camp-light')
 
 const Z_DECOR = 100
 const MARGIN_RATIO = 0.6
@@ -34,8 +35,13 @@ function fromTouch(clientX, clientY, rect, L) {
 // 夜里（19～6 点）换整套夜景底图和抠图（文件名加 night-），白天 / 傍晚用日景（傍晚再叠一层橙色）
 const isNight = (hour) => hour >= 19 || hour < 6
 
+// 包里垫的整张画（768 宽的低清版）：一打开就有画，高清切块（云存储）下完盖在上面；切块之间缩放时露的细缝透出来的也是同一张画
+const backdropImage = (night) => `/images/camp/base/${night ? 'night-' : ''}backdrop.jpg`
+
+// 高清切块（云存储 4×4）；没有云端前缀（没配或加载失败过）就不铺，只剩垫图
 function baseTiles(L, base, night) {
-  const prefix = (base || '/images/camp/base/') + (night ? 'night-' : '')
+  if (!base) return []
+  const prefix = base + (night ? 'night-' : '')
   const tiles = []
   const tw = L.width / 4
   const th = L.height / 4
@@ -65,11 +71,12 @@ function patchView(d, x, y, L, base) {
   }
 }
 
-function decorViews(placed, L, base) {
+// night：夜里按站的位置调亮度和暖色（camp-light.js，照夜景的光算的），火边亮、远处暗
+function decorViews(placed, L, base, night) {
   return placed
     .map((p) => ({ p, d: decorById(p.id) }))
     .filter((x) => x.d)
-    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base) }))
+    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base), night: !!night, ...(night ? nightLook(p.x, p.y) : { light: '', moon: 0, moonLight: '' }) }))
     .sort((a, b) => a.z - b.z)
 }
 
@@ -119,7 +126,7 @@ function shopGroups(owned, beans) {
   }))
 }
 
-function bowlViews(bowls, L) {
+function bowlViews(bowls, L, night) {
   return SCENE.bowls.map(([bx, by], index) => {
     const b = (bowls && bowls[index]) || { food: null, peeking: null }
     const size = BOWL_PX * scaleAt(by) * L.k
@@ -133,6 +140,7 @@ function bowlViews(bowls, L) {
       foodImage: b.food ? foodImage(b.food) : '',
       peeking: b.peeking || '',
       peekImage: b.peeking ? petFace(b.peeking) : '',
+      light: night ? nightFilter(bx, by) : '',
     }
   })
 }
@@ -176,18 +184,58 @@ function potLevel(daily) {
   return Math.min(3, daily.stamps.filter((s) => s.state && s.state !== 'none').length)
 }
 
-// 帐篷和暖暖锅是从底图里抠出来的独立一层（zy 是它们落地的 y）：宠物走到后面被挡住、走到前面盖在上面。锅按今天打了几顿换图
-function cutoutViews(L, potLevel, base, night) {
-  const prefix = (base || '/images/camp/cut/') + (night ? 'night-' : '')
-  return Object.keys(SCENE.cutouts).map((key) => {
+// 前沿折线在 x 处的 y（两头以外按端点）
+function frontAt(front, x) {
+  if (x <= front[0][0]) return front[0][1]
+  for (let i = 1; i < front.length; i++) {
+    const [x0, y0] = front[i - 1]
+    const [x1, y1] = front[i]
+    if (x <= x1) return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0 || 1)
+  }
+  return front[front.length - 1][1]
+}
+
+// 抠图层按「条」排前后：一般一整块一条（按 zy）；帐篷这种前沿斜着的竖着切成 strip 宽的条，每条按自己那段前沿最靠上的点排
+// （宠物、装饰只要站在这段前沿前面就盖在这条上面，站在后面就被它挡住；禁区比前沿再往外留了一点，站得到的地方不会排错）
+function cutoutStrips() {
+  const out = []
+  Object.keys(SCENE.cutouts).forEach((key) => {
     const c = SCENE.cutouts[key]
     const [l, t, r, b] = c.box
-    const file = key === 'pot' ? `pot-${Math.min(3, Math.max(0, potLevel || 0))}.png` : `${key}.png`
-    return { key, image: prefix + file, left: fmt(l * L.k), top: fmt(t * L.k), width: fmt((r - l) * L.k), height: fmt((b - t) * L.k), z: zOf(c.zy) + 1 }
+    if (!c.front || !c.strip) {
+      out.push({ key, cut: key, l, t, r, b, zy: c.zy })
+      return
+    }
+    for (let x = l, i = 0; x < r; x += c.strip, i++) {
+      const xr = Math.min(r, x + c.strip)
+      let zy = Math.min(frontAt(c.front, x), frontAt(c.front, xr))
+      c.front.forEach(([fx, fy]) => {
+        if (fx > x && fx < xr) zy = Math.min(zy, fy)
+      })
+      out.push({ key: `${key}-${i}`, cut: key, l: x, t, r: xr, b, zy: Math.round(zy) })
+    }
+  })
+  return out
+}
+
+// 帐篷、暖暖锅、木盖、提灯是从底图里抠出来的独立一层：宠物、装饰走到后面被挡住、走到前面盖在上面。锅按今天打了几顿换图
+// 云端的是 WebP（真彩、小），包里兜底的是 PNG；一条只露出整张图的一段（外面一层 view 裁，里面整张图往左挪）
+function cutoutViews(L, potLevel, base, night) {
+  const prefix = (base || '/images/camp/cut/') + (night ? 'night-' : '')
+  const ext = base ? 'webp' : 'png'
+  return cutoutStrips().map((s) => {
+    const c = SCENE.cutouts[s.cut]
+    const file = s.cut === 'pot' ? `pot-${Math.min(3, Math.max(0, potLevel || 0))}` : s.cut
+    return {
+      key: s.key, image: `${prefix}${file}.${ext}`, z: zOf(s.zy) + 1,
+      left: fmt(s.l * L.k), top: fmt(s.t * L.k), width: fmt((s.r - s.l) * L.k), height: fmt((s.b - s.t) * L.k),
+      imgLeft: fmt((c.box[0] - s.l) * L.k), imgWidth: fmt((c.box[2] - c.box[0]) * L.k),
+    }
   })
 }
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews, isNight,
+  frontAt, cutoutStrips, BOWL_PX, backdropImage,
 }

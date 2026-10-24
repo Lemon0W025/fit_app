@@ -220,6 +220,8 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   const camp = loadPage('camp', wx)
   camp.clock = manualClock()
   camp.hour = () => 10
+  let seed = 7
+  camp.random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
   camp.onLoad()
   camp.onShow()
   await settle()
@@ -282,9 +284,13 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   // 直接喂：小米拖到豆豆身上
   camp.openBag()
   camp.pickFood(event({ id: 'xiaomi' }))
+  // 松手的点：在豆豆身上、不在糯糯身上（两只挨着的时候点到上面那只）
   const dd = camp.data.pets[0]
-  const px = dd.left + dd.width / 2
-  const py = camp.L.height - dd.bottom - dd.width / 2
+  const nn = camp.data.pets[1]
+  const inside = (s, x, y) => x >= s.left && x <= s.left + s.width && y >= camp.L.height - s.bottom - s.width && y <= camp.L.height - s.bottom
+  const spots = []
+  for (let fx = 0.1; fx < 1; fx += 0.2) for (let fy = 0.1; fy < 1; fy += 0.2) spots.push([dd.left + dd.width * fx, camp.L.height - dd.bottom - dd.width * fy])
+  const [px, py] = spots.find(([x, y]) => !inside(nn, x, y)) || spots[12]
   camp.onDragStart(touchAt(px, py))
   await settle()
   camp.onDragEnd(touchAt(px, py))

@@ -2,9 +2,8 @@
 
     python3 scripts/camp/blockout.py
 
-输出：miniprogram/images/camp/base/t00.jpg…t33.jpg（1536×1536 切 4×4，底图占位）、
-以上再出一套夜景 night-t00.jpg…（夜里 19～6 点页面整套换掉；帐篷 / 锅的抠图层由 scripts/camp/cutouts.py 从画上抠）、
-art/guide/camp-blockout.jpg（1152×1152，Codex 底稿）、art/guide/camp-blockout-labels.jpg（带名字，给人看）。需要 Pillow。
+输出：art/guide/camp-blockout.jpg（1152×1152，布局示意）、art/guide/camp-blockout-labels.jpg（带名字，给人看）。
+包里不再放白模切块：页面底下垫的是正式画缩小的那张（cut_art.py --backdrop），高清切块在云存储。需要 Pillow。
 """
 import json
 import os
@@ -14,10 +13,7 @@ import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
-OUT_TILES = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'base')
-OUT_CUT = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'cut')
 GUIDE = os.path.join(REPO, 'art', 'guide')
-FULL_W = 1536          # 包里占位底图的宽
 GUIDE_W = 1152
 
 DAY = dict(GRASS=(150, 205, 95), GRASS_DARK=(128, 182, 80), FOREST=(62, 118, 70), MOUNTAIN=(170, 196, 205), SKY=(218, 236, 244),
@@ -137,39 +133,12 @@ def draw(width, labels=False):
     return img
 
 
-def cutout(width, what, level=0):
-    """透明底上只画帐篷 / 锅，再裁成 SCENE.cutouts 的那块"""
-    S = scene()
-    k = width / S['width']
-    img = Image.new('RGBA', (width, round(S['height'] * k)), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    if what == 'tent':
-        draw_tent(d, S, k)
-    else:
-        draw_pot(d, S, k, level)
-    l, t, r, b = S['cutouts'][what]['box']
-    return img.crop((round(l * k), round(t * k), round(r * k), round(b * k)))
-
-
 def main():
-    os.makedirs(OUT_TILES, exist_ok=True)
-    os.makedirs(OUT_CUT, exist_ok=True)
     os.makedirs(GUIDE, exist_ok=True)
-    total = cuts = 0
-    for pfx, palette in [('', DAY), ('night-', NIGHT)]:
-        use(palette)
-        full = draw(FULL_W)
-        tw, th = full.width / 4, full.height / 4
-        for row in range(4):
-            for col in range(4):
-                tile = full.crop((round(col * tw), round(row * th), round((col + 1) * tw), round((row + 1) * th)))
-                path = os.path.join(OUT_TILES, f'{pfx}t{row}{col}.jpg')
-                tile.save(path, quality=72, optimize=True)
-                total += os.path.getsize(path)
     use(DAY)
     draw(GUIDE_W).save(os.path.join(GUIDE, 'camp-blockout.jpg'), quality=88)
     draw(GUIDE_W, labels=True).save(os.path.join(GUIDE, 'camp-blockout-labels.jpg'), quality=88)
-    print(f'日 / 夜底图各 16 块共 {total // 1024} KB；底稿和标注图已写入 art/guide/（抠图层由 cutouts.py 从画上抠）')
+    print('底稿和标注图已写入 art/guide/（底图垫图由 cut_art.py --backdrop 出，抠图层由 cutouts.py 从画上抠）')
 
 
 if __name__ == '__main__':

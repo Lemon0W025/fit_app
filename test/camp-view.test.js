@@ -21,11 +21,15 @@ test('campLayout：1 倍画宽占满屏幕，四周留白', () => {
 })
 
 test('baseTiles：16 块拼满整张画', () => {
-  const tiles = V.baseTiles(L, '')
+  const tiles = V.baseTiles(L, 'cloud://x/camp/base/')
   assert.equal(tiles.length, 16)
-  assert.equal(tiles[0].image, '/images/camp/base/t00.jpg')
-  assert.equal(tiles[15].image, '/images/camp/base/t33.jpg')
+  assert.equal(tiles[0].image, 'cloud://x/camp/base/t00.jpg')
+  assert.equal(tiles[15].image, 'cloud://x/camp/base/t33.jpg')
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/')[5].image, 'cloud://x/camp/base/t11.jpg')
+  // 没有云端切块就不铺，只剩包里的垫图
+  assert.deepEqual(V.baseTiles(L, ''), [])
+  assert.equal(V.backdropImage(false), '/images/camp/base/backdrop.jpg')
+  assert.equal(V.backdropImage(true), '/images/camp/base/night-backdrop.jpg')
   assert.ok(Math.abs(tiles[15].left + tiles[15].width - L.width) < 1e-6)
   assert.ok(Math.abs(tiles[15].top + tiles[15].height - L.height) < 1e-6)
 })
@@ -64,7 +68,6 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.ok(bowls[0].size > 0 && bowls[0].left > 0)
   assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', '', '', ''])
   assert.deepEqual([6, 12, 18, 19, 23, 3, 5].map(V.isNight), [false, false, false, true, true, true, true])
-  assert.equal(V.baseTiles(L, '', true)[0].image, '/images/camp/base/night-t00.jpg')
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/', true)[15].image, 'cloud://x/camp/base/night-t33.jpg')
   assert.deepEqual(V.arrivalCard({ id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯闻着胡萝卜的香味，搬进营地啦！' })
   assert.deepEqual(V.arrivalCard({ id: null, ate: 'doudou', foodId: 'xiaomi', foodName: '小米' }), { image: '/images/camp/pets/doudou.png', text: '豆豆把食盆里的小米吃了，营地里没有别的小动物爱吃它啦' })
@@ -82,15 +85,49 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.equal(V.potLevel(null), 0)
   assert.equal(V.potLevel({ stamps: [{ state: 'none' }, { state: 'green' }, { state: 'yellow' }] }), 2)
   assert.equal(V.potLevel({ stamps: [{ state: 'green' }, { state: 'green' }, { state: 'red' }] }), 3)
-  // 抠图层：帐篷一张、锅按层数换图；帐篷在后、锅在前
+})
+
+test('抠图层：锅按层数换图；云端 WebP、包里 PNG；帐篷竖着切成条，每条按自己那段前沿排', () => {
   const cuts = V.cutoutViews(L, 2, '')
   const by = (list, key) => list.find((c) => c.key === key)
-  assert.equal(cuts.length, Object.keys(SCENE.cutouts).length)
-  assert.equal(by(cuts, 'tent').image, '/images/camp/cut/tent.png')
   assert.equal(by(cuts, 'pot').image, '/images/camp/cut/pot-2.png')
-  assert.ok(by(cuts, 'tent').z < by(cuts, 'pot').z && by(cuts, 'pot').z > V.Z_DECOR)
-  assert.ok(Math.abs(by(cuts, 'pot').left - SCENE.cutouts.pot.box[0] * L.k) < 0.011 && by(cuts, 'pot').width > 0)
   assert.equal(by(V.cutoutViews(L, 0, ''), 'pot').image, '/images/camp/cut/pot-0.png')
-  assert.equal(by(V.cutoutViews(L, 9, 'cloud://x/camp/cut/'), 'pot').image, 'cloud://x/camp/cut/pot-3.png')
-  assert.deepEqual(['tent', 'pot'].map((k) => by(V.cutoutViews(L, 1, '', true), k).image), ['/images/camp/cut/night-tent.png', '/images/camp/cut/night-pot-1.png'])
+  assert.equal(by(V.cutoutViews(L, 9, 'cloud://x/camp/cut/'), 'pot').image, 'cloud://x/camp/cut/pot-3.webp')
+  assert.deepEqual(['tent-0', 'pot'].map((k) => by(V.cutoutViews(L, 1, '', true), k).image), ['/images/camp/cut/night-tent.png', '/images/camp/cut/night-pot-1.png'])
+  assert.equal(by(V.cutoutViews(L, 1, 'cloud://x/', true), 'lantern').image, 'cloud://x/night-lantern.webp')
+  // 锅、木盖、提灯各一整块：图不挪、宽度就是框宽
+  ;['pot', 'lid', 'lantern'].forEach((key) => {
+    const c = by(cuts, key)
+    const [l, t, r, b] = SCENE.cutouts[key].box
+    assert.ok(Math.abs(c.left - l * L.k) < 0.011 && Math.abs(c.width - (r - l) * L.k) < 0.011 && Math.abs(c.top - t * L.k) < 0.011 && Math.abs(c.height - (b - t) * L.k) < 0.011, key)
+    assert.equal(c.imgLeft, 0)
+    assert.equal(c.imgWidth, c.width)
+    assert.equal(c.z, V.zOf(SCENE.cutouts[key].zy) + 1)
+  })
+  // 帐篷的条：首尾相接盖满整个框，都用同一张图、图往左挪到对齐
+  const tent = SCENE.cutouts.tent
+  const strips = V.cutoutStrips().filter((s) => s.cut === 'tent')
+  assert.equal(strips.length, Math.ceil((tent.box[2] - tent.box[0]) / tent.strip))
+  assert.equal(strips[0].l, tent.box[0])
+  assert.equal(strips[strips.length - 1].r, tent.box[2])
+  strips.forEach((s, i) => {
+    if (i) assert.equal(s.l, strips[i - 1].r)
+    const v = by(cuts, s.key)
+    assert.equal(v.image, '/images/camp/cut/tent.png')
+    assert.ok(Math.abs(v.left - s.l * L.k) < 0.011 && Math.abs(v.left + v.imgLeft - tent.box[0] * L.k) < 0.03, s.key)
+    assert.ok(Math.abs(v.imgWidth - (tent.box[2] - tent.box[0]) * L.k) < 0.011)
+    // 每条按它那段前沿最靠上的点排
+    assert.ok(s.zy <= V.frontAt(tent.front, s.l) + 0.5 && s.zy <= V.frontAt(tent.front, s.r) + 0.5, s.key)
+  })
+  // 帐篷门口睡觉的点：盖在挨着的每一条帐篷上面（不会被门帘挡住半个身子）
+  SCENE.tent.spots.forEach(([x, y]) => {
+    strips.filter((s) => s.l < x + 160 && s.r > x - 160).forEach((s) => assert.ok(V.zOf(y) + 1 > V.zOf(s.zy) + 1, `spot ${x},${y} vs ${s.key}`))
+  })
+  // 锅后面的点被锅挡住，锅前面的点盖在锅上面
+  assert.ok(V.zOf(2400) + 1 < by(cuts, 'pot').z)
+  assert.ok(V.zOf(3150) + 1 > by(cuts, 'pot').z)
+  // 前沿折线：两头以外按端点，中间线性
+  assert.equal(V.frontAt([[0, 10], [100, 30]], -5), 10)
+  assert.equal(V.frontAt([[0, 10], [100, 30]], 50), 20)
+  assert.equal(V.frontAt([[0, 10], [100, 30]], 500), 30)
 })

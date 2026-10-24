@@ -3,8 +3,12 @@
     python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出两块给 Codex：art/raw/cut/in-tent.png、in-pot.png（范围是 shared/camp.js 的 SCENE.cutouts）
     python3 scripts/camp/cutouts.py [--local]                           # 合成 art/cut/tent.png、pot-0.png～pot-3.png；--local 再写 1/4 小图到 miniprogram/images/camp/cut/
     加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-tent.png、night-pot-N.png）
-    python3 scripts/camp/cutouts.py --from-base [art/raw/camp/camp-hd.png] [--night] [--local]
-        不等 Codex 的「去掉」版，直接按 SCENE.cutouts 里量好的轮廓 poly 从画上抠（羽化边），锅里的内容由 pot_fill.py 画在锅口里；Codex 的 B 批出了再覆盖
+    python3 scripts/camp/cutouts.py --from-base [--local] [--check out-dir]
+        不等 Codex 的「去掉」版，直接从画上抠出物件本身的精确轮廓（日景、夜景一起出）：
+        poly 只圈个大概，圈里按颜色去掉草地（偏绿）、树林深处的暗青，只留和物件身上几个点（SEEDS）连着的那一大块（草里的花、碎叶断开就丢了），
+        边缘按「像草的程度」留半透明；夜景构图和日景一样，直接用日景算出的轮廓。锅里的内容由 pot_fill.py 画在锅口里。
+        日景按 0.75（和底图切块一样 3072 宽）、夜景按 0.5（2048 宽）出，像素和底图切块对齐；--check 把每张抠图贴在品红底上存一份看边
+        Codex 的 B 批出了再用下面的比对法覆盖
 
 Codex 在裁出来的块上用 edit 画（其他像素不动）：
     out-tent-removed.png   把帐篷整个去掉，补成草地和后面的树林       → 和 in 比对得到帐篷的范围 → tent.png
@@ -29,40 +33,147 @@ LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'cut')
 DIFF_MIN = 40
 LOCAL_SCALE = 0.3      # 本地小图相对云端图的比例（只是云端加载失败时的兜底）
 CLOUD_SCALE = 0.5      # 兜底比例（没传 scale 时）
-CLOUD_TARGET = 1800    # 云端抠图相当于整画多少像素宽：画上 1440 像素宽的帐篷在手机上最大也就 600 多设备像素
+DAY_RES = 0.75         # 日景抠图的分辨率（相对 4096 的画）：和日景底图切块一样，盖上去像素对得上、不糊
+NIGHT_RES = 0.5        # 夜景：和夜景底图切块一样
+LOCAL_RES = 0.16       # 包里的兜底小图
+DAY_HD = os.path.join(REPO, 'art', 'raw', 'camp', 'camp-hd.png')
+NIGHT_HD = os.path.join(REPO, 'art', 'raw', 'camp', 'night-hd.png')
+# 物件身上的几个点（画的像素）：只留和它们连着的那一大块
+SEEDS = {
+    'tent': [(600, 800), (1000, 1100), (1350, 1150), (250, 1150), (700, 1400), (1530, 1200)],
+    'pot': [(2050, 2550), (2100, 1830), (2055, 2080), (1690, 2520), (2550, 2700), (2470, 2470)],
+    'lid': [(1680, 2840)],
+    'lantern': [(2665, 2760), (2665, 2610), (2668, 2530)],
+}
 
 
 def scene():
-    js = "const C=require('./cloudfunctions/api/lib/shared/camp');console.log(JSON.stringify({W:C.W,cutouts:C.SCENE.cutouts,fire:C.SCENE.fire}))"
+    js = "const C=require('./cloudfunctions/api/lib/shared/camp');console.log(JSON.stringify({W:C.W,cutouts:C.SCENE.cutouts,fire:C.SCENE.fire,flame:C.SCENE.flame}))"
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
-def from_base(image, night, local):
-    """按 poly 轮廓从整画上抠：alpha = 多边形（羽化），锅再按 rim 画 1～3 层内容（pot_fill.py）"""
-    S = scene()
-    img = Image.open(image).convert('RGB')
+def smooth(lo, hi, v):
+    t = np.clip((v - lo) / (hi - lo), 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def objectness(rgb):
+    """每个像素「是物件不是草地」的程度 0～1：
+    草地和叶子绿得多（G 占 RGB 的比例高、G 比 R、B 都大一截），帐篷的橄榄绿、木头、锅、石头、绳子都不算；树林深处暗青色的也算背景"""
+    a = np.asarray(rgb).astype(np.float32)
+    R, G, B = a[..., 0], a[..., 1], a[..., 2]
+    grass = smooth(0.415, 0.45, G / (R + G + B + 1)) * smooth(10, 22, G - np.maximum(R, B))
+    forest = (np.maximum(np.maximum(R, G), B) < 110) & (G >= R) & (B >= R - 10)
+    return (1 - grass) * ~forest
+
+
+def poly_mask(size, polys, k, l, t, grow=0):
+    m = Image.new('L', size, 0)
+    d = ImageDraw.Draw(m)
+    for poly in polys:
+        d.polygon([(x * k - l, y * k - t) for x, y in poly], fill=255)
+    if grow:
+        m = m.filter(ImageFilter.MaxFilter(2 * grow + 1))
+    return np.asarray(m) > 0
+
+
+def bitmap(a):
+    return Image.fromarray(a.astype(np.uint8) * 255)
+
+
+def reconstruct(seed, mask):
+    """seed 在 mask 里一圈圈长，长到不再变：mask 里和 seed 连着的部分"""
+    cur = bitmap(seed & mask)
+    m = np.asarray(bitmap(mask))
+    prev = -1
+    while True:
+        for _ in range(25):
+            cur = Image.fromarray(np.minimum(np.asarray(cur.filter(ImageFilter.MaxFilter(3))), m))
+        total = int(np.asarray(cur).sum())
+        if total == prev:
+            return np.asarray(cur) > 0
+        prev = total
+
+
+def object_alpha(img, key, S):
+    """在高清日景上抠 key 的精确轮廓：返回 box 那块的 alpha（L 模式，img 的分辨率）"""
     k = img.width / S['W']
-    pfx = 'night-' if night else ''
-    scale = min(1.0, CLOUD_TARGET / img.width)   # 按 4096 尺度算：日景高清 3641 宽就缩一半，夜景 1903 宽基本不缩
+    c = S['cutouts'][key]
+    l, t, r, b = [round(v * k) for v in c['box']]
+    crop = img.crop((l, t, r, b))
+    obj = objectness(crop) * poly_mask(crop.size, [c['poly']], k, l, t, grow=4)
+    if key == 'pot':
+        # 木盖在锅前面，自己一层；火苗在锅底下那层逐帧动：都不抠进锅里
+        cut = poly_mask(crop.size, [S['cutouts']['lid']['poly'], S['flame']['zone']], k, l, t, grow=2)
+        obj = obj * ~cut
+    hard = obj > 0.5
+    seed = np.zeros_like(hard)
+    for x, y in SEEDS[key]:
+        X, Y = round(x * k - l), round(y * k - t)
+        if not hard[Y, X]:
+            raise SystemExit(f'{key} 的种子点 ({x}, {y}) 不在物件上：画换了就重新量 SEEDS')
+        seed[Y - 3:Y + 4, X - 3:X + 4] = True
+    # 先开运算（细的花茎、草叶连着的地方断开），从种子长出物件那一大块，再放回被开运算削掉的边
+    opened = np.asarray(bitmap(hard).filter(ImageFilter.MinFilter(5)).filter(ImageFilter.MaxFilter(5))) > 0
+    core = reconstruct(seed, opened)
+    keep = (np.asarray(bitmap(core).filter(ImageFilter.MaxFilter(7))) > 0) & hard
+    near = np.asarray(bitmap(keep).filter(ImageFilter.MaxFilter(5))) > 0
+    # 边缘按「像草的程度」留半透明，再往里收一像素：挡在宠物前面时不带一圈草绿
+    alpha = Image.fromarray((obj * near * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.GaussianBlur(0.7))
+    return alpha
+
+
+def from_base(local, check=None):
+    """日景、夜景的抠图层一起出：轮廓在高清日景上算一次，两套共用"""
+    S = scene()
+    W = S['W']
+    day_hd = Image.open(DAY_HD).convert('RGB')
+    # 和 cut_art.py 一样先把整张画缩到底图切块的分辨率再裁：抠图的像素和底图一模一样
+    full = {
+        '': day_hd.resize((round(W * DAY_RES),) * 2, Image.LANCZOS),
+        'night-': Image.open(NIGHT_HD).convert('RGB').resize((round(W * NIGHT_RES),) * 2, Image.LANCZOS),
+    }
+    tone = night_tone()
     os.makedirs(OUT, exist_ok=True)
+    if check:
+        os.makedirs(check, exist_ok=True)
     for key, c in S['cutouts'].items():
-        if not c.get('poly'):
-            continue
-        l, t, r, b = [round(v * k) for v in c['box']]
-        crop_rgb = img.crop((l, t, r, b))
-        mask = Image.new('L', crop_rgb.size, 0)
-        ImageDraw.Draw(mask).polygon([(x * k - l, y * k - t) for x, y in c['poly']], fill=255)
-        mask = mask.filter(ImageFilter.GaussianBlur(max(2, 6 * k)))
-        levels = [0, 1, 2, 3] if key == 'pot' else [None]
-        for n in levels:
-            rgb = crop_rgb.copy()
-            alpha = mask
-            if n:
-                cx, cy, rx, ry = c['rim']
-                rgb = fill(crop_rgb, n, (cx * k - l, cy * k - t, rx * k, ry * k), night_tone() if night else None)
-            name = f'{pfx}{key}{"-" + str(n) if n is not None else ""}.png'
-            emit(rgb, alpha, name, local, scale)
-    print(f'→ {OUT}（按轮廓抠的过渡版）；接着 npm run wx:art')
+        alpha_hd = object_alpha(day_hd, key, S)
+        for pfx, img in full.items():
+            res = img.width / W
+            box = [round(v * res) for v in c['box']]
+            crop = img.crop(box)
+            alpha = alpha_hd.resize(crop.size, Image.LANCZOS)
+            for n in ([0, 1, 2, 3] if key == 'pot' else [None]):
+                rgb = crop
+                if n:
+                    cx, cy, rx, ry = c['rim']
+                    rgb = fill(crop, n, (cx * res - box[0], cy * res - box[1], rx * res, ry * res), tone if pfx else None)
+                name = f'{pfx}{key}{"-" + str(n) if n is not None else ""}.png'
+                emit_full(rgb, alpha, name, local, res)
+                if check and n in (None, 0):
+                    on = Image.new('RGBA', rgb.size, (255, 0, 255, 255))
+                    piece = rgb.convert('RGBA')
+                    piece.putalpha(alpha)
+                    on.alpha_composite(piece)
+                    on.convert('RGB').save(os.path.join(check, name.replace('.png', '-on-magenta.jpg')), quality=88)
+    print(f'→ {OUT}（从画上抠的精确轮廓）；接着 npm run wx:art -- cut')
+
+
+def emit_full(rgb, alpha, name, local, res):
+    """云端：WebP（有损 q90 + 无损透明，真彩 PNG 的十分之一大；页面的 image 带 webp 属性，iOS 也能解）；
+    包里：缩到 LOCAL_RES 的 256 色 PNG（云端那张加载失败时的兜底）"""
+    rgba = rgb.convert('RGBA')
+    rgba.putalpha(alpha)
+    a = np.array(rgba)
+    a[a[:, :, 3] == 0] = 0
+    rgba = Image.fromarray(a)
+    path = os.path.join(OUT, name.replace('.png', '.webp'))
+    rgba.save(path, 'WEBP', quality=90, method=6)
+    if local:
+        os.makedirs(LOCAL, exist_ok=True)
+        small_png(rgba, LOCAL_RES / res).save(os.path.join(LOCAL, name), optimize=True)
+    print(f'  ✓  {os.path.basename(path)}  {rgba.width}×{rgba.height}  {os.path.getsize(path) // 1024} KB')
 
 
 def crop(image, pfx):
@@ -142,10 +253,11 @@ def main():
     ap.add_argument('--local', action='store_true')
     ap.add_argument('--night', action='store_true')
     ap.add_argument('--from-base', action='store_true')
+    ap.add_argument('--check', default=None)
     a = ap.parse_args()
     pfx = 'night-' if a.night else ''
     if a.from_base:
-        from_base(a.image if a.image != ap.get_default('image') or not a.night else os.path.join(REPO, 'art', 'raw', 'camp', 'night-hd.png'), a.night, a.local)
+        from_base(a.local, a.check)
     elif a.crop:
         crop(a.image if not a.night or a.image != ap.get_default('image') else os.path.join(REPO, 'art', 'raw', 'camp', 'night-hd.png'), pfx)
     else:

@@ -619,8 +619,10 @@ button.btn-small {
 }
 
 /* ---- 营地专用 ---- */
+.backdrop { position: absolute; left: 0; top: 0; display: block; }
 .base { position: absolute; display: block; }
-.cut { position: absolute; display: block; pointer-events: none; }
+.cut { position: absolute; overflow: hidden; pointer-events: none; }
+.cut-img { position: absolute; top: 0; display: block; max-width: none; }
 .decor { position: absolute; display: block; }
 .ghosted { opacity: 0.6; }
 .bowl { position: absolute; }
@@ -637,6 +639,10 @@ button.btn-small {
 .pet-body { position: relative; width: 100%; }
 .pet-body.flip { transform: scaleX(-1); }
 .pet-img { display: block; width: 100%; transform-origin: 50% 100%; }
+/* 夜里盖在本体上的月光版（同一张图去色染成夜色的蓝白，不透明度跟着站的地方变）：和本体同一套动画，叠得严丝合缝 */
+.pet-img.moon { position: absolute; left: 0; top: 0; pointer-events: none; }
+.anim-strip.moon { pointer-events: none; }
+.decor-moon { pointer-events: none; }
 .pet-img.gait-on { animation: trot 0.42s ease-in-out infinite; }
 @keyframes trot { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-6%) rotate(2deg); } }
 .act-idle { animation: breathe 2.4s ease-in-out infinite; }
