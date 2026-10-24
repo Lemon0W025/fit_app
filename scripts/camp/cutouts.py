@@ -1,8 +1,8 @@
 """帐篷和暖暖锅的「抠图层」：从高清营地图里把它们抠成独立的透明图，盖在底图上，宠物走到后面就被挡住；锅还按今天打了几顿换图
 
-    python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出两块给 Codex：art/raw/cut/in-tent.png、in-pot.png（范围是 shared/camp.js 的 SCENE.cutouts）
-    python3 scripts/camp/cutouts.py [--local]                           # 合成 art/cut/tent.png、pot-0.png～pot-3.png；--local 再写 1/4 小图到 miniprogram/images/camp/cut/
-    加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-tent.png、night-pot-N.png）
+    python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出给 Codex 的块：art/raw/cut/in-pot.png 等（范围是 shared/camp.js 的 SCENE.cutouts）
+    python3 scripts/camp/cutouts.py [--local]                           # 用 Codex 画的 out-pot-1～3 换掉锅里的过渡版
+    加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-pot-N）
     python3 scripts/camp/cutouts.py --from-base [--local] [--check out-dir]
         不等 Codex 的「去掉」版，直接从画上抠出物件本身的精确轮廓（日景、夜景一起出）：
         poly 只圈个大概，圈里按颜色去掉草地（偏绿）、树林深处的暗青，只留和物件身上几个点（SEEDS）连着的那一大块（草里的花、碎叶断开就丢了），
@@ -10,10 +10,9 @@
         日景按 0.75（和底图切块一样 3072 宽）、夜景按 0.5（2048 宽）出，像素和底图切块对齐；--check 把每张抠图贴在品红底上存一份看边
         Codex 的 B 批出了再用下面的比对法覆盖
 
-Codex 在裁出来的块上用 edit 画（其他像素不动）：
-    out-tent-removed.png   把帐篷整个去掉，补成草地和后面的树林       → 和 in 比对得到帐篷的范围 → tent.png
-    out-pot-removed.png    把锅和三脚架去掉，只留篝火石圈和草地         → 和 in 比对得到锅的范围 → pot-0.png（空锅，像素取自 in）
-    out-pot-1/2/3.png      锅里一层粥底 / 加了菜 / 满锅冒热气           → 锅的范围 ∪ 画了内容的范围 → pot-1～3.png
+Codex 在裁出来的锅那块上用 edit 画（其他像素不动）：
+    out-pot-1/2/3.png      锅里一层粥底 / 加了菜 / 满锅冒热气           → 精确轮廓 ∪ 画了内容的地方 → pot-1～3（替换 pot_fill.py 画的过渡版）
+（以前还要 Codex 画「去掉帐篷 / 去掉锅」两版来比对范围，现在 --from-base 直接从画上抠精确轮廓，不需要了）
 需要 Pillow 和 numpy。
 """
 import argparse
@@ -222,28 +221,28 @@ def emit(rgb, alpha, name, local, scale=CLOUD_SCALE):
 
 
 def build(local, pfx):
-    os.makedirs(OUT, exist_ok=True)
-    tent_in = load(f'in-{pfx}tent.png')
-    tent_removed = load(f'out-{pfx}tent-removed.png', tent_in.size) if tent_in else None
-    if tent_in and tent_removed:
-        emit(tent_in, mask_between(tent_in, tent_removed), f'{pfx}tent.png', local)
-    else:
-        print(f'  ·  帐篷：还没有 in-{pfx}tent.png / out-{pfx}tent-removed.png')
+    """Codex 画好了锅里三态（out-pot-1～3）：锅的范围用从画上抠的精确轮廓，再并上 Codex 画了东西的地方（锅里的内容、锅口上的热气）。
+    帐篷、空锅不用 Codex 的「去掉」版了（from_base 直接抠得准），这里只换锅里的 1～3 层。"""
+    S = scene()
+    c = S['cutouts']['pot']
     pot_in = load(f'in-{pfx}pot.png')
-    pot_removed = load(f'out-{pfx}pot-removed.png', pot_in.size) if pot_in else None
-    if not (pot_in and pot_removed):
-        print(f'  ·  锅：还没有 in-{pfx}pot.png / out-{pfx}pot-removed.png')
+    if not pot_in:
+        print(f'  ·  还没有 in-{pfx}pot.png（先 python3 scripts/camp/cutouts.py --crop{" --night" if pfx else ""}）')
         return
-    pot_mask = mask_between(pot_in, pot_removed)
-    emit(pot_in, pot_mask, f'{pfx}pot-0.png', local)
+    base_alpha = object_alpha(Image.open(DAY_HD).convert('RGB'), 'pot', S).resize(pot_in.size, Image.LANCZOS)
+    res = NIGHT_RES if pfx else DAY_RES
+    size = (round((c['box'][2] - c['box'][0]) * res), round((c['box'][3] - c['box'][1]) * res))
+    os.makedirs(OUT, exist_ok=True)
+    done = 0
     for n in (1, 2, 3):
         out = load(f'out-{pfx}pot-{n}.png', pot_in.size)
         if not out:
             print(f'  ·  还没有 out-{pfx}pot-{n}.png')
             continue
-        alpha = Image.fromarray(np.maximum(np.array(pot_mask), np.array(mask_between(pot_in, out))))
-        emit(out, alpha, f'{pfx}pot-{n}.png', local)
-    print(f'→ {OUT}；接着 npm run wx:art，把前缀填进 miniprogram/config.js 的 cutArt')
+        alpha = Image.fromarray(np.maximum(np.array(base_alpha), np.array(mask_between(pot_in, out))))
+        emit_full(out.resize(size, Image.LANCZOS), alpha.resize(size, Image.LANCZOS), f'{pfx}pot-{n}.png', local, res)
+        done += 1
+    print(f'→ {OUT}（锅里 {done} 层换成 Codex 画的）；scripts/wechat.js 的 CUT_VERSION 加一，npm run wx:art -- cut，把前缀填进 config.cutArt')
 
 
 def main():

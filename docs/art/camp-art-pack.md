@@ -46,11 +46,10 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带
 SHEET RULES / ANIMATION SHEET RULES）；输出路径和 art/manifest.json 里的一致；每出一张就跑
 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
-3. 帐篷和锅的抠图 + 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-tent.png、in-pot.png，
-   按第 1b 节用 edit 画 out-tent-removed.png（把帐篷整个去掉）、out-pot-removed.png（把锅和三脚架去掉）、
-   out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），每张只改该改的地方，其他像素不动。
-   夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-tent.png、in-night-pot.png，
-   画 out-night-tent-removed.png、out-night-pot-removed.png、out-night-pot-1/2/3.png。
+3. 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-pot.png，按第 1b 节用 edit 画
+   out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），只改锅口里面（和锅口上方一点热气），其他像素不动。
+   夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-pot.png，画 out-night-pot-1/2/3.png。
+   （帐篷、锅「去掉」的版本不用画了：抠图已经直接从画上抠出精确轮廓。）
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
@@ -184,22 +183,20 @@ Do not add or remove anything. Same lighting.
 
 然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
 
-### 1b. 帐篷和锅的抠图、锅的三种状态 `art/raw/cut/out-*.png`
+### 1b. 锅的三种状态 `art/raw/cut/out-pot-*.png`
 
-帐篷和锅在游戏里是从底图里抠出来单独的一层：宠物走到它们后面会被挡住。锅还是营地的中心：妈妈今天打了几顿正餐，锅里就有几层。做法是你把它们「去掉」一版，脚本比对就知道它们的范围。
+帐篷、锅连三脚架、木盖、提灯在游戏里是从底图里抠出来单独的一层（宠物走到它们后面会被挡住）。这几层由脚本直接从画上抠精确轮廓
+（`cutouts.py --from-base`，按颜色去掉草地、只留物件本身），**不需要你画「去掉」的版本**。只要锅里的内容：妈妈今天打了几顿正餐，锅里就有几层
+（现在是脚本画的过渡版，你画的会更好看）。
 
-1. `python3 scripts/camp/cutouts.py --crop` 从高清营地图裁出两块：`art/raw/cut/in-tent.png`（帐篷连周围）、`in-pot.png`（锅连篝火圈）。
-2. 用 edit 画，**每张只改该改的地方，其他像素一概不动**，尺寸和 in 一样：
-   - `out-tent-removed.png`：把帐篷整个去掉，那块补成草地和后面的树林，像从来没有帐篷
-   - `out-pot-removed.png`：把锅和三脚架去掉，只留篝火石圈、火和草地
+1. `python3 scripts/camp/cutouts.py --crop` 从高清营地图裁出锅那块 `art/raw/cut/in-pot.png`（夜景加 `--night` → `in-night-pot.png`）。
+2. 用 edit 画，**只改锅口里面（和锅口正上方一点点热气），其他像素一概不动**，尺寸和 in 一样：
    - `out-pot-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
    - `out-pot-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
    - `out-pot-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
-3. `python3 scripts/camp/cutouts.py` 比对 in / out 得到帐篷和锅的范围，合成 `art/cut/tent.png`、`pot-0.png`（空锅）～`pot-3.png`。
+3. `python3 scripts/camp/cutouts.py` 用精确轮廓 ∪ 你画了内容的地方，合成 `pot-1`～`pot-3`。
 
 ```
-PROMPT（去掉）: Edit this crop of the camp scene: remove the <tent / cooking pot and its tripod> completely and fill
-that area with the same meadow grass (and forest) as around it, seamless, same lighting. Change nothing else.
 PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
 满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, same camera angle, same soft light. Change ONLY the inside of the pot
 (and the faint steam right above it); the pot, tripod, fire, stones and grass must stay pixel-identical. UNIFIED STYLE.
@@ -308,6 +305,9 @@ mirrors it for the other side). Each row is one looping action of 6 frames, rows
 No props unless stated, no ground, no shadow, no text, no frame numbers. Transparent background.
 ```
 
+为什么这样要求（和营地的画融在一起靠这几条）：游戏会按宠物站的位置给它加脚下的软影子、夜里按画上的光给它调亮暗和冷暖（火边暖、远处是月光的蓝白），
+走到锅、帐篷、木盖后面会被正确挡住——所以宠物本身**不要画影子、不要画地面、不要画夜色或火光**，光一律左上方、亮度中等的白天光，颜色饱和度和营地的画差不多（别比画更艳）。
+
 ### 3.3 图册插画 `art/raw/pets/<id>-album.png`（1:1，透明底，1024 以上）
 
 坐着的正面偏 3/4 姿势，看着观众，最可爱的一张，图册里当大头照。
@@ -335,7 +335,7 @@ No props unless stated, no ground, no shadow, no text, no frame numbers. Transpa
 
 ## 4. 食物图标 `art/raw/ui/foods.png`（1:1，6×6，前 33 格）
 
-每格一样食物，chibi 风格的小图标（像游戏道具），顺序按 `shared/foods.js`：
+每格一样食物，chibi 风格的小图标（像游戏道具），用在背包、扭蛋、图册里（放进食盆后，碗里那一小堆是脚本按食物的颜色画的，碗沿从画上抠，不用你画）。顺序按 `shared/foods.js`：
 
 | 格 | 食物 |
 |---|---|
@@ -369,8 +369,9 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `npm run wx:art` 传云存储 → `config.campArt`
-- 帐篷 / 锅：`cutouts.py`（不带 `--from-base`）用 Codex 的「去掉」版和锅里三态覆盖过渡版 → `fx_art.py` 重出篝火逐帧（画换了才要）→ `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`
-- 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`
+- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
+- 底图：`cut_art.py` 顺手把 768 宽的垫图写进包里（`images/camp/base/backdrop.jpg`、`night-backdrop.jpg`）
+- 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）
 - 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）
 - 食物、界面：`slice-art.py` 加两条 SHEETS（`ui/foods.png` → `images/camp/foods/`，`ui/camp-icons.png` → `images/garden/ui/`）切成单张
-- 每批接完 `npm test`、截图核对、`npm run wx:preview`
+- 每批接完 `npm test`、`node scripts/preview/record-camp.js` 录屏逐帧看（锅后面、木盖旁、提灯旁、帐篷门口、夜里的光）、`npm run wx:preview`
