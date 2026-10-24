@@ -28,7 +28,7 @@
 |---|---|
 | `cloudfunctions/**` | `npm run wx:function` |
 | `miniprogram/**` | `npm run wx:preview`，把 `.wechat/preview-qrcode.jpg` 发给用户扫码；确认后 `npm run wx:upload -- <版本号> <描述>` |
-| 营地整图 `art/raw/camp/camp-hd.png` | `python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png`，然后 `npm run wx:art`，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `campArt`（高清：`detail_crops.py` → Codex 逐块重绘 → `merge_details.py`） |
+| 营地整图 `art/raw/camp/camp-hd.png` | `python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png`，然后 `npm run wx:art`，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `campArt`（高清：`detail_crops.py` → Codex 逐块重绘 → `merge_details.py`；模型只出 2:3，整图先 `pad23.py` 补边、生成后 `--crop` 裁回；Codex 每批的完整步骤在工单开头「执行流程」） |
 | 装饰原地重绘 `art/raw/decor/out-*.png` | `python3 scripts/camp/decor_patch.py`（之前先用 `decor_crop.py` 裁空草地给 Codex），然后 `npm run wx:art`，前缀填进 `config.decorArt` |
 | 动画拼图 `art/raw/anim/<id>-a.png`、`<id>-b.png` | `python3 scripts/pack_anim.py`，然后 `npm run wx:art`，前缀填进 `config.animArt` |
 | 其他 Codex 出的图 `art/raw/**` | `python3 scripts/art/check_art.py` 自检（清单 `art/manifest.json`），界面图标 `python3 scripts/slice-art.py`，宠物图册插画和食物图标的切法见 `docs/art/camp-art-pack.md` |

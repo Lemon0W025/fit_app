@@ -2,8 +2,9 @@
 
     python3 scripts/camp/decor_crop.py [art/raw/camp/camp-hd.png] [--ids tent,ball]
 
-每件装饰裁一块 patch × 1.25 的草地（按 shared/decor.js 的块大小，高清图按 3072 宽换算），位置自动挑在草地里离禁区远的地方，
-存成 art/raw/decor/in-<id>.png，并把裁的位置写进 art/raw/decor/boxes.json。
+每件装饰裁一块正方形草地（边长 = shared/decor.js 的块大小 × 1.25 里较长的那边，高清图按 3072 宽换算；正方形是因为图像模型的
+edit 只出 1024×1024，这样 out 和 in 不会变形），位置自动挑在草地里离禁区远的地方，存成 art/raw/decor/in-<id>.png，
+并把裁的位置写进 art/raw/decor/boxes.json。
 Codex 把装饰画在这块草地上（其他像素不动）存成 out-<id>.png，再跑 decor_patch.py 裁成带羽化边的块。需要 Pillow。
 """
 import argparse
@@ -45,10 +46,11 @@ def main():
             continue
         cx, cy = spots[i % len(spots)]
         w, h = dc['patch']['w'] * MARGIN, dc['patch']['h'] * MARGIN
-        # 以落脚点为准：块的 anchor 对着 (cx, cy)
-        left = cx - dc['anchor']['x'] * MARGIN
-        top = cy - dc['anchor']['y'] * MARGIN
-        box = [round(left * k), round(top * k), round((left + w) * k), round((top + h) * k)]
+        # 以落脚点为准：块的 anchor 对着 (cx, cy)，再往外扩成正方形
+        side = max(w, h)
+        left = cx - dc['anchor']['x'] * MARGIN - (side - w) / 2
+        top = cy - dc['anchor']['y'] * MARGIN - (side - h) / 2
+        box = [round(left * k), round(top * k), round((left + side) * k), round((top + side) * k)]
         img.crop(box).save(os.path.join(OUT, f'in-{dc["id"]}.png'))
         boxes[dc['id']] = {'box': box, 'anchor': [cx, cy], 'k': k}
     json.dump(boxes, open(os.path.join(OUT, 'boxes.json'), 'w'), indent=1)

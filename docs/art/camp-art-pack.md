@@ -12,6 +12,58 @@
 | 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
 | 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
 
+## 执行流程（照这个顺序喂 Codex）
+
+**准备（一次）**：在仓库根目录打开 Codex，环境里要有 `python3`（`pip install pillow numpy`）和 `node`。每一批开一个新对话，把下面对应的开场指令整段粘进去。Codex 中途会停下来给你看图（营地整图、宠物定稿），你回「可以」或者写改意见，它再往下做。
+
+**第 1 批开场指令**（整段粘给 Codex）：
+
+```
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批」。先把这个文件和
+docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带
+SHEET RULES / ANIMATION SHEET RULES）；输出路径和 art/manifest.json 里的一致；每出一张就跑
+python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
+1. 营地整图：python3 scripts/camp/pad23.py art/guide/camp-blockout.jpg -o art/raw/camp/blockout-23.png，
+   以这张为底 image-to-image 按第 1 节的 PROMPT 生成 1024×1536，出 3 版，挑草地最干净均匀、布局最贴白模的一张存
+   art/raw/camp/camp-23.png，再 python3 scripts/camp/pad23.py --crop art/raw/camp/camp-23.png -o art/raw/camp/camp.png。
+   把 camp.png 发给我看，我说可以再往下。
+2. 高清：python3 scripts/camp/detail_crops.py art/raw/camp/camp.png，对 art/raw/camp/detail/in-*.png 的每一块，
+   用第 1 节「高清第二轮」的提示词 image-to-image 重绘成同名 out-*.png（1024×1536，16 块），
+   然后 python3 scripts/camp/merge_details.py 得到 art/raw/camp/camp-hd.png。
+3. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
+   对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
+   （1024×1024，装饰以外的像素不动）。
+4. 宠物 doudou、nuonuo、lianlian、shishi：每只先按 3.1 出 art/raw/pets/<id>-ref.png，四张定稿一起发给我看；
+   我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
+   都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
+5. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
+6. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
+   codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）。
+```
+
+**第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 2 批之前先 `git pull`，仓库里得有第 1 批的 `art/raw/camp/camp-hd.png`（装饰是从它上面裁草地）。
+
+**第 2 批开场指令**：
+
+```
+你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 2 批」，规矩和第 1 批一样（UNIFIED STYLE、路径按 art/manifest.json、
+每张 check_art.py）。顺序：
+1. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
+   每块按第 2 节模板 edit 成 art/raw/decor/out-<id>.png。
+2. 宠物 huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha：先 7 张 -ref.png 一起给我看，我说可以之后每只再出 -a、-b、-album。
+3. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送。
+```
+
+**第 3 批开场指令**：
+
+```
+你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 3 批」，规矩同前。顺序：
+1. 鹤鹤 hehe：-ref.png 给我看，然后 -a（注意 A 张第 1 行是飞）、-b、-album。
+2. 金色小帐篷：python3 scripts/camp/decor_crop.py --ids gold_tent，edit 成 art/raw/decor/out-gold_tent.png。
+3. 全家福 art/raw/camp/family.png（第 6 节，1536×1024），以 12 张 -ref.png 为参考，每只都要认得出。
+4. check_art.py 全跑，art/raw/ 提交到新分支 codex/art-batch-3 并推送。
+```
+
 ## 0. 总则（每张都适用）
 
 **风格**（所有提示词都带上这段）：
@@ -33,7 +85,7 @@ outlines, no text, no labels, no watermark, no UI, no borders. Everything is cut
 | `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
 
 **尺寸与格式**：
-- 分辨率选工具支持的**最大**（竖图 3:4 → 1152×1536 或更大；1:1 → 1536×1536；只能出 1024 也接受）。输出原图，不要自己缩放、不要截图
+- 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：1:1 的图（定稿、拼图、插画、图标）用 1024×1024；竖图用 1024×1536，它是 2:3 不是 3:4，所以营地整图先用 `scripts/camp/pad23.py` 把白模补成 2:3 再生成、生成后 `--crop` 裁回 3:4（见第 1 节）；全家福 1536×1024。输出原图，不要自己缩放、不要截图
 - 拼图和精灵图一律 **真透明 PNG**（alpha 通道），不要把棋盘格画进图里；实在做不到透明就用纯洋红 `#FF00FF` 平涂背景，物体里不能有洋红
 - 营地整图、装饰的「原地重绘」是不透明的场景图，PNG 或高质量 JPG 都行
 
@@ -55,7 +107,8 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 
 这是整个游戏的舞台，值得多生成几轮挑最好的。
 
-- **布局底稿**：`art/guide/camp-blockout.jpg`，image-to-image，相似度调高，**布局一点都不能动**：草地的范围、小溪的位置（沿左侧流到左下的水塘）、篝火在正中、营地木台在篝火左下、两个食盆在木台右边、五棵树的位置、上缘的树林边缘。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
+- **尺寸**：工具只出 1024×1536（2:3），先 `python3 scripts/camp/pad23.py art/guide/camp-blockout.jpg -o art/raw/camp/blockout-23.png` 把白模补成 2:3（上面多一条天、下面多一条草），用这张做底稿；生成结果存 `art/raw/camp/camp-23.png`，再 `python3 scripts/camp/pad23.py --crop art/raw/camp/camp-23.png -o art/raw/camp/camp.png` 裁回 3:4。补出来的上下两条随便画（会裁掉），中间那块的布局必须和白模一一对应
+- **布局底稿**：`art/guide/camp-blockout.jpg`（补成 2:3 的那张），image-to-image，相似度调高，**布局一点都不能动**：草地的范围、小溪的位置（沿左侧流到左下的水塘）、篝火在正中、营地木台在篝火左下、两个食盆在木台右边、五棵树的位置、上缘的树林边缘。宠物的走动范围和装饰能放的位置都是按这张白模的坐标写死在代码里的。
 - **镜头**：45～50 度俯视（比白模的示意高一点也行，但透视要均匀，远近物体尺寸变化不超过 20%）。
 - **必须画成这样**：
   - 整片草地**均匀、干净、少杂物**（这是装饰块能贴到任何位置的前提）：允许零星小白花和草丛的质感，不要大块的颜色变化、不要小径、不要大石头、不要落叶堆
@@ -77,7 +130,7 @@ only tiny flowers and subtle grass texture: no paths, no patches, no rocks, no c
 be pasted on it later). Soft morning light, gentle shadows under the trees, calm and cozy.
 ```
 
-**高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 12 块放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成 `out-*.png`（比例和 in 一样，尺寸尽量大），提示词：
+**高清第二轮（必做）**：`python3 scripts/camp/detail_crops.py art/raw/camp/camp.png` 切 16 块（2:3，带重叠）放在 `art/raw/camp/detail/in-*.png`，每块用 image-to-image 重绘成同构图的高清版存成同名 `out-*.png`（1024×1536，正好是工具的竖图档），提示词：
 
 ```
 Redraw this crop of the camp scene at much higher detail in the same UNIFIED STYLE: identical
@@ -93,8 +146,8 @@ Do not add or remove anything. Same lighting.
 
 装饰不是单独画的透明图，而是**在营地原图的一块草地上原地画出来**，这样它天然长在地上、影子和光线都对。流程：
 
-1. 小程序这边先跑 `python3 scripts/camp/decor_crop.py`，从高清营地图裁出每件装饰需要的一块空草地 `art/raw/decor/in-<id>.png`（已经按块大小裁好，带 25% 边）。
-2. 你用 image-to-image / edit，把装饰画在这块草地**正中偏下**（装饰的底边落在块高的 80% 左右），**块里其他像素一概不动**，存成 `out-<id>.png`（和 in 一样的尺寸和比例）。
+1. 先跑 `python3 scripts/camp/decor_crop.py --ids <逗号隔开的 id>`（在仓库里直接跑，要有 `node` 和 Pillow），从高清营地图裁出每件装饰需要的一块空草地 `art/raw/decor/in-<id>.png`（正方形，装饰块连 25% 边都在里面；正方形是为了和 edit 的 1024×1024 输出对齐，不变形）。
+2. 你用 image-to-image / edit，把装饰画在这块草地**正中偏下**（装饰的底边落在块高的 80% 左右），**块里其他像素一概不动**，存成 `out-<id>.png`（1024×1024）。
 3. 小程序这边 `python3 scripts/camp/decor_patch.py` 比对 in / out，把装饰连一圈草地裁下来、边缘羽化。
 
 每件的提示词模板：
