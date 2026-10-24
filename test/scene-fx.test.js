@@ -14,7 +14,7 @@ test('开局只有前院正院：没有水没有花，什么特效都没有', ()
 test('修了荷塘院：池子上有波光和几点星光，裁成菱形；花圃院有花瓣；温泉院冒热气；后花园有瀑布', () => {
   const pond = fxViews(areas(['front', 'main', 'pond']), L)
   const shimmer = pond.filter((f) => f.kind === 'shimmer')
-  assert.equal(shimmer.length, 1)
+  assert.ok(shimmer.length >= 3, '方塘和几段小溪都有波光')
   assert.match(shimmer[0].clip, /^polygon\(/)
   assert.ok(shimmer[0].width > 0 && shimmer[0].height > 0)
   assert.ok(pond.filter((f) => f.kind === 'sparkle').length >= 3)

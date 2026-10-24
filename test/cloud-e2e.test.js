@@ -161,15 +161,15 @@ test('养生庭院：打卡赚豆 → 新手礼 → 扭蛋 → 摆放 → 移动
   const spun = cloud.db.collections.get('gardens').get('u1')
   cloud.db.collections.get('gardens').set('u1', { ...spun, inventory: { daisy: 1 } })
 
-  const placed = await main({ action: 'garden.place', data: { itemId, c: 10, r: 15 } })
+  const placed = await main({ action: 'garden.place', data: { itemId, c: 14, r: 19 } })
   assert.equal(placed.ok, true, placed.message)
   const uid = placed.data.placed.find((p) => p.itemId === itemId).uid
   assert.deepEqual(placed.data.inventory, [])
 
-  const blocked = await main({ action: 'garden.move', data: { uid, c: 11, r: 16 } })
+  const blocked = await main({ action: 'garden.move', data: { uid, c: 15, r: 18 } })
   assert.equal(blocked.code, 'BAD_REQUEST')
-  const moved = await main({ action: 'garden.move', data: { uid, c: 16, r: 17 } })
-  assert.deepEqual(moved.data.placed.find((p) => p.uid === uid), { uid, itemId, c: 16, r: 17, flip: false })
+  const moved = await main({ action: 'garden.move', data: { uid, c: 16, r: 19 } })
+  assert.deepEqual(moved.data.placed.find((p) => p.uid === uid), { uid, itemId, c: 16, r: 19, flip: false })
 
   const stashed = await main({ action: 'garden.stash', data: { uid } })
   assert.deepEqual(stashed.data.inventory, [{ itemId, count: 1 }])
@@ -189,7 +189,7 @@ test('庭院小动物：摆翠竹 → 打卡午餐 → 熊猫搬来 → 庭院�
   await main({ action: 'profile.save', data: profileInput })
   await main({ action: 'garden.get' })
   const doc = cloud.db.collections.get('gardens').get('u1')
-  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 10, r: 15 }) })
+  cloud.db.collections.get('gardens').set('u1', { ...doc, placed: doc.placed.concat({ uid: 'p9', itemId: 'bamboo', c: 14, r: 19 }) })
 
   const waiting = await main({ action: 'garden.get' })
   assert.deepEqual(waiting.data.waiting, ['panda'])
@@ -214,7 +214,7 @@ test('修整院子：豆不够提示、修好后旁边的能修、不挨着的�
   const first = await main({ action: 'garden.get' })
   assert.equal(first.data.hasProfile, true)
   assert.equal(first.data.daily.beansToday, 0)
-  assert.deepEqual(first.data.areas.filter((a) => a.unlockable).map((a) => a.id), ['pond', 'flower', 'orchard', 'bamboo'])
+  assert.deepEqual(first.data.areas.filter((a) => a.unlockable).map((a) => a.id), ['pond', 'orchard', 'bamboo', 'farm', 'back'])
   const poor = await main({ action: 'garden.unlock', data: { area: 'bamboo' } })
   assert.equal(poor.code, 'NO_BEANS')
 

@@ -20,7 +20,7 @@ test('estateLayout：1 倍时一个院子加两边的墙占屏幕宽 96%，四�
 
 test('areaOffset / tileOffset：把院子中间、某一格放到屏幕正中', () => {
   const o = W.areaOffset('main', L, WIN)
-  const p = tileTop(14, 14, L)
+  const p = tileTop(16, 14, L)
   assert.ok(Math.abs(o.x + L.margin + p.x - 187.5) < 1e-9)
   assert.ok(Math.abs(o.y + L.margin + p.y - 350) < 1e-9)
   assert.equal(o.scale, 1)
@@ -64,23 +64,23 @@ test('cloudViews：只有没修的院子有云，每个 6～9 朵，位置固定
 
 test('signViews：能修的院子门里侧立木牌', () => {
   const signs = W.signViews(AREAS, E.START_OPENED, L)
-  assert.deepEqual(signs.map((s) => s.key), ['pond', 'flower', 'orchard', 'bamboo'])
+  assert.deepEqual(signs.map((s) => s.key), ['pond', 'orchard', 'bamboo', 'farm', 'back'])
   const pond = signs[0]
   assert.deepEqual([pond.name, pond.cost], ['荷塘院', 200])
-  const p = tileCenter(19, 13, L)
+  const p = tileCenter(21, 9, L)
   assert.ok(Math.abs(pond.left + pond.width / 2 - p.x) < 1e-9)
   assert.ok(Math.abs(pond.bottom - (L.height - p.y)) < 1e-9)
 })
 
 test('hintViews：亮起能摆的格子', () => {
-  const placed = [{ uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }]
+  const placed = [{ uid: 'p1', itemId: 'starter_tree', c: 15, r: 18 }]
   const hints = W.hintViews(E.START_OPENED, placed, 'daisy', null, L)
-  assert.equal(hints.length, 47)
-  const h = hints.find((t) => t.c === 10 && t.r === 15)
-  const top = tileTop(10, 15, L)
-  assert.deepEqual([h.key, h.left, h.top, h.width, h.height], ['10-15', top.x - L.tileW / 2, top.y, L.tileW, L.tileH])
-  assert.equal(W.hintViews(E.START_OPENED, placed, 'daisy', 'p1', L).length, 48)
-  assert.ok(W.hintViews(E.START_OPENED, placed, 'pavilion', null, L).length < 47)
+  assert.equal(hints.length, 55)
+  const h = hints.find((t) => t.c === 14 && t.r === 19)
+  const top = tileTop(14, 19, L)
+  assert.deepEqual([h.key, h.left, h.top, h.width, h.height], ['14-19', top.x - L.tileW / 2, top.y, L.tileW, L.tileH])
+  assert.equal(W.hintViews(E.START_OPENED, placed, 'daisy', 'p1', L).length, 56)
+  assert.ok(W.hintViews(E.START_OPENED, placed, 'pavilion', null, L).length < 98)
 })
 
 test('tileFromTouch：拖动、缩放之后点到的还是那一格', () => {

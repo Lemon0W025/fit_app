@@ -291,6 +291,8 @@ def standing():
     add(max(c0 + r0, c1 + r1) + 0.1, door)
 
     for s in LAYOUT['shell']:
+        if 'rect' not in s:  # 不成矩形的（斜排的石头）：按外框算
+            s['rect'] = [min(t[0] for t in s['tiles']), min(t[1] for t in s['tiles']), max(t[0] for t in s['tiles']) + 1, max(t[1] for t in s['tiles']) + 1]
         c0, r0, c1, r1 = s['rect']
         what = s.get('what')
         key = (c1 - 1) + (r1 - 1)

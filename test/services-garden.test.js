@@ -17,7 +17,7 @@ function setup({ random = sequence([]), garden, now = NOW } = {}) {
   return { repo, service }
 }
 
-const richGarden = (extra = {}) => ({ welcomed: true, estate: 1, opened: ['front', 'main'], beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, ...extra })
+const richGarden = (extra = {}) => ({ welcomed: true, estate: 2, opened: ['front', 'main'], beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, ...extra })
 
 test('get：第一次进来送 60 暖豆和一棵大树，只送一次', async () => {
   const { repo, service } = setup()
@@ -25,7 +25,7 @@ test('get：第一次进来送 60 暖豆和一棵大树，只送一次', async (
   assert.deepEqual(first.welcome, { beans: 60, itemId: 'starter_tree' })
   assert.equal(first.beans, 60)
   assert.deepEqual(first.areas.map((a) => [a.id, a.unlocked, a.unlockable]).slice(0, 5), [
-    ['front', true, false], ['main', true, false], ['pond', false, true], ['flower', false, true], ['orchard', false, true],
+    ['front', true, false], ['main', true, false], ['pond', false, true], ['flower', false, false], ['orchard', false, true],
   ])
   assert.equal(first.areas.find((a) => a.id === 'spring').unlockable, false)
   assert.equal(first.scenery, undefined)
@@ -33,7 +33,7 @@ test('get：第一次进来送 60 暖豆和一棵大树，只送一次', async (
   assert.equal(first.daily, null)
   assert.equal(first.placed.length, 1)
   assert.equal(first.placed[0].itemId, 'starter_tree')
-  assert.deepEqual([first.placed[0].c, first.placed[0].r], [11, 16])
+  assert.deepEqual([first.placed[0].c, first.placed[0].r], [15, 18])
   assert.ok(first.placed[0].uid)
   assert.equal(first.collectedCount, 0)
   assert.equal(first.totalCount, 68)
@@ -119,38 +119,38 @@ test('spin：当季限定会出现在稀有池里', async () => {
 
 test('place：从背包摆到空地上', async () => {
   const { repo, service } = setup({ garden: richGarden({ inventory: { daisy: 2 } }) })
-  const view = await service.place('u1', { itemId: 'daisy', c: 10, r: 15 })
+  const view = await service.place('u1', { itemId: 'daisy', c: 14, r: 19 })
   assert.equal(view.placed.length, 1)
-  assert.deepEqual([view.placed[0].itemId, view.placed[0].c, view.placed[0].r], ['daisy', 10, 15])
+  assert.deepEqual([view.placed[0].itemId, view.placed[0].c, view.placed[0].r], ['daisy', 14, 19])
   assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 1 }])
-  await service.place('u1', { itemId: 'daisy', c: 12, r: 15 })
+  await service.place('u1', { itemId: 'daisy', c: 16, r: 19 })
   assert.deepEqual((await repo.getGarden('u1')).inventory, {})
 })
 
 test('place：背包里没有、出界、格子被占都不行', async () => {
-  const { service } = setup({ garden: richGarden({ inventory: { daisy: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 16, r: 16 }] }) })
+  const { service } = setup({ garden: richGarden({ inventory: { daisy: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 19, r: 18 }] }) })
   await assert.rejects(service.place('u1', { itemId: 'pavilion', c: 0, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: 6, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: -1, r: 0 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.place('u1', { itemId: 'daisy', c: 1.5, r: 0 }), { code: 'BAD_REQUEST' })
-  await assert.rejects(service.place('u1', { itemId: 'daisy', c: 16, r: 16 }), (e) => {
+  await assert.rejects(service.place('u1', { itemId: 'daisy', c: 19, r: 18 }), (e) => {
     assert.match(e.message, /已经有东西/)
     return true
   })
 })
 
 test('move：换到空地，可以原地不动，不能压在别的东西上', async () => {
-  const placed = [{ uid: 'a', itemId: 'pavilion', c: 16, r: 16 }, { uid: 'b', itemId: 'daisy', c: 10, r: 15 }]
+  const placed = [{ uid: 'a', itemId: 'pavilion', c: 19, r: 18 }, { uid: 'b', itemId: 'daisy', c: 14, r: 19 }]
   const { service } = setup({ garden: richGarden({ placed }) })
-  const view = await service.move('u1', { uid: 'a', c: 17, r: 17 })
-  assert.deepEqual(view.placed.find((p) => p.uid === 'a'), { uid: 'a', itemId: 'pavilion', c: 17, r: 17 })
-  await service.move('u1', { uid: 'a', c: 17, r: 17 })
-  await assert.rejects(service.move('u1', { uid: 'a', c: 11, r: 16 }), { code: 'BAD_REQUEST' })
+  const view = await service.move('u1', { uid: 'a', c: 16, r: 19 })
+  assert.deepEqual(view.placed.find((p) => p.uid === 'a'), { uid: 'a', itemId: 'pavilion', c: 16, r: 19 })
+  await service.move('u1', { uid: 'a', c: 16, r: 19 })
+  await assert.rejects(service.move('u1', { uid: 'a', c: 15, r: 19 }), { code: 'BAD_REQUEST' })
   await assert.rejects(service.move('u1', { uid: 'zzz', c: 0, r: 0 }), { code: 'NOT_FOUND' })
 })
 
 test('stash：收回背包', async () => {
-  const { repo, service } = setup({ garden: richGarden({ inventory: { pavilion: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 16, r: 16 }] }) })
+  const { repo, service } = setup({ garden: richGarden({ inventory: { pavilion: 1 }, placed: [{ uid: 'a', itemId: 'pavilion', c: 19, r: 18 }] }) })
   const view = await service.stash('u1', { uid: 'a' })
   assert.equal(view.placed.length, 0)
   assert.deepEqual(view.inventory, [{ itemId: 'pavilion', count: 2 }])
@@ -167,7 +167,7 @@ test('背包按物品表顺序排列', async () => {
 test('view：住户、新住户、在等的小动物', async () => {
   const { service } = setup({
     garden: richGarden({
-      placed: [{ uid: 'p1', itemId: 'bamboo', c: 10, r: 15 }, { uid: 'p2', itemId: 'grass', c: 12, r: 15 }],
+      placed: [{ uid: 'p1', itemId: 'bamboo', c: 14, r: 19 }, { uid: 'p2', itemId: 'grass', c: 16, r: 19 }],
       residents: [{ id: 'chick', since: '2026-10-20' }],
       arrivals: ['chick'],
     }),
@@ -180,7 +180,7 @@ test('view：住户、新住户、在等的小动物', async () => {
 
 test('arrive：摆了翠竹，熊猫搬来，一次只来一只', async () => {
   const { repo, service } = setup({
-    garden: richGarden({ placed: [{ uid: 'p2', itemId: 'grass', c: 12, r: 15 }, { uid: 'p1', itemId: 'bamboo', c: 10, r: 15 }] }),
+    garden: richGarden({ placed: [{ uid: 'p2', itemId: 'grass', c: 16, r: 19 }, { uid: 'p1', itemId: 'bamboo', c: 14, r: 19 }] }),
   })
   assert.deepEqual(await service.arrive('u1'), { id: 'panda', name: '大熊猫' })
   let stored = await repo.getGarden('u1')
@@ -214,7 +214,7 @@ test('旧数据：扭蛋抽到的小动物变成住户，不放进新住户', as
   const { service } = setup({
     garden: richGarden({
       inventory: { panda: 1, daisy: 2 },
-      placed: [{ uid: 'p1', itemId: 'crane', c: 10, r: 15 }, { uid: 'p2', itemId: 'daisy', c: 12, r: 15 }],
+      placed: [{ uid: 'p1', itemId: 'crane', c: 14, r: 19 }, { uid: 'p2', itemId: 'daisy', c: 16, r: 19 }],
       collected: ['panda', 'crane', 'daisy'],
     }),
   })
@@ -254,48 +254,48 @@ test('get：带上是否建档和今天的暖豆', async () => {
 })
 
 test('unlock：花暖豆修好一个院子，旁边的院子变成能修', async () => {
-  const { repo, service } = setup({ garden: { welcomed: true, estate: 1, opened: ['front', 'main'], beans: { earned: {}, bonus: 600, spent: 0 } } })
+  const { repo, service } = setup({ garden: { welcomed: true, estate: 2, opened: ['front', 'main'], beans: { earned: {}, bonus: 600, spent: 0 } } })
   const view = await service.unlock('u1', { area: 'pond' })
   assert.equal(view.beans, 400)
   assert.deepEqual(view.areas.filter((a) => a.unlocked).map((a) => a.id), ['front', 'main', 'pond'])
-  assert.deepEqual(view.areas.filter((a) => a.unlockable).map((a) => a.id), ['flower', 'orchard', 'bamboo', 'tea', 'back'])
+  assert.deepEqual(view.areas.filter((a) => a.unlockable).map((a) => a.id), ['flower', 'orchard', 'bamboo', 'tea', 'farm', 'back'])
   const stored = await repo.getGarden('u1')
   assert.deepEqual(stored.opened, ['front', 'main', 'pond'])
   assert.equal(stored.beans.spent, 200)
 })
 
 test('unlock：没有这个院子、已经修好、不挨着、暖豆不够都不行', async () => {
-  const { service } = setup({ garden: { welcomed: true, estate: 1, opened: ['front', 'main'], beans: { earned: {}, bonus: 350, spent: 0 } } })
+  const { service } = setup({ garden: { welcomed: true, estate: 2, opened: ['front', 'main'], beans: { earned: {}, bonus: 350, spent: 0 } } })
   await assert.rejects(service.unlock('u1', { area: 'moon' }), { code: 'BAD_REQUEST', message: '没有这个院子' })
   await assert.rejects(service.unlock('u1', {}), { code: 'BAD_REQUEST', message: '没有这个院子' })
   await assert.rejects(service.unlock('u1', { area: 'main' }), { code: 'BAD_REQUEST', message: '这个院子已经修整好了' })
   await assert.rejects(service.unlock('u1', { area: 'spring' }), { code: 'BAD_REQUEST', message: '要先修好旁边的院子' })
   await assert.rejects(service.unlock('u1', { area: 'bamboo' }), { code: 'NO_BEANS', message: '暖豆不够啦，修整要 400 暖豆，再攒攒' })
-  assert.equal((await service.unlock('u1', { area: 'flower' })).beans, 150)
+  assert.equal((await service.unlock('u1', { area: 'orchard' })).beans, 50)
 })
 
 test('place / move：按地面规矩和占格校验', async () => {
-  const { service } = setup({ garden: richGarden({ opened: ['front', 'main', 'pond', 'flower'], seq: 1, inventory: { daisy: 3, stool: 1, pavilion: 1 }, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }] }) })
+  const { service } = setup({ garden: richGarden({ opened: ['front', 'main', 'pond', 'flower'], seq: 1, inventory: { daisy: 3, stool: 1, pavilion: 1 }, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 15, r: 18 }] }) })
   const reject = (itemId, c, r, message) => assert.rejects(service.place('u1', { itemId, c, r }), { code: 'BAD_REQUEST', message })
   await reject('daisy', 0, 0, '放不到这里哦')
-  await reject('daisy', 3, 22, '这个院子还没修整呢')
-  await reject('daisy', 13, 15, '小路上不能摆东西')
-  await reject('daisy', 22, 13, '这是水里，放不了它')
-  await reject('stool', 19, 22, '土里只能种花种菜')
-  await reject('daisy', 22, 10, '石板地上种不了，换块草地')
-  await reject('daisy', 11, 16, '这块地上已经有东西了')
-  await reject('pavilion', 12, 17, '这里放不下它')
-  const view = await service.place('u1', { itemId: 'pavilion', c: 16, r: 16, flip: true })
-  assert.deepEqual(view.placed.find((p) => p.itemId === 'pavilion'), { uid: 'p2', itemId: 'pavilion', c: 16, r: 16, flip: true })
-  await reject('daisy', 15, 15, '这块地上已经有东西了')
-  await service.place('u1', { itemId: 'daisy', c: 19, r: 22 })
-  await assert.rejects(service.move('u1', { uid: 'p1', c: 13, r: 15 }), { code: 'BAD_REQUEST', message: '小路上不能摆东西' })
-  const moved = await service.move('u1', { uid: 'p2', c: 17, r: 17 })
-  assert.deepEqual(moved.placed.find((p) => p.uid === 'p2'), { uid: 'p2', itemId: 'pavilion', c: 17, r: 17, flip: true })
+  await reject('daisy', 6, 23, '这个院子还没修整呢')
+  await reject('daisy', 14, 15, '小路上不能摆东西')
+  await reject('daisy', 25, 14, '这是水里，放不了它')
+  await reject('stool', 24, 23, '土里只能种花种菜')
+  await reject('daisy', 21, 10, '石板地上种不了，换块草地')
+  await reject('daisy', 15, 18, '这块地上已经有东西了')
+  await reject('pavilion', 16, 19, '这里放不下它')
+  const view = await service.place('u1', { itemId: 'pavilion', c: 19, r: 18, flip: true })
+  assert.deepEqual(view.placed.find((p) => p.itemId === 'pavilion'), { uid: 'p2', itemId: 'pavilion', c: 19, r: 18, flip: true })
+  await reject('daisy', 18, 17, '这块地上已经有东西了')
+  await service.place('u1', { itemId: 'daisy', c: 24, r: 23 })
+  await assert.rejects(service.move('u1', { uid: 'p1', c: 14, r: 15 }), { code: 'BAD_REQUEST', message: '小路上不能摆东西' })
+  const moved = await service.move('u1', { uid: 'p2', c: 14, r: 19 })
+  assert.deepEqual(moved.placed.find((p) => p.uid === 'p2'), { uid: 'p2', itemId: 'pavilion', c: 14, r: 19, flip: true })
 })
 
 test('flip：换个方向', async () => {
-  const { repo, service } = setup({ garden: richGarden({ placed: [{ uid: 'a', itemId: 'lantern', c: 10, r: 15 }] }) })
+  const { repo, service } = setup({ garden: richGarden({ placed: [{ uid: 'a', itemId: 'lantern', c: 14, r: 19 }] }) })
   let view = await service.flip('u1', { uid: 'a' })
   assert.equal(view.placed[0].flip, true)
   view = await service.flip('u1', { uid: 'a' })
@@ -314,12 +314,12 @@ test('旧数据：小岛的东西收回背包，大树重新种在正院，修�
     },
   })
   const view = await service.get('u1')
-  assert.deepEqual(view.placed, [{ uid: 'p6', itemId: 'starter_tree', c: 11, r: 16 }])
+  assert.deepEqual(view.placed, [{ uid: 'p6', itemId: 'starter_tree', c: 15, r: 18 }])
   assert.deepEqual(view.inventory, [{ itemId: 'daisy', count: 2 }, { itemId: 'grass', count: 1 }])
   assert.deepEqual(view.areas.filter((a) => a.unlocked).map((a) => a.id), ['front', 'main'])
   assert.equal(view.beans, 60)
   const stored = await repo.getGarden('u1')
-  assert.equal(stored.estate, 1)
+  assert.equal(stored.estate, 2)
   assert.deepEqual(stored.opened, ['front', 'main'])
   assert.equal(stored.beans.bonus, 560)
 })
@@ -327,14 +327,14 @@ test('旧数据：小岛的东西收回背包，大树重新种在正院，修�
 test('旧数据：大地图开荒的暖豆退回；更早的小庭院也一样迁', async () => {
   const big = setup({ garden: { welcomed: true, plots: ['1,1', '1,0', '2,1'], beans: { earned: {}, bonus: 60, spent: 250 }, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 8, r: 8 }, { uid: 'p2', itemId: 'grass', c: 9, r: 7 }] } })
   const view = await big.service.get('u1')
-  assert.deepEqual(view.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 11, 16]])
+  assert.deepEqual(view.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 15, 18]])
   assert.deepEqual(view.inventory, [{ itemId: 'grass', count: 1 }])
   assert.equal(view.beans, 60)
   assert.equal((await big.repo.getGarden('u1')).plots, undefined)
 
   const small = setup({ garden: { welcomed: true, placed: [{ uid: 'p1', itemId: 'starter_tree', c: 2, r: 2 }, { uid: 'p2', itemId: 'daisy', c: 3, r: 0 }] } })
   const v2 = await small.service.get('u1')
-  assert.deepEqual(v2.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 11, 16]])
+  assert.deepEqual(v2.placed.map((p) => [p.itemId, p.c, p.r]), [['starter_tree', 15, 18]])
   assert.deepEqual(v2.inventory, [{ itemId: 'daisy', count: 1 }])
 })
 
@@ -343,8 +343,37 @@ test('旧数据：还没领新手礼的空文档迁完不多出大树；已经�
   const v = await fresh.service.get('u1')
   assert.deepEqual(v.welcome, { beans: 60, itemId: 'starter_tree' })
   assert.equal(v.placed.length, 1)
-  const kept = setup({ garden: richGarden({ opened: ['front', 'main', 'pond'], placed: [{ uid: 'p1', itemId: 'daisy', c: 20, r: 10 }] }) })
+  const kept = setup({ garden: richGarden({ estate: 2, opened: ['front', 'main', 'pond'], placed: [{ uid: 'p1', itemId: 'daisy', c: 22, r: 14 }] }) })
   const k = await kept.service.get('u1')
-  assert.deepEqual(k.placed.map((p) => [p.itemId, p.c, p.r]), [['daisy', 20, 10]])
+  assert.deepEqual(k.placed.map((p) => [p.itemId, p.c, p.r]), [['daisy', 22, 14]])
   assert.deepEqual(k.areas.filter((a) => a.unlocked).map((a) => a.id), ['front', 'main', 'pond'])
+})
+
+test('旧数据：第一版宅院（estate: 1）换成照第二版原画定的格子：摆在现在摆不了的地方的收回背包，大树挪到新起始格', async () => {
+  const { repo, service } = setup({
+    garden: richGarden({
+      estate: 1, opened: ['front', 'main', 'pond'], seq: 4, inventory: { grass: 1 },
+      placed: [
+        { uid: 'p1', itemId: 'starter_tree', c: 11, r: 16 }, // 现在是竹林院（没修）
+        { uid: 'p2', itemId: 'daisy', c: 14, r: 19 }, // 还是正院草地
+        { uid: 'p3', itemId: 'daisy', c: 22, r: 13 }, // 第一版的荷塘水面，现在是荷塘院草地，雏菊能留
+        { uid: 'p4', itemId: 'stool', c: 13, r: 15 }, // 第一版的小路，现在是石板场，凳子能留
+        { uid: 'p5', itemId: 'cabbage', c: 15, r: 18, flip: true }, // 压在大树要挪去的格子上：白菜不能种在草地，收回
+      ],
+    }),
+  })
+  const view = await service.get('u1')
+  assert.deepEqual(view.placed, [
+    { uid: 'p1', itemId: 'starter_tree', c: 15, r: 18 },
+    { uid: 'p2', itemId: 'daisy', c: 14, r: 19 },
+    { uid: 'p3', itemId: 'daisy', c: 22, r: 13 },
+    { uid: 'p4', itemId: 'stool', c: 13, r: 15 },
+  ])
+  assert.deepEqual(view.inventory, [{ itemId: 'grass', count: 1 }, { itemId: 'cabbage', count: 1 }])
+  const stored = await repo.getGarden('u1')
+  assert.equal(stored.estate, 2)
+  assert.deepEqual(stored.opened, ['front', 'main', 'pond'])
+  // 再进一次不再动
+  const again = await service.get('u1')
+  assert.deepEqual(again.placed.map((p) => p.uid), ['p1', 'p2', 'p3', 'p4'])
 })

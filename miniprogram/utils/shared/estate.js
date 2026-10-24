@@ -1,163 +1,177 @@
 // 园林大宅院：院子、墙、月亮门、壳里画好的地面，以及「能不能走、能不能摆、能不能修」的规则（云函数和小程序共用，纯函数）
 // 格子 (c, r)：c 往右下增加，r 往左下增加。rect = [c 起, r 起, c 止, r 止)，左闭右开
+// 这里的每个矩形都是照着 Codex 画的第二版原画（art/raw/estate/estate-hd.png，透视校正后）量出来的：画是什么样，格子就怎么定；
+// 换原画时用 scripts/estate/cut_art.py --save 存出对齐后的整张画，叠上格子重新量
 
 const { itemById } = require('./garden')
 
 const GRID = { cols: 37, rows: 28 }
 
-// 11 个院子：4 列（c 1～8、10～17、19～26、28～35）× 3 排（r 1～8、10～17、19～26），后花园占后排中间两列；院子之间隔一格墙
+// 11 个院子（矩形只管「这格归哪个院子」，后面的盖前面的：竹林院盖掉正院月亮门墙西边那一列；院子之间的隔断照画单独列在 FENCE_TILES 里）
 const AREAS = [
-  { id: 'front', name: '前院', cost: 0, rect: [10, 19, 18, 27] },
-  { id: 'main', name: '正院', cost: 0, rect: [10, 10, 18, 18] },
-  { id: 'pond', name: '荷塘院', cost: 200, rect: [19, 10, 27, 18] },
-  { id: 'flower', name: '花圃院', cost: 200, rect: [19, 19, 27, 27] },
-  { id: 'orchard', name: '果园', cost: 300, rect: [1, 19, 9, 27] },
-  { id: 'veg', name: '菜园', cost: 300, rect: [28, 19, 36, 27] },
-  { id: 'bamboo', name: '竹林院', cost: 400, rect: [1, 10, 9, 18] },
-  { id: 'tea', name: '茶院', cost: 400, rect: [28, 10, 36, 18] },
-  { id: 'farm', name: '动物小院', cost: 500, rect: [1, 1, 9, 9] },
-  { id: 'spring', name: '温泉院', cost: 500, rect: [28, 1, 36, 9] },
-  { id: 'back', name: '后花园', cost: 700, rect: [10, 1, 27, 9] },
+  { id: 'front', name: '前院', cost: 0, rect: [11, 20, 21, 27] },
+  { id: 'main', name: '正院', cost: 0, rect: [11, 8, 21, 20] },
+  { id: 'pond', name: '荷塘院', cost: 200, rect: [21, 8, 30, 21] },
+  { id: 'flower', name: '花圃院', cost: 200, rect: [21, 21, 30, 27] },
+  { id: 'orchard', name: '果园', cost: 300, rect: [1, 20, 11, 27] },
+  { id: 'veg', name: '菜园', cost: 300, rect: [30, 20, 36, 27] },
+  { id: 'bamboo', name: '竹林院', cost: 400, rect: [1, 10, 12, 20] },
+  { id: 'tea', name: '茶院', cost: 400, rect: [30, 10, 36, 20] },
+  { id: 'farm', name: '动物小院', cost: 500, rect: [1, 1, 11, 10] },
+  { id: 'spring', name: '温泉院', cost: 500, rect: [30, 1, 36, 10] },
+  { id: 'back', name: '后花园', cost: 700, rect: [11, 1, 30, 8] },
 ]
 const START_OPENED = ['front', 'main']
 
-// 壳里画好的东西，按顺序盖在草地上。kind：path 小路 / pave 石板铺地 / soil 土 / water 水 / block 建筑和山石；what 给画白模用
+// 壳里画好的东西，按顺序盖在草地上。kind：path 小路、台阶 / pave 石板铺地 / soil 土 / water 水 / block 建筑和山石；
+// what 给画白模、场景动效和遮挡用。tiles 是不成矩形的（照着画里斜着排的石头）
 const SHELL = [
-  // 前院：大门进来的石板路、绕过影壁、通向两边月亮门的横路
-  { area: 'front', kind: 'path', rect: [12, 23, 16, 27] },
-  { area: 'front', kind: 'path', rect: [13, 19, 15, 23] },
-  { area: 'front', kind: 'path', rect: [10, 22, 18, 24] },
-  { area: 'front', kind: 'block', what: 'screen', rect: [12, 23, 14, 25] },
-  // 正院：正房占后三行，门前甬道和横路
-  { area: 'main', kind: 'block', what: 'hall', rect: [10, 10, 18, 13] },
-  { area: 'main', kind: 'path', rect: [13, 13, 15, 18] },
-  { area: 'main', kind: 'path', rect: [10, 13, 18, 15] },
-  // 荷塘院：中间一大片水，池子北边一座木桥（原画里画的，只能摆家具）
-  { area: 'pond', kind: 'water', what: 'pond', rect: [20, 11, 26, 16] },
-  { area: 'pond', kind: 'pave', what: 'bridge', rect: [21, 10, 25, 11] },
-  // 花圃院：三条花坛，两条小径
-  { area: 'flower', kind: 'soil', rect: [19, 20, 21, 26] },
-  { area: 'flower', kind: 'path', rect: [21, 19, 22, 27] },
-  { area: 'flower', kind: 'soil', rect: [22, 20, 24, 26] },
-  { area: 'flower', kind: 'path', rect: [24, 19, 25, 27] },
-  { area: 'flower', kind: 'soil', rect: [25, 20, 27, 26] },
-  // 菜园：四条菜畦和一口井
-  { area: 'veg', kind: 'soil', rect: [29, 20, 30, 26] },
-  { area: 'veg', kind: 'soil', rect: [31, 20, 32, 26] },
-  { area: 'veg', kind: 'soil', rect: [33, 20, 34, 26] },
-  { area: 'veg', kind: 'soil', rect: [35, 20, 36, 26] },
-  { area: 'veg', kind: 'block', what: 'well', rect: [28, 25, 29, 26] },
-  // 果园：靠墙一座葡萄架
-  { area: 'orchard', kind: 'block', what: 'trellis', rect: [1, 19, 4, 21] },
-  // 竹林院：假山和一片白沙地
-  { area: 'bamboo', kind: 'block', what: 'rockery', rect: [1, 10, 4, 12] },
-  { area: 'bamboo', kind: 'pave', what: 'sand', rect: [5, 10, 9, 13] },
-  // 茶院：临水的茶亭平台和靠外墙的回廊
-  { area: 'tea', kind: 'pave', what: 'deck', rect: [28, 12, 32, 16] },
-  { area: 'tea', kind: 'pave', what: 'corridor', rect: [35, 10, 36, 18] },
+  // 前院：大门进来的石板场、通向正院的小路
+  { area: 'front', kind: 'pave', rect: [13, 23, 19, 27] },
+  { area: 'front', kind: 'path', rect: [16, 20, 18, 23] },
+  // 正院：正房、台阶、房前石板场（留两块草地）、房东侧的铺地和下荷塘院的台阶
+  { area: 'main', kind: 'pave', rect: [12, 15, 21, 20] },
+  { area: 'main', kind: 'lawn', rect: [14, 18, 17, 20] },
+  { area: 'main', kind: 'lawn', rect: [18, 17, 20, 19] },
+  { area: 'main', kind: 'block', what: 'hall', rect: [12, 11, 20, 15] },
+  { area: 'main', kind: 'path', what: 'steps', rect: [14, 15, 17, 17] },
+  { area: 'main', kind: 'pave', rect: [20, 9, 23, 13] },
+  { area: 'pond', kind: 'path', what: 'steps', rect: [23, 10, 25, 12] },
+  // 荷塘院：正房东边流下来的小溪（木板桥在 GATES 里）、方荷塘、院子南边的小溪、从后花园接过来的水道
+  { area: 'pond', kind: 'water', what: 'stream', rect: [21, 12, 22, 20] },
+  { area: 'pond', kind: 'water', what: 'pond', rect: [23, 12, 29, 18] },
+  { area: 'pond', kind: 'water', what: 'stream', rect: [21, 20, 29, 21] },
+  { area: 'pond', kind: 'water', what: 'stream', rect: [28, 10, 30, 12] },
+  // 花圃院、菜园：两组菜畦
+  { area: 'flower', kind: 'soil', rect: [20, 21, 29, 26] },
+  { area: 'veg', kind: 'soil', rect: [31, 21, 36, 26] },
+  // 果园：葡萄架
+  { area: 'orchard', kind: 'block', what: 'trellis', rect: [1, 21, 5, 25] },
+  // 竹林院：从动物小院下来的台阶和石板小路、枯山水（白沙 + 山石）
+  { area: 'bamboo', kind: 'path', what: 'steps', rect: [5, 10, 8, 12] },
+  { area: 'bamboo', kind: 'path', rect: [6, 12, 10, 14] },
+  { area: 'bamboo', kind: 'path', rect: [8, 14, 10, 21] },
+  { area: 'bamboo', kind: 'path', rect: [6, 20, 8, 22] },
+  { area: 'bamboo', kind: 'pave', what: 'sand', rect: [3, 15, 8, 21] },
+  { area: 'bamboo', kind: 'block', what: 'rockery', rect: [2, 13, 6, 17] },
+  // 茶院：茶亭、石板茶台、水井
+  { area: 'tea', kind: 'block', what: 'pavilion', rect: [32, 10, 36, 13] },
+  { area: 'tea', kind: 'pave', what: 'deck', rect: [30, 14, 34, 19] },
+  { area: 'tea', kind: 'block', what: 'well', rect: [34, 16, 35, 17] },
   // 动物小院：鸡舍
-  { area: 'farm', kind: 'block', what: 'coop', rect: [1, 1, 3, 3] },
-  // 温泉院：更衣木屋和温泉池
-  { area: 'spring', kind: 'block', what: 'cabin', rect: [27, 1, 29, 3] },
-  { area: 'spring', kind: 'water', what: 'spring', rect: [30, 2, 35, 6] },
-  // 后花园：沿后墙一长排假山，瀑布在偏左处落进水潭，小溪往右下流（中间一块石板能踩着过）
-  { area: 'back', kind: 'block', what: 'rockery', rect: [9, 1, 22, 3] },
-  { area: 'back', kind: 'water', what: 'falls', rect: [13, 2, 15, 4] },
-  { area: 'back', kind: 'water', what: 'stream', rect: [15, 3, 17, 4] },
-  { area: 'back', kind: 'water', what: 'pool', rect: [17, 3, 20, 5] },
-  { area: 'back', kind: 'water', what: 'stream', rect: [20, 5, 22, 6] },
-  { area: 'back', kind: 'water', what: 'stream', rect: [22, 6, 24, 7] },
-  { area: 'back', kind: 'path', what: 'slab', rect: [23, 6, 24, 7] },
-  { area: 'back', kind: 'water', what: 'stream', rect: [24, 7, 26, 8] },
-  { area: 'back', kind: 'water', what: 'stream', rect: [26, 8, 27, 9] },
+  { area: 'farm', kind: 'block', what: 'coop', rect: [2, 1, 6, 5] },
+  // 温泉院：木屋、温泉池
+  { area: 'spring', kind: 'block', what: 'cabin', rect: [30, 1, 33, 4] },
+  { area: 'spring', kind: 'block', what: 'shrubs', rect: [33, 1, 36, 4] }, // 木屋后面一丛灌木，走不进去
+  { area: 'spring', kind: 'water', what: 'spring', rect: [32, 4, 36, 9] },
+  { area: 'spring', kind: 'lawn', rect: [32, 4, 34, 5] }, // 木屋门口那两格是岸
+  // 后花园：假山瀑布、沿墙一排立石、一路流到荷塘院的小溪
+  { area: 'back', kind: 'block', what: 'rockery', rect: [11, 1, 14, 4] },
+  { area: 'back', kind: 'block', what: 'rockery', tiles: [[15, 1], [16, 1], [17, 1], [18, 1], [15, 2], [16, 2], [17, 2], [18, 2], [19, 2], [20, 2], [21, 2], [22, 2], [19, 3], [20, 3], [21, 3], [22, 3], [23, 3], [24, 3], [25, 3], [26, 3]] },
+  { area: 'back', kind: 'water', what: 'falls', rect: [13, 1, 15, 3] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [14, 3, 19, 4] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [16, 4, 24, 5] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [20, 5, 24, 6] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [21, 6, 26, 7] },
+  { area: 'back', kind: 'water', what: 'stream', rect: [24, 7, 27, 8] },
+  { area: 'pond', kind: 'water', what: 'stream', rect: [27, 8, 30, 9] },
+  { area: 'pond', kind: 'water', what: 'stream', rect: [28, 9, 30, 10] },
 ]
 
-// 月亮门（两格宽；新原画到了改成三格，见 blockout.py --wide），a、b 是它连着的两个院子
+// 院子之间的门：两格并排；fence 是这道门开在哪种隔断上（wall 白墙上的是带洞的月亮门，stream 是木板桥、石板桥，cliff 是台阶，没写的是缺口）
 const GATES = [
-  { a: 'front', b: 'main', tiles: [[13, 18], [14, 18]] },
-  { a: 'front', b: 'orchard', tiles: [[9, 22], [9, 23]] },
-  { a: 'front', b: 'flower', tiles: [[18, 22], [18, 23]] },
-  { a: 'main', b: 'bamboo', tiles: [[9, 13], [9, 14]] },
-  { a: 'main', b: 'pond', tiles: [[18, 13], [18, 14]] },
-  { a: 'bamboo', b: 'orchard', tiles: [[4, 18], [5, 18]] },
-  { a: 'bamboo', b: 'farm', tiles: [[4, 9], [5, 9]] },
-  { a: 'pond', b: 'flower', tiles: [[22, 18], [23, 18]] },
-  { a: 'pond', b: 'tea', tiles: [[27, 13], [27, 14]] },
-  { a: 'pond', b: 'back', tiles: [[22, 9], [23, 9]] },
-  { a: 'flower', b: 'veg', tiles: [[27, 22], [27, 23]] },
-  { a: 'tea', b: 'veg', tiles: [[31, 18], [32, 18]] },
+  { a: 'front', b: 'main', tiles: [[16, 20], [17, 20]], fence: 'fence' },
+  { a: 'front', b: 'orchard', tiles: [[11, 25], [11, 26]] },
+  { a: 'main', b: 'bamboo', tiles: [[11, 9], [11, 10]] },
+  { a: 'main', b: 'bamboo', tiles: [[12, 16], [12, 17]], fence: 'wall' },
+  { a: 'main', b: 'pond', tiles: [[20, 9], [20, 10]] },
+  { a: 'main', b: 'pond', tiles: [[21, 15], [21, 16]], fence: 'stream' },
+  { a: 'bamboo', b: 'orchard', tiles: [[5, 20], [6, 20]] },
+  { a: 'bamboo', b: 'farm', tiles: [[8, 9], [9, 9]], fence: 'cliff' },
+  { a: 'farm', b: 'main', tiles: [[10, 8], [10, 9]] },
+  { a: 'pond', b: 'flower', tiles: [[25, 20], [26, 20]], fence: 'stream' },
+  { a: 'pond', b: 'tea', tiles: [[29, 18], [29, 19]] },
+  { a: 'pond', b: 'back', tiles: [[26, 8], [27, 8]], fence: 'stream' },
+  { a: 'main', b: 'back', tiles: [[18, 8], [19, 8]], fence: 'fence' }, // 藏在正房屋顶后面
+  { a: 'flower', b: 'veg', tiles: [[29, 23], [29, 24]] },
+  { a: 'tea', b: 'veg', tiles: [[30, 19], [31, 19]] },
   { a: 'tea', b: 'spring', tiles: [[31, 9], [32, 9]] },
-  { a: 'back', b: 'farm', tiles: [[9, 4], [9, 5]] },
-  { a: 'back', b: 'spring', tiles: [[27, 4], [27, 5]] },
+  { a: 'back', b: 'spring', tiles: [[29, 7], [30, 7]], fence: 'fence' },
 ]
 // 外墙上的大门：新住户从这里进来
-const DOOR = [[13, 27], [14, 27]]
+const DOOR = [[14, 27], [15, 27]]
 
-// 院子之间的隔断（都不能走、不能摆，只影响画法和遮挡高度）：外圈是白墙黛瓦；里面按段换成矮木栏、绿篱、小溪、台地石阶，
-// 不一样才像园子，也不会把东西都挡在墙后面。type：wall 白墙（门是月亮门）/ fence 矮木栏 / hedge 绿篱 / stream 小溪（门是木板桥）/
-// cliff 台地边缘的石坎（后排三个院子高一层，门是台阶）；没列到的交叉口是 post 石柱
-const FENCES = [
-  { type: 'cliff', rect: [1, 9, 36, 10] },
-  { type: 'fence', rect: [9, 1, 10, 9] },
-  { type: 'fence', rect: [27, 1, 28, 9] },
-  { type: 'wall', rect: [9, 10, 10, 18] },
-  { type: 'stream', rect: [18, 10, 19, 18] },
-  { type: 'hedge', rect: [27, 10, 28, 18] },
-  { type: 'hedge', rect: [1, 18, 9, 19] },
-  { type: 'fence', rect: [10, 18, 18, 19] },
-  { type: 'stream', rect: [19, 18, 27, 19] },
-  { type: 'hedge', rect: [28, 18, 36, 19] },
-  { type: 'fence', rect: [9, 19, 10, 27] },
-  { type: 'hedge', rect: [18, 19, 19, 27] },
-  { type: 'fence', rect: [27, 19, 28, 27] },
-]
-const FENCE_TYPES = ['wall', 'fence', 'hedge', 'stream', 'cliff', 'post']
+// 院子之间的隔断，一格一格照画列（都不能走、不能摆，只影响画法和遮挡高度）。外圈白墙黛瓦是 outer（自动），
+// wall 院里的白墙（正院西侧带月亮门的那道）/ fence 矮木栏 / hedge 绿篱 / post 石柱；小溪是水、台地的台阶是小路，都不在这里
+const run = (c0, r0, c1, r1) => {
+  const out = []
+  for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) out.push([c, r])
+  return out
+}
+const FENCE_TILES = {
+  wall: run(12, 15, 12, 20),
+  fence: [].concat(
+    run(6, 1, 10, 1), run(10, 2, 10, 7), run(2, 9, 7, 9), // 动物小院：沿后墙、东侧、南侧的木栏
+    run(11, 7, 17, 7), // 后花园和正院之间（正房后面）
+    [[29, 4], [30, 4], [30, 5], [30, 6]], run(29, 8, 31, 8), // 温泉院西侧（斜着的）和南侧
+    run(11, 21, 11, 23), run(12, 20, 15, 20), run(18, 20, 20, 20), // 前院：西侧、北侧两段
+    run(20, 19, 20, 19), run(20, 24, 20, 26), // 前院东侧（中间是绿篱）
+    run(28, 21, 31, 21), // 菜畦北边
+  ),
+  hedge: [].concat(
+    run(9, 20, 10, 21), run(20, 21, 21, 22), [[20, 23]], run(13, 24, 14, 25), run(17, 25, 18, 25),
+    run(29, 12, 30, 14),
+  ),
+  post: [[11, 20], [11, 24]],
+}
+const FENCE_TYPES = ['outer', 'wall', 'fence', 'hedge', 'stream', 'cliff', 'post']
 
 // 小动物在壳里的活动点（站的那一格），作息和小事表按 id 引用
 const SPOTS = [
-  { id: 'coop', area: 'farm', c: 2, r: 3 },
-  { id: 'eaves', area: 'main', c: 11, r: 13 },
-  { id: 'steps', area: 'main', c: 14, r: 13 },
-  { id: 'well', area: 'veg', c: 28, r: 24 },
-  { id: 'veg_bed', area: 'veg', c: 31, r: 22 },
-  { id: 'flower_path', area: 'flower', c: 21, r: 22 },
-  { id: 'rockery', area: 'bamboo', c: 4, r: 11 },
-  { id: 'tea_deck', area: 'tea', c: 29, r: 13 },
-  { id: 'pond_water', area: 'pond', c: 22, r: 13 },
-  { id: 'falls', area: 'back', c: 18, r: 4 },
-  { id: 'hotspring', area: 'spring', c: 32, r: 3 },
-  { id: 'bridge', area: 'back', c: 23, r: 6 },
-  { id: 'haystack', area: 'farm', c: 6, r: 6 },
+  { id: 'coop', area: 'farm', c: 4, r: 5 },
+  { id: 'eaves', area: 'main', c: 13, r: 16 },
+  { id: 'steps', area: 'main', c: 15, r: 17 },
+  { id: 'well', area: 'tea', c: 33, r: 17 },
+  { id: 'veg_bed', area: 'veg', c: 32, r: 22 },
+  { id: 'flower_path', area: 'flower', c: 24, r: 23 },
+  { id: 'rockery', area: 'bamboo', c: 5, r: 18 },
+  { id: 'tea_deck', area: 'tea', c: 31, r: 16 },
+  { id: 'pond_water', area: 'pond', c: 25, r: 14 },
+  { id: 'falls', area: 'back', c: 17, r: 4 },
+  { id: 'hotspring', area: 'spring', c: 34, r: 6 },
+  { id: 'bridge', area: 'back', c: 26, r: 6 },
+  { id: 'haystack', area: 'farm', c: 7, r: 6 },
 ]
 
-const STARTER_TILE = { c: 11, r: 16 }
+const STARTER_TILE = { c: 15, r: 18 }
 
 // ---------------------------------------------------------------- 格子表
 
 const TILES = []
 for (let i = 0; i < GRID.cols * GRID.rows; i++) TILES.push({ area: '', kind: 'wall' })
 
+const at = (c, r) => TILES[r * GRID.cols + c]
 function fill(rect, patch) {
   for (let c = rect[0]; c < rect[2]; c++) {
-    for (let r = rect[1]; r < rect[3]; r++) Object.assign(TILES[r * GRID.cols + c], patch)
+    for (let r = rect[1]; r < rect[3]; r++) Object.assign(at(c, r), patch)
   }
 }
 AREAS.forEach((a) => fill(a.rect, { area: a.id, kind: 'lawn' }))
-SHELL.forEach((s) => fill(s.rect, { kind: s.kind }))
-GATES.forEach((g) => g.tiles.forEach(([c, r]) => Object.assign(TILES[r * GRID.cols + c], { area: '', kind: 'gate' })))
-DOOR.forEach(([c, r]) => Object.assign(TILES[r * GRID.cols + c], { area: '', kind: 'door' }))
-// 隔断的样式：墙、门洞都带上 fence；外圈是墙，里面没列到的交叉口是石柱
+SHELL.forEach((s) => (s.tiles ? s.tiles.forEach(([c, r]) => Object.assign(at(c, r), { kind: s.kind })) : fill(s.rect, { kind: s.kind })))
+Object.keys(FENCE_TILES).forEach((type) => FENCE_TILES[type].forEach(([c, r]) => Object.assign(at(c, r), { area: '', kind: 'wall', fence: type })))
+GATES.forEach((g) => g.tiles.forEach(([c, r]) => Object.assign(at(c, r), { area: '', kind: 'gate', fence: g.fence || 'post' })))
+DOOR.forEach(([c, r]) => Object.assign(at(c, r), { area: '', kind: 'door', fence: 'outer' }))
+// 外圈一律是白墙黛瓦
 TILES.forEach((t, i) => {
-  if (t.kind !== 'wall' && t.kind !== 'gate' && t.kind !== 'door') return
   const c = i % GRID.cols
   const r = Math.floor(i / GRID.cols)
-  const outer = c === 0 || r === 0 || c === GRID.cols - 1 || r === GRID.rows - 1
-  const seg = FENCES.find((f) => c >= f.rect[0] && c < f.rect[2] && r >= f.rect[1] && r < f.rect[3])
-  t.fence = outer || t.kind === 'door' ? 'wall' : seg ? seg.type : 'post'
+  if (t.kind === 'wall' && (c === 0 || r === 0 || c === GRID.cols - 1 || r === GRID.rows - 1)) t.fence = 'outer'
+  else if (t.kind === 'wall' && !t.fence) t.fence = 'post'
 })
 
 AREAS.forEach((a) => {
-  a.neighbors = GATES.filter((g) => g.a === a.id || g.b === a.id).map((g) => (g.a === a.id ? g.b : g.a))
+  const ids = GATES.filter((g) => g.a === a.id || g.b === a.id).map((g) => (g.a === a.id ? g.b : g.a))
+  a.neighbors = ids.filter((id, i) => ids.indexOf(id) === i)
 })
 
 const OUT = { area: '', kind: 'out' }
@@ -176,7 +190,7 @@ function areaTiles(id) {
   if (!a) return []
   const tiles = []
   for (let c = a.rect[0]; c < a.rect[2]; c++) {
-    for (let r = a.rect[1]; r < a.rect[3]; r++) tiles.push({ c, r })
+    for (let r = a.rect[1]; r < a.rect[3]; r++) if (tileInfo(c, r).area === id) tiles.push({ c, r })
   }
   return tiles
 }
@@ -304,7 +318,7 @@ module.exports = {
   AREAS,
   START_OPENED,
   SHELL,
-  FENCES,
+  FENCE_TILES,
   FENCE_TYPES,
   GATES,
   DOOR,

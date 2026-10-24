@@ -284,7 +284,7 @@ Transparent background.
 
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
-- 宅院：`cut_art.py --pad32` 对齐切 16 块 → `npm run wx:art` 传云存储 → `config.estateArt`；有高清版就切高清版
+- 宅院：`cut_art.py --pad32` 对齐切 16 块（画得带透视、和白模对不上的用 `--warp <四角 json>`，壳数据照画重量）→ `npm run wx:art` 传云存储 → `config.estateArt`；有高清版就切高清版
 - 云朵 / 图标 / 表情：`slice-art.py` 切成单张，替换 `images/garden/` 下的占位图
 - 新物件：`slice-art.py`（SHEETS 已写好 09～11）
 - 动画：`python3 scripts/pack_anim.py` 把 24 帧对齐、统一尺寸、压成 `art/anim/<id>.png` → `npm run wx:art` 传云存储 → `config.animArt`；页面有图用图、没图退回单张 + CSS 步态

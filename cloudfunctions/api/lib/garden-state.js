@@ -1,7 +1,7 @@
 // gardens 文档的完整形状：老数据或新用户缺的字段补上默认值，去掉已经废弃的字段
 
 const { ANIMALS, STARTER_ITEM } = require('./shared/garden')
-const { START_OPENED, STARTER_TILE } = require('./shared/estate')
+const { START_OPENED, STARTER_TILE, placeProblem } = require('./shared/estate')
 
 const LEGACY_FIELDS = ['currentSpecies', 'unlocked', 'unseen']
 // 小岛时代修整角落的价格，迁移时按这个退
@@ -35,6 +35,22 @@ function adoptEstate(garden, doc) {
   }
 }
 
+// 第二版原画（2026-10-24）把院子、水、建筑的格子都照画重定了：原来摆的东西现在摆不下的收回背包，大树挪到新的起始格。写上 estate: 2
+function adoptEstate2(garden) {
+  if (garden.estate >= 2) return garden
+  const inventory = { ...garden.inventory }
+  const placed = []
+  const order = garden.placed.slice().sort((a, b) => (b.itemId === STARTER_ITEM) - (a.itemId === STARTER_ITEM))
+  order.forEach((p) => {
+    if (!placeProblem(garden.opened, placed, p.itemId, p.c, p.r)) return placed.push(p)
+    if (p.itemId === STARTER_ITEM && !placeProblem(garden.opened, placed, p.itemId, STARTER_TILE.c, STARTER_TILE.r)) {
+      return placed.push({ ...p, c: STARTER_TILE.c, r: STARTER_TILE.r })
+    }
+    inventory[p.itemId] = (inventory[p.itemId] || 0) + 1
+  })
+  return { ...garden, estate: 2, inventory, placed }
+}
+
 // 以前小动物是扭蛋抽的：背包里、花园里的直接变成住户（不算新住户，免得一次走进来一群）
 function adoptAnimals(garden) {
   const found = garden.placed.filter((p) => isAnimal(p.itemId)).map((p) => p.itemId)
@@ -57,7 +73,7 @@ function normalizeGarden(doc) {
   const beans = g.beans || {}
   const gacha = g.gacha || {}
   // 修好了哪些院子（opened）和 estate 标记由 adoptEstate 给
-  return adoptAnimals(adoptEstate({
+  return adoptAnimals(adoptEstate2(adoptEstate({
     ...g,
     days: g.days || {},
     beans: { earned: beans.earned || {}, bonus: beans.bonus || 0, spent: beans.spent || 0 },
@@ -73,7 +89,7 @@ function normalizeGarden(doc) {
     arrivals: g.arrivals || [],
     // 已经领过的测试福利 id
     grants: g.grants || [],
-  }, g))
+  }, g)))
 }
 
 module.exports = { normalizeGarden }

@@ -77,7 +77,7 @@ function createGardenService({ repo, now, random = Math.random, getGrant = () =>
     async get(openid, input) {
       const doc = await repo.getGarden(openid)
       const garden = normalizeGarden(doc)
-      const migrated = !(doc && doc.estate)
+      const migrated = !doc || doc.estate !== garden.estate // 旧数据迁成宅院、或宅院格子换了版本，都要存一次
       let welcome = null
       if (!garden.welcomed) {
         garden.welcomed = true

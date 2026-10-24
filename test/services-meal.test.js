@@ -263,7 +263,7 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   assert.deepEqual(garden.beans.earned, {})
 })
 
-const bambooGarden = () => ({ welcomed: true, estate: 1, placed: [{ uid: 'p1', itemId: 'bamboo', c: 10, r: 15 }] })
+const bambooGarden = () => ({ welcomed: true, estate: 2, placed: [{ uid: 'p1', itemId: 'bamboo', c: 14, r: 19 }] })
 
 test('analyze：正餐打卡后，摆着翠竹的庭院搬来熊猫', async () => {
   const { repo, service } = setup({ results: [analysisJson()], garden: bambooGarden() })

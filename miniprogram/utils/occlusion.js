@@ -5,21 +5,21 @@
 const { GRID, SHELL, GATES, DOOR, tileInfo } = require('./shared/estate')
 const { tileTop } = require('./iso')
 
-// 各种隔断的高度（格高）：白墙 1.6、石柱 0.9、绿篱 0.7、矮木栏 0.55、台地石坎 0.5、小溪不挡人。月亮门洞：圆心离地 = up × 墙高，半径按格高
-// 和原画对过（把 pieces 画在切块上看）；Codex 重画后要重新对
-const WALL_H = 1.6
-const FENCE_H = { wall: WALL_H, post: 0.9, hedge: 0.7, fence: 0.55, cliff: 0.5, stream: 0 }
-const GATE_HOLE = { up: 0.55, radius: 0.9 }
-const DOOR_H = WALL_H * 1.3
+// 各种隔断的高度（格高）：outer 外圈白墙黛瓦 1.1、wall 院里的白墙 1.9（正院西侧带月亮门那道）、石柱 0.9、绿篱 0.7、矮木栏 0.55、台地石坎 0.5、小溪不挡人。
+// 月亮门洞：圆心离地 = up × 墙高，半径按格高。和第二版原画对过（scripts/estate/occ_overlay.py 把 pieces 画在对齐后的画上看）；Codex 重画后要重新对
+const WALL_H = 1.6 // 旧原画（legacy）全是这个高度的白墙
+const FENCE_H = { outer: 1.1, wall: 1.9, post: 0.9, hedge: 0.7, fence: 0.55, cliff: 0.5, stream: 0 }
+const GATE_HOLE = { up: 0.55, radius: 0.95 }
+const DOOR_H = 2.6
 // 建筑：h 墙身高、roof 屋顶高、over 屋檐出挑（格）、inset 比格子缩进多少（格）
 const BUILDINGS = {
-  hall: { h: 3, roof: 1.6, over: 0.3 },
-  screen: { h: 1.5 },
-  coop: { h: 1.4, roof: 0.8, over: 0.3 },
-  cabin: { h: 1.8, roof: 1.0, over: 0.3 },
-  well: { h: 0.8, inset: 0.2 },
-  trellis: { h: 1.6, inset: 0.1 },
-  rockery: { h: 2.2, inset: 0.3 },
+  hall: { h: 2.6, roof: 3.4, over: 0.7 },
+  pavilion: { h: 1.5, roof: 1.6, over: 0.6 },
+  coop: { h: 1.3, roof: 1.6, over: 0.5 },
+  cabin: { h: 1.5, roof: 1.6, over: 0.5 },
+  well: { h: 0.9, inset: 0.15 },
+  trellis: { h: 1.9, inset: 0.1 },
+  rockery: { h: 2.0, inset: 0.25 },
 }
 // 抠图左右比几何稍微宽一点，免得画里的墙边露出一条缝；上边反而收一点点：宁可让后面的东西从墙头露出一丝，也别用一条地面把它拦腰切断
 const PAD = 0.04
@@ -160,28 +160,30 @@ function pieces(L, { legacy = false } = {}) {
   GATES.forEach((g) => {
     // 只有白墙上的门是带洞的月亮门；篱笆、小溪、台地的门是缺口、木板桥、台阶，不挡人
     if (!legacy && tileInfo(g.tiles[0][0], g.tiles[0][1]).fence !== 'wall') return
+    const h = legacy ? WALL_H : FENCE_H.wall
     const cs = g.tiles.map((t) => t[0])
     const rs = g.tiles.map((t) => t[1])
     const [c0, r0] = g.tiles[0]
     const front = g.tiles.reduce((best, t) => (t[0] + t[1] > best[0] + best[1] ? t : best), g.tiles[0])
     const center = pairCenter(g.tiles, L)
-    const hole = circle(center.x, center.y - WALL_H * GATE_HOLE.up * L.tileH, GATE_HOLE.radius * L.tileH)
-    out.push(piece(`g${c0}-${r0}`, front[0], front[1], prism(Math.min(...cs), Math.min(...rs), Math.max(...cs) + 1, Math.max(...rs) + 1, WALL_H, L), L, hole))
+    const hole = circle(center.x, center.y - h * GATE_HOLE.up * L.tileH, GATE_HOLE.radius * L.tileH)
+    out.push(piece(`g${c0}-${r0}`, front[0], front[1], prism(Math.min(...cs), Math.min(...rs), Math.max(...cs) + 1, Math.max(...rs) + 1, h, L), L, hole))
   })
   {
     const [[c0, r0], [c1, r1]] = DOOR
     const center = pairCenter(DOOR, L)
-    const h = DOOR_H * L.tileH
+    const h = (legacy ? WALL_H * 1.3 : DOOR_H) * L.tileH
     const hole = [
       [center.x - L.tileW * 0.45, center.y - h * 0.85], [center.x + L.tileW * 0.45, center.y - h * 0.85],
       [center.x + L.tileW * 0.45, center.y - h * 0.05], [center.x - L.tileW * 0.45, center.y - h * 0.05],
     ]
-    out.push(piece(`d${c0}-${r0}`, c1, r1, prism(Math.min(c0, c1), Math.min(r0, r1), Math.max(c0, c1) + 1, Math.max(r0, r1) + 1, DOOR_H, L, 0.2, 0.6), L, hole))
+    out.push(piece(`d${c0}-${r0}`, c1, r1, prism(Math.min(c0, c1), Math.min(r0, r1), Math.max(c0, c1) + 1, Math.max(r0, r1) + 1, h / L.tileH, L, 0.2, 0.6), L, hole))
   }
   SHELL.forEach((s) => {
     const b = s.kind === 'block' && BUILDINGS[s.what]
     if (!b) return
-    const [c0, r0, c1, r1] = s.rect
+    const rect = s.rect || [Math.min(...s.tiles.map((t) => t[0])), Math.min(...s.tiles.map((t) => t[1])), Math.max(...s.tiles.map((t) => t[0])) + 1, Math.max(...s.tiles.map((t) => t[1])) + 1]
+    const [c0, r0, c1, r1] = rect
     const inset = b.inset || 0
     const poly = prism(c0 + inset, r0 + inset, c1 - inset, r1 - inset, b.h, L, b.over || 0, b.roof || 0)
     // 宽的建筑按屏幕上的竖条切开，每条的前后顺序按它脚下最靠前的那格算（不然前面的东西会被屋顶盖住）
