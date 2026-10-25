@@ -223,6 +223,7 @@ test('analyze 正餐：返回这次多得的暖豆和今天的印章，并记下
     mealType: 'breakfast',
     timing: 'late',
     allOnTime: false,
+    milestone: null,
   })
   const garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, { [TODAY]: true })
@@ -300,4 +301,16 @@ test('reanalyze 不触发搬家', async () => {
   const again = await service.reanalyze('u1', { mealId: meal._id, note: '米饭半碗' })
   assert.equal(again.arrival, undefined)
   assert.deepEqual((await repo.getGarden('u1')).pets, [])
+})
+
+test('analyze 正餐：这顿让连续打卡到 3 天，gain 带 milestone；重新分析不带', async () => {
+  const { addDays } = require('../cloudfunctions/api/lib/shared/date')
+  const { service } = setup({
+    results: [analysisJson(), analysisJson()],
+    garden: { camp: 1, days: { [addDays(TODAY, -2)]: true, [addDays(TODAY, -1)]: true } },
+  })
+  const meal = await service.analyze('u1', { mealType: 'lunch', note: '米饭' })
+  assert.deepEqual(meal.gain.milestone, { days: 3, times: 1, tier: 'bronze', glow: false, petId: '' })
+  const again = await service.reanalyze('u1', { mealId: meal._id, note: '米饭半碗' })
+  assert.equal(again.gain.milestone, null)
 })

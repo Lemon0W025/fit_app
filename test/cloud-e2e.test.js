@@ -205,3 +205,29 @@ test('测试福利：按 config.testGrant 送一次暖豆', async () => {
     config.testGrant = null
   }
 })
+
+test('连续打卡：第 3、7 天的第一顿正餐带里程碑，同一天第二顿不带；日历列出纪念章', async (t) => {
+  const clock = fixDate(t, '2026-10-16T08:00:00+08:00')
+  const cloud = createFakeCloud({ replies: Array.from({ length: 8 }, () => analysisJson()) })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  const got = []
+  for (let i = 0; i < 7; i++) {
+    clock.set(`2026-10-${16 + i}T08:00:00+08:00`)
+    const res = await main({ action: 'meal.analyze', data: { mealType: 'breakfast', note: '小米粥' } })
+    assert.equal(res.ok, true, res.message)
+    got.push(res.data.gain.milestone && res.data.gain.milestone.days)
+  }
+  assert.deepEqual(got, [null, null, 3, null, null, null, 7])
+  clock.set('2026-10-22T12:10:00+08:00')
+  const lunch = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭' } })
+  assert.equal(lunch.data.gain.milestone, null)
+  const garden = cloud.db.collections.get('gardens').get('u1')
+  assert.deepEqual(garden.streakBadges, {
+    3: { first: '2026-10-18', last: '2026-10-18', times: 1 },
+    7: { first: '2026-10-22', last: '2026-10-22', times: 1 },
+  })
+  const forest = await main({ action: 'forest.get' })
+  assert.deepEqual(forest.data.today.nextMilestone, { days: 14, left: 7 })
+  assert.deepEqual(forest.data.badges.map((b) => [b.days, b.got]), [[3, true], [7, true], [14, false]])
+})

@@ -54,6 +54,7 @@ function normalizeCamp(doc) {
     tasted: src.tasted || [],
     grants: src.grants || [],
     days: src.days || {},
+    streakBadges: src.streakBadges || {},
   }
 }
 

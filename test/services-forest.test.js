@@ -19,13 +19,13 @@ async function addMeal(repo, date, mealType, { rating = 'yellow', kcal = 300, ti
 test('syncDay：按当天打卡记下暖豆（准时 15、不在饭点 5）', async () => {
   const { repo, forest } = setup()
   await addMeal(repo, TODAY, 'breakfast', { timing: 'late' })
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 5 })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 5, milestone: null })
   let garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, { [TODAY]: true })
   assert.deepEqual(garden.beans.earned, { [TODAY]: 5 })
 
   await addMeal(repo, TODAY, 'lunch')
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 20 })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 20, milestone: null })
   garden = await repo.getGarden('u1')
   assert.deepEqual(garden.beans.earned, { [TODAY]: 20 })
 })
@@ -44,7 +44,7 @@ test('syncDay：只剩加餐时这天不算打卡，暖豆收回', async () => {
   await forest.syncDay('u1', TODAY)
   repo.state.meals = []
   await addMeal(repo, TODAY, 'snack', { timing: null })
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 0 })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 0, milestone: null })
   const garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, {})
   assert.deepEqual(garden.beans.earned, {})
@@ -88,6 +88,7 @@ test('today：今天的印章、暖豆、提示、连续天数、本月准时几
   assert.equal(view.beans, 75)
   assert.equal(view.monthOnTime, 4)
   assert.deepEqual(view.mealTimes, { breakfast: '07:30', lunch: '12:00', dinner: '18:00' })
+  assert.deepEqual(view.nextMilestone, { days: 7, left: 3 })
   assert.equal(view.nextGain, undefined)
 })
 
@@ -103,6 +104,7 @@ test('today：还没有营地时也能返回，余额不显示负数', async () 
   assert.equal(empty.beansToday, 0)
   assert.deepEqual(empty.stamps.map((s) => s.state), ['none', 'none', 'none'])
   assert.equal(empty.streak, 0)
+  assert.deepEqual(empty.nextMilestone, { days: 3, left: 3 })
   assert.equal(empty.beans, 0)
   assert.equal(empty.monthOnTime, 0)
   await repo.saveGarden('u1', { beans: { earned: {}, bonus: 0, spent: 30 } })
@@ -182,4 +184,72 @@ test('get：月份不合法或在未来时 BAD_REQUEST', async () => {
   await assert.rejects(forest.get('u1', { month: '2026-13' }), { code: 'BAD_REQUEST' })
   await assert.rejects(forest.get('u1', { month: '10/2026' }), { code: 'BAD_REQUEST' })
   await assert.rejects(forest.get('u1', { month: '2026-11' }), { code: 'BAD_REQUEST' })
+})
+
+async function lunchOn(repo, forest, ...daysAgo) {
+  for (const i of daysAgo) {
+    const d = addDays(TODAY, -i)
+    await addMeal(repo, d, 'lunch')
+    await forest.syncDay('u1', d)
+  }
+}
+
+test('syncDay：当天第一顿正餐让连续天数正好到里程碑，带 milestone 并记下纪念章；第二顿不再带', async () => {
+  const { repo, forest } = setup()
+  await lunchOn(repo, forest, 2, 1)
+  await addMeal(repo, TODAY, 'breakfast')
+  const first = await forest.syncDay('u1', TODAY)
+  assert.deepEqual(first.milestone, { days: 3, times: 1, tier: 'bronze', glow: false, petId: '' })
+  await addMeal(repo, TODAY, 'lunch')
+  assert.equal((await forest.syncDay('u1', TODAY)).milestone, null)
+  assert.deepEqual((await repo.getGarden('u1')).streakBadges, { 3: { first: TODAY, last: TODAY, times: 1 } })
+})
+
+test('syncDay：删掉打卡这天不算了，纪念章不收回；同一天再拍不再庆祝', async () => {
+  const { repo, forest } = setup()
+  await lunchOn(repo, forest, 2, 1)
+  await addMeal(repo, TODAY, 'breakfast')
+  await forest.syncDay('u1', TODAY)
+  repo.state.meals = repo.state.meals.filter((m) => m.date !== TODAY)
+  assert.equal((await forest.syncDay('u1', TODAY)).milestone, null)
+  const garden = await repo.getGarden('u1')
+  assert.equal(garden.days[TODAY], undefined)
+  assert.deepEqual(garden.streakBadges, { 3: { first: TODAY, last: TODAY, times: 1 } })
+  await addMeal(repo, TODAY, 'lunch')
+  assert.equal((await forest.syncDay('u1', TODAY)).milestone, null)
+})
+
+test('syncDay：断了以后再连到同一个天数，记第 2 次', async () => {
+  const { repo, forest } = setup()
+  await lunchOn(repo, forest, 10, 9, 8)
+  await lunchOn(repo, forest, 2, 1)
+  await addMeal(repo, TODAY, 'lunch')
+  const m = (await forest.syncDay('u1', TODAY)).milestone
+  assert.equal(m.days, 3)
+  assert.equal(m.times, 2)
+  assert.deepEqual((await repo.getGarden('u1')).streakBadges[3], { first: addDays(TODAY, -8), last: TODAY, times: 2 })
+})
+
+test('syncDay：milestone 带营地里喂得最多的那只，一样多取先来的', async () => {
+  const { repo, forest } = setup()
+  await repo.saveGarden('u1', {
+    camp: 1,
+    pets: [{ id: 'doudou', fed: 4 }, { id: 'nuonuo', fed: 9 }, { id: 'qiqi', fed: 9 }],
+    days: { [addDays(TODAY, -2)]: true, [addDays(TODAY, -1)]: true },
+  })
+  await addMeal(repo, TODAY, 'lunch')
+  assert.equal((await forest.syncDay('u1', TODAY)).milestone.petId, 'nuonuo')
+})
+
+test('get：纪念章列到下一个为止，已拿的带第一次的日期和次数；以前拿过更大的也列出来', async () => {
+  const { repo, forest } = setup()
+  const days = {}
+  for (let i = 0; i < 5; i++) days[addDays(TODAY, -i)] = true
+  await repo.saveGarden('u1', { camp: 1, days, streakBadges: { 3: { first: '2026-10-20', last: '2026-10-20', times: 1 } } })
+  assert.deepEqual((await forest.get('u1', {})).badges, [
+    { days: 3, tier: 'bronze', glow: false, got: true, first: '2026-10-20', times: 1 },
+    { days: 7, tier: 'bronze', glow: false, got: false, left: 2 },
+  ])
+  await repo.saveGarden('u1', { camp: 1, days: { [TODAY]: true }, streakBadges: { 3: { first: '2026-09-03', last: '2026-09-03', times: 1 }, 7: { first: '2026-09-07', last: '2026-09-07', times: 1 } } })
+  assert.deepEqual((await forest.get('u1', {})).badges.map((b) => [b.days, b.got, b.left]), [[3, true, undefined], [7, true, undefined]])
 })

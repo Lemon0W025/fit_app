@@ -18,7 +18,7 @@ function isMainMeal(mealType) {
 }
 
 // 这次打卡前后今天的暖豆变了多少，给打卡结果页做即时反馈
-function beansChange(beforeMeals, afterMeals, meal, times, at) {
+function beansChange(beforeMeals, afterMeals, meal, times, at, milestone = null) {
   const before = dayBeans(beforeMeals)
   const after = dayBeans(afterMeals)
   return {
@@ -30,6 +30,8 @@ function beansChange(beforeMeals, afterMeals, meal, times, at) {
     timing: meal.timing || null,
     // 这一次让三顿都准时了（结果页额外庆祝一下）
     allOnTime: after.allOnTime && !before.allOnTime,
+    // 这一次让连续打卡到了里程碑（结果页弹庆祝、发纪念章）
+    milestone,
   }
 }
 
@@ -122,8 +124,8 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       let gain = null
       let arrival = null
       if (isMainMeal(src.mealType)) {
-        await forest.syncDay(openid, date)
-        gain = beansChange(meals, meals.concat(saved), saved, times, at)
+        const synced = await forest.syncDay(openid, date)
+        gain = beansChange(meals, meals.concat(saved), saved, times, at, synced.milestone)
         arrival = await camp.arrive(openid)
       }
       return { ...saved, gain, arrival }
