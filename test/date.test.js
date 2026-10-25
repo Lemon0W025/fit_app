@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const {
   dateKey,
   localHour,
+  localMinutes,
   timeText,
   isDateKey,
   addDays,
@@ -44,4 +45,9 @@ test('addDays 跨月跨年', () => {
 test('dateLabel 输出中文月日与星期', () => {
   assert.equal(dateLabel('2026-10-22'), '10月22日 周四')
   assert.equal(dateLabel('2026-10-25'), '10月25日 周日')
+})
+
+test('localMinutes 返回东八区一天中的第几分钟', () => {
+  assert.equal(localMinutes(new Date('2026-10-22T04:10:00Z')), 12 * 60 + 10)
+  assert.equal(localMinutes(new Date('2026-10-22T16:30:00Z')), 30)
 })

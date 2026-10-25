@@ -21,6 +21,11 @@ function localHour(date = new Date(), offsetMinutes = CN_OFFSET_MINUTES) {
   return shifted(date, offsetMinutes).getUTCHours()
 }
 
+function localMinutes(date = new Date(), offsetMinutes = CN_OFFSET_MINUTES) {
+  const d = shifted(date, offsetMinutes)
+  return d.getUTCHours() * 60 + d.getUTCMinutes()
+}
+
 function timeText(ms, offsetMinutes = CN_OFFSET_MINUTES) {
   const d = shifted(new Date(ms), offsetMinutes)
   return `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`
@@ -51,6 +56,7 @@ module.exports = {
   CN_OFFSET_MINUTES,
   dateKey,
   localHour,
+  localMinutes,
   timeText,
   isDateKey,
   addDays,
