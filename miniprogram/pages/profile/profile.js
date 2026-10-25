@@ -1,15 +1,17 @@
 const api = require('../../utils/api')
 const { calcDailyKcal, ACTIVITY_LABELS } = require('../../utils/shared/nutrition')
+const { MAIN_MEALS, MEAL_WORDS, DEFAULT_MEAL_TIMES, timeOptions, mealTimesOf } = require('../../utils/shared/timing')
 
 const FIELDS = ['nickname', 'sex', 'age', 'heightCm', 'weightKg', 'targetWeightKg', 'activity', 'avoid']
 const NUMBER_FIELDS = ['age', 'heightCm', 'weightKg', 'targetWeightKg']
-const EMPTY_FORM = { nickname: '', sex: 'female', age: '', heightCm: '', weightKg: '', targetWeightKg: '', activity: 'light', avoid: '' }
+const EMPTY_FORM = { nickname: '', sex: 'female', age: '', heightCm: '', weightKg: '', targetWeightKg: '', activity: 'light', avoid: '', mealTimes: { ...DEFAULT_MEAL_TIMES } }
 
 function pickForm(profile) {
   const form = {}
   FIELDS.forEach((k) => {
     form[k] = profile[k] == null ? '' : profile[k]
   })
+  form.mealTimes = mealTimesOf(profile)
   return form
 }
 
@@ -24,6 +26,15 @@ function previewKcal(form) {
   return calcDailyKcal({ ...form, ...nums })
 }
 
+// 三餐时间的三行：每行的选项和当前选中的是第几个（picker 要下标）
+function mealRows(form) {
+  return MAIN_MEALS.map((t) => {
+    const options = timeOptions(t)
+    const value = form.mealTimes[t]
+    return { mealType: t, word: MEAL_WORDS[t], options, value, index: Math.max(0, options.indexOf(value)) }
+  })
+}
+
 Page({
   data: {
     loading: true,
@@ -32,6 +43,7 @@ Page({
     form: EMPTY_FORM,
     previewKcal: 0,
     activityOptions: Object.keys(ACTIVITY_LABELS).map((value) => ({ value, label: ACTIVITY_LABELS[value] })),
+    mealRows: mealRows(EMPTY_FORM),
   },
 
   onShow() {
@@ -40,7 +52,7 @@ Page({
     api.call('profile.get')
       .then((profile) => {
         const form = profile ? pickForm(profile) : { ...EMPTY_FORM }
-        this.setData({ loading: false, isNew: !profile, form, previewKcal: previewKcal(form) })
+        this.setData({ loading: false, isNew: !profile, form, previewKcal: previewKcal(form), mealRows: mealRows(form) })
       })
       .catch((err) => {
         this.setData({ loading: false })
@@ -51,7 +63,7 @@ Page({
   update(field, value) {
     this.dirty = true
     const form = { ...this.data.form, [field]: value }
-    this.setData({ form, previewKcal: previewKcal(form) })
+    this.setData({ form, previewKcal: previewKcal(form), mealRows: mealRows(form) })
   },
 
   onInput(e) {
@@ -63,6 +75,14 @@ Page({
     this.update(field, value)
   },
 
+  onMealTime(e) {
+    const { mealType } = e.currentTarget.dataset
+    const options = timeOptions(mealType)
+    const value = options[Number(e.detail.value)]
+    if (!value) return
+    this.update('mealTimes', { ...this.data.form.mealTimes, [mealType]: value })
+  },
+
   save() {
     if (this.data.saving) return
     this.setData({ saving: true })
@@ -71,7 +91,8 @@ Page({
         this.dirty = false
         const wasNew = this.data.isNew
         const form = pickForm(profile)
-        this.setData({ saving: false, isNew: false, form, previewKcal: profile.dailyKcal })
+        getApp().globalData.mealTimes = mealTimesOf(profile)
+        this.setData({ saving: false, isNew: false, form, previewKcal: profile.dailyKcal, mealRows: mealRows(form) })
         wx.showToast({ title: '保存好了', icon: 'success' })
         if (wasNew) setTimeout(() => wx.switchTab({ url: '/pages/today/today' }), 800)
       })

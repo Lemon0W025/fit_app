@@ -1,6 +1,7 @@
 const api = require('../../utils/api')
-const { MEAL_ORDER, MEAL_LABELS, guessMealType } = require('../../utils/shared/meal-types')
+const { MEAL_ORDER, MEAL_LABELS, guessMealType, isMealType } = require('../../utils/shared/meal-types')
 const { localHour } = require('../../utils/shared/date')
+const { MEAL_WORDS, mealTimesOf, mealAt, timingFor, windowText } = require('../../utils/shared/timing')
 
 Page({
   data: {
@@ -10,14 +11,34 @@ Page({
     note: '',
     submitting: false,
     stage: '',
+    timingText: '',
+    timingOn: false,
   },
 
-  onLoad() {
-    this.setData({ mealType: guessMealType(localHour()) })
+  // 首页大卡带着餐次进来就用它；不然按饭点窗口猜，都不在窗口里按钟点猜
+  onLoad(options) {
+    this.times = getApp().globalData.mealTimes || mealTimesOf(null)
+    const want = options && options.mealType
+    const mealType = isMealType(want) ? want : mealAt(this.times, new Date()) || guessMealType(localHour())
+    this.setData({ mealType })
+    this.updateTiming()
   },
 
   pickMealType(e) {
     this.setData({ mealType: e.currentTarget.dataset.value })
+    this.updateTiming()
+  },
+
+  // 餐次下面那句：现在拍这顿算不算准时（加餐不说）
+  updateTiming() {
+    const { mealType } = this.data
+    const timing = timingFor(mealType, new Date(), this.times)
+    const word = MEAL_WORDS[mealType]
+    let text = ''
+    if (timing === 'on') text = `现在拍${word}：准时 ✓`
+    else if (timing === 'early') text = `还没到${word}时间（${windowText(mealType, this.times)}），提前拍也算数`
+    else if (timing === 'late') text = `现在不在${word}时间，补拍也算数`
+    this.setData({ timingText: text, timingOn: timing === 'on' })
   },
 
   choosePhoto() {

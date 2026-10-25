@@ -76,15 +76,22 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   }
   profile.onPick(event({ field: 'activity', value: 'light' }))
   assert.equal(profile.data.previewKcal, 1270)
+  assert.deepEqual(profile.data.form.mealTimes, { breakfast: '07:30', lunch: '12:00', dinner: '18:00' })
+  profile.onMealTime(event({ mealType: 'breakfast' }, { value: profile.data.mealRows[0].options.indexOf('07:00') }))
+  assert.equal(profile.data.form.mealTimes.breakfast, '07:00')
+  assert.equal(profile.data.mealRows[0].value, '07:00')
   profile.save()
   await settle()
   assert.equal(profile.data.isNew, false)
   assert.ok(wx.log.toasts.includes('保存好了'))
+  assert.equal(wx.app.globalData.mealTimes.breakfast, '07:00')
 
   // 3. 打卡：拍照 + 备注
   const checkin = loadPage('checkin', wx)
   checkin.onLoad()
   checkin.pickMealType(event({ value: 'lunch' }))
+  assert.equal(checkin.data.timingText, '现在拍午饭：准时 ✓')
+  assert.equal(checkin.data.timingOn, true)
   checkin.choosePhoto()
   checkin.onNote(event({}, { value: '米饭吃了一半' }))
   checkin.submit()
@@ -138,6 +145,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   const checkin2 = loadPage('checkin', wx)
   checkin2.onLoad()
   checkin2.pickMealType(event({ value: 'dinner' }))
+  assert.equal(checkin2.data.timingText, '还没到晚饭时间（17:00～19:00），提前拍也算数')
   checkin2.onNote(event({}, { value: '一碗面条' }))
   checkin2.submit()
   await settle()
@@ -201,6 +209,22 @@ test('打卡页：没拍照也没写字时不提交', async () => {
   await settle()
   assert.equal(checkin.data.submitting, false)
   assert.deepEqual(wx.log.toasts, ['拍张照片或写几句吧'])
+})
+
+test('打卡页：从首页带着餐次进来就选好；不在任何饭点时按钟点猜', (t) => {
+  fixDate(t, '2026-10-22T15:00:00+08:00')
+  const wx = createWx(async () => ({ ok: true, data: null }))
+  const fromCard = loadPage('checkin', wx)
+  fromCard.onLoad({ mealType: 'lunch' })
+  assert.equal(fromCard.data.mealType, 'lunch')
+  assert.equal(fromCard.data.timingText, '现在不在午饭时间，补拍也算数')
+  const plain = loadPage('checkin', wx)
+  plain.onLoad({})
+  assert.equal(plain.data.mealType, 'snack')
+  assert.equal(plain.data.timingText, '')
+  const bad = loadPage('checkin', wx)
+  bad.onLoad({ mealType: 'supper' })
+  assert.equal(bad.data.mealType, 'snack')
 })
 
 test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡', async (t) => {

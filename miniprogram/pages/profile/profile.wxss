@@ -41,3 +41,21 @@
   line-height: 1.6;
   padding: 0 8rpx;
 }
+
+.meal-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  border-bottom: 1rpx solid var(--line);
+}
+
+.meal-time-word {
+  font-size: 32rpx;
+}
+
+.meal-time-value {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--primary);
+}

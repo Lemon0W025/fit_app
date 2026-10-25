@@ -3,6 +3,7 @@
   <view class="chips">
     <view wx:for="{{mealTypes}}" wx:key="value" class="chip {{mealType === item.value ? 'chip-on' : ''}}" data-value="{{item.value}}" bindtap="pickMealType">{{item.label}}</view>
   </view>
+  <view wx:if="{{timingText}}" class="timing {{timingOn ? 'timing-on' : ''}}">{{timingText}}</view>
 
   <view class="section-title">拍下这一餐</view>
   <view wx:if="{{!photo}}" class="card photo-picker" bindtap="choosePhoto">

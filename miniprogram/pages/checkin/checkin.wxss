@@ -79,3 +79,14 @@
     transform: rotate(360deg);
   }
 }
+
+.timing {
+  font-size: 30rpx;
+  margin: 12rpx 8rpx 0;
+  color: #d9822b;
+}
+
+.timing-on {
+  color: var(--primary);
+  font-weight: 700;
+}

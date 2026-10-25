@@ -61,6 +61,16 @@
       </view>
     </view>
 
+    <view class="field">
+      <view class="field-label">三餐时间（前后 1 小时内拍算准时）</view>
+      <view wx:for="{{mealRows}}" wx:key="mealType" class="meal-time-row">
+        <text class="meal-time-word">{{item.word}}</text>
+        <picker mode="selector" range="{{item.options}}" value="{{item.index}}" data-meal-type="{{item.mealType}}" bindchange="onMealTime">
+          <view class="meal-time-value">{{item.value}} ›</view>
+        </picker>
+      </view>
+    </view>
+
     <view class="field field-last">
       <view class="field-label">忌口 / 饮食习惯（选填）</view>
       <view class="input-wrap">
