@@ -34,7 +34,7 @@
 
 ### 营地
 
-- 打开小程序就是营地（第一次用会先去「我的」建档）：一块比屏幕大一圈的正方形草坪（默认看中间一半宽，拖着看两边），正中是篝火和火上的暖暖锅、草坪最左上角一顶大帐篷（拖过去才看到）、火边两个食盆，白天黑夜两套画，后面是一片树林；今天打了几顿正餐，锅里就有几层；一指拖动、双指缩放（0.8～2.5 倍），左下角「🏠」回到篝火
+- 打开小程序就是营地（第一次用会先去「我的」建档）：一块比屏幕大一圈的正方形草坪（默认看中间一半宽，拖着看两边），正中是篝火和火上的暖暖锅、草坪最左上角一顶大帐篷（拖过去才看到）、火边两个食盆，白天黑夜两套画，后面是一片树林；今天打了几顿正餐，锅里就有几层，还没打卡时锅是空的、火也没点；画的上面补了天空、下面补了草地，一指拖动、双指缩放（捏小看全景、捏大看细节），任何时候都铺满屏幕看不到边，左下角「🏠」回到篝火
 - 开局豆豆就住在营地里，再送 60 暖豆
 - **扭蛋抽食物**：30 暖豆一抽；普通 65% · 稀有 25% · 珍稀 8% · 传说 2%；连续 9 次没出珍稀，第 10 次必出珍稀以上。23 样食物按宠物爱吃的定，稀有度跟宠物走；10 样节气点心（霜降柿饼、冬至饺子、清明青团……）只在当季进池
 - **食盆引宠物**：把食物放进食盆，爱吃它、还没住进来的小动物会在树林边探头张望；下次正餐打卡它就走进营地（一次一只）。要是爱吃它的都住下了，这份食物就由住户吃掉
@@ -78,7 +78,8 @@ miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
   utils/api.js               调用云函数、上传照片、错误提示
   utils/view.js, chart.js    页面展示整理、体重图
   utils/camp-view.js         画 ↔ 屏幕换算、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 食盆视图、色调
-  utils/camp-life.js, pets.js, anim.js, scene-fx.js  宠物走动与作息、台词、逐帧动画帧选择、篝火等动效
+  utils/camp-life.js, pets.js, anim.js, scene-fx.js  宠物走动与作息（绕路、前后排序）、台词、逐帧动画帧选择、篝火等动效
+  utils/camp-light.js        夜里营地每处的亮度和冷暖（light_map.py 照夜景算的），宠物和装饰按位置上色
   utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、每日暖豆与印章、暖豆 / 稀有度 / 节气 garden.js、营地几何 camp.js、宠物 pets.js、食物 foods.js、装饰 decor.js）
   images/                    tabBar 图标、营地白模切块、宠物 / 装饰 / 食物占位图、界面图标
   config.js                  云开发环境 ID、云存储图的前缀
@@ -87,9 +88,10 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、食盆、喂、商店、摆放、礼物、图册）
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
-scripts/camp/               营地白模 blockout.py、占位图 placeholders.py、原画切块 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、抠图 cutouts、装饰原地重绘 decor_crop / decor_patch
+scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch
+scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）+ WXML 渲染器
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
-art/guide/camp-blockout.jpg 营地白模（blockout.py 生成，给 Codex 当重绘底稿）
+art/guide/camp-blockout.jpg 营地布局示意（blockout.py 生成）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
 docs/superpowers/            设计文档与实现计划；docs/art/camp-art-pack.md 出图工单
 ```

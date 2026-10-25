@@ -1,12 +1,13 @@
 // 宠物的日常：每只一个定时器，轮到它时按时段决定去哪、干什么，走到了做一会儿再换。坐标全是画的像素，页面按缩放画
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
 
-const { SCENE, scaleAt, inGrass, segmentHitsPoly, pointInPoly } = require('./shared/camp')
+const { SCENE, scaleAt, inGrass, hiddenAt, segmentHitsPoly, nogoPolys, pointInPoly } = require('./shared/camp')
 const { petById } = require('./shared/pets')
-const { decorById, patchRect } = require('./shared/decor')
+const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
 const { COLS, ROWS, frameFor, facingFor } = require('./anim')
-const { petImage, petFace, zOf } = require('./camp-view')
+const { petImage, petFace, zOf, cutoutStrips, BOWL_PX, isNight } = require('./camp-view')
+const { nightLook } = require('./camp-light')
 
 const REST_MS = [3000, 7000]
 const DO_MS = [6000, 12000]
@@ -21,8 +22,7 @@ const EAT_MS = 2000
 const JUMP_MS = 3000
 const HELLO_MS = 4000
 const PAIR_MS = 5000
-const DETOUR = 360
-const CORNER = 140 // 绕障碍物四角时离外框多远
+const PATH_MARGIN = 60 // 绕障碍时离它多远
 const BODY_GAP = 1.1 // 目标点离别的宠物至少几个身位
 const SUN_LOVERS = ['jutuan', 'guigui']
 const PAIR_CHANCE = 0.08
@@ -44,8 +44,25 @@ const realHour = () => new Date().getHours()
 
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by)
 
+// 一段路 from → to 跨过哪些东西的那条线（lines：[{ l, r, y }]），返回跨过去的那些点（按先后）。
+// 只要这一段路上身子哪儿横着挨着它就算（不只是跨线那一下）：斜着走，跨线时在旁边、走着走着挨上了，也得在跨线处切开，
+// 不然后半段按前半段的前后排，走到提灯后面还盖在提灯上面
+function depthCuts(from, to, half, lines) {
+  const ts = []
+  const len = Math.hypot(to.x - from.x, to.y - from.y)
+  lines.forEach((o) => {
+    if ((from.y - o.y) * (to.y - o.y) >= 0) return
+    if (Math.max(from.x, to.x) + half < o.l || Math.min(from.x, to.x) - half > o.r) return
+    const t = (o.y - from.y) / (to.y - from.y)
+    if (t * len > 1 && (1 - t) * len > 1) ts.push(t)
+  })
+  ts.sort((p, q) => p - q)
+  return ts.map((t) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, piece: true }))
+}
+
+// lit：篝火点着没有（锅是空的火不烧，夜里火边也只有月光）
 function createLife({
-  L, pets, decor, arrivals = [], hour = realHour, random = Math.random, clock = realClock, onChange = () => {},
+  L, pets, decor, arrivals = [], hour = realHour, lit = () => true, random = Math.random, clock = realClock, onChange = () => {},
   sheets = {}, animBase = '', bad = new Set(),
 }) {
   let placed = decor
@@ -62,11 +79,6 @@ function createLife({
 
   // ---------------------------------------------------------------- 地方
 
-  function nogoPolys() {
-    const n = SCENE.nogo
-    return [n.tent, n.fire]
-  }
-
   // 装饰上的点：{ x, y, action, uid, name }
   function decorSpots(action) {
     const out = []
@@ -77,7 +89,7 @@ function createLife({
       const s = scaleAt(p.y)
       d.spots.forEach((sp) => {
         if (sp.action !== action) return
-        out.push({ x: rect.left + sp.x * s, y: rect.top + sp.y * s, action, uid: p.uid, name: d.name })
+        out.push({ x: rect.left + sp.x * s, y: rect.top + sp.y * s, action, uid: p.uid, name: d.name, baseY: p.y })
       })
     })
     return out
@@ -101,23 +113,27 @@ function createLife({
     return animals.every((a) => a === self || a.hidden || dist(a.x, a.y, x, y) > self.pet.size * BODY_GAP)
   }
 
-  // 草地上随机一点（离别人远、离中心近一些的优先）
+  // 停下来的地方：草地上、不在锅身 / 提灯正后面（会被整个挡住）、离别人远
+  const restable = (x, y, self) => inGrass(x, y) && !hiddenAt(x, y) && awayFromOthers(x, y, self)
+
+  // 草地上随机一点
   function randomGrass(self, tries = 30) {
     for (let i = 0; i < tries; i++) {
       const x = 200 + random() * (SCENE.width - 400)
       const y = 800 + random() * (SCENE.height - 1000)
-      if (inGrass(x, y) && awayFromOthers(x, y, self)) return { x, y, action: 'idle' }
+      if (restable(x, y, self)) return { x, y, action: 'idle' }
     }
     return null
   }
 
+  // 篝火边：锅的前面和两边（锅后面会被锅挡住）
   function nearFire(self) {
     for (let i = 0; i < 30; i++) {
-      const a = random() * Math.PI * 2
-      const r = 380 + random() * 300
-      const x = SCENE.fire[0] + r * Math.cos(a)
+      const a = (-0.08 + random() * 1.16) * Math.PI
+      const r = 420 + random() * 320
+      const x = SCENE.fire[0] + r * Math.cos(a) * 1.15
       const y = SCENE.fire[1] + r * Math.sin(a) * 0.6
-      if (inGrass(x, y) && awayFromOthers(x, y, self)) return { x, y, action: 'idle' }
+      if (restable(x, y, self)) return { x, y, action: 'idle' }
     }
     return null
   }
@@ -141,13 +157,28 @@ function createLife({
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
     const shadowW = width * SHADOW_RATIO
     return {
-      id: a.id, name: a.pet.name, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(a.y) + 1,
+      id: a.id, name: a.pet.name, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
       bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (x - width / 2), bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
       emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping,
+      // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
+      ...nightLayers(a.x, a.y),
       shadow: { left: x - shadowW / 2, bottom: L.height - y - shadowW / 6, width: shadowW, height: shadowW / 3 },
     }
+  }
+
+  // 排前后用的 y：走路时按这一小段的中点；在装饰上玩、睡（吊床、窝、梯子）就排在那件装饰前面（盖在它上面）；其余按脚下
+  function sortY(a) {
+    if (a.depthY != null) return a.depthY
+    const spot = a.goal && !a.goal.path && a.goal.spot
+    if (spot && spot.baseY != null && Math.hypot(a.x - spot.x, a.y - spot.y) < 1) return Math.max(a.y, spot.baseY + 4)
+    return a.y
+  }
+
+  function nightLayers(x, y) {
+    if (!isNight(hour())) return { night: false, light: '', moon: 0, moonLight: '' }
+    return { night: true, ...nightLook(x, y, lit()) }
   }
 
   function emit(a) {
@@ -179,46 +210,89 @@ function createLife({
 
   // ---------------------------------------------------------------- 走
 
-  function detour(from, to) {
-    const polys = nogoPolys()
-    const blocked = (p, q) => polys.some((poly) => segmentHitsPoly([p.x, p.y], [q.x, q.y], poly))
-    if (!blocked(from, to)) return [to]
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    const len = Math.hypot(dx, dy) || 1
-    const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 }
-    const vias = []
-    for (const side of [1, -1, 2, -2]) vias.push({ x: mid.x + ((-dy / len) * DETOUR) * side, y: mid.y + ((dx / len) * DETOUR) * side })
-    // 大东西（帐篷、篝火圈）光往旁边挪一下绕不过去：再试每个障碍外框四个角外面一点
-    polys.forEach((poly) => {
-      const xs = poly.map((p) => p[0])
-      const ys = poly.map((p) => p[1])
-      const l = Math.min(...xs) - CORNER
-      const r = Math.max(...xs) + CORNER
-      const t = Math.min(...ys) - CORNER
-      const b = Math.max(...ys) + CORNER
-      vias.push({ x: l, y: t }, { x: r, y: t }, { x: l, y: b }, { x: r, y: b })
+  // 绕路：禁区（帐篷、篝火、木盖、提灯）和摆着的装饰的落脚框都是障碍。在每个障碍外面一圈取点，两点之间直线不碰障碍就连上，
+  // 走最短的那条（Dijkstra）；图只在装饰变了的时候重算。起点 / 终点在某件装饰的落脚框里（躺在吊床上、去窝里睡）的，那件这回不算障碍
+  let graph = null
+
+  function obstacles() {
+    const out = nogoPolys().map((poly) => ({ poly }))
+    placed.forEach((p) => {
+      if (!decorById(p.id)) return
+      const r = footRect(p.id, p.x, p.y)
+      out.push({ poly: [[r.left, r.top], [r.right, r.top], [r.right, r.bottom], [r.left, r.bottom]], decor: p.uid })
     })
-    const ok = vias.filter((v) => inGrass(v.x, v.y))
-    let best = null
-    const consider = (path, d) => {
-      if (!best || d < best.d) best = { path, d }
+    out.forEach((o) => {
+      const xs = o.poly.map((q) => q[0])
+      const ys = o.poly.map((q) => q[1])
+      o.box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
+    })
+    return out
+  }
+
+  function clear(p, q, obs) {
+    const l = Math.min(p.x, q.x)
+    const r = Math.max(p.x, q.x)
+    const t = Math.min(p.y, q.y)
+    const b = Math.max(p.y, q.y)
+    return !obs.some((o) => !(r < o.box[0] || l > o.box[2] || b < o.box[1] || t > o.box[3]) && segmentHitsPoly([p.x, p.y], [q.x, q.y], o.poly))
+  }
+
+  function buildGraph() {
+    const obs = obstacles()
+    const nodes = []
+    obs.forEach((o) => {
+      const cx = o.poly.reduce((acc, q) => acc + q[0], 0) / o.poly.length
+      const cy = o.poly.reduce((acc, q) => acc + q[1], 0) / o.poly.length
+      o.poly.forEach(([x, y]) => {
+        const len = Math.hypot(x - cx, y - cy) || 1
+        const n = { x: x + ((x - cx) / len) * PATH_MARGIN, y: y + ((y - cy) / len) * PATH_MARGIN }
+        if (inGrass(n.x, n.y) && !obs.some((q) => pointInPoly(n.x, n.y, q.poly))) nodes.push(n)
+      })
+    })
+    const edges = nodes.map(() => [])
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        if (!clear(nodes[i], nodes[j], obs)) continue
+        const d = dist(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y)
+        edges[i].push([j, d])
+        edges[j].push([i, d])
+      }
     }
-    ok.forEach((v) => {
-      if (blocked(from, v) || blocked(v, to)) return
-      consider([v, to], dist(from.x, from.y, v.x, v.y) + dist(v.x, v.y, to.x, to.y))
+    return { obs, nodes, edges }
+  }
+
+  function detour(from, to) {
+    if (!graph) graph = buildGraph()
+    const obs = graph.obs.filter((o) => !o.decor || (!pointInPoly(from.x, from.y, o.poly) && !pointInPoly(to.x, to.y, o.poly)))
+    if (clear(from, to, obs)) return [to]
+    const { nodes, edges } = graph
+    const n = nodes.length
+    const best = new Array(n).fill(Infinity)
+    const prev = new Array(n).fill(-1)
+    const done = new Array(n).fill(false)
+    const toGoal = new Array(n).fill(Infinity)
+    nodes.forEach((nd, i) => {
+      if (clear(from, nd, obs)) best[i] = dist(from.x, from.y, nd.x, nd.y)
+      if (clear(nd, to, obs)) toGoal[i] = dist(nd.x, nd.y, to.x, to.y)
     })
-    if (!best) {
-      // 一个拐点不够就两个：先绕过一个障碍再绕另一个
-      ok.forEach((v1) => {
-        if (blocked(from, v1)) return
-        ok.forEach((v2) => {
-          if (v1 === v2 || blocked(v1, v2) || blocked(v2, to)) return
-          consider([v1, v2, to], dist(from.x, from.y, v1.x, v1.y) + dist(v1.x, v1.y, v2.x, v2.y) + dist(v2.x, v2.y, to.x, to.y))
-        })
+    let goal = { d: Infinity, via: -1 }
+    for (;;) {
+      let u = -1
+      for (let i = 0; i < n; i++) if (!done[i] && best[i] < Infinity && (u < 0 || best[i] < best[u])) u = i
+      if (u < 0 || best[u] >= goal.d) break
+      done[u] = true
+      if (best[u] + toGoal[u] < goal.d) goal = { d: best[u] + toGoal[u], via: u }
+      edges[u].forEach(([v, d]) => {
+        if (!done[v] && best[u] + d < best[v]) {
+          best[v] = best[u] + d
+          prev[v] = u
+        }
       })
     }
-    return best ? best.path : null
+    if (goal.via < 0) return null
+    const path = [to]
+    for (let u = goal.via; u >= 0; u = prev[u]) path.unshift({ x: nodes[u].x, y: nodes[u].y })
+    return path
   }
 
   function walkTo(a, spot, then) {
@@ -229,12 +303,46 @@ function createLife({
     return true
   }
 
-  function stepAlong(a) {
-    const next = a.goal.path.shift()
+  // 会挡住宠物 / 被宠物挡住的东西，各自按一条横线排前后：抠图层（帐篷一条条）、装饰、食盆
+  const cutLines = cutoutStrips().map((c) => ({ l: c.l, r: c.r, y: c.zy }))
+  function occluders() {
+    const out = cutLines.slice()
+    placed.forEach((p) => {
+      if (!decorById(p.id)) return
+      const rect = patchRect(p.id, p.x, p.y)
+      out.push({ l: rect.left, r: rect.right, y: p.y })
+    })
+    SCENE.bowls.forEach(([bx, by]) => out.push({ l: bx - BOWL_PX / 2, r: bx + BOWL_PX / 2, y: by }))
+    return out
+  }
+
+  // 一段路要是跨过了某样东西的那条线、跨的时候身子又横着挨着它，就在跨过去的那一点切开：
+  // 每一小段里和谁前谁后都不变，按这段中点的 y 排（不然一出发就按终点排，走到锅后面之前就先钻到锅后面去了）
+  function splitForDepth(from, to, half) {
+    return depthCuts(from, to, half, occluders())
+  }
+
+  // 走下一小段：返回这段终点，宠物的前后按这段中点排
+  function nextStep(a, path) {
+    let next = path.shift()
+    const half = (a.pet.size * scaleAt(Math.max(a.y, next.y))) / 2
+    const cuts = splitForDepth({ x: a.x, y: a.y }, next, half)
+    if (cuts.length) {
+      path.unshift(...cuts.slice(1), { ...next, piece: true })
+      next = cuts[0]
+    }
     a.right = facingFor(next.x - a.x, a.right)
-    a.duration = Math.max(300, Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000))
+    // 切开的小段照原来的速度走（不设最短时长，不然走到切点会顿一下）
+    const ms = Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000)
+    a.duration = next.piece ? Math.max(16, ms) : Math.max(300, ms)
+    a.depthY = (a.y + next.y) / 2
     a.x = next.x
     a.y = next.y
+    return next
+  }
+
+  function stepAlong(a) {
+    nextStep(a, a.goal.path)
     a.action = a.pet.gait === 'fly' ? 'fly' : 'walk'
     emit(a)
     schedule(a, a.duration)
@@ -243,6 +351,7 @@ function createLife({
   function arrived(a) {
     const g = a.goal
     a.duration = 0
+    a.depthY = null
     if (g.path.length) return stepAlong(a)
     const then = g.then
     a.goal = { spot: g.spot }
@@ -252,6 +361,7 @@ function createLife({
   function doFor(a, action, ms, emoji = '') {
     a.action = action
     a.emoji = emoji
+    if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
     emit(a)
     schedule(a, ms)
   }
@@ -331,7 +441,7 @@ function createLife({
     const b = animals.find((o) => o.id === rule.b && !o.hidden && o.action === 'idle' && !o.holdGift)
     if (!b) return false
     const spot = { x: b.x + (a.pet.size + b.pet.size) * 0.4 * (a.x < b.x ? -1 : 1), y: b.y + 20, action: 'idle' }
-    if (!inGrass(spot.x, spot.y)) return false
+    if (!inGrass(spot.x, spot.y) || hiddenAt(spot.x, spot.y)) return false
     return walkTo(a, spot, (me) => {
       me.right = b.x > me.x
       say(me, rule.aLine, PAIR_MS)
@@ -404,8 +514,9 @@ function createLife({
       })
     },
 
+    // 暂停过才重新开始（没暂停时再 start 会让正在走的跳过这一步剩下的路）
     resume() {
-      this.start()
+      if (!running) this.start()
     },
 
     stop() {
@@ -418,6 +529,7 @@ function createLife({
 
     updateDecor(next) {
       placed = next
+      graph = null
       animals.forEach((a) => {
         const uid = a.goal && a.goal.spot && a.goal.spot.uid
         if (uid && !placed.some((p) => p.uid === uid)) {
@@ -455,6 +567,14 @@ function createLife({
       a.goal = a.goal && !a.goal.path ? a.goal : null
       say(a, liked ? a.pet.lines.fed : a.pet.lines.dislike)
       doFor(a, liked ? 'eat' : 'dislike', EAT_MS, liked ? '😋' : '💦')
+    },
+
+    // 叫第 i 只走到 (x, y)（画的像素）歇一会儿（stay 毫秒，不给就 6～12 秒）；那儿站不了或者走不到就返回 false
+    goTo(i, x, y, stay) {
+      const a = animals[i]
+      if (!a || a.hidden || a.holdGift || !inGrass(x, y)) return false
+      a.goal = null
+      return walkTo(a, { x, y, action: 'idle' }, (b) => rest(b, stay || between(DO_MS)))
     },
 
     // 打卡成功：全员跑到篝火边蹦一蹦
@@ -510,17 +630,13 @@ function createLife({
 
   // 叼礼物走路：和普通走路一样，但 holdGift 期间 turn 不接管，所以自己串
   function stepAlongGift(a) {
-    const next = a.goal.path.shift()
-    a.right = facingFor(next.x - a.x, a.right)
-    a.duration = Math.max(300, Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000))
-    a.x = next.x
-    a.y = next.y
+    nextStep(a, a.goal.path)
     a.action = 'gift'
     a.emoji = '🎁'
     emit(a)
     clock.clear(a.timer)
-    a.timer = clock.set(() => (a.goal.path.length ? stepAlongGift(a) : a.goal.then(a)), a.duration)
+    a.timer = clock.set(() => (a.goal.path.length ? stepAlongGift(a) : (a.depthY = null, a.goal.then(a))), a.duration)
   }
 }
 
-module.exports = { createLife }
+module.exports = { createLife, depthCuts }

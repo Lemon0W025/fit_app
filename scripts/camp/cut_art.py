@@ -3,8 +3,9 @@
     python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png [--width 3072] [--local]
     python3 scripts/camp/cut_art.py art/raw/camp/night-hd.png --prefix night-     # 夜景：同样切 16 块，文件名 night-t00.jpg…
 
-输出到 art/camp/t00.jpg … t33.jpg（npm run wx:art 上传到 camp/base/）；加 --local 则写到 miniprogram/images/camp/base/
-（替换白模占位，注意包大小，一般不用）。画必须是正方形（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
+输出到 art/camp/t00.jpg … t33.jpg（npm run wx:art 上传到 camp/base/）；画必须是正方形（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
+切完接着跑 scripts/camp/extend_art.py：画的上下补天空和草地（高清块 u*/d*），并把整个世界缩成 768 宽写进包里
+miniprogram/images/camp/base/world.jpg（夜景 night-world.jpg）当垫图——页面先垫这张，高清块盖在上面。
 """
 import argparse
 import os
@@ -49,7 +50,7 @@ def main():
             path = os.path.join(out, f'{a.prefix}t{row}{col}.jpg')
             tile.save(path, quality=85, optimize=True)
             total += os.path.getsize(path)
-    print(f'{canvas.width}×{canvas.height} → {out}，16 块共 {total // 1024} KB')
+    print(f'{canvas.width}×{canvas.height} → {out}，16 块共 {total // 1024} KB；接着 python3 scripts/camp/extend_art.py（上下补天空和草地、包里的垫图）')
 
 
 if __name__ == '__main__':

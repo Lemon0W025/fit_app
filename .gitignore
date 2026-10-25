@@ -11,3 +11,4 @@ __pycache__/
 art/camp/
 art/decor/
 art/cut/
+.preview/

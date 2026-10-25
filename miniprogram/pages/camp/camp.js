@@ -10,6 +10,9 @@ const { decorById, placeProblem } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
 
 const DOUBLE_TAP_MS = 300
+const HOUR_CHECK_MS = 60000
+const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
+const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -32,7 +35,9 @@ Page({
     hud: { top: 28, height: 32, below: 72 },
     world: null,
     view: { x: 0, y: 0, scale: 1 },
+    backdrop: '/images/camp/base/world.jpg',
     base: [],
+    frame: [],
     decor: [],
     pets: [],
     bowls: [],
@@ -70,10 +75,12 @@ Page({
 
   onHide() {
     this.stopLife()
+    this.later('viewTimer', null)
   },
 
   onUnload() {
     this.stopLife()
+    this.later('viewTimer', null)
   },
 
   win() {
@@ -120,12 +127,14 @@ Page({
       loaded: true,
       beans: view.beans,
       canSpin: view.beans >= view.spinCost,
-      world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
-      base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, config.campArt || '', night),
-      decor: V.decorViews(view.decor.placed, L, config.decorArt || ''),
-      bowls: V.bowlViews(view.bowls, L),
-      fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel),
-      cuts: V.cutoutViews(L, potLevel, config.cutArt || '', night),
+      world: { width: L.width, height: L.height, top: L.top, worldWidth: L.worldWidth, worldHeight: L.worldHeight, minScale: L.minScale, maxScale: L.maxScale, night },
+      backdrop: V.backdropImage(night),
+      base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
+      frame: this.data.frame.length && this.data.frame[0].image.indexOf(night ? 'night-u00' : '/u00') !== -1 ? this.data.frame : V.frameTiles(L, this.baseFailed ? '' : config.campArt || '', night),
+      decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night, potLevel > 0),
+      bowls: V.bowlViews(view.bowls, L, night, this.cutBase(), potLevel > 0),
+      fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
+      cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
       peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
@@ -136,42 +145,84 @@ Page({
       welcome: view.welcome || this.data.welcome,
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
-    if (!this.centered) {
+    const first = !this.centered
+    if (first) {
       patch.view = V.homeView(L, win)
       this.centered = true
     }
     this.setData(patch)
+    // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
+    if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
+    if (!this.hourTimer) this.watchHour()
     if (view.testGift) {
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，扭蛋、买装饰随便试试`, showCancel: false, confirmText: '好的' })
     }
     if (view.giftReady && !this.data.giftShown && this.life) this.offerGift(view)
   },
 
-  // movable-view 只在值变了才动：每次换一点点不同的小数
-  nudgeView(offset) {
+  // 捏着缩放：记下现在几倍（挪镜头前要知道）
+  onZoom(e) {
+    this.zoom = e.detail.scale
+  },
+
+  // 挪镜头到 offset（1 倍时的 x / y）。movable-view 同一次 setData 里又改 scale-value 又改 x / y 会吞掉一个，
+  // 所以放大过就先缩回 1 倍、等它缩完再平移；值和上次一样组件不动，每次加减一点点小数让它一定变
+  moveView(offset) {
     this.nudge = !this.nudge
     const d = this.nudge ? 0.01 : 0
-    this.setData({ view: { x: offset.x + d, y: offset.y + d, scale: offset.scale + d / 100 } })
+    const pan = () => this.setData({ 'view.x': offset.x + d, 'view.y': offset.y + d })
+    if (Math.abs((this.zoom || 1) - 1) < 0.005) {
+      this.later('viewTimer', null)
+      return pan()
+    }
+    this.zoom = 1
+    this.setData({ 'view.scale': this.data.view.scale === 1 ? 1.0001 : 1 })
+    this.later('viewTimer', pan, ZOOM_SETTLE_MS)
+  },
+
+  // 一个名字只挂一个定时器：再挂就把旧的换掉，fn 为空就只取消
+  later(name, fn, ms) {
+    const clock = this.clock || { set: (f, t) => setTimeout(f, t), clear: (h) => clearTimeout(h) }
+    if (this[name]) clock.clear(this[name])
+    this[name] = null
+    if (!fn) return
+    this[name] = clock.set(() => {
+      this[name] = null
+      fn()
+    }, ms)
   },
 
   recenter() {
-    this.nudgeView(V.homeView(this.L, this.win()))
+    this.moveView(V.homeView(this.L, this.win()))
   },
 
+  // 云端高清块（营地画和上下补的天空、草地）加载失败：都不再铺，只剩包里垫的整个世界（低清版）
   onBaseError() {
-    if (!config.campArt || !this.data.base.length || this.data.base[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ base: V.baseTiles(this.L, '', this.baseNight) })
+    if (this.baseFailed || (!this.data.base.length && !this.data.frame.length)) return
+    this.baseFailed = true
+    this.setData({ base: [], frame: [] })
+  },
+
+  // 帐篷 / 锅的抠图层和火苗逐帧图的前缀；云存储的图加载失败过一次就一直用包里的
+  cutBase() {
+    return this.cutFailed ? '' : config.cutArt || ''
   },
 
   onCutError() {
-    if (!config.cutArt || !this.data.cuts.length || this.data.cuts[0].image.indexOf('cloud://') !== 0) return
-    this.setData({ cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight) })
+    if (this.cutFailed || !config.cutArt) return
+    this.cutFailed = true
+    const placed = this.camp ? this.camp.decor.placed : []
+    this.setData({
+      cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
+      fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
+      bowls: V.bowlViews(this.camp ? this.camp.bowls : [], this.L, this.baseNight, '', (this.potLevel || 0) > 0),
+    })
   },
 
   onDecorError() {
     if (!config.decorArt || !this.camp) return
-    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '') })
+    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '', this.baseNight, (this.potLevel || 0) > 0) })
   },
 
   onAnimError(e) {
@@ -199,7 +250,9 @@ Page({
       decor: view.decor.placed,
       arrivals: view.arrivals || [],
       hour: this.hour || undefined,
+      lit: () => (this.potLevel || 0) > 0,
       clock: this.clock || undefined,
+      random: this.random || undefined,
       sheets: SHEETS,
       animBase: config.animArt || '',
       bad: this.badSheets,
@@ -212,6 +265,26 @@ Page({
   stopLife() {
     if (this.life) this.life.stop()
     this.life = null
+    this.stopWatchHour()
+  },
+
+  // 页面一直开着跨过 6 / 17 / 19 点：换日景 / 夜景整套、傍晚的色调（宠物自己每走一步就按新钟点上色，画也要跟上）
+  watchHour() {
+    const clock = this.clock || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h) }
+    this.stopWatchHour()
+    this.hourTimer = clock.set(() => {
+      this.hourTimer = null
+      const h = this.nowHour()
+      if (this.camp && (V.isNight(h) !== this.baseNight || V.tintFor(h) !== this.data.tint)) this.render(this.camp)
+      this.watchHour()
+    }, HOUR_CHECK_MS)
+  },
+
+  stopWatchHour() {
+    if (!this.hourTimer) return
+    const clock = this.clock || { clear: (h) => clearTimeout(h) }
+    clock.clear(this.hourTimer)
+    this.hourTimer = null
   },
 
   // 点一下说话；300ms 内再点一下是连点（打滚）
@@ -414,7 +487,7 @@ Page({
       if (px >= s.left && px <= s.left + s.width && py >= top && py <= L.height - s.bottom) return { pet: i }
     }
     for (const b of this.data.bowls) {
-      if (px >= b.left && px <= b.left + b.size && py >= b.top && py <= b.top + b.size) return { bowl: b.index }
+      if (px >= b.left && px <= b.left + b.width && py >= b.top && py <= b.top + b.height) return { bowl: b.index }
     }
     return null
   },
@@ -492,7 +565,7 @@ Page({
     const { index } = e.currentTarget.dataset
     const at = this.life ? this.life.focus(index) : null
     this.setData({ residentsOpen: false })
-    if (at) this.nudgeView(V.focusOffset(at.x, at.y, this.L, this.win(), 1.6))
+    if (at) this.moveView(V.focusOffset(at.x, at.y, this.L, this.win()))
   },
 
   // ---------------------------------------------------------------- 跳转

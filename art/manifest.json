@@ -26,14 +26,6 @@
       "minWidth": 1900
     },
     {
-      "file": "art/raw/cut/out-tent-removed.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-pot-removed.png",
-      "kind": "painting"
-    },
-    {
       "file": "art/raw/cut/out-pot-1.png",
       "kind": "painting"
     },
@@ -46,14 +38,6 @@
       "kind": "painting"
     },
     {
-      "file": "art/raw/cut/out-night-tent-removed.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-night-pot-removed.png",
-      "kind": "painting"
-    },
-    {
       "file": "art/raw/cut/out-night-pot-1.png",
       "kind": "painting"
     },
@@ -63,6 +47,22 @@
     },
     {
       "file": "art/raw/cut/out-night-pot-3.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-fire-off.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-fire-off.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/camp/out-sky.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/camp/out-night-sky.png",
       "kind": "painting"
     },
     {

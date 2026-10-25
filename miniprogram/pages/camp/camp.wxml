@@ -1,19 +1,29 @@
 <view class="screen">
   <view wx:if="{{!loaded}}" class="loading">正在走进营地…</view>
 
-  <movable-area wx:if="{{loaded}}" class="map-area">
-    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.8" scale-max="2.5" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
-      <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px">
+  <movable-area wx:if="{{loaded}}" class="map-area {{world.night ? 'night' : ''}}">
+    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="{{world.minScale}}" scale-max="{{world.maxScale}}" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" bindscale="onZoom" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px">
+      <image class="backdrop" src="{{backdrop}}" mode="scaleToFill" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px" />
+      <view id="world" class="world" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.height}}px">
         <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
-        <image wx:for="{{cuts}}" wx:key="key" class="cut" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
+        <view wx:for="{{cuts}}" wx:key="key" class="cut" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
+          <image class="cut-img" src="{{item.image}}" webp="{{true}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.imgLeft}}px; width: {{item.imgWidth}}px; height: {{item.height}}px" />
+        </view>
         <block wx:for="{{fx}}" wx:key="key">
-          <view wx:if="{{item.kind === 'shimmer'}}" class="fx-shimmer" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; -webkit-clip-path: {{item.clip}}; clip-path: {{item.clip}}; animation-delay: -{{item.delay}}s"></view>
-          <image wx:elif="{{item.kind === 'steam'}}" class="fx-steam" src="{{item.image}}" mode="aspectFit" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s" />
-          <view wx:else class="fx-{{item.kind}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
+          <view wx:if="{{item.kind === 'fire'}}" class="fx-fire" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
+            <image class="fx-fire-strip" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="width: {{item.strip.width}}%; height: {{item.strip.height}}%; left: {{item.strip.left}}%; top: {{item.strip.top}}%; animation-duration: {{item.ms}}ms" />
+          </view>
+          <image wx:elif="{{item.kind === 'patch'}}" class="fx-patch" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
+          <image wx:elif="{{item.kind === 'wisp'}}" class="fx-wisp" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s; animation-duration: {{item.ms}}ms" />
+          <view wx:else class="fx-{{item.kind}} {{item.variant ? 'fx-' + item.variant : ''}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
         </block>
-        <image wx:for="{{decor}}" wx:key="uid" class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
-        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.size}}px; height: {{item.size}}px; z-index: {{item.z}}">
-          <image wx:if="{{item.foodImage}}" class="bowl-food" src="{{item.foodImage}}" mode="aspectFit" />
+        <block wx:for="{{decor}}" wx:key="uid">
+          <image class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.light || 'none'}}" />
+          <image wx:if="{{item.night && item.moon}}" class="decor decor-moon {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.moonLight}}; opacity: {{mode === 'view' ? item.moon : item.moon * 0.6}}" />
+        </block>
+        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
+          <image wx:if="{{item.foodImage}}" class="bowl-pile" src="{{item.foodImage}}" mode="scaleToFill" style="left: {{item.pile.left}}px; top: {{item.pile.top}}px; width: {{item.pile.width}}px; height: {{item.pile.height}}px; filter: {{item.light || 'none'}}" />
+          <image wx:if="{{item.foodImage}}" class="bowl-rim" src="{{item.rimImage}}" webp="{{true}}" mode="scaleToFill" binderror="onCutError" />
           <image wx:if="{{item.peekImage}}" class="bowl-peek" src="{{item.peekImage}}" mode="aspectFit" />
         </view>
         <block wx:for="{{pets}}" wx:key="id">
@@ -24,15 +34,20 @@
             <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
             <view class="pet-body {{item.flip ? 'flip' : ''}}" style="height: {{item.width}}px">
               <view wx:if="{{item.sheet}}" class="anim-frame" style="width: {{item.width}}px; height: {{item.width}}px">
-                <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms" />
+                <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms; filter: {{item.light || 'none'}}; transition: filter {{item.duration}}ms linear" />
+                <image wx:if="{{item.night}}" class="anim-strip anim-f{{item.anim.frames}} moon" src="{{item.sheet}}" mode="scaleToFill" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms; filter: {{item.moonLight}}; opacity: {{item.moon}}; transition: filter {{item.duration}}ms linear, opacity {{item.duration}}ms linear" />
               </view>
-              <image wx:else class="pet-img {{item.cssAction}} gait-{{item.action === 'walk' || item.action === 'fly' || item.action === 'gift' ? 'on' : 'off'}}" src="{{item.image}}" mode="widthFix" />
+              <block wx:else>
+                <image class="pet-img {{item.cssAction}} gait-{{item.action === 'walk' || item.action === 'fly' || item.action === 'gift' ? 'on' : 'off'}}" src="{{item.image}}" mode="widthFix" style="filter: {{item.light || 'none'}}; transition: filter {{item.duration}}ms linear" />
+                <image wx:if="{{item.night}}" class="pet-img moon {{item.cssAction}} gait-{{item.action === 'walk' || item.action === 'fly' || item.action === 'gift' ? 'on' : 'off'}}" src="{{item.image}}" mode="widthFix" style="filter: {{item.moonLight}}; opacity: {{item.moon}}; transition: filter {{item.duration}}ms linear, opacity {{item.duration}}ms linear" />
+              </block>
             </view>
           </view>
         </block>
-        <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
       </view>
-      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
+      <image wx:for="{{frame}}" wx:key="key" class="base frame-tile" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+      <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
+      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
         <view wx:if="{{drag && drag.foot}}" class="drag-foot {{drag.ok ? 'ok' : 'bad'}}" style="left: {{drag.foot.left}}px; top: {{drag.foot.top}}px; width: {{drag.foot.width}}px; height: {{drag.foot.height}}px"></view>
         <image wx:if="{{drag}}" class="drag-ghost {{drag.ok ? '' : 'bad'}}" src="{{drag.image}}" mode="scaleToFill" style="left: {{drag.left}}px; top: {{drag.top}}px; width: {{drag.width}}px; height: {{drag.height}}px" />
       </view>

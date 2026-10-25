@@ -1,9 +1,9 @@
 // test/camp-life.test.js
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { createLife } = require('../miniprogram/utils/camp-life')
-const { campLayout } = require('../miniprogram/utils/camp-view')
-const { SCENE, inGrass, pointInPoly } = require('../miniprogram/utils/shared/camp')
+const { createLife, depthCuts } = require('../miniprogram/utils/camp-life')
+const { campLayout, cutoutStrips, zOf, BOWL_PX } = require('../miniprogram/utils/camp-view')
+const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
 const { manualClock } = require('./helpers/manual-clock')
 
@@ -19,7 +19,7 @@ function make(opts = {}) {
   const sprites = {}
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
-    hour: () => (opts.hour === undefined ? 12 : opts.hour), random: lcg(opts.seed || 7), clock,
+    hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', bad: new Set(),
   })
   return { life, clock, sprites }
@@ -158,4 +158,150 @@ test('有拼图时用拼图、按动作选行；拼图坏了退回单张图', ()
   assert.deepEqual([s.anim.cols, s.anim.rows, s.anim.row], [6, 6, 1])
   life.noSheet('doudou')
   assert.equal(life.sprites()[0].sheet, '')
+})
+
+test('depthCuts：跨过挨着的那条线就切开，旁边经过、不跨的不切', () => {
+  const lines = [{ l: 1416, r: 2668, y: 2820 }, { l: 100, r: 200, y: 3000 }]
+  const cuts = depthCuts({ x: 1350, y: 2600 }, { x: 1350, y: 3100 }, 100, lines)
+  assert.equal(cuts.length, 1)
+  assert.equal(cuts[0].y, 2820)
+  assert.equal(cuts[0].x, 1350)
+  assert.equal(depthCuts({ x: 1000, y: 2600 }, { x: 1000, y: 3100 }, 100, lines).length, 0) // 离锅远，身子挨不着
+  assert.equal(depthCuts({ x: 1350, y: 2900 }, { x: 1500, y: 3100 }, 100, lines).length, 0) // 一直在锅前面
+  assert.deepEqual(depthCuts({ x: 1300, y: 2700 }, { x: 1600, y: 3200 }, 100, lines).map((c) => Math.round(c.y)), [2820])
+  // 斜着走：跨线时离锅还远，走着走着挨上了锅，也要在跨线处切开（不然后半段按前半段排）
+  assert.deepEqual(depthCuts({ x: 3833, y: 3643 }, { x: 2524, y: 2300 }, 120, lines).map((c) => Math.round(c.y)), [2820])
+  // 一整段都在锅的左边、挨不着：不切
+  assert.deepEqual(depthCuts({ x: 700, y: 2600 }, { x: 1100, y: 3100 }, 100, lines), [])
+  // 跨线的地方离端点不到 1 像素才算没跨（长路上离端点 30 像素的跨线也要切）
+  assert.deepEqual(depthCuts({ x: 2000, y: 2832 }, { x: 2000, y: 1300 }, 100, lines).map((c) => c.y), [2820])
+  const both = depthCuts({ x: 160, y: 2700 }, { x: 160, y: 3200 }, 100, [{ l: 100, r: 200, y: 3000 }, { l: 0, r: 300, y: 2800 }])
+  assert.deepEqual(both.map((c) => c.y), [2800, 3000])
+})
+
+// 模拟一整天（多种随机种子、早中晚夜）：每走一小段，沿路取点，只要那一点身子横着挨着某样东西（抠图层的条、食盆、装饰），
+// 宠物在它前面还是后面就必须和这一小段排的 z（按中点）一致；停下来歇着的地方不在锅身、提灯正后面；走的路不穿任何禁区
+test('走路时和锅、帐篷、提灯、食盆、装饰的前后每一刻都对；停下来的地方看得见；路不穿禁区', () => {
+  const decor = [{ uid: 'd1', id: 'ball', x: 2500, y: 2300 }, { uid: 'd2', id: 'flowerbed', x: 1700, y: 3400 }, { uid: 'd3', id: 'hammock', x: 3300, y: 3300 }]
+  const { patchRect, decorById } = require('../miniprogram/utils/shared/decor')
+  const lines = cutoutStrips().map((c) => ({ l: c.l, r: c.r, y: c.zy }))
+    .concat(SCENE.bowls.map(([bx, by]) => ({ l: bx - BOWL_PX / 2, r: bx + BOWL_PX / 2, y: by })))
+    .concat(decor.filter((d) => decorById(d.id)).map((d) => { const r = patchRect(d.id, d.x, d.y); return { l: r.left, r: r.right, y: d.y } }))
+  let pieces = 0
+  let rests = 0
+  const runs = []
+  for (const seed of [3, 11, 29, 41, 57, 73, 97, 131]) for (const h of [8, 12, 18, 21]) runs.push([seed, h])
+  for (const [seed, h] of runs) {
+    const clock = manualClock()
+    let life = null
+    const prev = {}
+    const pets = ['doudou', 'nuonuo', 'jutuan', 'guigui', 'qiqi', 'shushu'].map((id) => ({ id, level: 3, fed: 9 }))
+    life = createLife({
+      L, pets, decor, arrivals: ['qiqi'], hour: () => h, random: lcg(seed), clock,
+      onChange: (i, sp) => {
+        const where = life.whereIs()[i]
+        const from = prev[i]
+        prev[i] = { x: where.x, y: where.y }
+        if (!from || (sp.action !== 'walk' && sp.action !== 'fly' && sp.action !== 'gift') || sp.hidden) return
+        if (Math.hypot(where.x - from.x, where.y - from.y) < 1) return
+        pieces += 1
+        const half = (petById(where.id).size * scaleAt(Math.max(from.y, where.y))) / 2
+        nogoPolys().forEach((poly) => assert.ok(!segmentHitsPoly([from.x, from.y], [where.x, where.y], poly), `${where.id} 穿过禁区 ${from.x},${from.y} → ${where.x},${where.y}`))
+        const midY = (from.y + where.y) / 2
+        assert.equal(sp.z, zOf(midY) + 1, `${where.id} 走路时按这一小段的中点排`)
+        for (let k = 0; k <= 10; k++) {
+          const x = from.x + ((where.x - from.x) * k) / 10
+          const y = from.y + ((where.y - from.y) * k) / 10
+          lines.forEach((o) => {
+            if (x + half < o.l || x - half > o.r || Math.abs(y - o.y) < 2 || Math.abs(midY - o.y) < 2) return
+            if (y > o.y !== midY > o.y) {
+              assert.fail(`${where.id} 在 ${x | 0},${y | 0} 挨着 y=${o.y} 的东西，却按 ${midY | 0} 排（${from.x | 0},${from.y | 0} → ${where.x | 0},${where.y | 0}，种子 ${seed}，${h} 点）`)
+            }
+          })
+        }
+      },
+    })
+    life.start()
+    for (let i = 0; i < 300; i++) {
+      clock.advance(700)
+      life.whereIs().forEach((w) => {
+        if (['idle', 'sit', 'sleep', 'sun'].includes(w.action)) {
+          rests += 1
+          assert.ok(!hiddenAt(w.x, w.y), `${w.id} 停在被挡住的地方 ${w.x | 0},${w.y | 0}（${w.action}）`)
+        }
+      })
+      if (i === 120) life.celebrate()
+      if (i === 200) life.gift(1)
+      if (i === 260) life.giftTaken()
+    }
+    life.stop()
+  }
+  assert.ok(pieces > 300, `走的步数 ${pieces}`)
+  assert.ok(rests > 1000, `歇着的次数 ${rests}`)
+})
+
+test('在装饰上玩、睡的宠物盖在那件装饰上面（不被吊床、窝挡住）；没暂停时 resume 不打断正在走的', () => {
+  const { decorById, patchRect } = require('../miniprogram/utils/shared/decor')
+  const { zOf: z } = require('../miniprogram/utils/camp-view')
+  const hammock = { uid: 'h1', id: 'hammock', x: 2600, y: 3500 }
+  assert.ok(decorById('hammock').spots.length)
+  let found = false
+  for (const seed of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+    // 夜里先去窝里睡（吊床是睡觉的地方）
+    const { life, clock, sprites } = make({ pets: [{ id: 'nuonuo', level: 3, fed: 9 }], decor: [hammock], seed, hour: 22 })
+    life.start()
+    for (let i = 0; i < 200 && !found; i++) {
+      clock.advance(500)
+      const w = life.whereIs()[0]
+      if (w.text.indexOf('吊床') !== -1 && w.action === 'sleep') {
+        found = true
+        assert.ok(sprites[0].z > z(hammock.y), `在吊床上的 z ${sprites[0].z} 应该在吊床 ${z(hammock.y)} 上面`)
+      }
+    }
+    life.stop()
+    if (found) break
+  }
+  assert.ok(found, '没等到有宠物去吊床上')
+  // resume：没暂停时不重新开始（正在走的不跳步）
+  const { life, clock } = make({ seed: 5 })
+  life.start()
+  clock.advance(2500)
+  const before = life.whereIs().map((w) => [w.x, w.y, w.action])
+  life.resume()
+  assert.deepEqual(life.whereIs().map((w) => [w.x, w.y, w.action]), before)
+  life.pause()
+  life.resume()
+  life.stop()
+  void patchRect
+})
+
+test('光、火星、萤火虫、热气这些层不挡点击（都在宠物上面）', () => {
+  const css = require('fs').readFileSync(require('path').join(__dirname, '../miniprogram/pages/camp/camp.wxss'), 'utf8')
+  ;['fx-fire', 'fx-fireglow', 'fx-glow', 'fx-ember', 'fx-firefly', 'fx-wisp', 'tint', 'cut', 'bowl-rim'].forEach((cls) => {
+    const rule = new RegExp(`\\.${cls} \\{[^}]*\\}`).exec(css)
+    assert.ok(rule, cls)
+    assert.match(rule[0], /pointer-events: none/, cls)
+  })
+})
+
+test('夜里宠物按站的位置调亮度和暖色（火边亮、远处暗），白天不调', () => {
+  const day = make({ hour: 12 })
+  day.life.sprites().forEach((s) => assert.equal(s.light, ''))
+  const night = make({ hour: 22 })
+  night.life.sprites().forEach((s) => assert.match(s.light, /^brightness\([\d.]+\) saturate\([\d.]+\) sepia\([\d.]+\)$/))
+  const { lightAt, nightFilter } = require('../miniprogram/utils/camp-light')
+  const b = (f) => Number(/brightness\(([\d.]+)\)/.exec(f)[1])
+  assert.ok(b(nightFilter(2130, 3200)) > b(nightFilter(3800, 3800)) + 0.2, '篝火前面比远处亮')
+  assert.ok(lightAt(2130, 3200).warm > 0 && lightAt(3800, 1200).warm < 0, '火边暖、远处冷')
+  assert.ok(b(nightFilter(1210, 1460)) > b(nightFilter(500, 2500)), '帐篷门口亮')
+  // 火没点（锅是空的）：火边和远处一样只有月光（暗、冷、盖月光层），帐篷门口、提灯边上照旧亮
+  assert.ok(Math.abs(b(nightFilter(2130, 3200, false)) - b(nightFilter(3800, 3800, false))) < 0.1, '火边和远处一样暗')
+  assert.ok(lightAt(2130, 3200, false).warm < -0.5, '火边不暖了')
+  assert.equal(b(nightFilter(1210, 1460, false)), b(nightFilter(1210, 1460)))
+  assert.ok(b(nightFilter(2750, 2750, false)) > b(nightFilter(2130, 3200, false)) + 0.1, '提灯边上还亮')
+  // 一开始都站在火堆前面：火没点就盖上月光层
+  const off = make({ hour: 22, lit: false }).life.sprites()[0]
+  const on = make({ hour: 22 }).life.sprites()[0]
+  assert.ok(off.moon > on.moon + 0.5, '火没点：火边的宠物盖上月光层')
+  assert.ok(b(off.light) < b(on.light))
 })
