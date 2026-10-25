@@ -368,3 +368,120 @@ button.btn-plain[disabled] {
 .stamps-small .stamp-on::after {
   display: none;
 }
+
+/* ---------------------------------------------------------------- 打卡动效（docs/superpowers/specs/2026-10-25-checkin-effects-design.md）
+   都很短、只播一次（呼吸除外）；结束的样子就是平时的样子（fill-mode 用 backwards，不挡按压效果）；
+   依次出现用 fx-d1～fx-d8（每档 100ms）；页面根节点加 fx-skip 就全部跳到结束 */
+@keyframes fx-rise {
+  from { opacity: 0; transform: translateY(32rpx); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fx-pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  70% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes fx-stamp {
+  0% { opacity: 0; transform: scale(1.6) rotate(-12deg); }
+  55% { opacity: 1; transform: scale(0.92) rotate(4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes fx-ink {
+  0% { opacity: 0.6; transform: scale(0.8); }
+  100% { opacity: 0; transform: scale(1.9); }
+}
+
+@keyframes fx-breathe {
+  0%, 100% { box-shadow: 0 4rpx 16rpx rgba(80, 60, 30, 0.05), 0 0 0 0 rgba(78, 125, 91, 0); }
+  50% { box-shadow: 0 4rpx 16rpx rgba(80, 60, 30, 0.05), 0 0 0 14rpx rgba(78, 125, 91, 0.16); }
+}
+
+@keyframes fx-breathe-warn {
+  0%, 100% { box-shadow: 0 4rpx 16rpx rgba(80, 60, 30, 0.05), 0 0 0 0 rgba(217, 130, 43, 0); }
+  50% { box-shadow: 0 4rpx 16rpx rgba(80, 60, 30, 0.05), 0 0 0 14rpx rgba(217, 130, 43, 0.26); }
+}
+
+@keyframes fx-nudge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+@keyframes fx-bounce {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.fx-rise { animation: fx-rise 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) backwards; }
+.fx-pop { animation: fx-pop 0.35s ease-out backwards; }
+.fx-d1 { animation-delay: 100ms; }
+.fx-d2 { animation-delay: 200ms; }
+.fx-d3 { animation-delay: 300ms; }
+.fx-d4 { animation-delay: 400ms; }
+.fx-d5 { animation-delay: 500ms; }
+.fx-d6 { animation-delay: 600ms; }
+.fx-d7 { animation-delay: 700ms; }
+.fx-d8 { animation-delay: 800ms; }
+
+/* 盖章：落下、歪一下回正，周围一圈墨晕开；准时的「准」再晚一点跳出来 */
+.fx-stamp {
+  position: relative;
+  animation: fx-stamp 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) 0.15s backwards;
+}
+
+.fx-stamp::before {
+  content: '';
+  position: absolute;
+  left: -8rpx;
+  top: -8rpx;
+  right: -8rpx;
+  bottom: -8rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(160, 90, 40, 0.45);
+  opacity: 0;
+  animation: fx-ink 0.7s ease-out 0.35s forwards;
+}
+
+.fx-stamp.stamp-on::after {
+  animation: fx-pop 0.3s ease-out 0.55s backwards;
+}
+
+/* 首页「下一顿」：饭点内慢慢呼吸，过点了琥珀色、快一点；按钮轻轻一胀一缩 */
+.fx-breathe { animation: fx-breathe 4s ease-in-out infinite; }
+.fx-breathe-warn { animation: fx-breathe-warn 2.5s ease-in-out infinite; }
+.fx-nudge { animation: fx-nudge 2s ease-in-out infinite; }
+
+/* 按下去缩一点，松手弹回：按钮用自带的 button-hover，卡片、小块用 hover-class="fx-press" */
+button,
+.card,
+.chip {
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+button.button-hover {
+  transform: scale(0.96);
+}
+
+.fx-press {
+  transform: scale(0.96);
+  opacity: 0.9;
+}
+
+.chip-on {
+  animation: fx-bounce 0.25s ease-out;
+}
+
+/* 点一下就跳到结束 */
+.fx-skip .fx-rise,
+.fx-skip .fx-pop,
+.fx-skip .fx-stamp,
+.fx-skip .fx-stamp.stamp-on::after {
+  animation: none;
+}
+
+.fx-skip .fx-stamp::before {
+  display: none;
+}

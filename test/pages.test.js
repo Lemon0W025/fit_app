@@ -134,7 +134,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(today.data.card.title, '午饭准时拍了 ✓')
   assert.equal(today.data.card.sub, '下一顿：晚饭 18:00')
   assert.equal(wx.app.globalData.mealTimes.lunch, '12:00')
-  assert.equal(today.data.daily.streakText, '🔥 已连续 1 天')
+  assert.equal(today.data.daily.streakText, '🔥 已连续 1 天 · 再 2 天拿 3 天纪念章')
   today.goGarden()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/camp/camp'])
   assert.match(today.data.greeting, /妈妈/)

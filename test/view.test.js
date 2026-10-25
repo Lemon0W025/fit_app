@@ -94,7 +94,7 @@ test('greetingText 按时段问候', () => {
   assert.equal(greetingText(22, ''), '晚上好')
 })
 
-const { stampsView, decorateGain, beansCard, buildCalendarCells, nextMealCard } = require('../miniprogram/utils/view')
+const { stampsView, decorateGain, gainTitle, beansCard, streakText, milestoneView, badgesView, analysisSteps, buildCalendarCells, nextMealCard } = require('../miniprogram/utils/view')
 
 const STAMPS = [
   { mealType: 'breakfast', label: '早', state: 'green', onTime: true },
@@ -125,16 +125,16 @@ test('decorateGain：准时的写清楚是哪顿准时，三顿都准时额外�
 })
 
 test('beansCard：今天的暖豆卡片', () => {
-  const card = beansCard({ stamps: STAMPS, beansToday: 20, hint: '再打卡晚餐还能得 20 暖豆', streak: 3, beans: 85, monthOnTime: 4 })
+  const card = beansCard({ stamps: STAMPS, beansToday: 20, hint: '再打卡晚餐还能得 20 暖豆', streak: 3, nextMilestone: { days: 7, left: 4 }, beans: 85, monthOnTime: 4 })
   assert.equal(card.title, '今天得了 20 暖豆')
   assert.equal(card.hint, '再打卡晚餐还能得 20 暖豆')
-  assert.equal(card.streakText, '🔥 已连续 3 天')
+  assert.equal(card.streakText, '🔥 已连续 3 天 · 再 4 天拿 7 天纪念章')
   assert.equal(card.stamps[0].cls, 'stamp-green stamp-on')
   assert.equal(card.onTimeText, '本月准时 4 顿')
-  const empty = beansCard({ stamps: [], beansToday: 0, hint: '打卡一顿正餐就能得 10 暖豆', streak: 0, beans: 0, monthOnTime: 0 })
+  const empty = beansCard({ stamps: [], beansToday: 0, hint: '打卡一顿正餐就能得 10 暖豆', streak: 0, nextMilestone: { days: 3, left: 3 }, beans: 0, monthOnTime: 0 })
   assert.equal(empty.onTimeText, '')
   assert.equal(empty.title, '今天还没打卡')
-  assert.equal(empty.streakText, '')
+  assert.equal(empty.streakText, '今天拍一顿，开始连续打卡')
   assert.equal(beansCard(null), null)
 })
 
@@ -180,4 +180,62 @@ test('nextMealCard：首页下一顿大卡', () => {
   })
   assert.equal(nextMealCard({ state: 'allDone', allOnTime: false }).title, '今天三顿都拍完啦 ✓')
   assert.equal(nextMealCard(null), null)
+})
+
+test('gainTitle / decorateGain：滚动时按显示的数写；刚打完卡这顿的印章要盖', () => {
+  const raw = { beans: 20, stamps: STAMPS, mealType: 'lunch', timing: 'on', allOnTime: false }
+  assert.equal(gainTitle(raw), '午饭准时打卡 +20 暖豆')
+  assert.equal(gainTitle(raw, 0), '午饭准时打卡 +0 暖豆')
+  assert.equal(gainTitle({ ...raw, timing: 'late' }, 3), '+3 暖豆')
+  assert.equal(gainTitle({ ...raw, beans: 0 }, 0), '这顿记下啦')
+  const fresh = decorateGain(raw, { fresh: true })
+  assert.deepEqual(fresh.stamps.map((s) => s.cls), ['stamp-green stamp-on', 'stamp-done fx-stamp', 'stamp-none'])
+  assert.deepEqual(decorateGain(raw).stamps.map((s) => s.cls), ['stamp-green stamp-on', 'stamp-done', 'stamp-none'])
+})
+
+test('streakText：连续几天 + 还差几天拿下一枚', () => {
+  const stamps = (done) => [{ state: done ? 'green' : 'none' }, { state: 'none' }, { state: 'none' }]
+  assert.equal(streakText({ streak: 0, nextMilestone: { days: 3, left: 3 }, stamps: stamps(false) }), '今天拍一顿，开始连续打卡')
+  assert.equal(streakText({ streak: 5, nextMilestone: { days: 7, left: 2 }, stamps: stamps(true) }), '🔥 已连续 5 天 · 再 2 天拿 7 天纪念章')
+  assert.equal(streakText({ streak: 6, nextMilestone: { days: 7, left: 1 }, stamps: stamps(true) }), '🔥 已连续 6 天 · 明天再拍就拿 7 天纪念章')
+  assert.equal(streakText({ streak: 6, nextMilestone: { days: 7, left: 1 }, stamps: stamps(false) }), '🔥 已连续 6 天 · 今天拍一顿就拿 7 天纪念章')
+  assert.equal(streakText({ streak: 2 }), '🔥 已连续 2 天')
+})
+
+test('milestoneView：庆祝卡的标题、第几次、小暖的话、最亲的小动物', () => {
+  const v = milestoneView({ days: 7, times: 1, tier: 'bronze', glow: false, petId: 'doudou' })
+  assert.deepEqual(v, {
+    days: 7, tier: 'bronze', glow: false,
+    title: '连续打卡 7 天！', sub: '', line: '一周都没落下，身体会记得的', image: '/images/camp/pets/doudou.png',
+  })
+  const again = milestoneView({ days: 465, times: 2, tier: 'gold', glow: true, petId: '' })
+  assert.equal(again.sub, '第 2 次做到')
+  assert.equal(again.line, '连续 465 天，小暖为你骄傲')
+  assert.equal(again.image, '/images/garden/ui/bean.png')
+  assert.equal(milestoneView(null), null)
+})
+
+test('badgesView：已拿的写天数和第一次的日子，下一个写还差几天', () => {
+  const v = badgesView([
+    { days: 3, tier: 'bronze', glow: false, got: true, first: '2026-10-18', times: 2 },
+    { days: 7, tier: 'bronze', glow: false, got: false, left: 2 },
+    { days: 14, tier: 'silver', glow: false, got: false },
+  ])
+  assert.deepEqual(v.map((b) => [b.label, b.firstText]), [['3 天', '2026年10月18日'], ['还差 2 天', ''], ['14 天', '']])
+  assert.deepEqual(badgesView(undefined), [])
+})
+
+test('analysisSteps：有照片三步、没照片两步，走到哪步前面打勾', () => {
+  assert.deepEqual(analysisSteps(true, 0).map((s) => [s.label, s.state]), [['上传照片', 'now'], ['认出菜', 'todo'], ['算热量', 'todo']])
+  assert.deepEqual(analysisSteps(true, 2).map((s) => s.state), ['done', 'done', 'now'])
+  assert.deepEqual(analysisSteps(false, 1).map((s) => [s.label, s.state]), [['认出菜', 'done'], ['算热量', 'now']])
+})
+
+test('buildCalendarCells：今天那格标出来', () => {
+  const days = [
+    { date: '2026-10-21', day: 21, future: false, stamps: [], beans: 0, mealsCount: 0, kcal: 0 },
+    { date: '2026-10-22', day: 22, future: false, stamps: [], beans: 0, mealsCount: 0, kcal: 0 },
+  ]
+  const cells = buildCalendarCells(days, 3, '2026-10-22')
+  assert.deepEqual(cells.filter((c) => !c.blank).map((c) => c.isToday), [false, true])
 })
