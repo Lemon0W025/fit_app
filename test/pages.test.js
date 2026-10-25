@@ -159,18 +159,21 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.ok(mealId)
   assert.match(wx.log.uploads[0].cloudPath, /^meals\/\d{4}-\d{2}-\d{2}\/\d+-\w+\.jpg$/)
 
-  // 4. 详情页
+  // 4. 详情页（刚打完卡：盖章、数字滚到位）
   assert.ok(readWxml('meal').includes('回到营地'))
   const meal = loadPage('meal', wx)
+  meal.clock = manualClock()
   meal.onLoad({ id: mealId })
   await settle()
+  meal.clock.advance(3000)
   assert.equal(meal.data.meal.kcalText, '约 520 千卡')
   assert.equal(meal.data.meal.label, '午餐')
   assert.equal(meal.data.note, '米饭吃了一半')
   assert.equal(meal.data.gain.title, '午饭准时打卡 +20 暖豆')
-  assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green stamp-on')
+  assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green stamp-on fx-stamp')
   assert.equal(meal.data.gain.bonus, '')
   assert.equal(wx.app.globalData.lastGain, null)
+  assert.deepEqual(wx.log.vibrations, ['light'])
 
   // 5. 估得不准 → 补充描述重新分析
   meal.startEdit()
@@ -282,6 +285,82 @@ test('打卡页：从首页带着餐次进来就选好；不在任何饭点时�
   const bad = loadPage('checkin', wx)
   bad.onLoad({ mealType: 'supper' })
   assert.equal(bad.data.mealType, 'snack')
+})
+
+const MEAL_FIXTURE = {
+  _id: 'm1', mealType: 'lunch', status: 'done', createdAt: 1, note: '',
+  analysis: { isFood: true, rating: 'green', totalKcal: 520, protein: 20, carbs: 60, fat: 15, foods: [], comment: '搭配不错' },
+}
+const LUNCH_STAMPS = [
+  { mealType: 'breakfast', label: '早', state: 'green', onTime: true },
+  { mealType: 'lunch', label: '午', state: 'green', onTime: true },
+  { mealType: 'dinner', label: '晚', state: 'none', onTime: false },
+]
+
+function mealPageWith(gain) {
+  const wx = createWx(async (req) => (req.action === 'meal.get' ? { ok: true, data: MEAL_FIXTURE } : { ok: true, data: null }))
+  if (gain) wx.app.globalData.lastGain = { mealId: 'm1', gain, arrival: null }
+  const page = loadPage('meal', wx)
+  page.clock = manualClock()
+  return { wx, page }
+}
+
+test('结果页：刚打完卡数字从 0 滚到位、盖章时轻震；里程碑等前面播完再弹，点「收下」关掉', async () => {
+  const { wx, page } = mealPageWith({
+    beans: 20, beansToday: 35, hint: 'x', stamps: LUNCH_STAMPS, mealType: 'lunch', timing: 'on', allOnTime: false,
+    milestone: { days: 7, times: 1, tier: 'bronze', glow: false, petId: 'doudou' },
+  })
+  page.onLoad({ id: 'm1' })
+  await settle()
+  assert.equal(page.data.gain.title, '午饭准时打卡 +0 暖豆')
+  assert.equal(page.data.meal.kcalText, '约 0 千卡')
+  page.clock.advance(300)
+  assert.deepEqual(wx.log.vibrations, ['light'])
+  page.clock.advance(1000)
+  assert.equal(page.data.gain.title, '午饭准时打卡 +20 暖豆')
+  assert.equal(page.data.meal.kcalText, '约 520 千卡')
+  assert.equal(page.data.celebrate, '')
+  page.clock.advance(200)
+  assert.equal(page.data.celebrate, 'milestone')
+  assert.equal(page.data.milestone.title, '连续打卡 7 天！')
+  assert.equal(page.data.milestone.image, '/images/camp/pets/doudou.png')
+  page.onCelebrateClose()
+  assert.equal(page.data.celebrate, '')
+  assert.equal(page.clock.count(), 0)
+})
+
+test('结果页：点一下屏幕跳到结束（里程碑马上弹）；三顿都准时撒彩带；看旧打卡不震动、不滚数字', async () => {
+  const skip = mealPageWith({
+    beans: 20, beansToday: 20, hint: 'x', stamps: LUNCH_STAMPS, mealType: 'lunch', timing: 'on', allOnTime: false,
+    milestone: { days: 3, times: 1, tier: 'bronze', glow: false, petId: '' },
+  })
+  skip.page.onLoad({ id: 'm1' })
+  await settle()
+  skip.page.skipFx()
+  assert.equal(skip.page.data.fxSkip, true)
+  assert.equal(skip.page.data.gain.title, '午饭准时打卡 +20 暖豆')
+  assert.equal(skip.page.data.meal.kcalText, '约 520 千卡')
+  assert.equal(skip.page.data.celebrate, 'milestone')
+  assert.equal(skip.page.clock.count(), 0)
+
+  const burst = mealPageWith({ beans: 35, beansToday: 75, hint: 'x', stamps: LUNCH_STAMPS, mealType: 'dinner', timing: 'on', allOnTime: true, milestone: null })
+  burst.page.onLoad({ id: 'm1' })
+  await settle()
+  burst.page.clock.advance(800)
+  assert.equal(burst.page.data.celebrate, 'burst')
+  burst.page.onCelebrateClose()
+  burst.page.onUnload()
+  assert.equal(burst.page.clock.count(), 0)
+
+  const old = mealPageWith(null)
+  old.page.onLoad({ id: 'm1' })
+  await settle()
+  assert.equal(old.page.data.meal.kcalText, '约 520 千卡')
+  assert.equal(old.page.data.gain, null)
+  assert.deepEqual(old.wx.log.vibrations, [])
+  assert.equal(old.page.clock.count(), 0)
+  old.page.skipFx()
+  assert.equal(old.page.data.fxSkip, false)
 })
 
 test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡', async (t) => {

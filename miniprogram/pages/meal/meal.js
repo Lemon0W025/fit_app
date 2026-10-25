@@ -1,6 +1,10 @@
 const api = require('../../utils/api')
-const { decorateMeal, decorateGain } = require('../../utils/view')
+const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
+const { clockOf, countUp, buzz } = require('../../utils/fx')
+
+// 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
+const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
 
 Page({
   data: {
@@ -11,6 +15,9 @@ Page({
     note: '',
     editing: false,
     working: false,
+    fxSkip: false,
+    celebrate: '',
+    milestone: null,
   },
 
   onLoad(options) {
@@ -19,7 +26,8 @@ Page({
     const app = getApp()
     const last = app.globalData.lastGain
     if (last && last.mealId === options.id) {
-      this.setData({ gain: decorateGain(last.gain), arrival: arrivalCard(last.arrival) })
+      this.freshGain = last.gain
+      this.setData({ gain: decorateGain(last.gain, { fresh: true }), arrival: arrivalCard(last.arrival) })
       app.globalData.lastGain = null
     }
     api.call('meal.get', { mealId: this.mealId })
@@ -32,6 +40,71 @@ Page({
 
   showMeal(meal) {
     this.setData({ loading: false, meal: decorateMeal(meal), note: meal.note || '' })
+    if (this.freshGain) {
+      const raw = this.freshGain
+      this.freshGain = null
+      this.playFx(raw)
+    }
+  },
+
+  // 刚打完卡：暖豆和热量从 0 滚上来，盖章那一下轻震，三顿都准时撒一把彩带，到了里程碑最后弹庆祝
+  playFx(raw) {
+    const clock = clockOf(this)
+    this.fxTimers = []
+    this.counters = []
+    const later = (fn, ms) => {
+      const h = clock.set(() => {
+        this.fxTimers = this.fxTimers.filter((x) => x !== h)
+        fn()
+      }, ms)
+      this.fxTimers.push(h)
+    }
+    later(() => buzz('light'), FX.buzz)
+    if (raw && raw.beans > 0 && this.data.gain) {
+      this.counters.push(countUp(0, raw.beans, FX.beansMs, (n) => this.setData({ 'gain.title': gainTitle(raw, n) }), clock))
+    }
+    const meal = this.data.meal
+    if (meal.status === 'done' && meal.analysis && meal.analysis.isFood !== false) {
+      this.counters.push(countUp(0, meal.analysis.totalKcal, FX.kcalMs, (n) => this.setData({ 'meal.kcalText': `约 ${n} 千卡` }), clock))
+    }
+    if (raw && raw.milestone) {
+      this.pendingMilestone = milestoneView(raw.milestone)
+      later(() => this.openMilestone(), FX.milestone)
+    } else if (raw && raw.allOnTime) {
+      later(() => this.setData({ celebrate: 'burst' }), FX.burst)
+    }
+  },
+
+  stopFx() {
+    const clock = clockOf(this)
+    ;(this.fxTimers || []).forEach((h) => clock.clear(h))
+    this.fxTimers = []
+    ;(this.counters || []).forEach((c) => c.finish())
+    this.counters = []
+  },
+
+  // 点一下屏幕：动效直接跳到结束，有里程碑就马上弹
+  skipFx() {
+    const playing = (this.fxTimers || []).length > 0 || (this.counters || []).some((c) => !c.done())
+    if (!playing && !this.pendingMilestone) return
+    this.stopFx()
+    this.setData({ fxSkip: true })
+    this.openMilestone()
+  },
+
+  openMilestone() {
+    if (!this.pendingMilestone) return
+    const milestone = this.pendingMilestone
+    this.pendingMilestone = null
+    this.setData({ celebrate: 'milestone', milestone })
+  },
+
+  onCelebrateClose() {
+    this.setData({ celebrate: '' })
+  },
+
+  onUnload() {
+    this.stopFx()
   },
 
   previewPhoto() {

@@ -1,8 +1,8 @@
 <view wx:if="{{loading}}" class="empty">加载中…</view>
 
-<view class="page" wx:if="{{meal}}">
-  <view wx:if="{{gain}}" class="card gain-banner" bindtap="goCamp">
-    <image class="gain-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
+<view class="page {{fxSkip ? 'fx-skip' : ''}}" wx:if="{{meal}}" bindtap="skipFx">
+  <view wx:if="{{gain}}" class="card gain-banner fx-rise" hover-class="fx-press" bindtap="goCamp">
+    <image class="gain-icon fx-pop fx-d3" src="/images/garden/ui/bean.png" mode="aspectFit" />
     <view class="gain-body">
       <view class="gain-title">{{gain.title}}</view>
       <view wx:if="{{gain.bonus}}" class="gain-bonus">{{gain.bonus}}</view>
@@ -12,7 +12,7 @@
       <view class="gain-hint">{{gain.hint}}</view>
     </view>
   </view>
-  <view wx:if="{{arrival}}" class="card arrival-banner" bindtap="goCamp">
+  <view wx:if="{{arrival}}" class="card arrival-banner fx-rise fx-d6" hover-class="fx-press" bindtap="goCamp">
     <image class="arrival-image" src="{{arrival.image}}" mode="aspectFit" />
     <view class="arrival-body">
       <view class="arrival-title">{{arrival.text}}</view>
@@ -20,9 +20,9 @@
     </view>
   </view>
 
-  <image wx:if="{{meal.fileID}}" class="hero-photo" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
+  <image wx:if="{{meal.fileID}}" class="hero-photo fx-rise fx-d1" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
 
-  <view class="card">
+  <view class="card fx-rise fx-d2">
     <view class="meal-head">
       <text class="meal-label">{{meal.label}}</text>
       <text class="meal-time">{{meal.timeText}}</text>
@@ -52,7 +52,7 @@
     <view wx:if="{{meal.note}}" class="note-line">我的备注：{{meal.note}}</view>
   </view>
 
-  <view wx:if="{{meal.analysis && meal.analysis.foods.length}}" class="card">
+  <view wx:if="{{meal.analysis && meal.analysis.foods.length}}" class="card fx-rise fx-d3">
     <view class="card-title">认出来的食物</view>
     <view wx:for="{{meal.analysis.foods}}" wx:key="name" class="list-row">
       <view>
@@ -63,7 +63,7 @@
     </view>
   </view>
 
-  <view wx:if="{{meal.analysis}}" class="card coach">
+  <view wx:if="{{meal.analysis}}" class="card coach fx-rise fx-d4">
     <view class="coach-name">🌿 小暖说</view>
     <view class="coach-text">{{meal.analysis.comment}}</view>
     <block wx:if="{{meal.analysis.suggestion}}">
@@ -84,4 +84,6 @@
   </view>
 
   <button class="btn-plain" bindtap="goCamp">回到营地</button>
+
+  <celebrate wx:if="{{celebrate}}" mode="{{celebrate}}" milestone="{{milestone}}" bindclose="onCelebrateClose" />
 </view>

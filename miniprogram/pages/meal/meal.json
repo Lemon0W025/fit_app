@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "这一餐"
+  "navigationBarTitleText": "这一餐",
+  "usingComponents": {
+    "celebrate": "/components/celebrate/celebrate"
+  }
 }
