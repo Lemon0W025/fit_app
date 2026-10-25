@@ -43,3 +43,14 @@ test('非法输入抛 BAD_REQUEST，多条错误用分号连接', async () => {
     return true
   })
 })
+
+test('save：三餐时间没传时沿用旧的，没有旧的用默认', async () => {
+  const { service } = setup()
+  const first = await service.save('u1', input)
+  assert.deepEqual(first.mealTimes, { breakfast: '07:30', lunch: '12:00', dinner: '18:00' })
+  const changed = await service.save('u1', { ...input, mealTimes: { breakfast: '07:00', lunch: '12:30', dinner: '18:30' } })
+  assert.deepEqual(changed.mealTimes, { breakfast: '07:00', lunch: '12:30', dinner: '18:30' })
+  const kept = await service.save('u1', input)
+  assert.deepEqual(kept.mealTimes, { breakfast: '07:00', lunch: '12:30', dinner: '18:30' })
+  await assert.rejects(service.save('u1', { ...input, mealTimes: { lunch: '12:15' } }), { code: 'BAD_REQUEST' })
+})

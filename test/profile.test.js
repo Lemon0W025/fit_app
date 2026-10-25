@@ -57,3 +57,12 @@ test('空输入不抛异常', () => {
   const { errors } = validateProfile(undefined)
   assert.ok(errors.length >= 5)
 })
+
+test('三餐时间：传了才校验，不合法给出错误', () => {
+  assert.equal(validateProfile(valid).value.mealTimes, undefined)
+  const ok = validateProfile({ ...valid, mealTimes: { breakfast: '07:00', lunch: '12:30', dinner: '18:30' } })
+  assert.deepEqual(ok.errors, [])
+  assert.deepEqual(ok.value.mealTimes, { breakfast: '07:00', lunch: '12:30', dinner: '18:30' })
+  const bad = validateProfile({ ...valid, mealTimes: { breakfast: '11:00' } })
+  assert.deepEqual(bad.errors, ['早饭时间要在 05:00～10:00 之间，按半小时选'])
+})

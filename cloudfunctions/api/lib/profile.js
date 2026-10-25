@@ -1,4 +1,5 @@
 const { ACTIVITY_FACTORS, round1 } = require('./shared/nutrition')
+const { validateMealTimes } = require('./shared/timing')
 
 const NUMBER_FIELDS = [
   { key: 'age', label: '年龄', min: 10, max: 100, unit: '岁', integer: true },
@@ -36,6 +37,13 @@ function validateProfile(input) {
     }
     value[f.key] = f.integer ? Math.round(n) : round1(n)
   })
+
+  // 三餐时间：老版本的小程序不传，就不动（保存时沿用旧的）
+  if (src.mealTimes !== undefined) {
+    const times = validateMealTimes(src.mealTimes)
+    value.mealTimes = times.value
+    errors.push(...times.errors)
+  }
 
   return { value, errors }
 }

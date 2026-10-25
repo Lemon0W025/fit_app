@@ -2,6 +2,7 @@ const { AppError, CODES } = require('../lib/errors')
 const { validateProfile } = require('../lib/profile')
 const { calcDailyKcal } = require('../lib/shared/nutrition')
 const { dateKey } = require('../lib/shared/date')
+const { mealTimesOf } = require('../lib/shared/timing')
 
 function createProfileService({ repo, now }) {
   return {
@@ -17,6 +18,7 @@ function createProfileService({ repo, now }) {
       const at = now()
       const profile = {
         ...value,
+        mealTimes: value.mealTimes || mealTimesOf(existing),
         dailyKcal: calcDailyKcal(value),
         createdAt: existing ? existing.createdAt : at.getTime(),
         updatedAt: at.getTime(),
