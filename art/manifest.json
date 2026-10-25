@@ -26,44 +26,24 @@
       "minWidth": 1900
     },
     {
-      "file": "art/raw/cut/out-pot-1.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-pot-2.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-pot-3.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-night-pot-1.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-night-pot-2.png",
-      "kind": "painting"
-    },
-    {
-      "file": "art/raw/cut/out-night-pot-3.png",
-      "kind": "painting"
-    },
-    {
       "file": "art/raw/cut/out-fire-off.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/cut/out-night-fire-off.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/camp/out-sky.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/camp/out-night-sky.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/ui/foods.png",
@@ -81,103 +61,128 @@
     },
     {
       "file": "art/raw/decor/out-tent.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-hammock.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-treehouse.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-strawbed.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-picnic.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-table.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-kettle.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-swing.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-ball.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-ladder.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-slide.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-flowerbed.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-pumpkins.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-sapling.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-sunflower.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-lights.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-bunting.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-windmill.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-mailbox.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-lantern.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-stonelamp.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-fence.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-clothesline.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-scarecrow.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/decor/out-gold_tent.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.0
     },
     {
       "file": "art/raw/pets/doudou-ref.png",
@@ -409,7 +414,8 @@
     },
     {
       "file": "art/raw/camp/family.png",
-      "kind": "painting"
+      "kind": "painting",
+      "aspect": 1.5
     }
   ]
 }

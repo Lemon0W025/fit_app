@@ -1,7 +1,7 @@
 """篝火没点的样子：今天一顿正餐都没打卡（锅是空的）火就不烧。画上的火是画死在底图里的，这里从画上把火「熄掉」，做成盖在底图上的补丁
 
     python3 scripts/camp/fire_off.py [--preview 目录]
-    python3 scripts/camp/fire_off.py --crop        # 裁出给 Codex 画正式「没点火」版的两块：art/raw/cut/in-fire-off.png、in-night-fire-off.png
+    python3 scripts/camp/fire_off.py --crop        # 裁出给 Codex 画正式「没点火」版的两块（正方形）：art/raw/cut/in-fire-off.png、in-night-fire-off.png
 
 日景：锅底下木柴之间那几处黄白色的火苗，换成木柴堆里的暗处：木柴按 LOGS 量好的轴线和粗细顺着补全（每根柴的横截面明暗照它露在外面的部分），
       柴缝里是暗的、低处一点灰；火照在木柴、灰床、石头、锅底上的暖光去掉（lit ≈ unlit × (1 + g·c)，g 从火堆往外衰减），锅身下半截不再被火照亮
@@ -15,8 +15,8 @@
 别的脚本要熄了火的整张画就调 unlit_day() / unlit_night()：cutouts.py 出空锅 pot-0 和夜里的 night-lid-off，
 bowl_food.py 出夜里的 night-bowl-N-off，light_map.py 出熄了火时宠物身上的光。
 画换了：重新量 LOGS（--preview 会把量的木柴框画在画上对），这几个脚本都重跑。
-Codex 画了正式的「没点火」版（工单第 1d 节：art/raw/cut/out-fire-off.png、out-night-fire-off.png）就直接用它，不再程序熄火；
-它画的范围要是比原来大，脚本打印的新框填进 SCENE.flame.off。
+Codex 画了正式的「没点火」版（工单第 1d 节：art/raw/cut/out-fire-off.png、out-night-fire-off.png）就直接用它，不再程序熄火：
+in / out 都是 SCENE.flame.off 外扩成的正方形，只取回框里那块（外圈羽化接回原画）。
 需要 Pillow 和 numpy。
 """
 import argparse
@@ -126,8 +126,11 @@ def _codex(day_or_night, img):
         return None
     S = scene()
     k = img.width / S['W']
-    box = [round(v * k) for v in _off_boxes()[day_or_night]]
-    piece = Image.open(path).convert('RGB').resize((box[2] - box[0], box[3] - box[1]), Image.LANCZOS)
+    off = _off_boxes()[day_or_night]
+    sq = [round(v * k) for v in _square(off, S['W'])]
+    box = [round(v * k) for v in off]
+    full = Image.open(path).convert('RGB').resize((sq[2] - sq[0], sq[3] - sq[1]), Image.LANCZOS)
+    piece = full.crop((box[0] - sq[0], box[1] - sq[1], box[2] - sq[0], box[3] - sq[1]))
     h, w = piece.height, piece.width
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
     edge = np.minimum.reduce([xx, w - 1 - xx, yy, h - 1 - yy]) / k
@@ -143,16 +146,28 @@ def _off_boxes():
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
+def _square(box, size):
+    """把框外扩成正方形（中心不变，碰到画边往里挪）：图像模型的 edit 只出 1024×1024，给它正方形的 in，回来的 out 才不会变形"""
+    side = max(box[2] - box[0], box[3] - box[1])
+    x0 = min(max((box[0] + box[2] - side) // 2, 0), size - side)
+    y0 = min(max((box[1] + box[3] - side) // 2, 0), size - side)
+    return [x0, y0, x0 + side, y0 + side]
+
+
 def crop():
-    """裁出给 Codex 的两块（框是 SCENE.flame.off）：日景火堆那块、夜景火照亮的那一大圈"""
+    """裁出给 Codex 的两块（SCENE.flame.off 外扩成正方形）：日景火堆那块、夜景火照亮的那一大圈"""
     os.makedirs(CODEX, exist_ok=True)
     boxes = _off_boxes()
+    W = scene()['W']
     for name, src, key in (('in-fire-off.png', 'camp-hd.png', 'day'), ('in-night-fire-off.png', 'night-hd.png', 'night')):
         img = Image.open(os.path.join(RAW, src)).convert('RGB')
-        k = img.width / 4096
-        img.crop([round(v * k) for v in boxes[key]]).save(os.path.join(CODEX, name))
-        print(f'  ✓  art/raw/cut/{name}')
-    print('Codex 按工单第 1d 节画 out-fire-off.png、out-night-fire-off.png（和 in-* 一样大），回来再跑 python3 scripts/camp/fire_off.py')
+        k = img.width / W
+        x0, y0, x1, _ = _square(boxes[key], W)
+        side = round((x1 - x0) * k)
+        piece = img.crop((round(x0 * k), round(y0 * k), round(x0 * k) + side, round(y0 * k) + side))
+        piece.save(os.path.join(CODEX, name))
+        print(f'  ✓  art/raw/cut/{name}  {piece.width}×{piece.height}')
+    print('Codex 按工单第 1d 节画 out-fire-off.png、out-night-fire-off.png（正方形，1024×1024 就行），回来再跑 python3 scripts/camp/fire_off.py')
 
 
 def unlit_day(day):

@@ -50,7 +50,8 @@ def main():
         side = max(w, h)
         left = cx - dc['anchor']['x'] * MARGIN - (side - w) / 2
         top = cy - dc['anchor']['y'] * MARGIN - (side - h) / 2
-        box = [round(left * k), round(top * k), round((left + side) * k), round((top + side) * k)]
+        x0, y0, n = round(left * k), round(top * k), round(side * k)
+        box = [x0, y0, x0 + n, y0 + n]
         img.crop(box).save(os.path.join(OUT, f'in-{dc["id"]}.png'))
         boxes[dc['id']] = {'box': box, 'anchor': [cx, cy], 'k': k}
     json.dump(boxes, open(os.path.join(OUT, 'boxes.json'), 'w'), indent=1)

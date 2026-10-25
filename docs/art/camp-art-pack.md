@@ -8,7 +8,7 @@
 
 | 批 | 内容 |
 |---|---|
-| 1 | A（已完成）：营地整图日 / 夜 + 高清。B：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、（可选）营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
+| 1 | A（已完成）：营地整图日 / 夜 + 高清。B：豆豆、糯糯、莲莲、柿柿各 4 张；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；没点火的火堆（日 / 夜）；食物图标；界面图标；（可选）营地上面的天空。锅里的三种状态不用画了（脚本画） |
 | 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
 | 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
 
@@ -39,53 +39,57 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 
 **A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
 
-**第 1 批 B：其余**（整段粘给 Codex）。一共约 36 张；中间第 5 步会停下来给你看 4 只宠物的定稿，你回「可以」或者写改意见，它再往下做：
+**第 1 批 B：其余**（整段粘给 Codex）。一共 28 张（另有 2 张可选）。**宠物定稿放在最前面**：第 1 步出完 4 只宠物的定稿就停下来给你看，你回「可以」或者写改意见；之后它一口气做完，不用再盯着。锅里的三种状态不用它画了（脚本画在锅口里，和画上的锅严丝合缝）：
 
 ```
 你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。
-先 git pull（拿到最新的脚本和场景数据），再把这个文件和 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。
+先切到最新代码：git checkout claude/mini-program-dev-nzn2n0 && git pull（脚本和场景数据都在这个分支上），
+再把这个文件和 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。
 只往 art/raw/ 里加图，别改代码和脚本。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带 SHEET RULES /
 ANIMATION SHEET RULES），把 art/guide/style-camp.jpg 当画风参考图；输出路径和 art/manifest.json 里的一致；每出一张就跑
-python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
-1. 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-pot.png，按第 1b 节用 edit 画
-   out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），只改锅口里面（和锅口上方一点热气），其他像素不动。
-   夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-pot.png，画 out-night-pot-1/2/3.png。
-2. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
-   in-night-fire-off.png（夜景被火照亮的那一大圈），按第 1d 节用 edit 画 out-fire-off.png、out-night-fire-off.png（尺寸和 in 一样）。
-3. （可选，前面都做完再做）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、
-   in-night-sky.png，按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
-4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
+python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。
+宠物和装饰在手机上显示得很小（宠物默认只有约 30 像素宽），第 2 节和 3.1 的「屏幕上很小」那几条每张都要照做。
+锅里的东西不用画（第 1b 节已取消）。顺序：
+1. 宠物 doudou、nuonuo、lianlian、shishi 的定稿：每只按 3.1 出 art/raw/pets/<id>-ref.png，四张一起发给我看，停下来等我。
+2. 我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
+   都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
+3. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
-5. 宠物 doudou、nuonuo、lianlian、shishi 的定稿：每只按 3.1 出 art/raw/pets/<id>-ref.png，四张一起发给我看，停下来等我。
-6. 我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
-   都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
-7. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
-8. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
-   codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）。
+4. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
+   in-night-fire-off.png（夜景被火照亮的那一大圈），都是正方形；按第 1d 节用 edit 画 out-fire-off.png、
+   out-night-fire-off.png（1024×1024）。
+5. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
+6. （可选，前面都做完再做）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、
+   in-night-sky.png，按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
+7. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我（第 2、3 批的图和没做的可选天空显示「还没有」是对的）；
+   把 art/raw/ 整个目录提交到新分支 codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）；
+   推完切回 claude/mini-program-dev-nzn2n0（git checkout claude/mini-program-dev-nzn2n0），别把仓库留在新分支上。
 ```
 
-**第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 2 批之前先 `git pull`，仓库里得有第 1 批的 `art/raw/camp/camp-hd.png`（装饰是从它上面裁草地）。
+**第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 1 批的图接进来后都在 `claude/mini-program-dev-nzn2n0` 分支上，第 2、3 批照样先切到这个分支 `git pull` 再做。
 
 **第 2 批开场指令**：
 
 ```
 你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 2 批」，规矩和第 1 批一样（UNIFIED STYLE、路径按 art/manifest.json、
-每张 check_art.py）。顺序：
-1. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
+每张 check_art.py、「屏幕上很小」那几条）。先 git checkout claude/mini-program-dev-nzn2n0 && git pull。顺序：
+1. 宠物 huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha：先 7 张 -ref.png 一起给我看，停下来等我；
+   我说可以之后每只再出 -a、-b、-album。
+2. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
    每块按第 2 节模板 edit 成 art/raw/decor/out-<id>.png。
-2. 宠物 huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha：先 7 张 -ref.png 一起给我看，我说可以之后每只再出 -a、-b、-album。
-3. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送。
+3. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送，
+   推完切回 claude/mini-program-dev-nzn2n0。
 ```
 
 **第 3 批开场指令**：
 
 ```
-你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 3 批」，规矩同前。顺序：
-1. 鹤鹤 hehe：-ref.png 给我看，然后 -a（注意 A 张第 1 行是飞）、-b、-album。
+你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 3 批」，规矩同前。先 git checkout claude/mini-program-dev-nzn2n0 && git pull。顺序：
+1. 鹤鹤 hehe：-ref.png 给我看，停下来等我；然后 -a（注意 A 张第 1 行是飞）、-b、-album。
 2. 金色小帐篷：python3 scripts/camp/decor_crop.py --ids gold_tent，edit 成 art/raw/decor/out-gold_tent.png。
 3. 全家福 art/raw/camp/family.png（第 6 节，1536×1024），以 12 张 -ref.png 为参考，每只都要认得出。
-4. check_art.py 全跑，art/raw/ 提交到新分支 codex/art-batch-3 并推送。
+4. check_art.py 全跑，art/raw/ 提交到新分支 codex/art-batch-3 并推送，推完切回 claude/mini-program-dev-nzn2n0。
 ```
 
 ## 0. 总则（每张都适用）
@@ -110,11 +114,13 @@ cute, friendly and calm.
 | `art/guide/camp-blockout.jpg` | 营地布局示意（**不是底稿**，别拿它做 image-to-image）：看懂有哪些东西、大致在哪就行；画好以后代码按你的画重新量 |
 | `art/guide/camp-blockout-labels.jpg` | 同一张示意图加了名字 |
 | `art/guide/style-camp.jpg` | **画风基准**（每张图都带上它当参考图）：手绘 2D 插画、软、暖，不是 3D 渲染。只参考画风，**不参考它的布局** |
+| `art/raw/camp/camp.png` | 选定的营地画（第 1 批 A）：宠物、装饰都住在这张画里，颜色的饱和度、亮度和它对齐。用视觉能力看一眼就行，画宠物时**别**当参考图传（免得把草地画进透明图里） |
 | `art/guide/town/*.jpg` | 更早的画风参考（偏 3D），只在 style-camp 不够用时看一眼 |
 | `art/raw/pets/<id>-ref.png` | 每只宠物的造型定稿：画它的动画和插画时作为「同一只」的参考（先出定稿） |
 
 **尺寸与格式**：
-- 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：营地整图、锅、定稿、拼图、插画、图标都是 1:1，用 1024×1024；全家福 1536×1024。输出原图，不要自己缩放、不要截图
+- 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：营地整图、定稿、拼图、插画、图标都是 1:1，用 1024×1024；全家福 1536×1024。输出原图，不要自己缩放、不要截图
+- 用 edit 改的那几样（装饰、没点火的火堆、天空），输入 `in-*.png` 都是脚本裁好的**正方形**，输出 1024×1024 就行（脚本会缩放回去对齐）；构图一点都不能挪，挪了贴回画上就错位
 - 拼图和精灵图一律 **真透明 PNG**（alpha 通道），不要把棋盘格画进图里；实在做不到透明就用纯洋红 `#FF00FF` 平涂背景，物体里不能有洋红
 - 营地整图、装饰的「原地重绘」是不透明的场景图，PNG 或高质量 JPG 都行
 
@@ -133,6 +139,8 @@ cast shadow, no connected scenery. Keep silhouettes within the middle 80% of the
 ---
 
 ## 1. 营地整图 `art/raw/camp/camp.png`（1:1 正方形）
+
+> **第 1 批 A，已完成**（选了候选 03，日景 / 夜景和高清都已接入），本节和 1c 留着备查，不用再做。
 
 这是整个游戏的舞台，值得多生成几版挑最好的。**不要用白模做底图**：白模只是告诉你有哪些东西、大致在哪；构图、细节、氛围以好看为准，画完代码照你的画来量。
 
@@ -187,24 +195,10 @@ Do not add or remove anything. Same lighting.
 
 然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
 
-### 1b. 锅的三种状态 `art/raw/cut/out-pot-*.png`
+### 1b. 锅的三种状态（**已取消，不用画**）
 
-帐篷、锅连三脚架、木盖、提灯在游戏里是从底图里抠出来单独的一层（宠物走到它们后面会被挡住）。这几层由脚本直接从画上抠精确轮廓
-（`cutouts.py --from-base`，按颜色去掉草地、只留物件本身），**不需要你画「去掉」的版本**。只要锅里的内容：妈妈今天打了几顿正餐，锅里就有几层
-（现在是脚本画的过渡版，你画的会更好看）。
-
-1. `python3 scripts/camp/cutouts.py --crop` 从高清营地图裁出锅那块 `art/raw/cut/in-pot.png`（夜景加 `--night` → `in-night-pot.png`）。
-2. 用 edit 画，**只改锅口里面（和锅口正上方一点点热气），其他像素一概不动**，尺寸和 in 一样：
-   - `out-pot-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
-   - `out-pot-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
-   - `out-pot-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
-3. `python3 scripts/camp/cutouts.py` 用精确轮廓 ∪ 你画了内容的地方，合成 `pot-1`～`pot-3`。
-
-```
-PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
-满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, same camera angle, same soft light. Change ONLY the inside of the pot
-(and the faint steam right above it); the pot, tripod, fire, stones and grass must stay pixel-identical. UNIFIED STYLE.
-```
+锅里的内容（妈妈今天打了几顿正餐，锅里就有几层：粥底 / 加了菜 / 满满一锅）由脚本 `pot_fill.py` 直接画在画上的锅口里，和锅的透视、光线严丝合缝，
+不再找你画。帐篷、锅连三脚架、木盖、提灯这几层抠图也是脚本从画上抠的，你什么都不用做。
 
 ### 1d. 没点火的火堆 `art/raw/cut/out-fire-off.png`、`out-night-fire-off.png`
 
@@ -212,10 +206,11 @@ PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot 
 你画的会更自然。
 
 1. `python3 scripts/camp/fire_off.py --crop` 裁出 `art/raw/cut/in-fire-off.png`（日景，锅底下的火堆和周围一圈）和 `in-night-fire-off.png`（夜景，火照亮的整片）。
-2. 用 edit 画，尺寸和 in 一样，**物件的位置、形状一概不动**：
+   两块都是**正方形**（比要改的范围大一圈，外面那圈原样留着就行）。
+2. 用 edit 画，输出 1024×1024，**构图一点不挪，物件的位置、形状一概不动**：
    - `out-fire-off.png`（白天）：火熄了——锅底下没有火苗，木柴还是那样搭着，柴缝里是暗的、底下一点灰白的灰；木柴、石头、锅底上那层橙黄的火光去掉，按白天的阳光画
    - `out-night-fire-off.png`（夜里）：火熄了——没有火苗，那一大圈暖黄的火光全部去掉，草地、石头、锅、三脚架、木盖、食盆都和远处一样只有冷冷的月光；**提灯还亮着**，只照亮它旁边一小圈
-3. 再跑 `python3 scripts/camp/fire_off.py`，它会直接用你画的（外圈自动羽化接回原画）。
+3. （小程序这边做，你不用跑）`python3 scripts/camp/fire_off.py` 直接用你画的，只取回框里那块，外圈自动羽化接回原画。
 
 ```
 PROMPT（白天）: Edit this crop of the camp scene: the campfire under the clay pot is OUT — no flames, no glow. Keep the
@@ -237,7 +232,7 @@ UNIFIED STYLE.
 2. 用 edit **只重画上半张**（下半张的山、树林、帐篷一概不动），尺寸不变：
    - 白天：和画上一样的蓝天，越往上蓝得越深一点；几朵和画上一样的蓬松白云，画顶那几朵被切掉的云往上长完整
    - 夜里：深蓝的夜空，越往上越深；稀稀落落几颗画上那种四角小星；画顶那几朵淡淡的夜云往上长完整
-3. 再跑 `python3 scripts/camp/extend_art.py`，它会用你画的上半张当天空（紧挨着画顶那一小段自动接回画上）。
+3. （小程序这边做，你不用跑）`python3 scripts/camp/extend_art.py` 用你画的上半张当天空，紧挨着画顶那一小段自动接回画上。
 
 ```
 PROMPT（白天）: Edit this image: repaint ONLY the upper half as open sky above the camp scene — the same soft blue as the
@@ -259,19 +254,26 @@ cut off at the middle line continue upward naturally. The lower half must stay p
 2. 你用 image-to-image / edit，把装饰画在这块草地**正中偏下**（装饰的底边落在块高的 80% 左右），**块里其他像素一概不动**，存成 `out-<id>.png`（1024×1024）。
 3. 小程序这边 `python3 scripts/camp/decor_patch.py` 比对 in / out，把装饰连一圈草地裁下来、边缘羽化。
 
+**屏幕上很小**：手机上默认看营地时，一件小装饰本身只有约 20 像素宽，大的也就 45 像素左右（宠物约 30）；双指捏小看全景还要再小三成。所以：
+- 造型简单、轮廓清楚，大块面的颜色，别画细碎的小零件、细线、小字和花纹
+- 和黄绿色的草地分得开：绿色的部分（叶子、帐篷布）用偏蓝或偏深的绿，或者边上留一圈浅色；别用和草一样的黄绿
+- 大小：装饰的宽度约占 in 图宽的一半（正好是块宽的三分之二），底边落在图高的 75%～80%，别画得太小，也别顶到块外
+
 每件的提示词模板：
 
 ```
 Edit this crop of the camp meadow: paint ONE <装饰> standing on the grass at the lower center of the
 image, in UNIFIED STYLE, same camera angle (about 45–50 degrees from above) and the same soft light from
 the upper left as the surrounding grass. The object must sit convincingly ON the ground with a soft
-contact shadow and a few blades of grass overlapping its base. Do not change anything else: the grass
+contact shadow and a few blades of grass overlapping its base. It is shown small on a phone, so keep it
+simple and bold: a clear silhouette, a few large color areas, no fine details, colors clearly separated
+from the yellow-green grass, about half the image width. Do not change anything else: the grass
 texture, colors and lighting outside the object must stay pixel-identical. No text, no people.
 ```
 
 | id | 名字（中文） | 画什么（英文填进 `<装饰>`） | 块大小 |
 |---|---|---|---|
-| tent | 小帐篷 | a small pastel-green pup tent, clearly smaller and a different color than the big camp tent already in the scene, door flap tied open | 大 |
+| tent | 小帐篷 | a small sky-blue pup tent with a cream door flap tied open — clearly smaller than the big olive-green camp tent in the scene and NOT green | 大 |
 | hammock | 吊床 | a striped fabric hammock slung between two slim young trees | 大 |
 | treehouse | 树洞小屋 | a tiny house built into a short hollow tree stump, round door, tiny windows | 大 |
 | strawbed | 草窝 | a round nest bed of golden straw | 小 |
@@ -284,7 +286,7 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 | slide | 小滑梯 | a small children's slide, pastel green with wooden steps | 大 |
 | flowerbed | 花坛 | a round flower bed edged with small stones, full of pastel daisies and cosmos | 中 |
 | pumpkins | 南瓜堆 | a pile of three plump orange pumpkins with a tiny one on top | 中 |
-| sapling | 小树 | a young round tree with a bushy soft canopy and a slim trunk | 大 |
+| sapling | 小树 | a young round tree with a bushy soft canopy and a slim trunk, the same style as the round trees along the top of the camp painting but much smaller | 大 |
 | sunflower | 向日葵 | three tall sunflowers of different heights | 小 |
 | lights | 灯串 | a string of warm round festoon lights hung between two slim wooden poles (lights off in daylight, bulbs visible) | 大 |
 | bunting | 彩旗 | a line of pastel triangular bunting flags strung between two short wooden poles | 中 |
@@ -297,7 +299,7 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 | scarecrow | 稻草人 | a friendly scarecrow with a straw hat and a smiling face, arms out | 中 |
 | gold_tent | 金色小帐篷 | the same camping tent but made of shimmering gold fabric with tiny star patterns (unlit) | 大 |
 
-块大小（营地高清图按 3072 宽算）：小约 240×200、中约 360×300、大约 520×420，装饰要整个落在裁出来的块里，四周留出一圈草地。
+块大小（按 4096 见方的营地算，`decor_crop.py` 会自动换算到高清图上）：小 240×200、中 360×300、大 520×420。作参照，同一张画上锅连三脚架约 600 宽、食盆 270、宠物 230～380。装饰要整个落在裁出来的块里，四周留出一圈草地。
 
 ---
 
@@ -314,7 +316,18 @@ CHARACTER SHEET: the same character three times side by side on a transparent ba
 three-quarter side view facing right, back view — feet on one baseline, same scale, plus a small close-up
 of its signature feature in a corner. Chibi proportions (big round head about 45% of the height, tiny
 limbs), big glossy eyes, soft rounded body, Pokémon-like cuteness but an ORIGINAL design.
+Designed to read when tiny on a phone screen: a simple bold silhouette, two or three large color areas,
+an oversized signature feature in a contrasting color, no fine patterns or thin details, and body colors
+clearly distinct from a yellow-green meadow.
 ```
+
+**屏幕上很小**（这条最要紧）：手机上默认看营地时，一只宠物只有约 **30 像素宽**（指甲盖大），双指捏小看全景约 20 像素，放到最大也就 80 像素。所以：
+- 轮廓简单饱满，光看剪影就能分清 12 只
+- 身上 2～3 种主色、大块面；不要细碎的花纹、细线、小配件
+- 记忆点（豆豆的豆芽、糯糯的长耳朵、莲莲的荷叶、柿柿背上的柿子……）画得**大**、颜色跳出来，30 像素时还认得出
+- 眼睛大而亮，表情一眼看得出
+- 和黄绿色的草地分得开：绿色的部分用偏蓝或偏深的绿，边上留一圈浅色；别整只都是绿的
+- 画完把定稿缩到 64 像素宽看一眼，认不出是谁就改
 
 ### 3.2 动画拼图 `art/raw/anim/<id>-a.png` 和 `<id>-b.png`（1:1，6 列 × 6 行 = 36 格，透明底）
 
@@ -350,7 +363,12 @@ baseline in every frame (about 15% above the cell bottom), centered horizontally
 cell empty on every side, nothing crosses a cell border. The character always faces RIGHT (the game
 mirrors it for the other side). Each row is one looping action of 6 frames, rows in the given order.
 No props unless stated, no ground, no shadow, no text, no frame numbers. Transparent background.
+The character is shown tiny on a phone, so every pose is clear and a little exaggerated (feet lifted high,
+clear squash and stretch on hops and jumps, the head and signature feature moving visibly); the silhouette
+changes from frame to frame enough to read as motion, while the size of the character stays the same.
 ```
+
+动作幅度要比平常大一点：屏幕上只有指甲盖大，小动作看不出来。走路脚抬高（身体还是保持水平），蹦的时候有明显的压扁拉伸，记忆点（豆芽、耳朵、荷叶）跟着动；只是动作大，宠物本身的大小每帧一样。
 
 为什么这样要求（和营地的画融在一起靠这几条）：游戏会按宠物站的位置给它加脚下的软影子、夜里按画上的光给它调亮暗和冷暖（火边暖、远处是月光的蓝白），
 走到锅、帐篷、木盖后面会被正确挡住——所以宠物本身**不要画影子、不要画地面、不要画夜色或火光**，光一律左上方、亮度中等的白天光，颜色饱和度和营地的画差不多（别比画更艳）。
@@ -365,10 +383,10 @@ No props unless stated, no ground, no shadow, no text, no frame numbers. Transpa
 |---|---|---|---|---|
 | doudou | 豆豆 | a round fluffy yellow chick with a sprouting soybean on top of its head (a pale yellow bean with two tiny green leaves), tiny orange beak and feet, big shiny dark eyes, curious expression | waddle, short quick steps | shakes its head so the sprout wobbles and a glowing golden bean pops out and bounces |
 | nuonuo | 糯糯 | a plump white rabbit whose long ears are soft, floppy and slightly translucent like strips of rice cake, pink inner ears, rosy cheeks, shy expression | hop cycle (crouch, push off, stretch, land, settle) | twists its two ears together into a braid and lets them spring apart |
-| lianlian | 莲莲 | a round yellow duckling wearing a big green lotus leaf on its head like a hat/umbrella, flat orange bill, orange webbed feet, sleepy slow expression | waddle, body rocking side to side | takes the lotus leaf off and fans itself with it |
+| lianlian | 莲莲 | a round yellow duckling wearing a big blue-green lotus leaf with a pale rim on its head like a hat/umbrella (cooler than the grass so it stands out), flat orange bill, orange webbed feet, sleepy slow expression | waddle, body rocking side to side | takes the lotus leaf off and fans itself with it |
 | shishi | 柿柿 | a small brown hedgehog whose back spines carry a cluster of tiny orange persimmons like fruit on branches, cream face, little black nose, busy expression | slow crawl, legs one at a time | curls up and rolls, persimmons tumble off, it uncurls and scoops them back |
 | huahua | 花花 | a chubby calico kitten (white with orange and dark-grey patches) whose tail ends in a yellow chrysanthemum flower, big round eyes, pink nose, proud expression | quadruped walk, tail swaying | sits and waves its flower tail like a fan toward the viewer |
-| guigui | 龟龟 | a small chubby green turtle whose shell is a tiny moss garden: velvety green moss, a pebble and one tiny mushroom growing on it; friendly half-closed eyes | slow crawl, head bobbing | pulls head and legs into the shell so only the moss garden is left, then peeks out |
+| guigui | 龟龟 | a small chubby turtle with warm tan skin whose shell is a tiny moss garden: velvety deep blue-green moss, a pale pebble and one tiny red-capped mushroom growing on it (not grass-colored, so it stands out on the meadow); friendly half-closed eyes | slow crawl, head bobbing | pulls head and legs into the shell so only the moss garden is left, then peeks out |
 | qiqi | 杞杞 | a small orange fox with a white chest and tail tip, wearing a necklace of twelve bright red goji berries, mischievous grin, one ear slightly bent | light quick quadruped trot | sneaks a goji berry off its necklace and flicks it away with a sly look |
 | shushu | 薯薯 | a small brown squirrel with a huge bushy tail and enormous round cheeks the color and shape of two sweet potatoes, tiny paws, greedy happy expression | hop-run with the tail bouncing | stuffs an imaginary snack into its cheeks, cheeks balloon, looks innocent |
 | jutuan | 橘团 | a very fat orange cat shaped like a tangerine segment: round body with faint tangerine ridges, a green leaf-shaped tail, cream belly, lazy half-closed eyes | heavy slow quadruped walk, belly swaying | curls into a perfect tangerine ball and rolls one full turn, then flops |
@@ -416,8 +434,8 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `extend_art.py`（上下补天空和草地的 16 块 + 包里垫的整个世界 `world.jpg`；Codex 画了 `out-sky.png` 就用它的天空）→ `npm run wx:art` 传云存储 → `config.campArt`
-- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
-- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
+- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。锅里三态不找 Codex 了，一直用 `pot_fill.py` 画的
+- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是这个框外扩成的正方形，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）
 - 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）

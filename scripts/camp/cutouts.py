@@ -1,6 +1,6 @@
 """帐篷和暖暖锅的「抠图层」：从高清营地图里把它们抠成独立的透明图，盖在底图上，宠物走到后面就被挡住；锅还按今天打了几顿换图
 
-    python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出给 Codex 的块：art/raw/cut/in-pot.png 等（范围是 shared/camp.js 的 SCENE.cutouts）
+    python3 scripts/camp/cutouts.py --crop [art/raw/camp/camp-hd.png]   # 裁出给 Codex 的块：art/raw/cut/in-pot.png 等（范围是 shared/camp.js 的 SCENE.cutouts；工单已取消，留着备用）
     python3 scripts/camp/cutouts.py [--local]                           # 用 Codex 画的 out-pot-1～3 换掉锅里的过渡版
     加 --night：对夜景做同样的事（裁 art/raw/camp/night-hd.png → in-night-*.png；合成 night-pot-N）
     python3 scripts/camp/cutouts.py --from-base [--local] [--check out-dir]
@@ -9,9 +9,9 @@
         边缘按「像草的程度」留半透明；夜景构图和日景一样，直接用日景算出的轮廓。锅里的内容由 pot_fill.py 画在锅口里。
         日景按 0.75（和底图切块一样 3072 宽）、夜景按 0.5（2048 宽）出，像素和底图切块对齐；--check 把每张抠图贴在品红底上存一份看边
         空锅 pot-0 只在锅是空的（火没点）时用，所以从 fire_off.py 熄了火的画上抠；夜里的木盖被火照着，另出一张熄火版 night-lid-off
-        Codex 的 B 批出了再用下面的比对法覆盖
+        锅里三态不再找 Codex 画；仓库里有 out-pot-1～3 时才用下面的比对法覆盖
 
-Codex 在裁出来的锅那块上用 edit 画（其他像素不动）：
+备用（工单第 1b 节已取消）：Codex 在裁出来的锅那块上用 edit 画（其他像素不动）：
     out-pot-1/2/3.png      锅里一层粥底 / 加了菜 / 满锅冒热气           → 精确轮廓 ∪ 画了内容的地方 → pot-1～3（替换 pot_fill.py 画的过渡版）
 （以前还要 Codex 画「去掉帐篷 / 去掉锅」两版来比对范围，现在 --from-base 直接从画上抠精确轮廓，不需要了）
 需要 Pillow 和 numpy。
