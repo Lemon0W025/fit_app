@@ -103,7 +103,8 @@ function renderNode(node, scope, ctx) {
     const x = Number(interp(a.x, scope)) || 0
     const y = Number(interp(a.y, scope)) || 0
     const k = Number(interp(a['scale-value'], scope)) || 1
-    style = `position:absolute;left:0;top:0;transform-origin:center center;transform:translate(${x}px,${y}px) scale(${k});` + style
+    // 和微信一样：x / y 是缩放后的左上角位置
+    style = `position:absolute;left:0;top:0;transform-origin:0 0;transform:translate(${x}px,${y}px) scale(${k});` + style
   }
   if (node.tag === 'image') {
     const fit = a.mode === 'aspectFill' ? 'object-fit:cover;' : a.mode === 'widthFix' ? 'height:auto;' : 'object-fit:contain;'

@@ -84,8 +84,8 @@ async function main() {
     ignores: ['node_modules/**/*', 'test/**/*', 'docs/**/*', 'scripts/**/*', '.wechat/**/*'],
   })
 
-  // art/cut 的版本：帐篷 / 锅抠图、火苗逐帧图改过就加一（传到 camp/cut-vN/，再把打印的前缀填进 config.cutArt）
-  const CUT_VERSION = 3
+  // art/cut 的版本：帐篷 / 锅抠图、火苗逐帧图、熄了火的补丁改过就加一（传到 camp/cut-vN/，再把打印的前缀填进 config.cutArt）
+  const CUT_VERSION = 4
 
   if (command === 'art') {
     const env = envId()
@@ -97,7 +97,7 @@ async function main() {
       { name: 'decor', dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
       { name: 'anim', dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
       // 抠图层和火苗逐帧图重新生成过就把版本号加一：同名覆盖的话 CDN 和手机会继续用旧图一阵子
-      { name: 'cut', dir: path.join(ROOT, 'art/cut'), check: 'pot-0.webp', remote: `camp/cut-v${CUT_VERSION}`, key: 'cutArt', hint: 'python3 scripts/camp/cutouts.py --from-base && python3 scripts/camp/fx_art.py' },
+      { name: 'cut', dir: path.join(ROOT, 'art/cut'), check: 'pot-0.webp', remote: `camp/cut-v${CUT_VERSION}`, key: 'cutArt', hint: 'python3 scripts/camp/fire_off.py && python3 scripts/camp/cutouts.py --from-base && python3 scripts/camp/fx_art.py' },
     ].filter((j) => (!only.length || only.includes(j.name)) && fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png|webp)$/.test(f)))
     if (!jobs.length) fail('art/camp/、art/decor/、art/anim/、art/cut/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py、pack_anim.py 或 cutouts.py')
     let bucket = ''

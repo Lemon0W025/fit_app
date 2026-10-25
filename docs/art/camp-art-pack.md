@@ -50,6 +50,8 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
    out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），只改锅口里面（和锅口上方一点热气），其他像素不动。
    夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-pot.png，画 out-night-pot-1/2/3.png。
    （帐篷、锅「去掉」的版本不用画了：抠图已经直接从画上抠出精确轮廓。）
+3b. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
+   in-night-fire-off.png（夜景被火照亮的那一大圈），按第 1d 节用 edit 画 out-fire-off.png、out-night-fire-off.png（尺寸和 in 一样）。
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
@@ -200,6 +202,28 @@ Do not add or remove anything. Same lighting.
 PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
 满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, same camera angle, same soft light. Change ONLY the inside of the pot
 (and the faint steam right above it); the pot, tripod, fire, stones and grass must stay pixel-identical. UNIFIED STYLE.
+```
+
+### 1d. 没点火的火堆 `art/raw/cut/out-fire-off.png`、`out-night-fire-off.png`
+
+妈妈今天还没打卡时锅是空的，火不烧。现在是脚本从画上把火「熄掉」的过渡版（`fire_off.py`：火苗换成柴堆里的暗处、夜里火照亮的那圈换成月光），
+你画的会更自然。
+
+1. `python3 scripts/camp/fire_off.py --crop` 裁出 `art/raw/cut/in-fire-off.png`（日景，锅底下的火堆和周围一圈）和 `in-night-fire-off.png`（夜景，火照亮的整片）。
+2. 用 edit 画，尺寸和 in 一样，**物件的位置、形状一概不动**：
+   - `out-fire-off.png`（白天）：火熄了——锅底下没有火苗，木柴还是那样搭着，柴缝里是暗的、底下一点灰白的灰；木柴、石头、锅底上那层橙黄的火光去掉，按白天的阳光画
+   - `out-night-fire-off.png`（夜里）：火熄了——没有火苗，那一大圈暖黄的火光全部去掉，草地、石头、锅、三脚架、木盖、食盆都和远处一样只有冷冷的月光；**提灯还亮着**，只照亮它旁边一小圈
+3. 再跑 `python3 scripts/camp/fire_off.py`，它会直接用你画的（外圈自动羽化接回原画）。
+
+```
+PROMPT（白天）: Edit this crop of the camp scene: the campfire under the clay pot is OUT — no flames, no glow. Keep the
+logs exactly where they are, stacked cold, with dark gaps between them and a little grey ash at the bottom; remove the
+orange firelight from the logs, stones and the pot's bottom, lit only by soft daylight. Everything else stays
+pixel-identical. UNIFIED STYLE.
+PROMPT（夜里）: Edit this crop of the night camp scene: the campfire is OUT — no flames and none of the warm yellow
+firelight on the grass, stones, pot, tripod, lid and bowls; they are lit only by the same cool blue moonlight as the rest
+of the night scene. The small lantern on the stump stays lit with its own small warm glow. Same objects, same positions.
+UNIFIED STYLE.
 ```
 
 ---
@@ -370,6 +394,7 @@ in this order: … Cells 34–36 empty.
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `npm run wx:art` 传云存储 → `config.campArt`
 - 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
+- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
 - 底图：`cut_art.py` 顺手把 768 宽的垫图写进包里（`images/camp/base/backdrop.jpg`、`night-backdrop.jpg`）
 - 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）
 - 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）

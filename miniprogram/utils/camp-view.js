@@ -9,17 +9,15 @@ const { SCENE } = require('./shared/camp')
 const { nightLook, nightFilter } = require('./camp-light')
 
 const Z_DECOR = 100
-const MARGIN_RATIO = 0.6
 const BOWL_PX = 270 // 食盆在画上的直径（像素，照画量的）
 
 const fmt = (n) => Math.round(n * 100) / 100
 
+// 1 倍时正方形的画正好盖满屏幕（竖屏是铺满高度，左右多出来的拖着看），movable-view 就是画本身、四周不留白：
+// 配上 scale-min 1 和 out-of-bounds=false，怎么拖、怎么捏都看不到画的边
 function campLayout(win) {
-  const k = win.width / W
-  const width = W * k
-  const height = H * k
-  const margin = win.width * MARGIN_RATIO
-  return { W, H, k, width, height, margin, viewWidth: width + margin * 2, viewHeight: height + margin * 2 }
+  const k = Math.max(win.width / W, win.height / H)
+  return { W, H, k, width: W * k, height: H * k }
 }
 
 function toScreen(x, y, L) {
@@ -72,11 +70,11 @@ function patchView(d, x, y, L, base) {
 }
 
 // night：夜里按站的位置调亮度和暖色（camp-light.js，照夜景的光算的），火边亮、远处暗
-function decorViews(placed, L, base, night) {
+function decorViews(placed, L, base, night, lit = true) {
   return placed
     .map((p) => ({ p, d: decorById(p.id) }))
     .filter((x) => x.d)
-    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base), night: !!night, ...(night ? nightLook(p.x, p.y) : { light: '', moon: 0, moonLight: '' }) }))
+    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base), night: !!night, ...(night ? nightLook(p.x, p.y, lit) : { light: '', moon: 0, moonLight: '' }) }))
     .sort((a, b) => a.z - b.z)
 }
 
@@ -128,7 +126,8 @@ function shopGroups(owned, beans) {
 
 // 食盆：碗是画上的；放了吃的就在碗口里画一小堆（images/camp/foods/bowl/，scripts/camp/bowl_food.py），
 // 再把从画上抠下来的碗沿和碗身（bowl-0 / bowl-1，cutBase 那儿）盖在上面：吃的在碗里，不是浮在碗上的一片
-function bowlViews(bowls, L, night, base) {
+// lit：篝火点着没有（锅是空的火不烧）。夜里碗原来被篝火照成暖黄，火没点就换熄了火的碗沿、食物按月光上色
+function bowlViews(bowls, L, night, base, lit = true) {
   const { rx, ry, boxes } = SCENE.bowl
   const ext = base ? 'webp' : 'png'
   return SCENE.bowls.map(([bx, by], index) => {
@@ -141,13 +140,13 @@ function bowlViews(bowls, L, night, base) {
       width: fmt((r - l) * L.k),
       height: fmt((bt - t) * L.k),
       z: zOf(by),
-      rimImage: `${base || '/images/camp/cut/'}${night ? 'night-' : ''}bowl-${index}.${ext}`,
+      rimImage: `${base || '/images/camp/cut/'}${night ? 'night-' : ''}bowl-${index}${night && !lit ? '-off' : ''}.${ext}`,
       pile: { left: fmt((bx - rx - l) * L.k), top: fmt((by - ry - t) * L.k), width: fmt(2 * rx * L.k), height: fmt(2 * ry * L.k) },
       food: b.food || '',
       foodImage: b.food ? `/images/camp/foods/bowl/${b.food}.png` : '',
       peeking: b.peeking || '',
       peekImage: b.peeking ? petFace(b.peeking) : '',
-      light: night ? nightFilter(bx, by) : '',
+      light: night ? nightFilter(bx, by, lit) : '',
     }
   })
 }
@@ -170,19 +169,20 @@ function arrivalCard(arrival) {
   return { image: petImage(arrival.ate), text: `${p ? p.name : ''}把食盆里的${arrival.foodName}吃了，营地里没有别的小动物爱吃它啦` }
 }
 
-// 让画上的点 (x, y) 停在屏幕正中：movable-view 的 x / y 是 view 左上角相对可视区的位移，缩放以 view 中心为原点
-function focusOffset(x, y, L, win, scale) {
-  const cx = L.viewWidth / 2
-  const cy = L.viewHeight / 2
-  const px = L.margin + x * L.k
-  const py = L.margin + y * L.k
-  return { x: win.width / 2 - cx - scale * (px - cx), y: win.height / 2 - cy - scale * (py - cy), scale }
+// 让画上的点 (x, y) 尽量停在屏幕正中。movable-view 的 x / y 是缩放后画的左上角在屏幕上的位置；
+// 推到边上的拉回来（画始终盖满屏幕，和组件 out-of-bounds=false 自己的限位一样）
+function focusOffset(x, y, L, win, scale = 1) {
+  const fit = (v, lo) => fmt(Math.min(0, Math.max(lo, v)))
+  return {
+    x: fit(win.width / 2 - scale * x * L.k, win.width - scale * L.width),
+    y: fit(win.height / 2 - scale * y * L.k, win.height - scale * L.height),
+    scale,
+  }
 }
 
-// 首页默认视角：画填满屏幕高度（纵向正好不露边）、横向对准篝火（暖暖锅）；正方形的画一屏只看到一半宽，两边拖着看，捏一下能缩到 0.8 看全貌
+// 首页默认视角：1 倍（画正好铺满屏幕高度）、横向对准篝火（暖暖锅）；正方形的画一屏看到一半多宽，两边拖着看，捏一下能放大
 function homeView(L, win) {
-  const scale = Math.min(2.5, Math.max(1, Math.round((win.height / L.height) * 100) / 100))
-  return focusOffset(SCENE.fire[0], H / 2, L, win, scale)
+  return focusOffset(SCENE.fire[0], H / 2, L, win, 1)
 }
 
 // 暖暖锅：今天打了几顿正餐（早午晚印章里有状态的），锅里就有几层（0～3）
@@ -227,12 +227,14 @@ function cutoutStrips() {
 
 // 帐篷、暖暖锅、木盖、提灯是从底图里抠出来的独立一层：宠物、装饰走到后面被挡住、走到前面盖在上面。锅按今天打了几顿换图
 // 云端的是 WebP（真彩、小），包里兜底的是 PNG；一条只露出整张图的一段（外面一层 view 裁，里面整张图往左挪）
+// 锅按今天的层数换图（0 层是空锅：从熄了火的画上抠的，锅底不再被火照亮）；夜里火没点时木盖换熄了火的那张（原来被篝火照成暖黄）
 function cutoutViews(L, potLevel, base, night) {
   const prefix = (base || '/images/camp/cut/') + (night ? 'night-' : '')
   const ext = base ? 'webp' : 'png'
+  const level = Math.min(3, Math.max(0, potLevel || 0))
   return cutoutStrips().map((s) => {
     const c = SCENE.cutouts[s.cut]
-    const file = s.cut === 'pot' ? `pot-${Math.min(3, Math.max(0, potLevel || 0))}` : s.cut
+    const file = s.cut === 'pot' ? `pot-${level}` : s.cut === 'lid' && night && !level ? 'lid-off' : s.cut
     return {
       key: s.key, image: `${prefix}${file}.${ext}`, z: zOf(s.zy) + 1,
       left: fmt(s.l * L.k), top: fmt(s.t * L.k), width: fmt((s.r - s.l) * L.k), height: fmt((s.b - s.t) * L.k),

@@ -19,7 +19,7 @@ function make(opts = {}) {
   const sprites = {}
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
-    hour: () => (opts.hour === undefined ? 12 : opts.hour), random: lcg(opts.seed || 7), clock,
+    hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', bad: new Set(),
   })
   return { life, clock, sprites }
@@ -294,4 +294,14 @@ test('夜里宠物按站的位置调亮度和暖色（火边亮、远处暗）�
   assert.ok(b(nightFilter(2130, 3200)) > b(nightFilter(3800, 3800)) + 0.2, '篝火前面比远处亮')
   assert.ok(lightAt(2130, 3200).warm > 0 && lightAt(3800, 1200).warm < 0, '火边暖、远处冷')
   assert.ok(b(nightFilter(1210, 1460)) > b(nightFilter(500, 2500)), '帐篷门口亮')
+  // 火没点（锅是空的）：火边和远处一样只有月光（暗、冷、盖月光层），帐篷门口、提灯边上照旧亮
+  assert.ok(Math.abs(b(nightFilter(2130, 3200, false)) - b(nightFilter(3800, 3800, false))) < 0.1, '火边和远处一样暗')
+  assert.ok(lightAt(2130, 3200, false).warm < -0.5, '火边不暖了')
+  assert.equal(b(nightFilter(1210, 1460, false)), b(nightFilter(1210, 1460)))
+  assert.ok(b(nightFilter(2750, 2750, false)) > b(nightFilter(2130, 3200, false)) + 0.1, '提灯边上还亮')
+  // 一开始都站在火堆前面：火没点就盖上月光层
+  const off = make({ hour: 22, lit: false }).life.sprites()[0]
+  const on = make({ hour: 22 }).life.sprites()[0]
+  assert.ok(off.moon > on.moon + 0.5, '火没点：火边的宠物盖上月光层')
+  assert.ok(b(off.light) < b(on.light))
 })

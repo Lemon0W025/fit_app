@@ -11,6 +11,8 @@ const SHEETS = require('../../utils/anim-sheets')
 
 const DOUBLE_TAP_MS = 300
 const HOUR_CHECK_MS = 60000
+const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
+const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -72,10 +74,12 @@ Page({
 
   onHide() {
     this.stopLife()
+    this.later('viewTimer', null)
   },
 
   onUnload() {
     this.stopLife()
+    this.later('viewTimer', null)
   },
 
   win() {
@@ -122,11 +126,11 @@ Page({
       loaded: true,
       beans: view.beans,
       canSpin: view.beans >= view.spinCost,
-      world: { width: L.width, height: L.height, viewWidth: L.viewWidth, viewHeight: L.viewHeight, margin: L.margin },
+      world: { width: L.width, height: L.height, night },
       backdrop: V.backdropImage(night),
       base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
-      decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night),
-      bowls: V.bowlViews(view.bowls, L, night, this.cutBase()),
+      decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night, potLevel > 0),
+      bowls: V.bowlViews(view.bowls, L, night, this.cutBase(), potLevel > 0),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
@@ -139,11 +143,14 @@ Page({
       welcome: view.welcome || this.data.welcome,
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
-    if (!this.centered) {
+    const first = !this.centered
+    if (first) {
       patch.view = V.homeView(L, win)
       this.centered = true
     }
     this.setData(patch)
+    // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
+    if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
     if (!this.hourTimer) this.watchHour()
     if (view.testGift) {
@@ -152,15 +159,40 @@ Page({
     if (view.giftReady && !this.data.giftShown && this.life) this.offerGift(view)
   },
 
-  // movable-view 只在值变了才动：每次换一点点不同的小数
-  nudgeView(offset) {
+  // 捏着缩放：记下现在几倍（挪镜头前要知道）
+  onZoom(e) {
+    this.zoom = e.detail.scale
+  },
+
+  // 挪镜头到 offset（1 倍时的 x / y）。movable-view 同一次 setData 里又改 scale-value 又改 x / y 会吞掉一个，
+  // 所以放大过就先缩回 1 倍、等它缩完再平移；值和上次一样组件不动，每次加减一点点小数让它一定变
+  moveView(offset) {
     this.nudge = !this.nudge
     const d = this.nudge ? 0.01 : 0
-    this.setData({ view: { x: offset.x + d, y: offset.y + d, scale: offset.scale + d / 100 } })
+    const pan = () => this.setData({ 'view.x': offset.x + d, 'view.y': offset.y + d })
+    if (Math.abs((this.zoom || 1) - 1) < 0.005) {
+      this.later('viewTimer', null)
+      return pan()
+    }
+    this.zoom = 1
+    this.setData({ 'view.scale': this.data.view.scale === 1 ? 1.0001 : 1 })
+    this.later('viewTimer', pan, ZOOM_SETTLE_MS)
+  },
+
+  // 一个名字只挂一个定时器：再挂就把旧的换掉，fn 为空就只取消
+  later(name, fn, ms) {
+    const clock = this.clock || { set: (f, t) => setTimeout(f, t), clear: (h) => clearTimeout(h) }
+    if (this[name]) clock.clear(this[name])
+    this[name] = null
+    if (!fn) return
+    this[name] = clock.set(() => {
+      this[name] = null
+      fn()
+    }, ms)
   },
 
   recenter() {
-    this.nudgeView(V.homeView(this.L, this.win()))
+    this.moveView(V.homeView(this.L, this.win()))
   },
 
   // 云端高清切块加载失败：不再铺切块，只剩包里的垫图（整张画的低清版）
@@ -182,13 +214,13 @@ Page({
     this.setData({
       cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
       fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
-      bowls: V.bowlViews(this.camp ? this.camp.bowls : [], this.L, this.baseNight, ''),
+      bowls: V.bowlViews(this.camp ? this.camp.bowls : [], this.L, this.baseNight, '', (this.potLevel || 0) > 0),
     })
   },
 
   onDecorError() {
     if (!config.decorArt || !this.camp) return
-    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '', this.baseNight) })
+    this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '', this.baseNight, (this.potLevel || 0) > 0) })
   },
 
   onAnimError(e) {
@@ -216,6 +248,7 @@ Page({
       decor: view.decor.placed,
       arrivals: view.arrivals || [],
       hour: this.hour || undefined,
+      lit: () => (this.potLevel || 0) > 0,
       clock: this.clock || undefined,
       random: this.random || undefined,
       sheets: SHEETS,
@@ -530,7 +563,7 @@ Page({
     const { index } = e.currentTarget.dataset
     const at = this.life ? this.life.focus(index) : null
     this.setData({ residentsOpen: false })
-    if (at) this.nudgeView(V.focusOffset(at.x, at.y, this.L, this.win(), 1.6))
+    if (at) this.moveView(V.focusOffset(at.x, at.y, this.L, this.win()))
   },
 
   // ---------------------------------------------------------------- 跳转

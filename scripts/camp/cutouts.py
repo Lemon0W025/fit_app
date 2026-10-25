@@ -8,6 +8,7 @@
         poly 只圈个大概，圈里按颜色去掉草地（偏绿）、树林深处的暗青，只留和物件身上几个点（SEEDS）连着的那一大块（草里的花、碎叶断开就丢了），
         边缘按「像草的程度」留半透明；夜景构图和日景一样，直接用日景算出的轮廓。锅里的内容由 pot_fill.py 画在锅口里。
         日景按 0.75（和底图切块一样 3072 宽）、夜景按 0.5（2048 宽）出，像素和底图切块对齐；--check 把每张抠图贴在品红底上存一份看边
+        空锅 pot-0 只在锅是空的（火没点）时用，所以从 fire_off.py 熄了火的画上抠；夜里的木盖被火照着，另出一张熄火版 night-lid-off
         Codex 的 B 批出了再用下面的比对法覆盖
 
 Codex 在裁出来的锅那块上用 edit 画（其他像素不动）：
@@ -133,6 +134,9 @@ def from_base(local, check=None):
         'night-': Image.open(NIGHT_HD).convert('RGB').resize((round(W * NIGHT_RES),) * 2, Image.LANCZOS),
     }
     tone = night_tone()
+    from fire_off import unlit_day, unlit_night   # fire_off 也用这里的 objectness，放在这儿 import 免得互相引用
+    day_off = unlit_day(day_hd).resize(full[''].size, Image.LANCZOS)
+    unlit = {'': day_off, 'night-': unlit_night(full['night-'], day_off)}
     os.makedirs(OUT, exist_ok=True)
     if check:
         os.makedirs(check, exist_ok=True)
@@ -143,8 +147,10 @@ def from_base(local, check=None):
             box = [round(v * res) for v in c['box']]
             crop = img.crop(box)
             alpha = alpha_hd.resize(crop.size, Image.LANCZOS)
+            if key == 'lid' and pfx:
+                emit_full(unlit[pfx].crop(box), alpha, f'{pfx}lid-off.png', local, res)
             for n in ([0, 1, 2, 3] if key == 'pot' else [None]):
-                rgb = crop
+                rgb = unlit[pfx].crop(box) if n == 0 else crop
                 if n:
                     cx, cy, rx, ry = c['rim']
                     rgb = fill(crop, n, (cx * res - box[0], cy * res - box[1], rx * res, ry * res), tone if pfx else None)

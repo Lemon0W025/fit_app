@@ -4,6 +4,7 @@
 
 输出：
     art/cut/bowl-0.webp、bowl-1.webp（+ night-）     两个食盆的碗沿和碗身（从画上抠的精确轮廓，去掉碗口里面那块），随 npm run wx:art -- cut 上传
+    art/cut/night-bowl-0-off.webp …                  夜里火没点（锅是空的）时的碗沿：从 fire_off.py 熄了火的夜景上抠（碗原来被篝火照成暖黄）
     miniprogram/images/camp/cut/bowl-0.png …          包里的兜底小图
     miniprogram/images/camp/foods/bowl/<id>.png        每样食物盛在碗里的样子（只画碗口里面那一块，透明底）
 碗口的大小、位置在 shared/camp.js 的 SCENE.bowl（照画量的）。等 Codex 出了正式的食物图标，这里可以换成「图标放进碗里」。需要 Pillow 和 numpy。
@@ -63,6 +64,8 @@ def rims():
     rx, ry = S['bowl']['rx'], S['bowl']['ry']
     day_hd = Image.open(os.path.join(REPO, 'art', 'raw', 'camp', 'camp-hd.png')).convert('RGB')
     full = {pfx: Image.open(os.path.join(REPO, 'art', 'raw', 'camp', 'night-hd.png' if pfx else 'camp-hd.png')).convert('RGB').resize((round(W * r),) * 2, Image.LANCZOS) for pfx, r in RES.items()}
+    from fire_off import unlit_day, unlit_night
+    unlit = {'night-': unlit_night(full['night-'], unlit_day(day_hd))}
     os.makedirs(OUT, exist_ok=True)
     os.makedirs(LOCAL, exist_ok=True)
     for i, (bx, by) in enumerate(S['bowls']):
@@ -85,7 +88,8 @@ def rims():
         hole = np.asarray(hole.filter(ImageFilter.GaussianBlur(1.2))).astype(np.float32) / 255
         alpha = alpha * (1 - hole)
         alpha_img = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.6))
-        for pfx, img in full.items():
+        sources = [(pfx, img, '') for pfx, img in full.items()] + [(pfx, img, '-off') for pfx, img in unlit.items()]
+        for pfx, img, suffix in sources:
             res = img.width / W
             pbox = [round(v * res) for v in box]
             piece = img.crop(pbox).convert('RGBA')
@@ -93,7 +97,7 @@ def rims():
             a = np.array(piece)
             a[a[:, :, 3] == 0] = 0
             piece = Image.fromarray(a)
-            name = f'{pfx}bowl-{i}'
+            name = f'{pfx}bowl-{i}{suffix}'
             piece.save(os.path.join(OUT, f'{name}.webp'), 'WEBP', quality=90, method=6)
             small_png(piece, LOCAL_RES / res).save(os.path.join(LOCAL, f'{name}.png'), optimize=True)
             print(f'  ✓  {name}.webp  {piece.width}×{piece.height}')

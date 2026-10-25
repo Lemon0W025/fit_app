@@ -5,6 +5,7 @@ const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
 const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
 const { SCENE } = require('../miniprogram/utils/shared/camp')
+const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
 
 const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile']
@@ -232,8 +233,19 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.ok(camp.data.base[0].image.endsWith('/t00.jpg')) // 白天的日景块（填了 campArt 就是云存储的）
   assert.equal(camp.data.bowls.length, 2)
   assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou'])
-  assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
+  // 今天还没打卡：锅是空的、火没点（没有火苗，盖着熄了火的那块）
+  assert.ok(!camp.data.fx.some((f) => f.kind === 'fire' || f.kind === 'fireglow' || f.kind === 'ember'))
+  assert.ok(camp.data.fx.some((f) => f.kind === 'patch'))
+  assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-0')
   assert.equal(camp.data.tint, '')
+  // 镜头：画正好铺满屏幕高度（1 倍、不留白），篝火在屏幕正中；排好版后再对准一次（只平移，不动缩放）
+  const WIN = { width: 375, height: 700 }
+  const home = V.homeView(camp.L, WIN)
+  assert.deepEqual([camp.data.world.width, camp.data.world.height], [700, 700])
+  assert.deepEqual(camp.data.view, home)
+  camp.clock.advance(300)
+  assert.notEqual(camp.data.view.x, home.x, '排好版后又对准了一次（值加了一点点小数，组件才会动）')
+  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.01 && camp.data.view.scale === 1)
   camp.closeWelcome()
   camp.clock.advance(5000)
   assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
@@ -278,6 +290,10 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   camp.onShow()
   await settle()
   assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou', 'nuonuo'])
+  // 打了第一顿：锅里一层、火点上了
+  assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
+  assert.ok(!camp.data.fx.some((f) => f.kind === 'patch'))
+  assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
   camp.clock.advance(50)
   assert.ok(camp.data.pets.some((p) => p.action === 'walk' || p.action === 'jump'))
 
@@ -345,6 +361,22 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.deepEqual(camp.data.residents.map((r) => r.name), ['豆豆', '糯糯'])
   camp.findResident(event({ index: 1 }))
   assert.equal(camp.data.residentsOpen, false)
+  const found = camp.data.pets[1]
+  const sx = camp.data.view.x + found.left + found.width / 2
+  assert.ok(sx > 0 && sx < WIN.width, `找它：${found.name} 在屏幕里（${sx}）`)
+  // 捏放大过再点「回到篝火」：先缩回 1 倍、缩完再平移（同一次 setData 改 scale-value 又改 x / y，movable-view 会吞掉一个）
+  camp.onZoom(event({}, { x: -300, y: -200, scale: 1.8 }))
+  const before = { ...camp.data.view }
+  camp.recenter()
+  assert.notEqual(camp.data.view.scale, before.scale)
+  assert.deepEqual([camp.data.view.x, camp.data.view.y], [before.x, before.y])
+  camp.clock.advance(600)
+  assert.ok(Math.abs(camp.data.view.scale - 1) < 0.001)
+  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.01)
+  // 没放大：直接平移，不碰缩放
+  const scaleNow = camp.data.view.scale
+  camp.findResident(event({ index: 0 }))
+  assert.equal(camp.data.view.scale, scaleNow)
   camp.onUnload()
   assert.equal(camp.clock.count(), 0)
 })

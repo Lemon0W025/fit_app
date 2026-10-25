@@ -1,9 +1,9 @@
 <view class="screen">
   <view wx:if="{{!loaded}}" class="loading">正在走进营地…</view>
 
-  <movable-area wx:if="{{loaded}}" class="map-area">
-    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="0.8" scale-max="2.5" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" style="width: {{world.viewWidth}}px; height: {{world.viewHeight}}px">
-      <view id="world" class="world" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px">
+  <movable-area wx:if="{{loaded}}" class="map-area {{world.night ? 'night' : ''}}">
+    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="1" scale-max="2" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" bindscale="onZoom" style="width: {{world.width}}px; height: {{world.height}}px">
+      <view id="world" class="world" style="width: {{world.width}}px; height: {{world.height}}px">
         <image class="backdrop" src="{{backdrop}}" mode="scaleToFill" style="width: {{world.width}}px; height: {{world.height}}px" />
         <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
         <view wx:for="{{cuts}}" wx:key="key" class="cut" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
@@ -13,6 +13,7 @@
           <view wx:if="{{item.kind === 'fire'}}" class="fx-fire" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
             <image class="fx-fire-strip" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="width: {{item.strip.width}}%; height: {{item.strip.height}}%; left: {{item.strip.left}}%; top: {{item.strip.top}}%; animation-duration: {{item.ms}}ms" />
           </view>
+          <image wx:elif="{{item.kind === 'patch'}}" class="fx-patch" src="{{item.image}}" mode="scaleToFill" binderror="onCutError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}" />
           <image wx:elif="{{item.kind === 'wisp'}}" class="fx-wisp" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s; animation-duration: {{item.ms}}ms" />
           <view wx:else class="fx-{{item.kind}} {{item.variant ? 'fx-' + item.variant : ''}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; animation-delay: -{{item.delay}}s"></view>
         </block>
@@ -45,7 +46,7 @@
         </block>
         <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
       </view>
-      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="left: {{world.margin}}px; top: {{world.margin}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
+      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
         <view wx:if="{{drag && drag.foot}}" class="drag-foot {{drag.ok ? 'ok' : 'bad'}}" style="left: {{drag.foot.left}}px; top: {{drag.foot.top}}px; width: {{drag.foot.width}}px; height: {{drag.foot.height}}px"></view>
         <image wx:if="{{drag}}" class="drag-ghost {{drag.ok ? '' : 'bad'}}" src="{{drag.image}}" mode="scaleToFill" style="left: {{drag.left}}px; top: {{drag.top}}px; width: {{drag.width}}px; height: {{drag.height}}px" />
       </view>

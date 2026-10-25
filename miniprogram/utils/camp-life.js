@@ -60,8 +60,9 @@ function depthCuts(from, to, half, lines) {
   return ts.map((t) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, piece: true }))
 }
 
+// lit：篝火点着没有（锅是空的火不烧，夜里火边也只有月光）
 function createLife({
-  L, pets, decor, arrivals = [], hour = realHour, random = Math.random, clock = realClock, onChange = () => {},
+  L, pets, decor, arrivals = [], hour = realHour, lit = () => true, random = Math.random, clock = realClock, onChange = () => {},
   sheets = {}, animBase = '', bad = new Set(),
 }) {
   let placed = decor
@@ -177,7 +178,7 @@ function createLife({
 
   function nightLayers(x, y) {
     if (!isNight(hour())) return { night: false, light: '', moon: 0, moonLight: '' }
-    return { night: true, ...nightLook(x, y) }
+    return { night: true, ...nightLook(x, y, lit()) }
   }
 
   function emit(a) {

@@ -8,16 +8,20 @@ const { decorById } = require('../miniprogram/utils/shared/decor')
 const WIN = { width: 375, height: 736 }
 const L = V.campLayout(WIN)
 
-test('campLayout：1 倍画宽占满屏幕，四周留白', () => {
+test('campLayout：1 倍时正方形的画正好盖满屏幕（竖屏铺满高度），四周不留白', () => {
   assert.equal(L.W, W)
-  assert.equal(L.width, 375)
-  assert.ok(Math.abs(L.height - (375 * H) / W) < 1e-9)
-  assert.equal(L.margin, 225)
-  assert.equal(L.viewWidth, 375 + 450)
-  assert.equal(L.viewHeight, L.height + 450)
-  assert.deepEqual(V.toScreen(W, H, L), { x: 375, y: L.height })
-  const rect = { left: -100, top: 20, width: 750, height: L.height * 2 }
-  assert.deepEqual(V.fromTouch(275, 20 + L.height, rect, L), { x: W / 2, y: H / 2 })
+  assert.equal(L.k, WIN.height / H)
+  assert.equal(L.width, WIN.height)
+  assert.equal(L.height, WIN.height)
+  assert.equal(L.margin, undefined)
+  // 横着拿 / 方屏也盖满
+  for (const win of [{ width: 900, height: 400 }, { width: 500, height: 500 }]) {
+    const l = V.campLayout(win)
+    assert.ok(l.width >= win.width && l.height >= win.height)
+  }
+  assert.deepEqual(V.toScreen(W, H, L), { x: L.width, y: L.height })
+  const rect = { left: -100, top: 20, width: L.width * 2, height: L.height * 2 }
+  assert.deepEqual(V.fromTouch(-100 + L.width, 20 + L.height, rect, L), { x: W / 2, y: H / 2 })
 })
 
 test('baseTiles：16 块拼满整张画', () => {
@@ -72,21 +76,31 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.ok(Math.abs(bowls[0].left + bowls[0].pile.left + bowls[0].pile.width / 2 - SCENE.bowls[0][0] * L.k) < 0.03)
   assert.equal(bowls[0].rimImage, '/images/camp/cut/bowl-0.png')
   assert.equal(V.bowlViews([], L, true, 'cloud://x/')[1].rimImage, 'cloud://x/night-bowl-1.webp')
+  assert.equal(V.bowlViews([], L, true, 'cloud://x/', false)[1].rimImage, 'cloud://x/night-bowl-1-off.webp')
+  assert.equal(V.bowlViews([], L, false, '', false)[0].rimImage, '/images/camp/cut/bowl-0.png')
+  assert.notEqual(V.bowlViews([], L, true, '', false)[0].light, V.bowlViews([], L, true, '')[0].light)
   assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', '', '', ''])
   assert.deepEqual([6, 12, 18, 19, 23, 3, 5].map(V.isNight), [false, false, false, true, true, true, true])
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/', true)[15].image, 'cloud://x/camp/base/night-t33.jpg')
   assert.deepEqual(V.arrivalCard({ id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯闻着胡萝卜的香味，搬进营地啦！' })
   assert.deepEqual(V.arrivalCard({ id: null, ate: 'doudou', foodId: 'xiaomi', foodName: '小米' }), { image: '/images/camp/pets/doudou.png', text: '豆豆把食盆里的小米吃了，营地里没有别的小动物爱吃它啦' })
   assert.equal(V.arrivalCard(null), null)
-  const o = V.focusOffset(W / 2, H / 2, L, WIN, 1)
-  assert.ok(Math.abs(o.x + L.margin + L.width / 2 - WIN.width / 2) < 1e-9)
-  assert.ok(Math.abs(o.y + L.margin + L.height / 2 - WIN.height / 2) < 1e-9)
-  // 默认视角：画填满屏幕高度、篝火在正中
+  // 对准画上一点：x / y 是缩放后画的左上角在屏幕上的位置；推到边上的拉回来
+  assert.deepEqual(V.focusOffset(W / 2, H / 2, L, WIN), { x: WIN.width / 2 - L.width / 2, y: 0, scale: 1 })
+  assert.deepEqual(V.focusOffset(0, 0, L, WIN), { x: 0, y: 0, scale: 1 })
+  assert.deepEqual(V.focusOffset(W, H, L, WIN), { x: WIN.width - L.width, y: 0, scale: 1 })
+  assert.deepEqual(V.focusOffset(W / 2, H / 2, L, WIN, 2), { x: WIN.width / 2 - L.width, y: WIN.height / 2 - L.height, scale: 2 })
+  // 不管对准哪儿、几倍，画都盖满屏幕
+  for (const [x, y, s] of [[0, 0, 1], [W, H, 1], [W / 2, H / 2, 2], [0, H, 2], [W, 0, 1.5], [SCENE.fire[0], SCENE.fire[1], 1.3]]) {
+    const v = V.focusOffset(x, y, L, WIN, s)
+    assert.ok(v.x <= 0 && v.x + s * L.width >= WIN.width - 0.01, `x ${x},${y} × ${s}`)
+    assert.ok(v.y <= 0 && v.y + s * L.height >= WIN.height - 0.01, `y ${x},${y} × ${s}`)
+  }
+  // 默认视角：1 倍、篝火（暖暖锅）在屏幕正中
   const home = V.homeView(L, WIN)
-  assert.equal(home.scale, Math.round((WIN.height / L.height) * 100) / 100)
-  assert.ok(home.scale > 1 && home.scale <= 2.5)
-  assert.deepEqual(home, V.focusOffset(SCENE.fire[0], H / 2, L, WIN, home.scale))
-  assert.deepEqual(V.homeView(L, { width: 375, height: 300 }).scale, 1)
+  assert.equal(home.scale, 1)
+  assert.equal(home.y, 0)
+  assert.ok(Math.abs(home.x + SCENE.fire[0] * L.k - WIN.width / 2) < 0.01)
   // 暖暖锅：按今天有状态的印章数算层数，0 层不显示
   assert.equal(V.potLevel(null), 0)
   assert.equal(V.potLevel({ stamps: [{ state: 'none' }, { state: 'green' }, { state: 'yellow' }] }), 2)
@@ -101,6 +115,11 @@ test('抠图层：锅按层数换图；云端 WebP、包里 PNG；帐篷竖着�
   assert.equal(by(V.cutoutViews(L, 9, 'cloud://x/camp/cut/'), 'pot').image, 'cloud://x/camp/cut/pot-3.webp')
   assert.deepEqual(['tent-0', 'pot'].map((k) => by(V.cutoutViews(L, 1, '', true), k).image), ['/images/camp/cut/night-tent.png', '/images/camp/cut/night-pot-1.png'])
   assert.equal(by(V.cutoutViews(L, 1, 'cloud://x/', true), 'lantern').image, 'cloud://x/night-lantern.webp')
+  // 锅是空的火不烧：夜里木盖换熄了火的那张（原来被篝火照成暖黄）；白天、打过卡的照旧
+  assert.equal(by(V.cutoutViews(L, 0, 'cloud://x/', true), 'lid').image, 'cloud://x/night-lid-off.webp')
+  assert.equal(by(V.cutoutViews(L, 1, 'cloud://x/', true), 'lid').image, 'cloud://x/night-lid.webp')
+  assert.equal(by(V.cutoutViews(L, 0, 'cloud://x/'), 'lid').image, 'cloud://x/lid.webp')
+  assert.equal(by(V.cutoutViews(L, 0, '', true), 'lantern').image, '/images/camp/cut/night-lantern.png')
   // 锅、木盖、提灯各一整块：图不挪、宽度就是框宽
   ;['pot', 'lid', 'lantern'].forEach((key) => {
     const c = by(cuts, key)

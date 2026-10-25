@@ -1,5 +1,6 @@
 // 让营地自己动起来：篝火（从画上取的逐帧火苗 + 一圈跟着跳的火光 + 往上飘的火星）、暖暖锅的热气、
 // 夜里帐篷的灯光和萤火虫、水壶炉的热气、灯的光晕。
+// 篝火只在锅里有东西（今天打过正餐）时烧；锅是空的就盖一块「熄了火」的补丁（scripts/camp/fire_off.py 从画上熄的），没有火苗、火光、火星。
 // 原则：不在画上「画东西」（CSS 画的火团、烟团、蝴蝶跟手绘的画放一起很假），只加光和很小的颗粒；
 // 有形状的东西用从画上取的帧（火苗）或很淡的半透明图（热气）。纯函数，有单测；坐标是屏幕像素（画的像素 × L.k）
 
@@ -17,6 +18,8 @@ const fmt = (n) => Math.round(n * 10) / 10
 // 光（火光、帐篷灯、灯笼的光晕）盖在所有宠物和装饰上面（它们的 z 最大 1125），傍晚那层橙色（1700）下面：
 // 走到火边的宠物、装饰也跟着一闪一闪地被照亮，和画上的光一样，不会只有草地在闪
 const Z_LIGHT = 1650
+// 熄了火的补丁就是底图的一部分：盖在底图切块上、所有站在地上的东西（z ≥ 100）下面
+const Z_PATCH = 2
 
 function noise(n) {
   const x = Math.sin(n * 12.9898 + 78.233) * 43758.5453
@@ -37,12 +40,8 @@ function boxRect([l, t, r, b], L) {
   return { left: fmt(l * L.k), top: fmt(t * L.k), width: fmt((r - l) * L.k), height: fmt((b - t) * L.k) }
 }
 
-// base：帐篷 / 锅抠图层的前缀（config.cutArt），火苗的逐帧图也在那儿；空的用包里的小图
-function fxViews(L, hour, placed, potLevel = 0, base = '') {
-  const night = hour >= 19 || hour < 6
-  const out = []
-  const potZ = zOf(SCENE.cutouts.pot.zy) // 锅的抠图层在 potZ + 1
-  // 火苗：逐帧，压在锅下面（火苗本来就在锅底下、木柴之间）
+// 篝火烧着：火苗（逐帧，压在锅下面：火苗本来就在锅底下、木柴之间）、一圈跟着跳的火光、往上飘的火星
+function fire(out, L, night, base, potZ) {
   // 逐帧图每帧比框大一圈（pad，原画），框只露中间：这里算好图在框里的大小和偏移（百分比，跟着缩放走）
   const [fl, ft, fr, fb] = SCENE.flame.box
   const pad = SCENE.flame.pad
@@ -59,6 +58,15 @@ function fxViews(L, hour, placed, potLevel = 0, base = '') {
   EMBERS.slice(0, night ? 6 : 3).forEach(([x, y, v, d], i) => {
     out.push({ key: `ember-${i}`, kind: 'ember', variant: `ember-${v}`, ...centered(x, y, 22, 22, L), z: potZ + 3, delay: d })
   })
+}
+
+// base：帐篷 / 锅抠图层的前缀（config.cutArt），火苗的逐帧图、熄了火的补丁也在那儿；空的用包里的小图
+function fxViews(L, hour, placed, potLevel = 0, base = '') {
+  const night = hour >= 19 || hour < 6
+  const out = []
+  const potZ = zOf(SCENE.cutouts.pot.zy) // 锅的抠图层在 potZ + 1
+  if (potLevel > 0) fire(out, L, night, base, potZ)
+  else out.push({ key: 'fire-off', kind: 'patch', image: `${base || '/images/camp/cut/'}${night ? 'night-' : ''}fire-off.jpg`, ...boxRect(SCENE.flame.off[night ? 'night' : 'day'], L), z: Z_PATCH, delay: 0 })
   // 暖暖锅：打了两顿起冒热气（从锅口飘起来），三顿两缕
   const [rx, ry] = SCENE.cutouts.pot.rim
   for (let i = 0; i < (potLevel >= 3 ? 2 : potLevel >= 2 ? 1 : 0); i++) {
@@ -87,4 +95,4 @@ function fxViews(L, hour, placed, potLevel = 0, base = '') {
   return out
 }
 
-module.exports = { fxViews, FIRE_FRAMES, Z_LIGHT }
+module.exports = { fxViews, FIRE_FRAMES, Z_LIGHT, Z_PATCH }

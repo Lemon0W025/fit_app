@@ -50,6 +50,14 @@
       "kind": "painting"
     },
     {
+      "file": "art/raw/cut/out-fire-off.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-fire-off.png",
+      "kind": "painting"
+    },
+    {
       "file": "art/raw/ui/foods.png",
       "kind": "grid",
       "cols": 6,
