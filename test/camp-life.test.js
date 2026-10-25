@@ -299,24 +299,18 @@ test('拼图的来源由页面给（下到本地的文件）：还没下好用�
   assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou-a.png')
 })
 
-test('夜里宠物按站的位置调亮度和暖色（火边亮、远处暗），白天不调', () => {
+test('夜里宠物按站的位置上色，白天不调；火没点时火边的盖上月光层，点着了全都是本来的颜色', () => {
   const day = make({ hour: 12 })
   day.life.sprites().forEach((s) => assert.equal(s.light, ''))
-  const night = make({ hour: 22 })
+  const night = make({ hour: 22, lit: false })
   night.life.sprites().forEach((s) => assert.match(s.light, /^brightness\([\d.]+\) saturate\([\d.]+\) sepia\([\d.]+\)$/))
-  const { lightAt, nightFilter } = require('../miniprogram/utils/camp-light')
-  const b = (f) => Number(/brightness\(([\d.]+)\)/.exec(f)[1])
-  assert.ok(b(nightFilter(2130, 3200)) > b(nightFilter(3800, 3800)) + 0.2, '篝火前面比远处亮')
-  assert.ok(lightAt(2130, 3200).warm > 0 && lightAt(3800, 1200).warm < 0, '火边暖、远处冷')
-  assert.ok(b(nightFilter(1210, 1460)) > b(nightFilter(500, 2500)), '帐篷门口亮')
-  // 火没点（锅是空的）：火边和远处一样只有月光（暗、冷、盖月光层），帐篷门口、提灯边上照旧亮
-  assert.ok(Math.abs(b(nightFilter(2130, 3200, false)) - b(nightFilter(3800, 3800, false))) < 0.1, '火边和远处一样暗')
-  assert.ok(lightAt(2130, 3200, false).warm < -0.5, '火边不暖了')
-  assert.equal(b(nightFilter(1210, 1460, false)), b(nightFilter(1210, 1460)))
-  assert.ok(b(nightFilter(2750, 2750, false)) > b(nightFilter(2130, 3200, false)) + 0.1, '提灯边上还亮')
-  // 一开始都站在火堆边上：火没点就都暗下来、偏冷；火堆正前面的盖上月光层（提灯边上的那只还被提灯照着一点）
-  const off = make({ hour: 22, lit: false }).life.sprites()
+  const off = night.life.sprites()
   const on = make({ hour: 22 }).life.sprites()
-  off.forEach((s, i) => assert.ok(s.moon > on[i].moon && b(s.light) < b(on[i].light), s.id))
-  assert.ok(off.some((s, i) => s.moon > on[i].moon + 0.5), '火没点：火边的宠物盖上月光层')
+  on.forEach((s) => assert.deepEqual([s.light, s.moon], ['brightness(0.92) saturate(1) sepia(0.12)', 0], s.id))
+  assert.ok(off.some((s) => s.moon > 0.3), '火没点：有的盖上月光层')
+  // 摆一盏小灯笼在它脚边：月光淡下去
+  const spot = night.life.whereIs()[0]
+  const lamp = make({ hour: 22, lit: false, decor: [{ uid: 'd1', id: 'lantern', x: Math.round(spot.x + 40), y: Math.round(spot.y + 10) }] })
+  const w = lamp.life.whereIs()[0]
+  if (Math.hypot(w.x - spot.x, w.y - spot.y) < 1) assert.ok(lamp.life.sprites()[0].moon < off[0].moon)
 })

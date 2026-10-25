@@ -1,16 +1,16 @@
-// 营地画面的换算（纯函数，有单测）：画的像素 ↔ 屏幕像素、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 食盆的展示数据、色调
+// 营地画面的换算（纯函数，有单测）：画的像素 ↔ 屏幕像素、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 锅和客人的展示数据、色调
 
-const { W, H, scaleAt } = require('./shared/camp')
+const { W, H, scaleAt, pointInPoly } = require('./shared/camp')
 const { RARITIES } = require('./shared/garden')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { DECOR, CATEGORIES, decorById, footRect } = require('./shared/decor')
 const { SCENE } = require('./shared/camp')
-const { nightLook, nightFilter } = require('./camp-light')
+const { nightLook, lampsOf } = require('./camp-light')
 const DECOR_ART = require('./decor-art')
 
 const Z_DECOR = 100
-const BOWL_PX = 270 // 食盆在画上的直径（像素，照画量的）
+const BOWL_PX = 270 // 画上两个碗（摆设，走路要绕、排前后）的直径（像素，照画量的）
 const HOME_ZOOM = 0.72 // 默认视角：画的高度铺满屏幕的 0.72 倍（锅占屏幕宽度四成多，看得到营地边上的树林和草地）
 const DETAIL_ZOOM = 2 // 最多放大到「画的高度铺满屏幕」的 2 倍
 const TILE = 1024 // 底图一块（画的像素）
@@ -96,12 +96,13 @@ function patchView(d, x, y, L, base) {
   }
 }
 
-// night：夜里按站的位置调亮度和暖色（camp-light.js，照夜景的光算的），火边亮、远处暗
+// night：夜里按站的位置上色（camp-light.js）：火着全营地本来的颜色，火没着是月光色、灯边暖亮
 function decorViews(placed, L, base, night, lit = true) {
+  const lamps = night ? lampsOf(placed) : []
   return placed
     .map((p) => ({ p, d: decorById(p.id) }))
     .filter((x) => x.d)
-    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base), night: !!night, ...(night ? nightLook(p.x, p.y, lit) : { light: '', moon: 0, moonLight: '' }) }))
+    .map(({ p, d }) => ({ uid: p.uid, id: p.id, name: d.name, x: p.x, y: p.y, ...patchView(d, p.x, p.y, L, base), night: !!night, ...(night ? nightLook(p.x, p.y, lit, lamps) : { light: '', moon: 0, moonLight: '' }) }))
     .sort((a, b) => a.z - b.z)
 }
 
@@ -151,33 +152,6 @@ function shopGroups(owned, beans) {
   }))
 }
 
-// 食盆：碗是画上的；放了吃的就在碗口里画一小堆（images/camp/foods/bowl/，scripts/camp/bowl_food.py），
-// 再把从画上抠下来的碗沿和碗身（bowl-0 / bowl-1，cutBase 那儿）盖在上面：吃的在碗里，不是浮在碗上的一片
-// lit：篝火点着没有（锅是空的火不烧）。夜里碗原来被篝火照成暖黄，火没点就换熄了火的碗沿、食物按月光上色
-function bowlViews(bowls, L, night, base, lit = true) {
-  const { rx, ry, boxes } = SCENE.bowl
-  const ext = base ? 'webp' : 'png'
-  return SCENE.bowls.map(([bx, by], index) => {
-    const b = (bowls && bowls[index]) || { food: null, peeking: null }
-    const [l, t, r, bt] = boxes[index]
-    return {
-      index,
-      left: fmt(l * L.k),
-      top: fmt(t * L.k),
-      width: fmt((r - l) * L.k),
-      height: fmt((bt - t) * L.k),
-      z: zOf(by),
-      rimImage: `${base || '/images/camp/cut/'}${night ? 'night-' : ''}bowl-${index}${night && !lit ? '-off' : ''}.${ext}`,
-      pile: { left: fmt((bx - rx - l) * L.k), top: fmt((by - ry - t) * L.k), width: fmt(2 * rx * L.k), height: fmt(2 * ry * L.k) },
-      food: b.food || '',
-      foodImage: b.food ? `/images/camp/foods/bowl/${b.food}.png` : '',
-      peeking: b.peeking || '',
-      peekImage: b.peeking ? petFace(b.peeking) : '',
-      light: night ? nightFilter(bx, by, lit) : '',
-    }
-  })
-}
-
 // 一天的光：傍晚偏橙、夜里偏蓝
 function tintFor(hour) {
   // 夜里整套换成夜景图，不叠色；傍晚在日景上叠一层橙
@@ -185,15 +159,13 @@ function tintFor(hour) {
   return ''
 }
 
-// 打卡结果页的横幅
+// 打卡结果页的横幅：闻着香味来的客人住下了（一只说闻着什么来的，几只一起报名字；图用第一只）
 function arrivalCard(arrival) {
-  if (!arrival) return null
-  if (arrival.id) {
-    const p = petById(arrival.id)
-    return { image: petImage(arrival.id), text: `${p ? p.name : ''}闻着${arrival.foodName}的香味，搬进营地啦！` }
-  }
-  const p = petById(arrival.ate)
-  return { image: petImage(arrival.ate), text: `${p ? p.name : ''}把食盆里的${arrival.foodName}吃了，营地里没有别的小动物爱吃它啦` }
+  const pets = (arrival && arrival.pets) || []
+  if (!pets.length) return null
+  const first = pets[0]
+  const text = pets.length === 1 && first.foodName ? `${first.name}闻着${first.foodName}的香味，住进营地啦！` : `${pets.map((p) => p.name).join('、')}住进营地啦！`
+  return { image: petImage(first.id), text }
 }
 
 // 让营地画上的点 (x, y) 尽量停在屏幕正中。movable-view 的 x / y 是缩放后整个世界的左上角在屏幕上的位置；
@@ -212,10 +184,26 @@ function homeView(L, win) {
   return focusOffset(SCENE.fire[0], H / 2, L, win, 1)
 }
 
-// 暖暖锅：今天打了几顿正餐（早午晚印章里有状态的），锅里就有几层（0～3）
-function potLevel(daily) {
-  if (!daily || !daily.stamps) return 0
-  return Math.min(3, daily.stamps.filter((s) => s.state && s.state !== 'none').length)
+// 暖暖锅：今天锅里煮了几样，锅里就有几层（0～3）；0 层是空锅、火不烧
+function potLevel(pot) {
+  return pot && pot.foods ? Math.min(3, pot.foods.length) : 0
+}
+
+// 手里拿着食物松手的点 (x, y)（画的像素）在不在锅上：锅身连三脚架（抠图轮廓），或者篝火石圈
+function onPot(x, y) {
+  return pointInPoly(x, y, SCENE.cutouts.pot.poly) || pointInPoly(x, y, SCENE.nogo.fire)
+}
+
+// 点锅时说一句：锅里煮着什么
+function potNote(pot) {
+  const names = ((pot && pot.foods) || []).map((id) => foodById(id)).filter(Boolean).map((f) => f.name)
+  return names.length ? `锅里煮着：${names.join('、')}。爱吃的小动物会过来` : ''
+}
+
+// 顶上的提示条：闻着香味来的客人，下次拍正餐住下
+function visitorNote(visitors) {
+  const names = (visitors || []).map((v) => petById(v.id)).filter(Boolean).map((p) => p.name)
+  return names.length ? `👀 ${names.join('、')}闻着香味来了…下次拍正餐就住下` : ''
 }
 
 // 前沿折线在 x 处的 y（两头以外按端点）
@@ -252,7 +240,7 @@ function cutoutStrips() {
   return out
 }
 
-// 帐篷、暖暖锅、木盖、提灯是从底图里抠出来的独立一层：宠物、装饰走到后面被挡住、走到前面盖在上面。锅按今天打了几顿换图
+// 帐篷、暖暖锅、木盖、提灯是从底图里抠出来的独立一层：宠物、装饰走到后面被挡住、走到前面盖在上面。锅按今天锅里煮了几样换图
 // 云端的是 WebP（真彩、小），包里兜底的是 PNG；一条只露出整张图的一段（外面一层 view 裁，里面整张图往左挪）
 // 锅按今天的层数换图（0 层是空锅：从熄了火的画上抠的，锅底不再被火照亮）；夜里火没点时木盖换熄了火的那张（原来被篝火照成暖黄）
 function cutoutViews(L, potLevel, base, night) {
@@ -282,6 +270,6 @@ function changedPaths(prefix, prev, next) {
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews, isNight,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potNote, visitorNote, cutoutViews, isNight,
   frontAt, cutoutStrips, BOWL_PX, backdropImage, changedPaths,
 }

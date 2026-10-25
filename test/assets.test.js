@@ -17,8 +17,9 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
   })
   FOODS.concat(TREATS).forEach((f) => {
     assert.ok(exists('camp', 'foods', `${f.id}.png`), f.id)
-    assert.ok(exists('camp', 'foods', 'bowl', `${f.id}.png`), `碗里的 ${f.id}`)
   })
+  // 食盆不用了（食物直接下锅）：碗里的食物图、碗沿抠图都不进包
+  assert.ok(!exists('camp', 'foods', 'bowl'))
   DECOR.forEach((d) => assert.ok(exists('camp', 'decor', `${d.id}.png`), d.id))
   ;['world.jpg', 'night-world.jpg'].forEach((f) => assert.ok(exists('camp', 'base', f), f))
   const { SCENE } = require('../cloudfunctions/api/lib/shared/camp')
@@ -28,7 +29,7 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
       files.forEach((f) => assert.ok(exists('camp', 'cut', pfx + f), pfx + f))
     })
     assert.ok(exists('camp', 'cut', `${pfx}fire.jpg`), `${pfx}fire.jpg`)
-    ;[0, 1].forEach((i) => assert.ok(exists('camp', 'cut', `${pfx}bowl-${i}.png`), `${pfx}bowl-${i}.png`))
+    ;[0, 1].forEach((i) => assert.ok(!exists('camp', 'cut', `${pfx}bowl-${i}.png`), `${pfx}bowl-${i}.png`))
   })
 })
 
