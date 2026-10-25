@@ -1386,7 +1386,7 @@ const STAMPS = [
 ]
 ```
 
-- `stampsView：印章的样式` 的期望改成第一条 `cls: 'stamp-green stamp-on'`，其余不变。
+- `stampsView：印章的样式` 的期望改成第一条 `cls: 'stamp-green stamp-on'`，其余不变；`buildCalendarCells` 那个测试也用 `STAMPS`，`cells[3].stamps[0].cls` 同样改成 `'stamp-green stamp-on'`。
 - `decorateGain` 那个测试换成：
 
 ```js

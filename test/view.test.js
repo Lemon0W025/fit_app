@@ -94,40 +94,45 @@ test('greetingText 按时段问候', () => {
   assert.equal(greetingText(22, ''), '晚上好')
 })
 
-const { stampsView, decorateGain, beansCard, buildCalendarCells } = require('../miniprogram/utils/view')
+const { stampsView, decorateGain, beansCard, buildCalendarCells, nextMealCard } = require('../miniprogram/utils/view')
 
 const STAMPS = [
-  { mealType: 'breakfast', label: '早', state: 'green' },
-  { mealType: 'lunch', label: '午', state: 'done' },
-  { mealType: 'dinner', label: '晚', state: 'none' },
+  { mealType: 'breakfast', label: '早', state: 'green', onTime: true },
+  { mealType: 'lunch', label: '午', state: 'done', onTime: false },
+  { mealType: 'dinner', label: '晚', state: 'none', onTime: false },
 ]
 
 test('stampsView：印章的样式', () => {
   assert.deepEqual(stampsView(STAMPS), [
-    { key: 'breakfast', label: '早', cls: 'stamp-green' },
+    { key: 'breakfast', label: '早', cls: 'stamp-green stamp-on' },
     { key: 'lunch', label: '午', cls: 'stamp-done' },
     { key: 'dinner', label: '晚', cls: 'stamp-none' },
   ])
   assert.deepEqual(stampsView(undefined), [])
 })
 
-test('decorateGain：这次多得了暖豆就庆祝，没多得就说记下了', () => {
-  const gain = decorateGain({ beans: 10, beansToday: 20, hint: '再打卡晚餐还能得 20 暖豆', stamps: STAMPS })
-  assert.equal(gain.title, '+10 暖豆')
-  assert.equal(gain.hint, '再打卡晚餐还能得 20 暖豆')
+test('decorateGain：准时的写清楚是哪顿准时，三顿都准时额外庆祝', () => {
+  const gain = decorateGain({ beans: 20, beansToday: 20, hint: '下一顿晚饭 17:00～19:00 拍算准时', stamps: STAMPS, mealType: 'lunch', timing: 'on', allOnTime: false })
+  assert.equal(gain.title, '午饭准时打卡 +20 暖豆')
+  assert.equal(gain.bonus, '')
+  assert.equal(gain.hint, '下一顿晚饭 17:00～19:00 拍算准时')
   assert.equal(gain.stamps.length, 3)
+  assert.equal(decorateGain({ beans: 35, stamps: STAMPS, mealType: 'dinner', timing: 'on', allOnTime: true }).bonus, '三顿都准时，再加 15！')
+  assert.equal(decorateGain({ beans: 10, stamps: STAMPS, mealType: 'dinner', timing: 'late', allOnTime: false }).title, '+10 暖豆')
   assert.equal(decorateGain({ beans: 0, beansToday: 20, hint: 'x', stamps: STAMPS }).title, '这顿记下啦')
   assert.equal(decorateGain({ beans: -10, beansToday: 10, hint: 'x', stamps: STAMPS }).title, '这顿记下啦')
   assert.equal(decorateGain(null), null)
 })
 
 test('beansCard：今天的暖豆卡片', () => {
-  const card = beansCard({ stamps: STAMPS, beansToday: 20, nextGain: 20, hint: '再打卡晚餐还能得 20 暖豆', streak: 3, beans: 85 })
+  const card = beansCard({ stamps: STAMPS, beansToday: 20, hint: '再打卡晚餐还能得 20 暖豆', streak: 3, beans: 85, monthOnTime: 4 })
   assert.equal(card.title, '今天得了 20 暖豆')
   assert.equal(card.hint, '再打卡晚餐还能得 20 暖豆')
   assert.equal(card.streakText, '🔥 已连续 3 天')
-  assert.equal(card.stamps[0].cls, 'stamp-green')
-  const empty = beansCard({ stamps: [], beansToday: 0, nextGain: 10, hint: '打卡一顿正餐就能得 10 暖豆', streak: 0, beans: 0 })
+  assert.equal(card.stamps[0].cls, 'stamp-green stamp-on')
+  assert.equal(card.onTimeText, '本月准时 4 顿')
+  const empty = beansCard({ stamps: [], beansToday: 0, hint: '打卡一顿正餐就能得 10 暖豆', streak: 0, beans: 0, monthOnTime: 0 })
+  assert.equal(empty.onTimeText, '')
   assert.equal(empty.title, '今天还没打卡')
   assert.equal(empty.streakText, '')
   assert.equal(beansCard(null), null)
@@ -145,11 +150,34 @@ test('buildCalendarCells：周一开头的日历，每天印章和暖豆', () =>
   assert.deepEqual(cells.slice(0, 3).map((c) => c.blank), [true, true, true])
   assert.equal(cells[3].day, 1)
   assert.equal(cells[3].beansText, '+20')
-  assert.equal(cells[3].stamps[0].cls, 'stamp-green')
+  assert.equal(cells[3].stamps[0].cls, 'stamp-green stamp-on')
   assert.equal(cells[4].beansText, '')
   assert.deepEqual(cells[4].stamps, [])
   assert.equal(cells[5].future, true)
   assert.ok(cells.every((c) => c.key))
   assert.equal(buildCalendarCells(days, 0).filter((c) => c.blank).length, 6)
   assert.equal(buildCalendarCells(days, 1).filter((c) => c.blank).length, 0)
+})
+
+test('nextMealCard：首页下一顿大卡', () => {
+  const base = { mealType: 'lunch', word: '午饭', time: '12:00', window: '11:00～13:00' }
+  assert.deepEqual(nextMealCard({ state: 'upcoming', ...base }), {
+    state: 'upcoming', title: '午饭 · 12:00', sub: '11:00～13:00 拍算准时', button: '📷 拍午饭', mealType: 'lunch', small: false, warn: false,
+  })
+  assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 40 }).sub, '11:00～13:00 拍算准时，还剩 40 分钟')
+  assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 100 }).sub, '11:00～13:00 拍算准时，还剩 1 小时 40 分')
+  assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 60 }).sub, '11:00～13:00 拍算准时，还剩 1 小时')
+  assert.deepEqual(nextMealCard({ state: 'missed', ...base }), {
+    state: 'missed', title: '午饭还没拍', sub: '现在补拍也算数', button: '📷 补拍午饭', mealType: 'lunch', small: false, warn: true,
+  })
+  assert.deepEqual(nextMealCard({ state: 'done', ...base, onTime: true, next: { mealType: 'dinner', word: '晚饭', time: '18:00' } }), {
+    state: 'done', title: '午饭准时拍了 ✓', sub: '下一顿：晚饭 18:00', button: '拍加餐', mealType: 'snack', small: true, warn: false,
+  })
+  assert.equal(nextMealCard({ state: 'done', ...base, onTime: false, next: null }).title, '午饭拍了 ✓')
+  assert.equal(nextMealCard({ state: 'done', ...base, onTime: false, next: null }).sub, '')
+  assert.deepEqual(nextMealCard({ state: 'allDone', allOnTime: true }), {
+    state: 'allDone', title: '今天三顿都准时拍了 ✓', sub: '', button: '加餐也可以拍', mealType: 'snack', small: true, warn: false,
+  })
+  assert.equal(nextMealCard({ state: 'allDone', allOnTime: false }).title, '今天三顿都拍完啦 ✓')
+  assert.equal(nextMealCard(null), null)
 })

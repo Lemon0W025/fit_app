@@ -9,6 +9,7 @@
     <view class="today-hint">{{daily.hint}}</view>
     <view class="today-stats">
       <text wx:if="{{daily.streakText}}" class="today-stat">{{daily.streakText}}</text>
+      <text wx:if="{{daily.onTimeText}}" class="today-stat">⏰ {{daily.onTimeText}}</text>
       <text class="today-stat">📅 累计打卡 {{view.totalDays}} 天</text>
     </view>
   </view>
@@ -33,6 +34,6 @@
         </block>
       </view>
     </view>
-    <view class="month-stats">这个月打卡 {{view.stats.days}} 天，得了 {{view.stats.beans}} 暖豆</view>
+    <view class="month-stats">这个月打卡 {{view.stats.days}} 天，准时 {{view.stats.onTime}} 顿，得了 {{view.stats.beans}} 暖豆</view>
   </view>
 </view>

@@ -2,6 +2,8 @@
 
 const { MEAL_ORDER, MEAL_LABELS, RATING_LABELS } = require('./shared/meal-types')
 const { timeText, dateLabel } = require('./shared/date')
+const { MEAL_WORDS } = require('./shared/timing')
+const { BEANS } = require('./shared/forest')
 
 // 还没建档时进度条用的兜底预算
 const FALLBACK_DAILY_KCAL = 1500
@@ -62,16 +64,19 @@ function buildDayView(day) {
 
 // ---------------------------------------------------------------- 每日暖豆
 
-// 早 / 午 / 晚三个印章：cls 对应 app.wxss 里的颜色
+// 早 / 午 / 晚三个印章：cls 对应 app.wxss 里的颜色，准时拍的再加金边 stamp-on
 function stampsView(stamps) {
-  return (stamps || []).map((s) => ({ key: s.mealType, label: s.label, cls: `stamp-${s.state}` }))
+  return (stamps || []).map((s) => ({ key: s.mealType, label: s.label, cls: `stamp-${s.state}${s.onTime ? ' stamp-on' : ''}` }))
 }
 
-// 打卡结果页：这次打卡多得了多少暖豆
+// 打卡结果页：这次打卡多得了多少暖豆，准时的写清楚是哪顿准时
 function decorateGain(gain) {
   if (!gain) return null
+  let title = '这顿记下啦'
+  if (gain.beans > 0) title = gain.timing === 'on' ? `${MEAL_WORDS[gain.mealType]}准时打卡 +${gain.beans} 暖豆` : `+${gain.beans} 暖豆`
   return {
-    title: gain.beans > 0 ? `+${gain.beans} 暖豆` : '这顿记下啦',
+    title,
+    bonus: gain.allOnTime ? `三顿都准时，再加 ${BEANS.allOnTime}！` : '',
     hint: gain.hint,
     stamps: stampsView(gain.stamps),
   }
@@ -85,7 +90,36 @@ function beansCard(daily) {
     hint: daily.hint,
     stamps: stampsView(daily.stamps),
     streakText: daily.streak > 0 ? `🔥 已连续 ${daily.streak} 天` : '',
+    onTimeText: daily.monthOnTime > 0 ? `本月准时 ${daily.monthOnTime} 顿` : '',
   }
+}
+
+// 「40 分钟」「1 小时 40 分」「1 小时」
+function leftText(minutes) {
+  if (minutes < 60) return `${minutes} 分钟`
+  const m = minutes % 60
+  return `${Math.floor(minutes / 60)} 小时${m ? ` ${m} 分` : ''}`
+}
+
+// 首页「下一顿」大卡：shared/timing.js 的 mealStatus → 页面字段。mealType 是按钮带去打卡页的餐次，small 是只给一个小链接
+function nextMealCard(s) {
+  if (!s) return null
+  if (s.state === 'allDone') {
+    return { state: 'allDone', title: s.allOnTime ? '今天三顿都准时拍了 ✓' : '今天三顿都拍完啦 ✓', sub: '', button: '加餐也可以拍', mealType: 'snack', small: true, warn: false }
+  }
+  const card = { state: s.state, title: `${s.word} · ${s.time}`, sub: `${s.window} 拍算准时`, button: `📷 拍${s.word}`, mealType: s.mealType, small: false, warn: false }
+  if (s.state === 'open') card.sub = `${s.window} 拍算准时，还剩 ${leftText(s.minutesLeft)}`
+  if (s.state === 'missed') Object.assign(card, { title: `${s.word}还没拍`, sub: '现在补拍也算数', button: `📷 补拍${s.word}`, warn: true })
+  if (s.state === 'done') {
+    Object.assign(card, {
+      title: s.onTime ? `${s.word}准时拍了 ✓` : `${s.word}拍了 ✓`,
+      sub: s.next ? `下一顿：${s.next.word} ${s.next.time}` : '',
+      button: '拍加餐',
+      mealType: 'snack',
+      small: true,
+    })
+  }
+  return card
 }
 
 // 打卡日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）；没打正餐的日子不画印章，月历看着清爽
@@ -115,5 +149,6 @@ module.exports = {
   stampsView,
   decorateGain,
   beansCard,
+  nextMealCard,
   buildCalendarCells,
 }

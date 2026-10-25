@@ -26,6 +26,12 @@
   font-size: 28rpx;
 }
 
+.gain-bonus {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #c98a12;
+}
+
 .arrival-banner {
   display: flex;
   align-items: center;

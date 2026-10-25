@@ -5,6 +5,7 @@
     <image class="gain-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
     <view class="gain-body">
       <view class="gain-title">{{gain.title}}</view>
+      <view wx:if="{{gain.bonus}}" class="gain-bonus">{{gain.bonus}}</view>
       <view class="stamps">
         <view wx:for="{{gain.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
       </view>

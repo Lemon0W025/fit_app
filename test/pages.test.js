@@ -100,8 +100,9 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(meal.data.meal.kcalText, '约 520 千卡')
   assert.equal(meal.data.meal.label, '午餐')
   assert.equal(meal.data.note, '米饭吃了一半')
-  assert.equal(meal.data.gain.title, '+20 暖豆')
-  assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green')
+  assert.equal(meal.data.gain.title, '午饭准时打卡 +20 暖豆')
+  assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green stamp-on')
+  assert.equal(meal.data.gain.bonus, '')
   assert.equal(wx.app.globalData.lastGain, null)
 
   // 5. 估得不准 → 补充描述重新分析
@@ -161,6 +162,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   const todayCell = forest.data.cells.find((c) => c.date === today.data.view.date)
   assert.equal(todayCell.beansText, '+10')
   assert.deepEqual(todayCell.stamps.map((s) => s.cls), ['stamp-none', 'stamp-none', 'stamp-green'])
+  assert.match(readWxml('forest'), /准时 \{\{view.stats.onTime\}\} 顿/)
   forest.openDay(event({ key: todayCell.key }))
   assert.match(wx.log.modals.pop(), /打卡 1 顿 · 约 \d+ 千卡 · 得了 10 暖豆/)
   forest.prevMonth()

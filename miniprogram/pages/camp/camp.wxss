@@ -464,6 +464,14 @@ button.btn-small {
   font-size: 20rpx;
 }
 
+.stamps-mini .stamp-on {
+  box-shadow: 0 0 0 4rpx #f0b429;
+}
+
+.stamps-mini .stamp-on::after {
+  display: none;
+}
+
 /* 左右两列圆按钮 */
 .side {
   position: absolute;

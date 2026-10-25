@@ -326,6 +326,27 @@ button.btn-plain[disabled] {
   color: var(--gray);
 }
 
+/* 准时拍的那顿：金边 + 角上一个「准」 */
+.stamp-on {
+  position: relative;
+  box-shadow: 0 0 0 5rpx #f0b429;
+}
+
+.stamp-on::after {
+  content: '准';
+  position: absolute;
+  right: -16rpx;
+  top: -16rpx;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50%;
+  background: #f0b429;
+  color: #fff;
+  font-size: 20rpx;
+  line-height: 30rpx;
+  text-align: center;
+}
+
 /* 日历格子里的小印章：只要颜色 */
 .stamps-small {
   gap: 4rpx;
@@ -338,4 +359,12 @@ button.btn-plain[disabled] {
   height: 20rpx;
   font-size: 0;
   border-width: 2rpx;
+}
+
+.stamps-small .stamp-on {
+  box-shadow: 0 0 0 3rpx #f0b429;
+}
+
+.stamps-small .stamp-on::after {
+  display: none;
 }
