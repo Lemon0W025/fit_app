@@ -4,13 +4,12 @@
 「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
 生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
 
-设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。一共三批，每批交完小程序就能上一版：
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。第 1 批已经做完接进来了，剩下的（原来的第 2、3 批加一张返工）合成一次做完：
 
 | 批 | 内容 |
 |---|---|
 | 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已完成，10/25 接入）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
-| 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰；重画小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝） |
-| 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
+| 2（剩下的全部） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
 
 ## 执行流程（照这个顺序喂 Codex）
 
@@ -71,32 +70,39 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
    推完切回 claude/mini-program-dev-nzn2n0（git checkout claude/mini-program-dev-nzn2n0），别把仓库留在新分支上。
 ```
 
-**第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 1 批的图接进来后都在 `claude/mini-program-dev-nzn2n0` 分支上，第 2、3 批照样先切到这个分支 `git pull` 再做。
+**第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 1 批的图接进来后都在 `claude/mini-program-dev-nzn2n0` 分支上，剩下的照样先切到这个分支 `git pull` 再做。
 
-**第 2 批开场指令**：
-
-```
-你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 2 批」，规矩和第 1 批一样（UNIFIED STYLE、路径按 art/manifest.json、
-每张 check_art.py、「屏幕上很小」那几条）。先 git checkout claude/mini-program-dev-nzn2n0 && git pull。顺序：
-1. 宠物 huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha：先 7 张 -ref.png 一起给我看，停下来等我；
-   我说可以之后每只再出 -a、-b、-album。
-2. 重画小帐篷：上一批的 art/raw/decor/out-tent.png 画成了浅绿色，在草地上看不出来。用现有的 art/raw/decor/in-tent.png
-   （别重新裁）按第 2 节模板再 edit 一次，帐篷布用天蓝色（浅蓝 + 白边），覆盖 out-tent.png。
-3. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
-   每块按第 2 节模板 edit 成 art/raw/decor/out-<id>.png。装饰别画太小：宽度约占 in 图的一半（小灯笼上次只画了四分之一宽）。
-4. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送，
-   推完切回 claude/mini-program-dev-nzn2n0。
-```
-
-**第 3 批开场指令**：
+**剩下的全部：开场指令**（整段粘给 Codex。第 1 步出完 8 只宠物的定稿会停下来给你看，你回「可以」或写改意见，之后一口气做完）：
 
 ```
-你在仓库根目录，按 docs/art/camp-art-pack.md 做「第 3 批」，规矩同前。先 git checkout claude/mini-program-dev-nzn2n0 && git pull。顺序：
-1. 鹤鹤 hehe：-ref.png 给我看，停下来等我；然后 -a（注意 A 张第 1 行是飞）、-b、-album。
-2. 金色小帐篷：python3 scripts/camp/decor_crop.py --ids gold_tent，edit 成 art/raw/decor/out-gold_tent.png。
-3. 全家福 art/raw/camp/family.png（第 6 节，1536×1024），以 12 张 -ref.png 为参考，每只都要认得出。
-4. check_art.py 全跑，art/raw/ 提交到新分支 codex/art-batch-3 并推送，推完切回 claude/mini-program-dev-nzn2n0。
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 把剩下的图做完（返工 1 张 + 新图 50 张）。
+先切到最新代码：git checkout claude/mini-program-dev-nzn2n0 && git pull，再把这个文件的第 0、2、3、6 节读一遍
+（尤其「屏幕上很小」那几条）。只往 art/raw/ 里加图，别改代码和脚本。规矩和第 1 批一样：每张提示词都带第 0 节的
+UNIFIED STYLE（拼图再带 SHEET RULES / ANIMATION SHEET RULES），把 art/guide/style-camp.jpg 当画风参考图；
+输出路径和 art/manifest.json 一致；每出一张就跑 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修。
+画风要和第 1 批已经接进来的一致：art/raw/pets/doudou-ref.png、nuonuo-ref.png、lianlian-ref.png、shishi-ref.png
+和 art/raw/decor/out-*.png 那 8 件装饰也一起当参考图。顺序：
+1. 宠物定稿 8 张：huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha、hehe，每只按 3.1 出 art/raw/pets/<id>-ref.png，
+   CHARACTER 用 3.4 表里那只的。12 只要光看剪影和颜色就分得开（3.4 表下面「分得开」那段，橘团、杞杞、花花最容易撞）。
+   8 张一起发给我看，停下来等我。
+2. 我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
+   都以它自己的 -ref.png 为参考图。鹤鹤 A 张第 1 行是飞。
+3. 返工小帐篷：上一批的 art/raw/decor/out-tent.png 画成了浅绿色，在草地上看不出来。用现有的 art/raw/decor/in-tent.png
+   （别重新裁），按第 2 节模板和表里 tent 那行再 edit 一次：天蓝色帐篷布、奶白门帘，覆盖 out-tent.png。
+4. 装饰 17 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow,gold_tent
+   （只裁这 17 件，第 1 批的不动），对每个 art/raw/decor/in-<id>.png 按第 2 节模板 edit 成 out-<id>.png（1024×1024）。
+   上一批最容易错的两条：装饰宽度要占图宽的一半左右（小灯笼只画了四分之一宽）；颜色别和黄绿的草一样（小帐篷）。
+   只画装饰本身、贴地的影子和压在底边的几根草，周围的草地一个像素都别动。
+5. 全家福 art/raw/camp/family.png（第 6 节，1536×1024），以 12 张 -ref.png 为参考，每只都要认得出。
+6. 最后 python3 scripts/art/check_art.py 全跑一遍（应该 90 / 90 通过），把输出贴给我；
+   把 art/raw/ 整个目录提交到新分支 codex/art-batch-2 并推送（推不了就打成 art-batch-2.zip 给我）；
+   推完 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
+中途断了（对话太长、出错）：新开对话粘同一段，先跑 python3 scripts/art/check_art.py，已经通过的别重做，从「还没有」的接着做。
 ```
+
+**回来之后**：告诉 Claude「剩下的图在分支 codex/art-batch-2」，Claude 按第 7 节接入、发预览二维码。
+
+---
 
 ## 0. 总则（每张都适用）
 
@@ -272,7 +278,7 @@ cut off at the middle line continue upward naturally. The lower half must stay p
 
 1. 先跑 `python3 scripts/camp/decor_crop.py --ids <逗号隔开的 id>`（在仓库里直接跑，要有 `node` 和 Pillow），从高清营地图裁出每件装饰需要的一块空草地 `art/raw/decor/in-<id>.png`（正方形，装饰块连 25% 边都在里面；正方形是为了和 edit 的 1024×1024 输出对齐，不变形）。
 2. 你用 image-to-image / edit，把装饰画在这块草地**正中偏下**（装饰的底边落在块高的 80% 左右），**块里其他像素一概不动**，存成 `out-<id>.png`（1024×1024）。
-3. 小程序这边 `python3 scripts/camp/decor_patch.py` 比对 in / out，把装饰连一圈草地裁下来、边缘羽化。
+3. 小程序这边 `python3 scripts/camp/decor_patch.py` 比对 in / out，只取你画了的地方：装饰本身留着，脚下顺手画的那圈草皮去掉、只留影子。所以**只画装饰、贴地的影子和压在底边的几根草**，别在周围重画一圈草地。
 
 **屏幕上很小**：手机上默认看营地时，一件小装饰本身只有约 20 像素宽，大的也就 45 像素左右（宠物约 30）；双指捏小看全景还要再小三成。所以：
 - 造型简单、轮廓清楚，大块面的颜色，别画细碎的小零件、细线、小字和花纹
@@ -294,7 +300,7 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 | id | 名字（中文） | 画什么（英文填进 `<装饰>`） | 块大小 |
 |---|---|---|---|
 | tent | 小帐篷 | a small sky-blue pup tent with a cream door flap tied open — clearly smaller than the big olive-green camp tent in the scene and NOT green | 大 |
-| hammock | 吊床 | a striped fabric hammock slung between two slim young trees | 大 |
+| hammock | 吊床 | a coral-and-cream striped fabric hammock slung between two short wooden posts | 大 |
 | treehouse | 树洞小屋 | a tiny house built into a short hollow tree stump, round door, tiny windows | 大 |
 | strawbed | 草窝 | a round nest bed of golden straw | 小 |
 | picnic | 野餐垫 | a red-and-white checkered picnic blanket with a small basket and two cups | 中 |
@@ -303,7 +309,7 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 | swing | 秋千 | a wooden swing hanging from a sturdy wooden A-frame | 大 |
 | ball | 滚球 | a big soft rubber ball, cream with a wide pastel blue band | 小 |
 | ladder | 木梯 | a short wooden step ladder leaning slightly, with a flat top platform | 中 |
-| slide | 小滑梯 | a small children's slide, pastel green with wooden steps | 大 |
+| slide | 小滑梯 | a small children's slide, pastel coral pink with wooden steps — NOT green | 大 |
 | flowerbed | 花坛 | a round flower bed edged with small stones, full of pastel daisies and cosmos | 中 |
 | pumpkins | 南瓜堆 | a pile of three plump orange pumpkins with a tiny one on top | 中 |
 | sapling | 小树 | a young round tree with a bushy soft canopy and a slim trunk, the same style as the round trees along the top of the camp painting but much smaller | 大 |
@@ -416,6 +422,8 @@ changes from frame to frame enough to read as motion, while the size of the char
 
 参考 `art/raw/pets/<id>-ref.png`（同一只）；A 张和 B 张分开出，每张都要带 CHARACTER。
 
+**分得开**：12 只在手机上只有 30 像素宽，光看剪影和颜色就要认得出。已经有的四只是黄色小鸡（豆豆）、白兔（糯糯）、顶荷叶的黄色小鸭（莲莲）、背柿子的棕色刺猬（柿柿）。橘团、杞杞、花花三只都带橘色，最容易撞：橘团是一整个圆滚滚的亮橘黄球、绿叶尾巴画大；杞杞瘦长、尖耳朵、大尾巴、偏红的橙色、白胸口、脖子上一串红枸杞；花花是白底三花（白色占一半以上），尾巴尖一朵黄菊花。龟龟、笋宝、茶茶别和草同色：龟壳上的苔藓用偏蓝的深绿，笋帽画大，茶茶的奶白身子和粉白山茶要跳出来。
+
 ---
 
 ## 4. 食物图标 `art/raw/ui/foods.png`（1:1，6×6，前 33 格）
@@ -445,7 +453,7 @@ in this order: … Cells 34–36 empty.
 
 ---
 
-## 6. 全家福 `art/raw/camp/family.png`（第 3 批，3:2）
+## 6. 全家福 `art/raw/camp/family.png`（最后做，3:2）
 
 12 只宠物围着篝火坐成一圈，傍晚暖光，看向观众，每只都能认出来（参考 12 张定稿），营地背景和第 1 张一致。图册全收集后当封面。
 
