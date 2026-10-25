@@ -71,7 +71,8 @@
 - **里程碑**：`MILESTONES = [3, 7, 14, 21, 30, 60, 100, 150, 200, 300, 365]`，365 以后每满 100 天再算一次（465、565……）。
   - `isMilestone(n)`：在列表里，或 `n > 365 && (n - 365) % 100 === 0`。
   - `nextMilestone(n)` → `{ days, left }`：比 n 大的下一个里程碑和还差几天。
-  - `tierOf(days)` → `'bronze'`（3、7）/ `'silver'`（14、21、30）/ `'gold'`（60 以上）；365 和以后的额外 `glow: true`。
+  - `badgeLook(days)` → `{ tier, glow }`：`tier` 是 `'bronze'`（3、7）/ `'silver'`（14、21、30）/ `'gold'`（60 以上），365 和以后 `glow: true`。
+  - `milestonesUpTo(days)`：不超过 days 的里程碑（日历列纪念章用）。
 - **什么时候触发**：某天第一次有了正餐打卡（这一天从「没算」变成「算了」）、并且算上这天的连续天数正好是里程碑。
   - 只看正餐：加餐不调用 `syncDay`，本来就不会触发。
   - 一天只触发一次：纪念章记着上次触发的日期 `last`，等于今天就不再触发（同一天删了再拍不会再庆祝）。
@@ -120,7 +121,7 @@ streakBadges: { '7': { first: '2026-11-01', last: '2026-11-01', times: 1 }, … 
 3. 中间一张卡（从 0.6 倍弹到 1 倍）：
    - 纪念章（`medal`，大号）转半圈放大落定，同时 `wx.vibrateShort({ type: 'medium' })`；
    - 大字「连续打卡 7 天！」，第 2 次以后下面小字「第 2 次做到」；
-   - 营地里最亲的那只（`petId`）的图册小图从卡片下沿探出头（`images/camp/pets/<id>.png`），没宠物就放暖豆图标；
+   - 营地里最亲的那只（`petId`）的图册小图从卡片左下角探出头（`images/camp/pets/<id>.png`），没宠物就放暖豆图标；
    - 一句小暖的话（按天数挑，写在 `utils/milestone-lines.js`，比如 7 天「一周都没落下，身体会记得的」、30 天「一个月了，这已经是习惯啦」）；
    - 大按钮「收下纪念章」。
 4. 点按钮或卡片外面关掉（0.2 秒淡出），结果页照常可用。
@@ -138,9 +139,9 @@ streakBadges: { '7': { first: '2026-11-01', last: '2026-11-01', times: 1 }, … 
 - `cloudfunctions/api/services/meal.js`：`gain.milestone`。
 - `miniprogram/utils/fx.js`：
   - `countUp(from, to, ms, onStep, clock)`：数字滚动（缓出），最后一步一定等于 `to`；
-  - `stagger(n, gap)`：依次出现的延迟数组；
-  - `buzz(type)`：包一层 `wx.vibrateShort`，不支持就忽略。
-  页面里用 `this.clock`（和首页现在的定时器一样可注入）。
+  - `buzz(type)`：包一层 `wx.vibrateShort`，不支持就忽略；
+  - `clockOf(page)`：页面 / 组件的 `this.clock`（测试里注入手动时钟），没有就用真的定时器。
+  依次出现的节奏用 CSS 的 `animation-delay`（`fx-d1`～`fx-d8`，每档 100ms）。
 - `miniprogram/utils/view.js`：`decorateGain` 多 `milestone`、`newStamp`（哪个印章要播盖章）；`beansCard` 的 `streakText` 带下一个里程碑；日历的 `badges` 视图。
 - `miniprogram/app.wxss`：共用的动画（`fx-stamp`、`fx-pop`、`fx-rise`、`fx-breathe`、`fx-breathe-warn`、`fx-press`），页面加 class 就能用。
 - `miniprogram/components/celebrate/`、`miniprogram/components/medal/`：两个自定义组件；`meal`、`forest` 页面的 `json` 里注册。
@@ -148,11 +149,11 @@ streakBadges: { '7': { first: '2026-11-01', last: '2026-11-01', times: 1 }, … 
 
 ## 五、测试
 
-- `shared/streak.js`：`isMilestone` 列表里的、365 以后每 100 天、不在的；`nextMilestone` 的边界（0、2、3、365、366）；`tierOf` 各档；两边逐字节一致（现有检查自动覆盖）。
+- `shared/streak.js`：`isMilestone` 列表里的、365 以后每 100 天、不在的；`nextMilestone` 的边界（0、2、3、365、366）；`milestonesUpTo`；`badgeLook` 各档；两边逐字节一致（现有检查自动覆盖）。
 - `forest.syncDay`：当天第一顿正餐到 7 天触发；同一天第二顿不触发；同一天删了再拍不再触发；断了再连到 7 天 `times` 为 2；
   删打卡让那天不算了，纪念章还在；`petId` 取 `fed` 最多的。
 - `meal.create`：正餐带 `gain.milestone`，加餐没有 `gain`；端到端（`fake-cloud`）连续 7 天打卡第 7 天的结果里有 `milestone`。
-- `utils/fx.js`：`countUp` 快进到结束等于目标值、中途单调；`stagger`。
+- `utils/fx.js`：`countUp` 快进到结束等于目标值、中途单调、`finish` 直接到目标值。
 - 页面（`page-harness`）：结果页带 `gain` 时播盖章（`newStamp` 对）、带 `milestone` 时出现庆祝、点「收下纪念章」关掉；看旧打卡不震动；
   首页的 `streakText` 带「再 N 天」；日历显示已拿和下一个纪念章、点开的文字。
 - 录屏：仿照 `scripts/preview/record-camp.js` 加 `scripts/preview/record-checkin.js`，用同一个 `wxml-render` 把结果页（普通 / 三顿准时 / 里程碑）、
