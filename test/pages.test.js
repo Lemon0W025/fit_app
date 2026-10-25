@@ -365,6 +365,27 @@ test('结果页：点一下屏幕跳到结束（里程碑马上弹）；三顿�
   assert.equal(old.page.data.fxSkip, false)
 })
 
+test('打卡日历：纪念章一排（已拿的、还差几天的），点开看第一次的日子；今天那格标出来', async (t) => {
+  const clock = fixDate(t, '2026-10-16T08:00:00+08:00')
+  const cloud = createFakeCloud({ replies: Array.from({ length: 3 }, () => analysisJson()) })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  for (const d of [16, 17, 18]) {
+    clock.set(`2026-10-${d}T08:00:00+08:00`)
+    await main({ action: 'meal.analyze', data: { mealType: 'breakfast', note: '小米粥' } })
+  }
+  const wx = createWx(main)
+  const forest = loadPage('forest', wx)
+  forest.onShow()
+  await settle()
+  assert.deepEqual(forest.data.badges.map((b) => [b.days, b.got, b.label]), [[3, true, '3 天'], [7, false, '还差 4 天']])
+  assert.equal(forest.data.cells.find((c) => c.isToday).date, '2026-10-18')
+  forest.openBadge(event({ days: 3 }))
+  assert.equal(wx.log.modals.pop(), '第一次 2026年10月18日 · 共 1 次')
+  forest.openBadge(event({ days: 7 }))
+  assert.equal(wx.log.modals.pop(), '再连续打卡 4 天就能拿到')
+})
+
 test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡', async (t) => {
   const clock = fixDate(t, '2026-10-22T11:20:00+08:00')
   const cloud = createFakeCloud()

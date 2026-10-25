@@ -101,3 +101,34 @@
   font-size: 28rpx;
   color: var(--muted);
 }
+
+/* 纪念章一排：横着能滑 */
+.medals {
+  white-space: nowrap;
+  margin-top: 24rpx;
+}
+
+.medal-cell {
+  display: inline-block;
+  width: 140rpx;
+  vertical-align: top;
+  text-align: center;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.medal-label {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: #b8763a;
+}
+
+.medal-label-off {
+  color: var(--gray);
+}
+
+/* 今天那一格 */
+.cell-today {
+  border-radius: 16rpx;
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 3rpx rgba(78, 125, 91, 0.35);
+}

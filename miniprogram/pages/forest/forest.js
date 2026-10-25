@@ -1,5 +1,5 @@
 const api = require('../../utils/api')
-const { beansCard, buildCalendarCells } = require('../../utils/view')
+const { beansCard, buildCalendarCells, badgesView } = require('../../utils/view')
 
 Page({
   data: {
@@ -7,6 +7,7 @@ Page({
     month: '',
     view: null,
     daily: null,
+    badges: [],
     cells: [],
     weekdays: ['一', '二', '三', '四', '五', '六', '日'],
   },
@@ -29,7 +30,8 @@ Page({
             totalDays: view.totalDays,
           },
           daily: beansCard(view.today),
-          cells: buildCalendarCells(view.days, view.firstWeekday),
+          badges: badgesView(view.badges),
+          cells: buildCalendarCells(view.days, view.firstWeekday, view.today.date),
         })
       })
       .catch((err) => api.showError(err))
@@ -57,5 +59,16 @@ Page({
       showCancel: false,
       confirmText: '知道了',
     })
+  },
+
+  // 点纪念章：拿到的看第一次是哪天、一共几次；没拿到的说还差几天
+  openBadge(e) {
+    const days = Number(e.currentTarget.dataset.days)
+    const b = this.data.badges.find((x) => x.days === days)
+    if (!b) return
+    let content = '连续打卡到这一天就能拿到'
+    if (b.got) content = `第一次 ${b.firstText} · 共 ${b.times} 次`
+    else if (b.left) content = `再连续打卡 ${b.left} 天就能拿到`
+    wx.showModal({ title: `连续打卡 ${b.days} 天`, content, showCancel: false, confirmText: '知道了' })
   },
 })

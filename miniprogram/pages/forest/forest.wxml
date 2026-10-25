@@ -12,6 +12,12 @@
       <text wx:if="{{daily.onTimeText}}" class="today-stat">⏰ {{daily.onTimeText}}</text>
       <text class="today-stat">📅 累计打卡 {{view.totalDays}} 天</text>
     </view>
+    <scroll-view wx:if="{{badges.length}}" scroll-x class="medals">
+      <view wx:for="{{badges}}" wx:key="days" class="medal-cell" hover-class="fx-press" data-days="{{item.days}}" bindtap="openBadge">
+        <medal days="{{item.days}}" tier="{{item.tier}}" glow="{{item.glow}}" locked="{{!item.got}}" size="{{96}}" />
+        <view class="medal-label {{item.got ? '' : 'medal-label-off'}}">{{item.label}}</view>
+      </view>
+    </scroll-view>
   </view>
 
   <view class="card">
@@ -24,7 +30,7 @@
       <text wx:for="{{weekdays}}" wx:key="*this" class="weekday">{{item}}</text>
     </view>
     <view class="grid">
-      <view wx:for="{{cells}}" wx:key="key" class="cell {{item.future ? 'cell-future' : ''}}" data-key="{{item.key}}" bindtap="openDay">
+      <view wx:for="{{cells}}" wx:key="key" class="cell {{item.future ? 'cell-future' : ''}} {{item.isToday ? 'cell-today' : ''}}" data-key="{{item.key}}" bindtap="openDay">
         <block wx:if="{{!item.blank}}">
           <view class="cell-day">{{item.day}}</view>
           <view class="stamps stamps-small">
