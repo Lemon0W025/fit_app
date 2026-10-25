@@ -8,7 +8,7 @@
 
 | 批 | 内容 |
 |---|---|
-| 1 | 营地整图（+ 高清 12 块）；豆豆、糯糯、莲莲、柿柿各 4 张；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；食物图标；界面图标 |
+| 1 | A（已完成）：营地整图日 / 夜 + 高清。B：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、（可选）营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
 | 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
 | 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
 
@@ -39,29 +39,29 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 
 **A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
 
-**第 1 批 B：其余**（整段粘给 Codex）：
+**第 1 批 B：其余**（整段粘给 Codex）。一共约 36 张；中间第 5 步会停下来给你看 4 只宠物的定稿，你回「可以」或者写改意见，它再往下做：
 
 ```
-你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。先把这个文件和
-docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带
-SHEET RULES / ANIMATION SHEET RULES）；输出路径和 art/manifest.json 里的一致；每出一张就跑
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。
+先 git pull（拿到最新的脚本和场景数据），再把这个文件和 docs/superpowers/specs/2026-10-24-camp-pets-design.md 读一遍。
+只往 art/raw/ 里加图，别改代码和脚本。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带 SHEET RULES /
+ANIMATION SHEET RULES），把 art/guide/style-camp.jpg 当画风参考图；输出路径和 art/manifest.json 里的一致；每出一张就跑
 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。顺序：
-3. 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-pot.png，按第 1b 节用 edit 画
+1. 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-pot.png，按第 1b 节用 edit 画
    out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），只改锅口里面（和锅口上方一点热气），其他像素不动。
    夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-pot.png，画 out-night-pot-1/2/3.png。
-   （帐篷、锅「去掉」的版本不用画了：抠图已经直接从画上抠出精确轮廓。）
-3b. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
+2. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
    in-night-fire-off.png（夜景被火照亮的那一大圈），按第 1d 节用 edit 画 out-fire-off.png、out-night-fire-off.png（尺寸和 in 一样）。
-3c. （可选）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、in-night-sky.png，
-   按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
+3. （可选，前面都做完再做）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、
+   in-night-sky.png，按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
-5. 宠物 doudou、nuonuo、lianlian、shishi：每只先按 3.1 出 art/raw/pets/<id>-ref.png，四张定稿一起发给我看；
-   我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
+5. 宠物 doudou、nuonuo、lianlian、shishi 的定稿：每只按 3.1 出 art/raw/pets/<id>-ref.png，四张一起发给我看，停下来等我。
+6. 我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
    都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
-6. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
-7. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
+7. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
+8. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支
    codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）。
 ```
 
