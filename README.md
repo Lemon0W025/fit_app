@@ -77,11 +77,13 @@ miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
   pages/checkin|meal          打卡、打卡详情
   pages/gacha|shop|album|forest  扭蛋机（食物）、商店（装饰）、营地图册、打卡日历
   utils/api.js               调用云函数、上传照片、错误提示
+  utils/fx.js, confetti.js   打卡动效：数字滚动、轻震（时钟可注入）；彩带的纯计算（小程序 canvas 和录屏共用）
+  components/                自定义组件：medal 纪念章（纯 CSS）、celebrate 庆祝（彩带 + 里程碑卡）
   utils/view.js, chart.js    页面展示整理、体重图
   utils/camp-view.js         画 ↔ 屏幕换算、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 食盆视图、色调
   utils/camp-life.js, pets.js, anim.js, scene-fx.js  宠物走动与作息（绕路、前后排序）、台词、逐帧动画帧选择、篝火等动效
   utils/camp-light.js        夜里营地每处的亮度和冷暖（light_map.py 照夜景算的），宠物和装饰按位置上色
-  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、饭点和准时 timing.js、每日暖豆与印章、暖豆 / 稀有度 / 节气 garden.js、营地几何 camp.js、宠物 pets.js、食物 foods.js、装饰 decor.js）
+  utils/shared/              与云函数共用的纯逻辑（日期、营养计算、餐次、饭点和准时 timing.js、每日暖豆与印章、暖豆 / 稀有度 / 节气 garden.js、营地几何 camp.js、宠物 pets.js、食物 foods.js、装饰 decor.js、连续打卡里程碑 streak.js）
   images/                    tabBar 图标、营地白模切块、宠物 / 装饰 / 食物占位图、界面图标
   config.js                  云开发环境 ID、云存储图的前缀
 cloudfunctions/api/          唯一的云函数，按 action 路由
@@ -90,7 +92,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
 scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch、宠物图册小图、头像和全家福 pet_art
-scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）+ WXML 渲染器
+scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）、打卡动效录屏 record-checkin.js + WXML 渲染器（认自定义组件）
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
 art/guide/camp-blockout.jpg 营地布局示意（blockout.py 生成）
 test/                        单元测试 + 端到端测试 + 页面冒烟测试
@@ -206,7 +208,7 @@ npm test
 - 帐篷 / 锅 / 木盖 / 提灯的抠图层、篝火逐帧、熄火补丁：`cutouts.py`、`fx_art.py`、`fire_off.py`，`npm run wx:art -- cut`（`cutArt`）
 - 食物、界面图标、表情：`python3 scripts/slice-art.py`；`scripts/draw-images.py` 画 tab 图标
 - 云存储里每类图在 `camp/<类>-vN/`，版本号在 `scripts/wechat.js` 的 `ART_VERSION`：重新生成过就加一再传（同名覆盖的话 CDN 和手机会继续用旧图一阵子）
-- 改了营地画面就 `node scripts/preview/record-camp.js` 录屏逐帧看（输出 `.preview/camp/`）
+- 改了营地画面就 `node scripts/preview/record-camp.js` 录屏逐帧看（输出 `.preview/camp/`）；改了打卡页面的动效就 `node scripts/preview/record-checkin.js`（输出 `.preview/checkin/`）
 - 小程序主包上限 2MB，现在约 1.7MB；加图后看一眼 `du -sh --apparent-size miniprogram`
 
 ## 第二期计划

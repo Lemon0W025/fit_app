@@ -89,10 +89,52 @@ function renderChildren(children, scope, ctx) {
   return out
 }
 
+// 页面 / 组件 json 里的 usingComponents → { 标签: { name, dir, ast, defaults, using } }
+function loadComponents(using) {
+  const out = {}
+  Object.entries(using || {}).forEach(([tag, ref]) => {
+    const dir = path.join(MP, ref)
+    const name = path.basename(ref)
+    const json = JSON.parse(fs.readFileSync(`${dir}.json`, 'utf8'))
+    const src = fs.readFileSync(`${dir}.js`, 'utf8')
+    const defaults = {}
+    // 只认 properties 里 { type, value } 的默认值（我们的组件都这么写）
+    for (const m of src.matchAll(/(\w+):\s*\{\s*type:\s*\w+,\s*value:\s*([^}]+?)\s*\}/g)) {
+      try {
+        defaults[m[1]] = Function(`return (${m[2]})`)()
+      } catch (e) {
+        defaults[m[1]] = null
+      }
+    }
+    out[tag] = { name, dir, ast: parse(fs.readFileSync(`${dir}.wxml`, 'utf8')), defaults, using: loadComponents(json.usingComponents) }
+  })
+  return out
+}
+
+// 用到的组件的样式（递归），按文件去重
+function componentCss(components, seen = new Set()) {
+  let css = ''
+  Object.values(components).forEach((c) => {
+    if (seen.has(c.dir)) return
+    seen.add(c.dir)
+    css += '\n' + fs.readFileSync(`${c.dir}.wxss`, 'utf8') + componentCss(c.using, seen)
+  })
+  return css
+}
+
 const TAGS = { 'movable-area': 'div', 'movable-view': 'div', 'scroll-view': 'div', view: 'div', text: 'span', image: 'img', button: 'button', input: 'input', textarea: 'textarea', canvas: 'canvas' }
 
 function renderNode(node, scope, ctx) {
   if (node.tag === 'block') return renderChildren(node.children, scope, ctx)
+  const comp = ctx.components && ctx.components[node.tag]
+  if (comp) {
+    const props = {}
+    Object.entries(node.attrs).forEach(([k, v]) => {
+      if (!/^(bind|catch|wx:|class$|style$)/.test(k)) props[k.replace(/-(\w)/g, (_, c) => c.toUpperCase())] = interp(v, scope)
+    })
+    const inner = renderChildren(comp.ast.children, { ...comp.defaults, ...props }, { ...ctx, components: comp.using })
+    return `<div class="wx-comp wx-${node.tag} ${esc(interp(node.attrs.class || '', scope))}">${inner}</div>`
+  }
   const a = node.attrs
   const tag = TAGS[node.tag] || 'div'
   const cls = `wx-${node.tag} ${interp(a.class || '', scope)}`
@@ -162,16 +204,17 @@ canvas { display: block; width: 300px; height: 150px; }
 .tab.on { color: #4E7D5B; }
 `
 
-function pageCss(name) {
+function pageCss(name, components = {}) {
   const app = fs.readFileSync(path.join(MP, 'app.wxss'), 'utf8')
   const page = fs.readFileSync(path.join(MP, 'pages', name, `${name}.wxss`), 'utf8')
-  return rpx(app + '\n' + page).replace(/(^|[\s,}])page(?=\s*[{,])/gm, '$1body')
+  return rpx(app + '\n' + page + componentCss(components)).replace(/(^|[\s,}])page(?=\s*[{,])/gm, '$1body')
 }
 
 function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = false }) {
   const wxml = fs.readFileSync(path.join(MP, 'pages', name, `${name}.wxml`), 'utf8')
   const json = JSON.parse(fs.readFileSync(path.join(MP, 'pages', name, `${name}.json`), 'utf8'))
-  const body = renderChildren(parse(wxml).children, data, { mapSrc })
+  const components = loadComponents(json.usingComponents)
+  const body = renderChildren(parse(wxml).children, data, { mapSrc, components })
   const tabs = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8')).tabBar.list
   const tabbar = tab
     ? `<div class="tabbar">${tabs
@@ -189,9 +232,18 @@ function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = f
 <div class="nav">${back ? '<span class="back">‹</span>' : ''}${esc(json.navigationBarTitleText)}<span class="capsule">··· ◉</span></div>`
   const customCss = custom ? `.frame{position:relative}.content{flex:none;position:relative;height:${812 - (tab ? 76 : 0)}px;overflow:hidden}.screen{height:100%!important;width:375px!important}
 .status-float{position:absolute;left:0;right:0;top:0;background:transparent;z-index:999}.capsule-float{position:absolute;top:24px;right:7px;width:87px;height:32px;border-radius:16px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-around;font-size:14px;z-index:999}` : ''
-  return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}\n${pageCss(name)}\n${customCss}</style></head>
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}\n${pageCss(name, components)}\n${customCss}</style></head>
 <body><div class="frame">${head}
 <div class="content">${body}</div>${tabbar}</div>${extraScript}</body></html>`
 }
 
-module.exports = { renderPage }
+// 单独渲染一个组件（录屏时等一会儿再插进页面用，比如结果页的庆祝）
+function renderComponent(ref, props, mapSrc) {
+  const tag = path.basename(ref)
+  const components = loadComponents({ [tag]: ref })
+  const withProps = { [tag]: { ...components[tag], defaults: { ...components[tag].defaults, ...props } } }
+  const html = renderChildren([{ tag, attrs: {}, children: [] }], {}, { mapSrc, components: withProps })
+  return { html, css: rpx(componentCss(components)) }
+}
+
+module.exports = { renderPage, renderComponent }
