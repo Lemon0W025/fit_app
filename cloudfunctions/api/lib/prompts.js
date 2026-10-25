@@ -1,5 +1,6 @@
 const { ACTIVITY_LABELS, MIN_KCAL, round1 } = require('./shared/nutrition')
 const { MEAL_LABELS, RATING_LABELS } = require('./shared/meal-types')
+const { timeText } = require('./shared/date')
 
 const COACH_NAME = '小暖'
 
@@ -22,6 +23,7 @@ const MEAL_SYSTEM = `${PERSONA}
 - 根据图片里的碗、盘、筷子等参照物或用户描述判断份量，中国家常菜按常见做法的用油量计算。
 - 用户备注优先于你的判断（比如"米饭只吃了一半"）。
 - 点评不超过 80 字，建议不超过 60 字，要具体到吃什么、吃多少；结合今天剩余的热量预算。
+- 【拍照时间】写着「准时」的，顺口夸一句按时吃饭；写着「不在饭点」的，温和提醒下顿按时吃、吃之前先拍，不要批评。
 
 评级：green = 搭配合理、热量合适；yellow = 有可以改进的地方；red = 明显超量或很不健康。
 
@@ -52,16 +54,26 @@ function budgetText(dailyKcal, consumedKcal) {
   return `【今日热量】预算 ${dailyKcal} 千卡，本餐之前已吃 ${consumedKcal} 千卡，${rest}`
 }
 
-function buildMealMessages({ profile, mealType, note, imageUrl, consumedKcal }) {
+// 什么时候拍的、算不算准时（饭点规则在 shared/timing.js）
+function timingText(mealType, timing, at, times) {
+  if (!at) return ''
+  const clock = timeText(at.getTime())
+  if (!timing || !times) return `【拍照时间】${clock}`
+  const status = timing === 'on' ? '准时' : '不在饭点'
+  return `【拍照时间】${clock}，${status}（${MEAL_LABELS[mealType]}饭点 ${times[mealType]}）`
+}
+
+function buildMealMessages({ profile, mealType, note, imageUrl, consumedKcal, timing, at, times }) {
   const lines = [
     profileText(profile),
     budgetText(profile.dailyKcal, consumedKcal),
     `【本餐】${MEAL_LABELS[mealType] || '加餐'}`,
+    timingText(mealType, timing, at, times),
     `【用户备注】${note || '无'}`,
     imageUrl
       ? '请看图片估算这一餐。'
       : '用户这次没有拍照，请根据上面的文字描述估算，并在点评里说明是按描述估算的。',
-  ]
+  ].filter(Boolean)
   const text = lines.join('\n')
   const user = imageUrl
     ? { role: 'user', content: [{ type: 'text', text }, { type: 'image_url', image_url: { url: imageUrl } }] }

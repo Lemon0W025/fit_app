@@ -92,3 +92,15 @@ test('总结消息：没有体重记录也能生成', () => {
   })
   assert.match(messages[messages.length - 1].content, /暂无体重记录/)
 })
+
+test('打卡消息：带上拍照时间和准不准时', () => {
+  const at = new Date('2026-10-22T04:10:00Z')
+  const times = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
+  const build = (mealType, timing) => buildMealMessages({ profile, mealType, note: '', imageUrl: null, consumedKcal: 0, timing, at, times })
+  assert.match(build('lunch', 'on')[1].content, /【拍照时间】12:10，准时（午餐饭点 12:00）/)
+  assert.match(build('breakfast', 'late')[1].content, /【拍照时间】12:10，不在饭点（早餐饭点 07:30）/)
+  assert.match(build('snack', null)[1].content, /【拍照时间】12:10\n/)
+  assert.match(build('lunch', 'on')[0].content, /准时/)
+  const none = buildMealMessages({ profile, mealType: 'lunch', note: 'x', imageUrl: null, consumedKcal: 0 })
+  assert.doesNotMatch(none[1].content, /拍照时间/)
+})

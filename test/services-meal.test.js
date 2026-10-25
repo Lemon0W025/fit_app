@@ -57,6 +57,7 @@ test('analyze：有照片时调用视觉模型并保存', async () => {
   assert.equal(meal.timing, 'on')
   assert.equal(gain.beans, 20)
   assert.deepEqual(await repo.getMeal('u1', meal._id), stored)
+  assert.match(lastUserText(chat.calls[0].messages), /【拍照时间】12:00，准时（午餐饭点 12:00）/)
 })
 
 test('analyze：视觉失败但有备注时退回文字分析', async () => {
