@@ -3,8 +3,9 @@
     python3 scripts/pack_anim.py              # art/raw/anim/<id>-a.png、<id>-b.png → art/anim/<id>-a.png、<id>-b.png，并回写 utils/anim-sheets.js
     python3 scripts/pack_anim.py --demo       # 没有正式图时，用占位单张图合成示意拼图到 art/anim-demo/（只用来验证播放）
 
-对齐：同一行（一个动作的 6 帧）一起平移，让这行的脚底平均落在格底往上 10% 处、水平居中——
-按行而不是按帧对齐，才不会把模型画的步幅起伏抹掉。输出每格 CELL px、6×6 格、256 色 PNG，传云存储（npm run wx:art）。
+对齐：上下按行（一个动作的 6 帧一起平移，让这行的脚底平均落在格底往上 10% 处），不把模型画的步幅起伏、跳起来抹掉；
+左右按帧（每帧的身体重心放在格子正中）：模型画的 6 格常常越画越偏（一行里漂 10～18 像素），按行对齐的话每转一圈宠物就往回跳一下，
+看着一抽一抽的；在地上走、跳的位移都是页面在挪，拼图里本来就该原地。输出每格 CELL px、6×6 格、256 色 PNG，传云存储（npm run wx:art）。
 需要 Pillow 和 numpy。
 """
 import argparse
@@ -48,23 +49,24 @@ def pack(src):
         c, r = i % COLS, i // COLS
         box = (round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch))
         cell = src.crop(box)
-        cells.append((cell, bbox(np.array(cell)[:, :, 3] >= ALPHA_MIN)))
+        a = np.array(cell)[:, :, 3].astype(float)
+        a[a < ALPHA_MIN] = 0
+        cx = float((a.sum(0) * np.arange(a.shape[1])).sum() / a.sum()) if a.sum() else None
+        cells.append((cell, bbox(a > 0), cx))
     out = Image.new('RGBA', (COLS * CELL, ROWS * CELL), (0, 0, 0, 0))
     for group in GROUPS:
         boxes = [cells[i][1] for i in group if cells[i][1]]
         if not boxes:
             continue
-        cx = np.mean([(b[0] + b[2]) / 2 for b in boxes])
         bottom = np.mean([b[3] for b in boxes])
-        dx = cw / 2 - cx
         dy = ch * (1 - FOOT) - bottom
         for i in group:
-            cell, b = cells[i]
+            cell, b, cx = cells[i]
             if not b:
                 continue
             c, r = i % COLS, i // COLS
             moved = Image.new('RGBA', cell.size, (0, 0, 0, 0))
-            moved.paste(cell, (round(dx), round(dy)))
+            moved.paste(cell, (round(cw / 2 - cx), round(dy)))
             out.paste(moved.resize((CELL, CELL), Image.LANCZOS), (c * CELL, r * CELL))
     return out
 

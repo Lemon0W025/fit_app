@@ -270,8 +270,18 @@ function cutoutViews(L, potLevel, base, night) {
   })
 }
 
+// setData 只发变了的字段：{ 'pets[0].left': … }；以前没有就整个发。图片的 src 一样也别重发（云存储的图重设一次就重新取一次，会闪一下）
+function changedPaths(prefix, prev, next) {
+  if (!prev) return { [prefix]: next }
+  const out = {}
+  Object.keys(next).forEach((k) => {
+    if (JSON.stringify(prev[k]) !== JSON.stringify(next[k])) out[`${prefix}.${k}`] = next[k]
+  })
+  return out
+}
+
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews, isNight,
-  frontAt, cutoutStrips, BOWL_PX, backdropImage,
+  frontAt, cutoutStrips, BOWL_PX, backdropImage, changedPaths,
 }

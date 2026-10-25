@@ -60,6 +60,13 @@ test('frameTiles：上面天空两行、下面草地两行，铺满营地画以�
   assert.ok(near(tiles[3].left + tiles[3].width, L.worldWidth))
 })
 
+test('changedPaths：只发变了的字段（云存储的图 setData 一次就重新取一次，宠物每换个动作就会闪一下）', () => {
+  const a = { id: 'doudou', sheet: 'wxfile://tmp/doudou-a.png', left: 1, anim: { row: 0, ms: 720 }, shadow: { left: 1 } }
+  assert.deepEqual(V.changedPaths('pets[0]', undefined, a), { 'pets[0]': a })
+  assert.deepEqual(V.changedPaths('pets[0]', a, JSON.parse(JSON.stringify(a))), {})
+  assert.deepEqual(V.changedPaths('pets[0]', a, { ...a, left: 2, anim: { row: 1, ms: 1800 } }), { 'pets[0].left': 2, 'pets[0].anim': { row: 1, ms: 1800 } })
+})
+
 test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', () => {
   const views = V.decorViews([{ uid: 'd2', id: 'ball', x: 1500, y: 3000 }, { uid: 'd1', id: 'tent', x: 1000, y: 1500 }], L, '')
   assert.deepEqual(views.map((v) => v.uid), ['d1', 'd2'])

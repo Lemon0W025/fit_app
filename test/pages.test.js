@@ -273,6 +273,62 @@ test('云函数报错时页面给出提示：短消息用 toast，长消息用�
   assert.match(wx2.log.modals[0], /超时时间调到 60 秒/)
 })
 
+test('营地：宠物拼图先下到本地、两张都好了才换上；之后只发变了的数据，回到营地没变的图层不重发（云存储的图重设一次就闪一下）', async () => {
+  const config = require('../miniprogram/config')
+  const SHEETS = require('../miniprogram/utils/anim-sheets')
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const camp = loadPage('camp', wx)
+  camp.clock = manualClock()
+  camp.hour = () => 10
+  let seed = 7
+  camp.random = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  camp.onLoad()
+  camp.onShow()
+  await settle()
+  assert.ok(SHEETS.doudou && config.animArt, '豆豆有拼图、填了 animArt')
+  assert.deepEqual(wx.log.downloads.slice().sort(), [`${config.animArt}doudou-a.png`, `${config.animArt}doudou-b.png`])
+  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
+  camp.closeWelcome()
+  const sent = []
+  const setData = camp.setData
+  camp.setData = function (patch, cb) {
+    sent.push(...Object.keys(patch))
+    return setData.call(this, patch, cb)
+  }
+  camp.clock.advance(30000)
+  const petKeys = sent.filter((k) => k.startsWith('pets'))
+  assert.ok(petKeys.length > 0, '宠物在动')
+  assert.ok(!petKeys.some((k) => /^pets(\[\d+\])?$/.test(k) || /\.(sheet|image|face)$/.test(k)), petKeys.join(' '))
+  assert.deepEqual(camp.data.pets, camp.life.sprites(), '只发变了的字段，拼起来和整只一样')
+  // 切到别的 tab 再回来：拼图下过了不再下；抠图层、火、食盆、装饰没变就不重发
+  sent.length = 0
+  camp.onHide()
+  camp.onShow()
+  await settle()
+  assert.equal(wx.log.downloads.length, 2)
+  assert.ok(!sent.some((k) => ['cuts', 'fx', 'decor', 'bowls'].indexOf(k) !== -1), sent.join(' '))
+  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
+})
+
+test('营地：拼图下载失败就一直用单张图', async () => {
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  wx.failDownloads = true
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const camp = loadPage('camp', wx)
+  camp.clock = manualClock()
+  camp.hour = () => 10
+  camp.onLoad()
+  camp.onShow()
+  await settle()
+  assert.equal(camp.data.pets[0].sheet, '')
+  assert.equal(camp.data.pets[0].image, '/images/camp/pets/doudou.png')
+})
+
 test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡后搬来 → 喂 → 商店买装饰摆放 → 找它', async () => {
   const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
   const { main } = loadCloudFunction(cloud)

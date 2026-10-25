@@ -28,6 +28,8 @@ const MP = `${REPO}/miniprogram`
 const mapSrc = (src) => {
   src = String(src)
   if (src.startsWith('/images/')) return `file://${MP}${src}`
+  // 宠物拼图页面会先下到本地（假的 wx.cloud.downloadFile 给的是 wxfile://tmp/<文件名>）
+  if (src.startsWith('wxfile://tmp/')) return `file://${REPO}/art/anim/${src.slice('wxfile://tmp/'.length)}`
   const m = src.match(/cloud:\/\/.*\/camp\/(base|cut|decor|anim)(-v\d+)?\/(.+)$/)
   if (m) return `file://${REPO}/art/${m[1] === 'base' ? 'camp' : m[1]}/${m[3]}`
   return src

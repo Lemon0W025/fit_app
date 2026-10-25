@@ -20,7 +20,7 @@ function make(opts = {}) {
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
     hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock,
-    onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', bad: new Set(),
+    onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
   })
   return { life, clock, sprites }
 }
@@ -282,6 +282,21 @@ test('光、火星、萤火虫、热气这些层不挡点击（都在宠物上�
     assert.ok(rule, cls)
     assert.match(rule[0], /pointer-events: none/, cls)
   })
+})
+
+test('拼图的来源由页面给（下到本地的文件）：还没下好用单张图，下好了 refresh 换上', () => {
+  const ready = {}
+  const { life, sprites } = make({ sheets: { doudou: { top: 0.2 } }, sheetSrc: (id, s) => ready[`${id}-${s}`] || '' })
+  assert.equal(life.sprites()[0].sheet, '')
+  assert.equal(life.sprites()[0].image, '/images/camp/pets/doudou.png')
+  ready['doudou-a'] = 'wxfile://tmp/doudou-a.png'
+  ready['doudou-b'] = 'wxfile://tmp/doudou-b.png'
+  life.refresh('doudou')
+  assert.equal(sprites[0].sheet, 'wxfile://tmp/doudou-a.png')
+  assert.equal(sprites[0].anim.row, 1)
+  // 不给 sheetSrc 就按 animBase 拼云存储的路径（预览录屏、老用法）
+  const old = make({ sheets: { doudou: { top: 0.2 } }, animBase: 'cloud://x/camp/anim-v1/' })
+  assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou-a.png')
 })
 
 test('夜里宠物按站的位置调亮度和暖色（火边亮、远处暗），白天不调', () => {

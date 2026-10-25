@@ -21,7 +21,7 @@ function setPath(obj, key, value) {
 }
 
 function createWx(main) {
-  const log = { toasts: [], modals: [], nav: [], uploads: [] }
+  const log = { toasts: [], modals: [], nav: [], uploads: [], downloads: [] }
   const wx = {
     log,
     app: { globalData: { lastGain: null } },
@@ -37,6 +37,11 @@ function createWx(main) {
       uploadFile({ cloudPath, filePath, success }) {
         log.uploads.push({ cloudPath, filePath })
         setImmediate(() => success({ fileID: `cloud://env/${cloudPath}` }))
+      },
+      // 云存储的文件下到本地：临时路径用文件名；wx.failDownloads 设成 true 就都失败
+      downloadFile({ fileID, success, fail }) {
+        log.downloads.push(fileID)
+        setImmediate(() => (wx.failDownloads ? fail && fail({ errMsg: 'downloadFile:fail' }) : success({ tempFilePath: `wxfile://tmp/${fileID.split('/').pop()}`, statusCode: 200 })))
       },
     },
     compressImage({ src, success }) {

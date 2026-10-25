@@ -64,6 +64,8 @@ function depthCuts(from, to, half, lines) {
 function createLife({
   L, pets, decor, arrivals = [], hour = realHour, lit = () => true, random = Math.random, clock = realClock, onChange = () => {},
   sheets = {}, animBase = '', bad = new Set(),
+  // 拼图从哪儿来（页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
+  sheetSrc = (id, sheet) => (animBase ? `${animBase}${id}-${sheet}.png` : ''),
 }) {
   let placed = decor
   let running = false
@@ -142,9 +144,11 @@ function createLife({
 
   function sheetOf(a) {
     const s = sheets[a.id]
-    if (!s || !animBase || bad.has(a.id)) return null
+    if (!s || bad.has(a.id)) return null
     const anim = frameFor(a.action, { sleepStyle: a.sleepStyle })
-    return { sheet: `${animBase}${a.id}-${anim.sheet}.png`, anim: { ...anim, cols: COLS, rows: ROWS }, top: s.top }
+    const src = sheetSrc(a.id, anim.sheet)
+    if (!src) return null
+    return { sheet: src, anim: { ...anim, cols: COLS, rows: ROWS }, top: s.top }
   }
 
   function sprite(a) {
@@ -620,11 +624,16 @@ function createLife({
       return { x: a.x, y: a.y }
     },
 
-    noSheet(id) {
-      bad.add(id)
+    // 这只的拼图有变化（下好了 / 坏了）：重新出一次
+    refresh(id) {
       animals.forEach((a) => {
         if (a.id === id) emit(a)
       })
+    },
+
+    noSheet(id) {
+      bad.add(id)
+      this.refresh(id)
     },
   }
 
