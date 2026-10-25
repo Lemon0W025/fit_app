@@ -2,6 +2,11 @@ const api = require('../../utils/api')
 const { MEAL_ORDER, MEAL_LABELS, guessMealType, isMealType } = require('../../utils/shared/meal-types')
 const { localHour } = require('../../utils/shared/date')
 const { MEAL_WORDS, mealTimesOf, mealAt, timingFor, windowText } = require('../../utils/shared/timing')
+const { clockOf } = require('../../utils/fx')
+const { analysisSteps } = require('../../utils/view')
+
+// 认菜和算热量是同一次调用：认菜这步走 6 秒后把「算热量」点亮，让等的人知道还在往前走
+const COUNT_AFTER_MS = 6000
 
 Page({
   data: {
@@ -11,6 +16,7 @@ Page({
     note: '',
     submitting: false,
     stage: '',
+    steps: [],
     timingText: '',
     timingOn: false,
   },
@@ -75,22 +81,40 @@ Page({
       return
     }
 
-    this.setData({ submitting: true, stage: photo ? '正在上传照片…' : '小暖正在看…' })
+    const hasPhoto = !!photo
+    this.setData({ submitting: true, stage: photo ? '正在上传照片…' : '小暖正在看…', steps: analysisSteps(hasPhoto, 0) })
     const upload = photo ? api.uploadMealPhoto(photo) : Promise.resolve('')
     upload
       .then((fileID) => {
-        this.setData({ stage: '小暖正在仔细看你的饭菜…' })
+        const look = hasPhoto ? 1 : 0
+        this.setData({ stage: '小暖正在仔细看你的饭菜…', steps: analysisSteps(hasPhoto, look) })
+        this.stepTimer = clockOf(this).set(() => {
+          this.stepTimer = null
+          this.setData({ steps: analysisSteps(hasPhoto, look + 1) })
+        }, COUNT_AFTER_MS)
         return api.call('meal.analyze', { fileID, mealType, note })
       })
       .then((meal) => {
+        this.stopSteps()
         getApp().globalData.lastGain = { mealId: meal._id, gain: meal.gain, arrival: meal.arrival }
         // 正餐打卡成功：回营地时全员到篝火边庆祝
         if (meal.gain) getApp().globalData.celebrate = true
         wx.redirectTo({ url: `/pages/meal/meal?id=${meal._id}` })
       })
       .catch((err) => {
+        this.stopSteps()
         this.setData({ submitting: false, stage: '' })
         api.showError(err)
       })
+  },
+
+  stopSteps() {
+    if (!this.stepTimer) return
+    clockOf(this).clear(this.stepTimer)
+    this.stepTimer = null
+  },
+
+  onUnload() {
+    this.stopSteps()
   },
 })

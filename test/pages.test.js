@@ -187,6 +187,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   // 6. 今日页展示
   today.onShow()
   await settle()
+  today.clock.advance(1000)
   assert.equal(today.data.view.totals.kcal, 300)
   assert.equal(today.data.view.meals.length, 1)
   assert.equal(today.data.daily.title, '今天得了 20 暖豆')
@@ -213,6 +214,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
 
   today.onShow()
   await settle()
+  today.clock.advance(1000)
   assert.equal(today.data.view.totals.kcal, 700)
   today.generateSummary()
   await settle()
@@ -388,6 +390,50 @@ test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡',
 
   today.onHide()
   assert.equal(today.clock.count(), 0)
+})
+
+test('今日页：热量从上次显示的数滚到新数，进度条跟着长；离开页面不留定时器', async (t) => {
+  fixDate(t, '2026-10-22T12:10:00+08:00')
+  const cloud = createFakeCloud({ replies: [analysisJson({ totalKcal: 520 })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const wx = createWx(main)
+  const today = loadPage('today', wx)
+  today.clock = manualClock()
+  today.onShow()
+  await settle()
+  assert.equal(today.data.view.totals.kcal, 0)
+  assert.equal(today.data.view.percent, 0)
+  await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭' } })
+  today.onShow()
+  await settle()
+  assert.equal(today.data.view.totals.kcal, 0)
+  today.clock.advance(1000)
+  assert.equal(today.data.view.totals.kcal, 520)
+  assert.ok(today.data.view.percent > 0)
+  today.onHide()
+  assert.equal(today.clock.count(), 0)
+})
+
+test('打卡页：等小暖时三步走到哪打勾（认菜 6 秒后算热量），出错后清掉', async () => {
+  let fail
+  const wx = createWx(() => new Promise((resolve) => {
+    fail = () => resolve({ ok: false, code: 'AI_FAILED', message: '小暖没看清' })
+  }))
+  const checkin = loadPage('checkin', wx)
+  checkin.clock = manualClock()
+  checkin.onLoad({ mealType: 'lunch' })
+  checkin.choosePhoto()
+  checkin.submit()
+  assert.deepEqual(checkin.data.steps.map((s) => s.state), ['now', 'todo', 'todo'])
+  await settle()
+  assert.deepEqual(checkin.data.steps.map((s) => s.state), ['done', 'now', 'todo'])
+  checkin.clock.advance(6000)
+  assert.deepEqual(checkin.data.steps.map((s) => s.state), ['done', 'done', 'now'])
+  fail()
+  await settle()
+  assert.equal(checkin.data.submitting, false)
+  assert.equal(checkin.clock.count(), 0)
 })
 
 test('云函数报错时页面给出提示：短消息用 toast，长消息用弹窗', async () => {

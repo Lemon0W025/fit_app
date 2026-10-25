@@ -2,21 +2,25 @@
   <view wx:if="{{loading}}" class="empty">小暖正在翻今天的记录…</view>
 
   <block wx:if="{{view}}">
-    <view class="greeting">{{greeting}}</view>
+    <view class="greeting fx-rise">{{greeting}}</view>
 
-    <view wx:if="{{card}}" class="card next-card {{card.warn ? 'next-card-warn' : ''}}">
-      <view class="next-title">{{card.title}}</view>
-      <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
-      <button wx:if="{{!card.small}}" class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
-      <view wx:else class="next-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}} ›</view>
+    <view wx:if="{{card}}" class="fx-rise fx-d1">
+      <view class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
+        <view class="next-title">{{card.title}}</view>
+        <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
+        <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
+          <button class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
+        </view>
+        <view wx:else class="next-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}} ›</view>
+      </view>
     </view>
 
-    <view wx:if="{{daily}}" class="card beans-card" bindtap="goGarden">
+    <view wx:if="{{daily}}" class="card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
       <image class="beans-card-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
       <view class="beans-card-body">
         <view class="beans-card-title">{{daily.title}}</view>
         <view class="stamps">
-          <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
+          <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}} fx-pop" style="animation-delay: {{300 + index * 100}}ms">{{item.label}}</view>
         </view>
         <view class="beans-card-hint">{{daily.hint}}</view>
         <view wx:if="{{daily.streakText}}" class="beans-card-streak">{{daily.streakText}}</view>
@@ -25,7 +29,7 @@
       <text class="beans-card-arrow">›</text>
     </view>
 
-    <view class="card hero">
+    <view class="card hero fx-rise fx-d3">
       <view class="hero-top">
         <text>{{view.dateLabel}}</text>
         <text>每日预算 {{view.dailyKcal}} 千卡</text>
@@ -56,7 +60,7 @@
 
     <view class="section-title">今天的打卡</view>
     <view wx:if="{{view.meals.length === 0}}" class="card empty">还没有打卡哦，吃饭前先拍一张给小暖看看～</view>
-    <view wx:for="{{view.meals}}" wx:key="_id" class="card meal" data-id="{{item._id}}" bindtap="openMeal">
+    <view wx:for="{{view.meals}}" wx:key="_id" class="card meal fx-rise" hover-class="fx-press" style="animation-delay: {{400 + index * 80}}ms" data-id="{{item._id}}" bindtap="openMeal">
       <image wx:if="{{item.fileID}}" class="meal-thumb" src="{{item.fileID}}" mode="aspectFill" lazy-load />
       <view wx:else class="meal-thumb meal-thumb-text">✍️</view>
       <view class="meal-body">

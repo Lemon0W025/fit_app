@@ -3,6 +3,7 @@ const { buildDayView, greetingText, beansCard, nextMealCard } = require('../../u
 const { localHour } = require('../../utils/shared/date')
 const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
 const { beansHint } = require('../../utils/shared/forest')
+const { clockOf, countUp } = require('../../utils/fx')
 
 // 下一顿大卡和提示跟着时间走（倒计时、过点），每分钟按现在的时间重算一次
 const REFRESH_MS = 60000
@@ -23,10 +24,12 @@ Page({
 
   onHide() {
     this.stopRefresh()
+    this.stopNumbers()
   },
 
   onUnload() {
     this.stopRefresh()
+    this.stopNumbers()
   },
 
   onPullDownRefresh() {
@@ -44,11 +47,14 @@ Page({
         this.day = day
         this.times = mealTimesOf(day.profile)
         getApp().globalData.mealTimes = this.times
+        // 热量和进度条从上次显示的数滚到新数（第一次从 0）
+        const view = buildDayView(day)
         this.setData({
           loading: false,
-          view: buildDayView(day),
+          view: { ...view, totals: { ...view.totals, kcal: this.shownKcal || 0 }, percent: this.shownPercent || 0 },
           greeting: greetingText(localHour(), day.profile.nickname),
         })
+        this.playNumbers(view.totals.kcal, view.percent)
         this.refresh()
       })
       .catch((err) => {
@@ -65,15 +71,37 @@ Page({
       daily: beansCard({ ...this.day.daily, hint: beansHint(meals, this.times, now) }),
     })
     this.stopRefresh()
-    const clock = this.clock || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h) }
-    this.refreshTimer = clock.set(() => this.refresh(), REFRESH_MS)
+    this.refreshTimer = clockOf(this).set(() => this.refresh(), REFRESH_MS)
   },
 
   stopRefresh() {
     if (!this.refreshTimer) return
-    const clock = this.clock || { clear: (h) => clearTimeout(h) }
-    clock.clear(this.refreshTimer)
+    clockOf(this).clear(this.refreshTimer)
     this.refreshTimer = null
+  },
+
+  playNumbers(kcal, percent) {
+    this.stopNumbers()
+    const clock = clockOf(this)
+    const from = this.shownKcal || 0
+    this.shownKcal = kcal
+    this.shownPercent = percent
+    this.kcalCounter = countUp(from, kcal, 700, (n) => this.setData({ 'view.totals.kcal': n }), clock)
+    // 进度条：下一拍再给宽度，CSS 的 transition 才会从旧宽度长过去
+    this.barTimer = clock.set(() => {
+      this.barTimer = null
+      this.setData({ 'view.percent': percent })
+    }, 50)
+  },
+
+  stopNumbers() {
+    if (this.kcalCounter) this.kcalCounter.finish()
+    this.kcalCounter = null
+    if (this.barTimer) {
+      clockOf(this).clear(this.barTimer)
+      this.barTimer = null
+      this.setData({ 'view.percent': this.shownPercent })
+    }
   },
 
   goGarden() {

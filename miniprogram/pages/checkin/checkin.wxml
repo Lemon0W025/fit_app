@@ -27,9 +27,20 @@
   <button class="btn-primary btn-big" bindtap="submit" disabled="{{submitting}}">交给小暖看看</button>
 
   <view wx:if="{{submitting}}" class="overlay">
-    <view class="overlay-card">
-      <view class="spinner"></view>
+    <view class="overlay-card fx-pop">
+      <!-- 小暖在看：照片（没照片就是写的字）上一道光来回扫 -->
+      <view class="scan">
+        <image wx:if="{{photo}}" class="scan-photo" src="{{photo}}" mode="aspectFill" />
+        <view wx:else class="scan-note">{{note}}</view>
+        <view class="scan-light"></view>
+      </view>
       <view class="overlay-stage">{{stage}}</view>
+      <view class="steps">
+        <view wx:for="{{steps}}" wx:key="label" class="step step-{{item.state}}">
+          <view class="step-dot">{{item.state === 'done' ? '✓' : ''}}</view>
+          <text>{{item.label}}</text>
+        </view>
+      </view>
       <view class="muted small">一般需要 10～30 秒，请稍等</view>
     </view>
   </view>
