@@ -1,7 +1,7 @@
 // test/camp-life.test.js
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { createLife, depthCuts } = require('../miniprogram/utils/camp-life')
+const { createLife, depthCuts, PET_ZOOM } = require('../miniprogram/utils/camp-life')
 const { campLayout, cutoutStrips, zOf, BOWL_PX } = require('../miniprogram/utils/camp-view')
 const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
@@ -15,11 +15,12 @@ function lcg(seed) {
 }
 
 function make(opts = {}) {
-  const clock = manualClock()
+  const clock = opts.clock || manualClock()
   const sprites = {}
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
-    hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock,
+    visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || [],
+    hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock: opts.clock || clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
   })
   return { life, clock, sprites }
@@ -62,7 +63,7 @@ test('白天：开始后会走动，每一步都落在草地上、不穿禁区�
   assert.equal(clock.count(), 0)
 })
 
-test('傍晚全员围着篝火坐；夜里去睡：有草窝睡草窝，没有去树荫', () => {
+test('傍晚火着着：全员围着篝火坐；火没着：各玩各的，不去坐', () => {
   const dusk = make({ hour: 18 })
   dusk.life.start()
   dusk.clock.advance(120000)
@@ -71,15 +72,148 @@ test('傍晚全员围着篝火坐；夜里去睡：有草窝睡草窝，没有�
     const [sx, sy] = SCENE.seats[i]
     assert.ok(Math.hypot(w.x - sx, w.y - sy) < 1, `${w.id} 没坐到位 ${w.x},${w.y}`)
   })
-  const night = make({ hour: 23, decor: [{ uid: 'd1', id: 'strawbed', x: 1500, y: 1800 }] })
-  night.life.start()
-  night.clock.advance(120000)
-  const where = night.life.whereIs()
-  assert.ok(where.every((w) => w.action === 'sleep'), JSON.stringify(where.map((w) => w.action)))
-  const inBed = where.filter((w) => w.text === '在草窝里睡觉')
-  assert.equal(inBed.length, 1)
-  const shade = where.find((w) => w.text === '在睡觉')
-  assert.ok(SCENE.shade.concat(SCENE.tent.spots).some(([x, y]) => Math.hypot(x - shade.x, y - shade.y) < 1))
+  const cold = make({ hour: 18, lit: false })
+  cold.life.start()
+  for (let i = 0; i < 120; i++) {
+    cold.clock.advance(1000)
+    assert.ok(cold.life.whereIs().every((w) => w.action !== 'sit'))
+  }
+  cold.life.stop()
+})
+
+const ALL = ['doudou', 'nuonuo', 'lianlian', 'shishi', 'huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
+
+test('随机小睡：任何时候睡着的不超过上限（白天 1/4、夜里 1/2，至少 1 只），夜里不是全体睡、白天也有打盹的', () => {
+  for (const [hour, share, n] of [[12, 1 / 4, 12], [23, 1 / 2, 12], [12, 1 / 4, 2], [2, 1 / 2, 4]]) {
+    for (const seed of [3, 17, 41]) {
+      const pets = ALL.slice(0, n).map((id) => ({ id, level: 3, fed: 9 }))
+      const { life, clock } = make({ hour, pets, seed, lit: false, decor: [{ uid: 'd1', id: 'strawbed', x: 2900, y: 3300 }] })
+      life.start()
+      let most = 0
+      for (let i = 0; i < 1200; i++) {
+        clock.advance(1000)
+        const here = life.whereIs().filter((w) => w.action !== 'away')
+        const sleeping = here.filter((w) => w.action === 'sleep').length
+        most = Math.max(most, sleeping)
+        assert.ok(sleeping <= Math.max(1, Math.floor(here.length * share)), `${hour} 点 ${n} 只（种子 ${seed}）：同时睡了 ${sleeping} 只`)
+      }
+      assert.ok(most >= 1, `${hour} 点 ${n} 只（种子 ${seed}）：20 分钟里没人打盹`)
+      life.stop()
+    }
+  }
+})
+
+test('小睡多久：白天 10～40 秒、夜里 1～5 分钟；睡够了自己醒；点睡着的马上醒、说「嗯…？醒啦」', () => {
+  for (const [hour, lo, hi] of [[12, 10000, 40000], [23, 60000, 300000]]) {
+    const { life, clock, sprites } = make({ hour, seed: 5, lit: false, pets: [{ id: 'doudou', level: 1, fed: 0 }] })
+    life.start()
+    let fellAt = -1
+    let wokeAt = -1
+    for (let t = 0; t < 3600 && wokeAt < 0; t++) {
+      clock.advance(1000)
+      const action = sprites[0] && sprites[0].action
+      if (fellAt < 0 && action === 'sleep') fellAt = t
+      if (fellAt >= 0 && action !== 'sleep') wokeAt = t
+    }
+    assert.ok(fellAt >= 0 && wokeAt > fellAt, `${hour} 点：没睡着或没醒`)
+    const slept = (wokeAt - fellAt) * 1000
+    assert.ok(slept >= lo - 1000 && slept <= hi + 1000, `${hour} 点睡了 ${slept}ms`)
+    life.stop()
+  }
+  // 点醒
+  const { life, clock, sprites } = make({ hour: 23, seed: 5, lit: false, pets: [{ id: 'doudou', level: 1, fed: 0 }] })
+  life.start()
+  for (let t = 0; t < 3600 && !(sprites[0] && sprites[0].action === 'sleep'); t++) clock.advance(1000)
+  assert.equal(sprites[0].action, 'sleep')
+  life.tap(0)
+  assert.equal(sprites[0].action, 'happy')
+  assert.equal(sprites[0].bubble, '嗯…？醒啦')
+  clock.advance(2000)
+  assert.equal(sprites[0].action, 'idle')
+  life.stop()
+})
+
+test('不瞬移：snapshot → 新建（saved）站回原地、朝向不变；没睡完的接着睡、睡完了的不睡；站不住的地方不用', () => {
+  const clock = manualClock()
+  const first = make({ clock, hour: 12, seed: 9 })
+  first.life.start()
+  clock.advance(20000)
+  first.life.pause()
+  const snap = first.life.snapshot()
+  first.life.stop()
+  assert.deepEqual(Object.keys(snap), ['doudou', 'nuonuo'])
+  const again = make({ clock, hour: 12, seed: 99, saved: snap })
+  again.life.whereIs().forEach((w) => {
+    assert.ok(Math.abs(w.x - snap[w.id].x) < 1e-6 && Math.abs(w.y - snap[w.id].y) < 1e-6, w.id)
+  })
+  assert.deepEqual(again.life.sprites().map((s) => !s.flip), [snap.doudou.right, snap.nuonuo.right])
+  // 睡到 until：还没到就接着睡，到了就醒
+  const sleepy = { doudou: { x: 3000, y: 3300, right: false, action: 'sleep', until: clock.now() + 30000, sleepStyle: 'B' }, nuonuo: { x: 3300, y: 3500, right: true, action: 'sleep', until: clock.now() - 1, sleepStyle: 'A' } }
+  const back = make({ clock, hour: 23, lit: false, seed: 4, saved: sleepy })
+  assert.deepEqual(back.life.whereIs().map((w) => w.action), ['sleep', 'idle'])
+  back.life.start()
+  clock.advance(29000)
+  assert.equal(back.life.whereIs()[0].action, 'sleep')
+  clock.advance(2000)
+  assert.notEqual(back.life.whereIs()[0].action, 'sleep')
+  back.life.stop()
+  // 禁区里、锅后面看不见的地方、装饰脚下的：不用，照常在火边找地方
+  const bad = { doudou: { x: SCENE.fire[0], y: SCENE.fire[1], right: true, action: 'idle', until: 0 }, nuonuo: { x: 1500, y: 1800, right: true, action: 'idle', until: 0 } }
+  const moved = make({ clock, saved: bad, decor: [{ uid: 'd1', id: 'ball', x: 1500, y: 1800 }] })
+  moved.life.whereIs().forEach((w) => assert.ok(Math.hypot(w.x - bad[w.id].x, w.y - bad[w.id].y) > 50, w.id))
+})
+
+test('客人：从营地边上进来、在锅边转悠，不睡、不在「找它」里；点它说闻着什么来的；addVisitor 加在最后', () => {
+  const { life, clock, sprites } = make({ hour: 23, lit: false, visitors: [{ id: 'sunbao', foodId: 'zhusun' }] })
+  const start = life.sprites()[2]
+  assert.equal(start.visitor, true)
+  assert.ok(SCENE.entries.some(([x, y]) => Math.abs(x * L.k - (start.left + start.width / 2)) < 1 && Math.abs(y * L.k - (L.height - start.bottom)) < 1))
+  assert.deepEqual(life.whereIs().map((w) => w.id), ['doudou', 'nuonuo'])
+  life.start()
+  let sniffed = false
+  for (let i = 0; i < 1800; i++) {
+    clock.advance(1000)
+    assert.notEqual(sprites[2] && sprites[2].action, 'sleep')
+    if (sprites[2] && sprites[2].bubble === '好香啊……') sniffed = true
+  }
+  assert.ok(sniffed, '客人没在锅边闻')
+  life.tap(2)
+  assert.equal(sprites[2].bubble, '它闻着竹笋的香味来的。妈妈下次拍正餐，它就住下来')
+  assert.equal(life.addVisitor({ id: 'nuonuo', foodId: 'huluobo' }), 1, '已经在的不加')
+  assert.equal(life.addVisitor({ id: 'qiqi', foodId: 'kaohongshu' }), 3)
+  assert.equal(sprites[3].visitor, true)
+  clock.advance(100)
+  assert.equal(sprites[3].action, 'walk')
+  assert.ok('qiqi' in life.snapshot())
+  life.stop()
+})
+
+test('下锅：爱吃的住户走到锅边吃；白天锅里有它爱吃的会自己过去吃', () => {
+  const { life, clock, sprites } = make({ hour: 12, saved: { doudou: { x: 3400, y: 3600, right: true, action: 'idle', until: 0 }, nuonuo: { x: 900, y: 3600, right: true, action: 'idle', until: 0 } } })
+  life.start()
+  life.cook(['doudou'])
+  assert.equal(sprites[0].action, 'walk')
+  clock.advance(30000)
+  const w = life.whereIs()[0]
+  assert.ok(sprites[0].action === 'eat' || Math.hypot(w.x - SCENE.fire[0], w.y - SCENE.fire[1]) < 900, `豆豆没去锅边 ${w.x | 0},${w.y | 0} ${sprites[0].action}`)
+  life.stop()
+  const hungry = make({ hour: 12, seed: 13, pot: ['xiaomi'], pets: [{ id: 'doudou', level: 1, fed: 0 }] })
+  hungry.life.start()
+  let ate = 0
+  for (let i = 0; i < 1200; i++) {
+    hungry.clock.advance(1000)
+    if (hungry.sprites[0] && hungry.sprites[0].action === 'eat') ate += 1
+  }
+  assert.ok(ate > 0, '锅里有小米，豆豆 20 分钟里没去吃')
+  hungry.life.stop()
+})
+
+test('小动物放大 1.3 倍：宽度 = size × 远近 × k × 1.3', () => {
+  const { life } = make()
+  const s = life.sprites()[0]
+  const w = life.whereIs()[0]
+  assert.equal(PET_ZOOM, 1.3)
+  assert.ok(Math.abs(s.width - petById('doudou').size * scaleAt(w.y) * L.k * 1.3) < 1e-9)
 })
 
 test('鹤鹤只在 5～9 点出现', () => {
@@ -197,15 +331,16 @@ test('走路时和锅、帐篷、提灯、食盆、装饰的前后每一刻都�
     const prev = {}
     const pets = ['doudou', 'nuonuo', 'jutuan', 'guigui', 'qiqi', 'shushu'].map((id) => ({ id, level: 3, fed: 9 }))
     life = createLife({
-      L, pets, decor, arrivals: ['qiqi'], hour: () => h, random: lcg(seed), clock,
+      L, pets, decor, arrivals: ['qiqi'], visitors: [{ id: 'sunbao', foodId: 'zhusun' }], pot: () => ['xiaomi'], lit: () => h !== 21, hour: () => h, random: lcg(seed), clock,
       onChange: (i, sp) => {
-        const where = life.whereIs()[i]
+        // 位置从精灵反推（客人不在 whereIs 里）
+        const where = { id: sp.id, x: (sp.left + sp.width / 2) / L.k, y: (L.height - sp.bottom) / L.k }
         const from = prev[i]
         prev[i] = { x: where.x, y: where.y }
         if (!from || (sp.action !== 'walk' && sp.action !== 'fly' && sp.action !== 'gift') || sp.hidden) return
         if (Math.hypot(where.x - from.x, where.y - from.y) < 1) return
         pieces += 1
-        const half = (petById(where.id).size * scaleAt(Math.max(from.y, where.y))) / 2
+        const half = (petById(where.id).size * PET_ZOOM * scaleAt(Math.max(from.y, where.y))) / 2
         nogoPolys().forEach((poly) => assert.ok(!segmentHitsPoly([from.x, from.y], [where.x, where.y], poly), `${where.id} 穿过禁区 ${from.x},${from.y} → ${where.x},${where.y}`))
         const midY = (from.y + where.y) / 2
         assert.equal(sp.z, zOf(midY) + 1, `${where.id} 走路时按这一小段的中点排`)
@@ -299,18 +434,18 @@ test('拼图的来源由页面给（下到本地的文件）：还没下好用�
   assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou-a.png')
 })
 
-test('夜里宠物按站的位置上色，白天不调；火没点时火边的盖上月光层，点着了全都是本来的颜色', () => {
+test('夜里宠物按站的位置上色，白天不调；火没点时远处的盖上月光层、灯边的不盖，点着了全都是本来的颜色', () => {
   const day = make({ hour: 12 })
   day.life.sprites().forEach((s) => assert.equal(s.light, ''))
-  const night = make({ hour: 22, lit: false })
-  night.life.sprites().forEach((s) => assert.match(s.light, /^brightness\([\d.]+\) saturate\([\d.]+\) sepia\([\d.]+\)$/))
-  const off = night.life.sprites()
-  const on = make({ hour: 22 }).life.sprites()
+  // 豆豆站在远处草地上，糯糯站在画上的提灯边
+  const saved = { doudou: { x: 3500, y: 3600, right: true, action: 'idle', until: 0 }, nuonuo: { x: 2700, y: 2950, right: false, action: 'idle', until: 0 } }
+  const off = make({ hour: 22, lit: false, saved }).life.sprites()
+  off.forEach((s) => assert.match(s.light, /^brightness\([\d.]+\) saturate\([\d.]+\) sepia\([\d.]+\)$/))
+  assert.ok(off[0].moon > 0.5, `远处盖月光层 ${off[0].moon}`)
+  assert.ok(off[1].moon < 0.15, `提灯边不盖 ${off[1].moon}`)
+  const on = make({ hour: 22, saved }).life.sprites()
   on.forEach((s) => assert.deepEqual([s.light, s.moon], ['brightness(0.92) saturate(1) sepia(0.12)', 0], s.id))
-  assert.ok(off.some((s) => s.moon > 0.3), '火没点：有的盖上月光层')
-  // 摆一盏小灯笼在它脚边：月光淡下去
-  const spot = night.life.whereIs()[0]
-  const lamp = make({ hour: 22, lit: false, decor: [{ uid: 'd1', id: 'lantern', x: Math.round(spot.x + 40), y: Math.round(spot.y + 10) }] })
-  const w = lamp.life.whereIs()[0]
-  if (Math.hypot(w.x - spot.x, w.y - spot.y) < 1) assert.ok(lamp.life.sprites()[0].moon < off[0].moon)
+  // 在豆豆脚边摆一盏小灯笼：月光淡下去
+  const lamp = make({ hour: 22, lit: false, saved, decor: [{ uid: 'd1', id: 'lantern', x: 3560, y: 3520 }] }).life.sprites()
+  assert.ok(lamp[0].moon < off[0].moon - 0.3, `${lamp[0].moon}`)
 })
