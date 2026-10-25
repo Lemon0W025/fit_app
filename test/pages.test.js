@@ -3,7 +3,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
-const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
+const { createWx, loadPage, loadComponent, settle, event, readWxml, readComponentWxml, checkTags, boundHandlers, referencedRoots } = require('./helpers/page-harness')
 const { SCENE } = require('../miniprogram/utils/shared/camp')
 const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
@@ -45,6 +45,40 @@ for (const name of PAGES) {
     }
   })
 }
+
+const COMPONENTS = ['medal']
+
+for (const name of COMPONENTS) {
+  test(`组件 ${name}：标签配对、事件处理函数存在、变量都在属性 / data 里`, () => {
+    const wxml = readComponentWxml(name)
+    assert.deepEqual(checkTags(wxml), [])
+    const comp = loadComponent(name, createWx(async () => ({ ok: true, data: null })))
+    for (const handler of boundHandlers(wxml)) {
+      assert.equal(typeof comp[handler], 'function', `${name} 缺少处理函数 ${handler}`)
+    }
+    for (const root of referencedRoots(wxml)) {
+      assert.ok(root in comp.data || root === 'item' || root === 'index', `${name}.wxml 引用了没有的 ${root}`)
+    }
+  })
+}
+
+test('页面和组件注册的自定义组件文件都在', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const root = path.join(__dirname, '../miniprogram')
+  const jsons = PAGES.map((p) => `pages/${p}/${p}.json`).concat(COMPONENTS.map((c) => `components/${c}/${c}.json`))
+  for (const file of jsons) {
+    const using = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8')).usingComponents || {}
+    for (const [tag, ref] of Object.entries(using)) {
+      for (const ext of ['js', 'json', 'wxml', 'wxss']) {
+        assert.ok(fs.existsSync(path.join(root, `${ref}.${ext}`)), `${file} 的 ${tag} 缺少 ${ref}.${ext}`)
+      }
+    }
+  }
+  for (const c of COMPONENTS) {
+    assert.equal(JSON.parse(fs.readFileSync(path.join(root, `components/${c}/${c}.json`), 'utf8')).component, true)
+  }
+})
 
 test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删除 → 总结 → 体重', async (t) => {
   fixDate(t, '2026-10-22T12:10:00+08:00')

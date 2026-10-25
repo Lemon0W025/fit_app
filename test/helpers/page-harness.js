@@ -4,6 +4,7 @@ const path = require('node:path')
 const fs = require('node:fs')
 
 const PAGES_DIR = path.join(__dirname, '../../miniprogram/pages')
+const COMPONENTS_DIR = path.join(__dirname, '../../miniprogram/components')
 
 function clone(v) {
   return v == null ? v : JSON.parse(JSON.stringify(v))
@@ -123,6 +124,43 @@ function loadPage(name, wx) {
   return page
 }
 
+// 自定义组件：属性默认值 + data，props 覆盖；attach / detach 调生命周期；triggerEvent 记在 events 里
+function loadComponent(name, wx, props = {}) {
+  const file = path.join(COMPONENTS_DIR, name, `${name}.js`)
+  let def = null
+  global.wx = wx
+  global.getApp = () => wx.app
+  global.Component = (d) => {
+    def = d
+  }
+  delete require.cache[file]
+  require(file)
+  const defaults = {}
+  Object.entries(def.properties || {}).forEach(([k, p]) => {
+    defaults[k] = p && p.value !== undefined ? p.value : null
+  })
+  const life = def.lifetimes || {}
+  return {
+    ...(def.methods || {}),
+    data: { ...clone(defaults), ...clone(def.data || {}), ...clone(props) },
+    events: [],
+    setData(patch, cb) {
+      Object.entries(patch).forEach(([k, v]) => setPath(this.data, k, v))
+      if (cb) cb()
+    },
+    triggerEvent(type, detail) {
+      this.events.push([type, detail])
+    },
+    createSelectorQuery: () => wx.createSelectorQuery(),
+    attach() {
+      if (life.attached) life.attached.call(this)
+    },
+    detach() {
+      if (life.detached) life.detached.call(this)
+    },
+  }
+}
+
 async function settle() {
   for (let i = 0; i < 30; i++) await new Promise((r) => setImmediate(r))
   // 让 setTimeout(0) 之类的定时器也跑完
@@ -159,6 +197,10 @@ function checkTags(wxml) {
   return errors
 }
 
+function readComponentWxml(name) {
+  return fs.readFileSync(path.join(COMPONENTS_DIR, name, `${name}.wxml`), 'utf8')
+}
+
 function boundHandlers(wxml) {
   return [...wxml.matchAll(/\b(?:bind|catch)\w+="(\w+)"/g)].map((m) => m[1])
 }
@@ -177,4 +219,4 @@ function referencedRoots(wxml) {
   return [...roots]
 }
 
-module.exports = { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, referencedRoots }
+module.exports = { createWx, loadPage, loadComponent, settle, event, readWxml, readComponentWxml, checkTags, boundHandlers, referencedRoots }

@@ -1,0 +1,11 @@
+<view class="medal medal-{{tier}} {{locked ? 'medal-locked' : ''}}" style="width: {{size}}rpx; height: {{size * 1.3}}rpx">
+  <view class="medal-ribbon medal-ribbon-l" style="width: {{size * 0.28}}rpx; height: {{size * 0.62}}rpx; left: {{size * 0.2}}rpx; top: {{size * 0.62}}rpx"></view>
+  <view class="medal-ribbon medal-ribbon-r" style="width: {{size * 0.28}}rpx; height: {{size * 0.62}}rpx; right: {{size * 0.2}}rpx; top: {{size * 0.62}}rpx"></view>
+  <view wx:if="{{glow && !locked}}" class="medal-halo" style="width: {{size * 1.3}}rpx; height: {{size * 1.3}}rpx; left: {{size * -0.15}}rpx; top: {{size * -0.15}}rpx"></view>
+  <view class="medal-disc" style="width: {{size}}rpx; height: {{size}}rpx">
+    <view class="medal-ring">
+      <text class="medal-num" style="font-size: {{days >= 100 ? size * 0.3 : size * 0.4}}rpx">{{days}}</text>
+      <text class="medal-unit" style="font-size: {{size * 0.15}}rpx">天</text>
+    </view>
+  </view>
+</view>
