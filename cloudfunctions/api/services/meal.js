@@ -4,8 +4,8 @@ const { buildMealMessages } = require('../lib/prompts')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
-const { MAIN_MEALS, dayTree, mealStamps, beansHint } = require('../lib/shared/forest')
-const { STAGE_BEANS } = require('../lib/shared/garden')
+const { MAIN_MEALS, dayBeans, mealStamps, beansHint } = require('../lib/shared/forest')
+const { mealTimesOf, timingFor } = require('../lib/shared/timing')
 
 const NOTE_MAX = 200
 
@@ -18,14 +18,18 @@ function isMainMeal(mealType) {
 }
 
 // 这次打卡前后今天的暖豆变了多少，给打卡结果页做即时反馈
-function beansChange(beforeMeals, afterMeals) {
-  const before = dayTree(beforeMeals)
-  const after = dayTree(afterMeals)
+function beansChange(beforeMeals, afterMeals, meal, times, at) {
+  const before = dayBeans(beforeMeals)
+  const after = dayBeans(afterMeals)
   return {
-    beans: STAGE_BEANS[after.stage] - STAGE_BEANS[before.stage],
-    beansToday: STAGE_BEANS[after.stage],
-    hint: beansHint(after),
+    beans: after.beans - before.beans,
+    beansToday: after.beans,
+    hint: beansHint(afterMeals, times, at),
     stamps: mealStamps(afterMeals),
+    mealType: meal.mealType,
+    timing: meal.timing || null,
+    // 这一次让三顿都准时了（结果页额外庆祝一下）
+    allOnTime: after.allOnTime && !before.allOnTime,
   }
 }
 
@@ -53,8 +57,8 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
   }
 
   // 先看图；看图不可用或失败时，有文字描述就按描述估算；都不行就记为失败，留给用户补描述后重试
-  async function runAnalysis({ profile, mealType, note, fileID, consumed }) {
-    const base = { profile, mealType, note, consumedKcal: consumed }
+  async function runAnalysis({ profile, mealType, note, fileID, consumed, timing, at, times }) {
+    const base = { profile, mealType, note, consumedKcal: consumed, timing, at, times }
 
     if (fileID && config.visionModel) {
       try {
@@ -96,13 +100,16 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const profile = await requireProfile(openid)
       const at = now()
       const date = dateKey(at)
+      const times = mealTimesOf(profile)
+      const timing = timingFor(src.mealType, at, times)
       const meals = await repo.listMeals(openid, date)
-      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals) })
+      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals), timing, at, times })
 
       const meal = {
         _openid: openid,
         date,
         mealType: src.mealType,
+        timing,
         fileID,
         note,
         ...result,
@@ -116,7 +123,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       let arrival = null
       if (isMainMeal(src.mealType)) {
         await forest.syncDay(openid, date)
-        gain = beansChange(meals, meals.concat(saved))
+        gain = beansChange(meals, meals.concat(saved), saved, times, at)
         arrival = await camp.arrive(openid)
       }
       return { ...saved, gain, arrival }
@@ -129,6 +136,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const note = src.note === undefined ? meal.note || '' : text(src.note, NOTE_MAX)
       if (!meal.fileID && !note) throw new AppError(CODES.BAD_REQUEST, '写几句描述再分析吧')
 
+      const times = mealTimesOf(profile)
       const meals = await repo.listMeals(openid, meal.date)
       const result = await runAnalysis({
         profile,
@@ -136,6 +144,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         note,
         fileID: meal.fileID,
         consumed: consumedKcal(meals, meal._id),
+        timing: meal.timing || null,
+        at: new Date(meal.createdAt),
+        times,
       })
       // 已经有结果的打卡，重试失败时不要把好结果覆盖掉
       if (result.status === 'failed' && meal.status === 'done') {
@@ -149,7 +160,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       let gain = null
       if (isMainMeal(meal.mealType)) {
         await forest.syncDay(openid, meal.date)
-        gain = beansChange(meals, meals.map((m) => (m._id === meal._id ? updated : m)))
+        gain = beansChange(meals, meals.map((m) => (m._id === meal._id ? updated : m)), updated, times, now())
       }
       return { ...updated, gain }
     },

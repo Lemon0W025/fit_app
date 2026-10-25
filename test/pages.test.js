@@ -7,6 +7,7 @@ const { createWx, loadPage, settle, event, readWxml, checkTags, boundHandlers, r
 const { SCENE } = require('../miniprogram/utils/shared/camp')
 const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
+const { fixDate } = require('./helpers/fixed-date')
 
 const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile']
 
@@ -43,7 +44,8 @@ for (const name of PAGES) {
   })
 }
 
-test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删除 → 总结 → 体重', async () => {
+test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删除 → 总结 → 体重', async (t) => {
+  fixDate(t, '2026-10-22T12:10:00+08:00')
   const cloud = createFakeCloud({
     replies: [
       analysisJson({ totalKcal: 520, comment: '搭配不错' }),
@@ -98,7 +100,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(meal.data.meal.kcalText, '约 520 千卡')
   assert.equal(meal.data.meal.label, '午餐')
   assert.equal(meal.data.note, '米饭吃了一半')
-  assert.equal(meal.data.gain.title, '+10 暖豆')
+  assert.equal(meal.data.gain.title, '+20 暖豆')
   assert.equal(meal.data.gain.stamps[1].cls, 'stamp-green')
   assert.equal(wx.app.globalData.lastGain, null)
 
@@ -116,8 +118,8 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   await settle()
   assert.equal(today.data.view.totals.kcal, 300)
   assert.equal(today.data.view.meals.length, 1)
-  assert.equal(today.data.daily.title, '今天得了 10 暖豆')
-  assert.equal(today.data.daily.hint, '再打卡晚餐还能得 10 暖豆')
+  assert.equal(today.data.daily.title, '今天得了 20 暖豆')
+  assert.equal(today.data.daily.hint, '下一顿晚饭 17:00～19:00 拍算准时')
   assert.equal(today.data.daily.streakText, '🔥 已连续 1 天')
   today.goGarden()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/camp/camp'])

@@ -551,7 +551,7 @@ test('dayBeans：准时 15、不在饭点 5、绿色每顿 5、三顿准时再 1
 
 test('dayBeans：加餐不算；老打卡没有 timing 算不准时；失败的打卡也算拍了', () => {
   assert.equal(dayBeans([meal('snack', null, 'green')]).beans, 0)
-  assert.equal(dayBeans([meal('lunch', undefined)]).beans, 5)
+  assert.equal(dayBeans([meal('lunch', 'on', 'yellow', { timing: undefined })]).beans, 5)
   assert.equal(dayBeans([meal('lunch', 'on', null, { status: 'failed', analysis: null })]).beans, 15)
 })
 

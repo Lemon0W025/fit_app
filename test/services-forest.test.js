@@ -11,21 +11,21 @@ function setup() {
 }
 
 let seq = 0
-async function addMeal(repo, date, mealType, rating = 'yellow', kcal = 300) {
+async function addMeal(repo, date, mealType, { rating = 'yellow', kcal = 300, timing = 'on' } = {}) {
   seq += 1
-  return repo.addMeal({ _openid: 'u1', date, mealType, status: 'done', analysis: { rating, totalKcal: kcal }, createdAt: seq })
+  return repo.addMeal({ _openid: 'u1', date, mealType, timing, status: 'done', analysis: { rating, totalKcal: kcal }, createdAt: seq })
 }
 
-test('syncDay：按当天打卡记下种树和暖豆', async () => {
+test('syncDay：按当天打卡记下暖豆（准时 15、不在饭点 5）', async () => {
   const { repo, forest } = setup()
-  await addMeal(repo, TODAY, 'breakfast')
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { stage: 'sprout', beans: 10 })
+  await addMeal(repo, TODAY, 'breakfast', { timing: 'late' })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 5 })
   let garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, { [TODAY]: true })
-  assert.deepEqual(garden.beans.earned, { [TODAY]: 10 })
+  assert.deepEqual(garden.beans.earned, { [TODAY]: 5 })
 
   await addMeal(repo, TODAY, 'lunch')
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { stage: 'small', beans: 20 })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 20 })
   garden = await repo.getGarden('u1')
   assert.deepEqual(garden.beans.earned, { [TODAY]: 20 })
 })
@@ -35,16 +35,16 @@ test('syncDay：重复同步不会重复记豆', async () => {
   await addMeal(repo, TODAY, 'breakfast')
   await forest.syncDay('u1', TODAY)
   await forest.syncDay('u1', TODAY)
-  assert.deepEqual((await repo.getGarden('u1')).beans.earned, { [TODAY]: 10 })
+  assert.deepEqual((await repo.getGarden('u1')).beans.earned, { [TODAY]: 15 })
 })
 
-test('syncDay：只剩加餐时这天不算种树，暖豆收回', async () => {
+test('syncDay：只剩加餐时这天不算打卡，暖豆收回', async () => {
   const { repo, forest } = setup()
   await addMeal(repo, TODAY, 'lunch')
   await forest.syncDay('u1', TODAY)
   repo.state.meals = []
-  await addMeal(repo, TODAY, 'snack')
-  assert.deepEqual(await forest.syncDay('u1', TODAY), { stage: 'empty', beans: 0 })
+  await addMeal(repo, TODAY, 'snack', { timing: null })
+  assert.deepEqual(await forest.syncDay('u1', TODAY), { beans: 0 })
   const garden = await repo.getGarden('u1')
   assert.deepEqual(garden.days, {})
   assert.deepEqual(garden.beans.earned, {})
@@ -58,7 +58,7 @@ test('syncDay：旧档先迁成营地再记豆；营地文档里其他字段保�
   const garden = await repo.getGarden('u1')
   assert.equal(garden.camp, 1)
   assert.equal(garden.inventory, undefined)
-  assert.deepEqual(garden.beans, { spent: 0, bonus: 0, earned: { [TODAY]: 10 } })
+  assert.deepEqual(garden.beans, { spent: 0, bonus: 0, earned: { [TODAY]: 15 } })
   assert.deepEqual(garden.days, { '2026-10-20': 'apple', [TODAY]: true })
   assert.equal(garden.currentSpecies, undefined)
   assert.equal(garden.unlocked, undefined)
@@ -66,46 +66,55 @@ test('syncDay：旧档先迁成营地再记豆；营地文档里其他字段保�
   await forest.syncDay('u1', TODAY)
   const again = await repo.getGarden('u1')
   assert.deepEqual(again.foods, { xiaomi: 2 })
-  assert.deepEqual(again.beans, { spent: 30, bonus: 60, earned: { [TODAY]: 10 } })
+  assert.deepEqual(again.beans, { spent: 30, bonus: 60, earned: { [TODAY]: 15 } })
 })
 
-test('today：今天的印章、暖豆、提示和连续天数', async () => {
+test('today：今天的印章、暖豆、提示、连续天数、本月准时几顿', async () => {
   const { repo, forest } = setup()
   for (let i = 3; i >= 1; i--) {
     const d = addDays(TODAY, -i)
     await addMeal(repo, d, 'lunch')
     await forest.syncDay('u1', d)
   }
-  await addMeal(repo, TODAY, 'breakfast', 'green')
-  await addMeal(repo, TODAY, 'lunch', 'green')
+  await addMeal(repo, TODAY, 'breakfast', { rating: 'green', timing: 'late' })
+  await addMeal(repo, TODAY, 'lunch', { rating: 'green' })
   await forest.syncDay('u1', TODAY)
   const view = await forest.today('u1', TODAY, await repo.listMeals('u1', TODAY))
-  assert.deepEqual(view.stamps.map((s) => s.state), ['green', 'green', 'none'])
-  assert.equal(view.hint, '再打卡晚餐还能得 20 暖豆')
-  assert.equal(view.beansToday, 20)
-  assert.equal(view.nextGain, 20)
+  assert.deepEqual(view.stamps.map((s) => [s.state, s.onTime]), [['green', false], ['green', true], ['none', false]])
+  // 12:00 午饭已经拍了，提示看下一顿
+  assert.equal(view.hint, '下一顿晚饭 17:00～19:00 拍算准时')
+  assert.equal(view.beansToday, 30)
   assert.equal(view.streak, 4)
-  assert.equal(view.beans, 50)
-  assert.equal(view.stage, undefined)
+  assert.equal(view.beans, 75)
+  assert.equal(view.monthOnTime, 4)
+  assert.deepEqual(view.mealTimes, { breakfast: '07:30', lunch: '12:00', dinner: '18:00' })
+  assert.equal(view.nextGain, undefined)
 })
 
-test('today：还没有花园时也能返回，余额不显示负数', async () => {
+test('today：按档案里的饭点算', async () => {
+  const { repo, forest } = setup()
+  const view = await forest.today('u1', TODAY, [], { mealTimes: { breakfast: '07:30', lunch: '11:00', dinner: '18:00' } })
+  assert.equal(view.hint, '午饭 10:00～12:00 拍算准时，能得 15 暖豆')
+})
+
+test('today：还没有营地时也能返回，余额不显示负数', async () => {
   const { repo, forest } = setup()
   const empty = await forest.today('u1', TODAY, [])
   assert.equal(empty.beansToday, 0)
   assert.deepEqual(empty.stamps.map((s) => s.state), ['none', 'none', 'none'])
   assert.equal(empty.streak, 0)
   assert.equal(empty.beans, 0)
+  assert.equal(empty.monthOnTime, 0)
   await repo.saveGarden('u1', { beans: { earned: {}, bonus: 0, spent: 30 } })
   assert.equal((await forest.today('u1', TODAY, [])).beans, 0)
 })
 
-test('get：本月日历，每天的印章和暖豆，未来日期标 future', async () => {
+test('get：本月日历，每天的印章、暖豆、准时几顿，未来日期标 future', async () => {
   const { repo, forest } = setup()
-  for (const t of ['breakfast', 'lunch', 'dinner']) await addMeal(repo, '2026-10-20', t, 'green', 400)
+  for (const t of ['breakfast', 'lunch', 'dinner']) await addMeal(repo, '2026-10-20', t, { rating: 'green', kcal: 400 })
   await addMeal(repo, '2026-10-21', 'lunch')
-  await addMeal(repo, '2026-10-21', 'snack', 'red', 200)
-  await addMeal(repo, TODAY, 'breakfast')
+  await addMeal(repo, '2026-10-21', 'snack', { rating: 'red', kcal: 200, timing: null })
+  await addMeal(repo, TODAY, 'breakfast', { timing: 'late' })
   await addMeal(repo, TODAY, 'lunch')
   await addMeal(repo, '2026-09-30', 'lunch')
   for (const d of ['2026-10-20', '2026-10-21', TODAY]) await forest.syncDay('u1', d)
@@ -120,28 +129,40 @@ test('get：本月日历，每天的印章和暖豆，未来日期标 future', a
     day: 20,
     future: false,
     stamps: [
-      { mealType: 'breakfast', label: '早', state: 'green' },
-      { mealType: 'lunch', label: '午', state: 'green' },
-      { mealType: 'dinner', label: '晚', state: 'green' },
+      { mealType: 'breakfast', label: '早', state: 'green', onTime: true },
+      { mealType: 'lunch', label: '午', state: 'green', onTime: true },
+      { mealType: 'dinner', label: '晚', state: 'green', onTime: true },
     ],
-    beans: 60,
+    beans: 75,
+    onTime: 3,
     mealsCount: 3,
     kcal: 1200,
   })
   assert.deepEqual(view.days[20].stamps.map((s) => s.state), ['none', 'yellow', 'none'])
-  assert.equal(view.days[20].beans, 10)
+  assert.equal(view.days[20].beans, 15)
   assert.equal(view.days[20].mealsCount, 2)
   assert.equal(view.days[21].beans, 20)
+  assert.equal(view.days[21].onTime, 1)
   assert.equal(view.days[0].beans, 0)
   assert.equal(view.days[0].future, false)
   assert.equal(view.days[22].future, true)
   assert.deepEqual(view.days[22].stamps, [])
-  assert.deepEqual(view.stats, { days: 3, beans: 90 })
+  assert.deepEqual(view.stats, { days: 3, beans: 110, onTime: 5 })
   assert.equal(view.prevMonth, '2026-09')
   assert.equal(view.nextMonth, null)
   assert.equal(view.today.beansToday, 20)
   assert.equal(view.today.streak, 3)
+  assert.equal(view.today.monthOnTime, 5)
   assert.equal(view.totalDays, 3)
+})
+
+test('get：规则改过以前记下的日子，按当时得的暖豆显示', async () => {
+  const { repo, forest } = setup()
+  await repo.addMeal({ _openid: 'u1', date: '2026-10-19', mealType: 'lunch', status: 'done', analysis: { rating: 'green', totalKcal: 300 }, createdAt: 1 })
+  await repo.saveGarden('u1', { camp: 1, days: { '2026-10-19': true }, beans: { earned: { '2026-10-19': 40 }, bonus: 0, spent: 0 } })
+  const view = await forest.get('u1', {})
+  assert.equal(view.days[18].beans, 40)
+  assert.equal(view.days[18].onTime, 0)
 })
 
 test('get：查看过去的月份', async () => {
@@ -150,7 +171,7 @@ test('get：查看过去的月份', async () => {
   await forest.syncDay('u1', '2026-09-30')
   const view = await forest.get('u1', { month: '2026-09' })
   assert.equal(view.days.length, 30)
-  assert.equal(view.days[29].beans, 10)
+  assert.equal(view.days[29].beans, 15)
   assert.equal(view.firstWeekday, 2)
   assert.equal(view.nextMonth, '2026-10')
   assert.equal(view.today.date, TODAY)

@@ -3,7 +3,6 @@ const assert = require('node:assert/strict')
 const G = require('../cloudfunctions/api/lib/shared/garden')
 
 test('常量', () => {
-  assert.deepEqual(G.STAGE_BEANS, { empty: 0, sprout: 10, small: 20, big: 40, bloom: 50, fruit: 60 })
   assert.equal(G.SPIN_COST, 30)
   assert.equal(G.WELCOME_BEANS, 60)
   assert.equal(G.PITY, 10)
@@ -14,12 +13,10 @@ test('常量', () => {
   assert.ok(G.SOLAR_TERMS.every((t) => t.key && t.name && /^\d{4}-\d{2}-\d{2}$/.test(t.start)))
 })
 
-test('beanBalance / nextStageGain', () => {
+test('beanBalance', () => {
   assert.equal(G.beanBalance({ beans: { earned: { a: 10, b: 20 }, bonus: 5, spent: 15 } }), 20)
   assert.equal(G.beanBalance({}), 0)
-  assert.equal(G.nextStageGain('empty'), 10)
-  assert.equal(G.nextStageGain('big'), 10)
-  assert.equal(G.nextStageGain('fruit'), 0)
+  assert.equal(G.nextStageGain, undefined)
 })
 
 test('rollRarity：按权重，保底前一抽只出珍稀以上', () => {

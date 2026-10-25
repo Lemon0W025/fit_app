@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { dateKey } = require('../cloudfunctions/api/lib/shared/date')
 const { analysisJson } = require('./helpers/fake-repo')
+const { fixDate } = require('./helpers/fixed-date')
 const config = require('../cloudfunctions/api/config')
 
 const profileInput = { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light', avoid: '' }
@@ -97,7 +98,8 @@ test('没有 openid 与未知 action', async () => {
   assert.equal((await main({ action: 'nope' })).code, 'UNKNOWN_ACTION')
 })
 
-test('每日暖豆：三顿全绿拿满、日历印章、删除后回退', async () => {
+test('每日暖豆：三顿全绿拿满、日历印章、删除后回退', async (t) => {
+  const clock = fixDate(t, '2026-10-22T07:40:00+08:00')
   const green = analysisJson({ rating: 'green' })
   const cloud = createFakeCloud({ replies: [green, green, green] })
   const { main } = loadCloudFunction(cloud)
@@ -106,30 +108,33 @@ test('每日暖豆：三顿全绿拿满、日历印章、删除后回退', async
 
   const beans = []
   const ids = []
+  const times = { breakfast: '07:40', lunch: '12:10', dinner: '18:10' }
   for (const mealType of ['breakfast', 'lunch', 'dinner']) {
+    clock.set(`2026-10-22T${times[mealType]}:00+08:00`)
     const res = await main({ action: 'meal.analyze', data: { mealType, note: '家常菜' } })
     assert.equal(res.ok, true, res.message)
     beans.push(res.data.gain.beans)
     ids.push(res.data._id)
   }
-  assert.deepEqual(beans, [10, 10, 40])
+  assert.deepEqual(beans, [20, 20, 35])
 
   const garden = cloud.db.collections.get('gardens').get('u1')
   assert.equal(garden._openid, 'u1')
   assert.deepEqual(garden.days, { [today]: true })
-  assert.deepEqual(garden.beans.earned, { [today]: 60 })
+  assert.deepEqual(garden.beans.earned, { [today]: 75 })
 
   const forest = await main({ action: 'forest.get' })
   assert.equal(forest.ok, true, forest.message)
-  assert.equal(forest.data.today.beansToday, 60)
+  assert.equal(forest.data.today.beansToday, 75)
   assert.equal(forest.data.today.streak, 1)
-  assert.equal(forest.data.today.beans, 60)
-  assert.equal(forest.data.days.find((d) => d.date === today).beans, 60)
-  assert.deepEqual(forest.data.stats, { days: 1, beans: 60 })
+  assert.equal(forest.data.today.beans, 75)
+  assert.equal(forest.data.days.find((d) => d.date === today).beans, 75)
+  assert.deepEqual(forest.data.stats, { days: 1, beans: 75, onTime: 3 })
 
   const day = await main({ action: 'day.get' })
-  assert.equal(day.data.daily.beansToday, 60)
+  assert.equal(day.data.daily.beansToday, 75)
   assert.deepEqual(day.data.daily.stamps.map((s) => s.state), ['green', 'green', 'green'])
+  assert.deepEqual(day.data.daily.stamps.map((s) => s.onTime), [true, true, true])
 
   assert.equal((await main({ action: 'forest.setSpecies', data: { species: 'peach' } })).code, 'UNKNOWN_ACTION')
 
@@ -140,7 +145,8 @@ test('每日暖豆：三顿全绿拿满、日历印章、删除后回退', async
   assert.equal((await main({ action: 'forest.get' })).data.today.streak, 0)
 })
 
-test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后宠物搬来 → 买装饰摆上 → 图册', async () => {
+test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后宠物搬来 → 买装饰摆上 → 图册', async (t) => {
+  fixDate(t, '2026-10-22T12:10:00+08:00')
   const cloud = createFakeCloud({ replies: [analysisJson(), analysisJson()] })
   const { main } = loadCloudFunction(cloud)
   await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
@@ -166,11 +172,11 @@ test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后�
   const after = await main({ action: 'camp.get', data: { markSeen: true } })
   assert.deepEqual(after.data.pets.map((p) => p.id), ['doudou', 'nuonuo'])
   assert.deepEqual(after.data.arrivals, ['nuonuo'])
-  assert.equal(after.data.beans, 40) // 30 + 第一顿正餐 10（STAGE_BEANS.sprout）
+  assert.equal(after.data.beans, 50) // 30 + 午饭准时 15 + 绿 5
 
   const buy = await main({ action: 'camp.buy', data: { decorId: 'ball' } })
   assert.equal(buy.ok, true, buy.message)
-  assert.equal(buy.data.beans, 0) // 40 − 滚球 40
+  assert.equal(buy.data.beans, 10) // 50 − 滚球 40
   const placed = await main({ action: 'camp.place', data: { decorId: 'ball', x: 1500, y: 1800 } })
   assert.equal(placed.ok, true, placed.message)
   const uid = placed.data.decor.placed[0].uid

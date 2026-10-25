@@ -8,10 +8,6 @@ const RARITIES = [
   { id: 'legendary', label: '传说', weight: 2, color: '#D99A1E' },
 ]
 
-// 每天的树长到哪个阶段，当天就给多少暖豆（见 shared/forest.js 的 dayTree）
-const STAGE_BEANS = { empty: 0, sprout: 10, small: 20, big: 40, bloom: 50, fruit: 60 }
-const STAGE_ORDER = ['empty', 'sprout', 'small', 'big', 'bloom', 'fruit']
-
 // 扭蛋 30 暖豆一抽；第一次进来送 60
 const SPIN_COST = 30
 const WELCOME_BEANS = 60
@@ -60,12 +56,6 @@ function beanBalance(garden) {
   return earned + (beans.bonus || 0) - (beans.spent || 0)
 }
 
-function nextStageGain(stage) {
-  const i = STAGE_ORDER.indexOf(stage)
-  if (i === -1 || i === STAGE_ORDER.length - 1) return 0
-  return STAGE_BEANS[STAGE_ORDER[i + 1]] - STAGE_BEANS[stage]
-}
-
 function pickWeighted(entries, rand) {
   const total = entries.reduce((sum, e) => sum + e.weight, 0)
   let x = rand * total
@@ -90,6 +80,6 @@ function currentTerm(dateKey) {
 }
 
 module.exports = {
-  RARITIES, STAGE_BEANS, SPIN_COST, WELCOME_BEANS, PITY, SOLAR_TERMS,
-  beanBalance, nextStageGain, pickWeighted, rollRarity, currentTerm,
+  RARITIES, SPIN_COST, WELCOME_BEANS, PITY, SOLAR_TERMS,
+  beanBalance, pickWeighted, rollRarity, currentTerm,
 }

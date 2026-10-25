@@ -1,17 +1,14 @@
 // 与 miniprogram/utils/shared/forest.js 保持一致（test/shared-sync.test.js 会检查）
-// 每天的打卡档位：由当天三顿正餐的打卡情况决定当天得多少暖豆；界面上显示成早 / 午 / 晚三个印章
+// 每天的暖豆和早 / 午 / 晚三个印章：看三顿正餐拍了没有、是不是准时拍的（饭点规则在 timing.js）、吃得好不好
 
 const { addDays } = require('./date')
-const { MEAL_LABELS } = require('./meal-types')
-const { STAGE_BEANS, nextStageGain } = require('./garden')
+const { MAIN_MEALS, MEAL_WORDS, loggedMeals, mealStatus, windowText } = require('./timing')
 
-const STAGES = ['empty', 'sprout', 'small', 'big', 'bloom', 'fruit']
-
-// 加餐照常打卡点评，但不算进每天的暖豆：既不因零食受罚，也不会为了暖豆多吃一顿
-const MAIN_MEALS = ['breakfast', 'lunch', 'dinner']
+// 准时拍一顿 15、不在饭点拍 5、三顿都准时再加 15、评级「吃得好」（绿）每顿 5；加餐照常点评但不算暖豆
+const BEANS = { onTime: 15, offTime: 5, allOnTime: 15, green: 5 }
 const STAMP_LABELS = { breakfast: '早', lunch: '午', dinner: '晚' }
 
-// 每种正餐取最新的一条（重拍、重新打卡以最后一次为准）
+// 每种正餐最新的一条（重拍以最后一次的评级为准）
 function latestMainMeals(meals) {
   const latest = {}
   ;(meals || []).forEach((m) => {
@@ -21,56 +18,60 @@ function latestMainMeals(meals) {
   return latest
 }
 
-function dayTree(meals) {
-  const latest = latestMainMeals(meals)
-  const logged = MAIN_MEALS.filter((t) => latest[t])
-  const missing = MAIN_MEALS.filter((t) => !latest[t])
-  // 分析失败的打卡也算打卡了，只是没有评级
-  const greens = logged.filter((t) => {
-    const m = latest[t]
-    return m.status === 'done' && m.analysis && m.analysis.rating === 'green'
-  }).length
-
-  let stage = 'empty'
-  if (logged.length === 1) stage = 'sprout'
-  else if (logged.length === 2) stage = 'small'
-  else if (logged.length === 3) stage = greens === 3 ? 'fruit' : greens === 2 ? 'bloom' : 'big'
-
-  return { stage, logged, missing, greens }
+function ratingOf(m) {
+  return m && m.status === 'done' && m.analysis && m.analysis.rating ? m.analysis.rating : null
 }
 
-// 早 / 午 / 晚三个印章：评级的颜色；分析失败但打了卡是 done；没打卡是 none
-function mealStamps(meals) {
+// 这一天的暖豆；logged / onTime 是拍了的、准时拍了的正餐
+function dayBeans(meals) {
+  const logged = loggedMeals(meals)
   const latest = latestMainMeals(meals)
-  return MAIN_MEALS.map((t) => {
-    const m = latest[t]
-    let state = 'none'
-    if (m) state = m.status === 'done' && m.analysis && m.analysis.rating ? m.analysis.rating : 'done'
-    return { mealType: t, label: STAMP_LABELS[t], state }
+  let beans = 0
+  MAIN_MEALS.forEach((t) => {
+    if (!logged[t].logged) return
+    beans += logged[t].onTime ? BEANS.onTime : BEANS.offTime
+    if (ratingOf(latest[t]) === 'green') beans += BEANS.green
   })
+  const onTime = MAIN_MEALS.filter((t) => logged[t].onTime)
+  const allOnTime = onTime.length === MAIN_MEALS.length
+  if (allOnTime) beans += BEANS.allOnTime
+  return { beans, logged: MAIN_MEALS.filter((t) => logged[t].logged), onTime, allOnTime }
 }
 
-// 提示还没打卡的下一顿：优先选比已打卡餐次更晚的
-function nextMissingMeal(tree) {
-  const lastIndex = Math.max(-1, ...tree.logged.map((t) => MAIN_MEALS.indexOf(t)))
-  const later = tree.missing.filter((t) => MAIN_MEALS.indexOf(t) > lastIndex)
-  return later[0] || tree.missing[0]
+// 早 / 午 / 晚三个印章：state 是评级的颜色（分析失败但打了卡是 done，没打卡是 none），onTime 是有没有准时拍的一次
+function mealStamps(meals) {
+  const logged = loggedMeals(meals)
+  const latest = latestMainMeals(meals)
+  return MAIN_MEALS.map((t) => ({
+    mealType: t,
+    label: STAMP_LABELS[t],
+    state: logged[t].logged ? ratingOf(latest[t]) || 'done' : 'none',
+    onTime: logged[t].onTime,
+  }))
 }
 
-function beansHint(tree) {
-  switch (tree.stage) {
-    case 'empty':
-      return `打卡一顿正餐就能得 ${STAGE_BEANS.sprout} 暖豆`
-    case 'sprout':
-    case 'small':
-      return `再打卡${MEAL_LABELS[nextMissingMeal(tree)]}还能得 ${nextStageGain(tree.stage)} 暖豆`
-    case 'big':
-      return '三顿都打卡啦！明天多吃绿色的，暖豆更多'
-    case 'bloom':
-      return `真棒！明天三顿都吃成绿色，能拿满 ${STAGE_BEANS.fruit} 暖豆`
-    default:
-      return '三顿都吃得好，今天的暖豆拿满啦！'
+// 卡片上的一句话：围绕「下一顿准时拍」说能得多少暖豆
+function beansHint(meals, times, now) {
+  const s = mealStatus(meals, times, now)
+  const day = dayBeans(meals)
+  if (s.state === 'open' || s.state === 'upcoming') {
+    const last = day.onTime.length === MAIN_MEALS.length - 1 ? `，三顿都准时再加 ${BEANS.allOnTime}` : ''
+    return `${s.word} ${s.window} 拍算准时，能得 ${BEANS.onTime} 暖豆${last}`
   }
+  if (s.state === 'missed') return `${s.word}过点了，现在补拍也有 ${BEANS.offTime} 暖豆`
+  if (s.state === 'done' && s.next) return `下一顿${s.next.word} ${windowText(s.next.mealType, times)} 拍算准时`
+  const missing = MAIN_MEALS.filter((t) => day.logged.indexOf(t) === -1)
+  if (missing.length) return `${missing.map((t) => MEAL_WORDS[t]).join('、')}还没拍，补拍也有 ${BEANS.offTime} 暖豆`
+  return day.allOnTime ? '三顿都准时拍了，真棒！' : '三顿都拍完啦！明天按饭点拍，暖豆更多'
+}
+
+// 一段日子里准时拍的正餐顿数（每天每顿最多算一次）
+function onTimeCount(meals) {
+  const byDate = {}
+  ;(meals || []).forEach((m) => {
+    ;(byDate[m.date] = byDate[m.date] || []).push(m)
+  })
+  return Object.keys(byDate).reduce((sum, d) => sum + dayBeans(byDate[d]).onTime.length, 0)
 }
 
 // days：{ 'YYYY-MM-DD': true }，有正餐打卡的日子
@@ -87,10 +88,11 @@ function streakFrom(days, today) {
 }
 
 module.exports = {
-  STAGES,
   MAIN_MEALS,
-  dayTree,
+  BEANS,
+  dayBeans,
   mealStamps,
   beansHint,
+  onTimeCount,
   streakFrom,
 }
