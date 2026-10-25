@@ -147,3 +147,38 @@
   white-space: pre-wrap;
   line-height: 1.8;
 }
+
+/* 首页「下一顿」大卡 */
+.next-card {
+  padding: 32rpx 28rpx;
+  background: linear-gradient(135deg, #eaf5ec 0%, #ffffff 85%);
+}
+
+.next-card-warn {
+  background: linear-gradient(135deg, #fff1e0 0%, #ffffff 85%);
+}
+
+.next-title {
+  font-size: 48rpx;
+  font-weight: 700;
+}
+
+.next-card-warn .next-title {
+  color: #d9822b;
+}
+
+.next-sub {
+  font-size: 32rpx;
+  margin-top: 8rpx;
+  color: var(--muted);
+}
+
+.next-btn {
+  margin-top: 24rpx;
+}
+
+.next-link {
+  margin-top: 16rpx;
+  font-size: 30rpx;
+  color: var(--primary);
+}

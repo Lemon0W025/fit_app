@@ -27,6 +27,8 @@ test('app.json 里的页面文件和 tabBar 图标都存在', () => {
     assert.ok(fs.existsSync(path.join(root, tab.iconPath)), `缺少 ${tab.iconPath}`)
     assert.ok(fs.existsSync(path.join(root, tab.selectedIconPath)), `缺少 ${tab.selectedIconPath}`)
   }
+  assert.equal(app.pages[0], 'pages/today/today')
+  assert.deepEqual(app.tabBar.list.map((t) => t.text), ['今日', '营地', '体重', '我的'])
 })
 
 for (const name of PAGES) {
@@ -59,6 +61,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
 
   // 1. 第一次打开：今日页发现没有档案，跳去建档
   const today = loadPage('today', wx)
+  today.clock = manualClock()
   today.onShow()
   await settle()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/profile/profile'])
@@ -121,6 +124,9 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   assert.equal(today.data.view.meals.length, 1)
   assert.equal(today.data.daily.title, '今天得了 20 暖豆')
   assert.equal(today.data.daily.hint, '下一顿晚饭 17:00～19:00 拍算准时')
+  assert.equal(today.data.card.title, '午饭准时拍了 ✓')
+  assert.equal(today.data.card.sub, '下一顿：晚饭 18:00')
+  assert.equal(wx.app.globalData.mealTimes.lunch, '12:00')
   assert.equal(today.data.daily.streakText, '🔥 已连续 1 天')
   today.goGarden()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/camp/camp'])
@@ -195,6 +201,33 @@ test('打卡页：没拍照也没写字时不提交', async () => {
   await settle()
   assert.equal(checkin.data.submitting, false)
   assert.deepEqual(wx.log.toasts, ['拍张照片或写几句吧'])
+})
+
+test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡', async (t) => {
+  const clock = fixDate(t, '2026-10-22T11:20:00+08:00')
+  const cloud = createFakeCloud()
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const wx = createWx(main)
+  const today = loadPage('today', wx)
+  today.clock = manualClock()
+  today.onShow()
+  await settle()
+  assert.equal(today.data.card.title, '午饭 · 12:00')
+  assert.equal(today.data.card.sub, '11:00～13:00 拍算准时，还剩 1 小时 40 分')
+  assert.equal(today.data.daily.hint, '午饭 11:00～13:00 拍算准时，能得 15 暖豆')
+  today.goCheckin(event({ mealType: 'lunch' }))
+  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/checkin/checkin?mealType=lunch'])
+
+  // 过了午饭点：一分钟后自己刷新成「还没拍」
+  clock.set('2026-10-22T13:30:00+08:00')
+  today.clock.advance(60000)
+  assert.equal(today.data.card.title, '午饭还没拍')
+  assert.equal(today.data.card.warn, true)
+  assert.equal(today.data.daily.hint, '午饭过点了，现在补拍也有 5 暖豆')
+
+  today.onHide()
+  assert.equal(today.clock.count(), 0)
 })
 
 test('云函数报错时页面给出提示：短消息用 toast，长消息用弹窗', async () => {

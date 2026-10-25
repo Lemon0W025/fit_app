@@ -1,18 +1,32 @@
 const api = require('../../utils/api')
-const { buildDayView, greetingText, beansCard } = require('../../utils/view')
+const { buildDayView, greetingText, beansCard, nextMealCard } = require('../../utils/view')
 const { localHour } = require('../../utils/shared/date')
+const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
+const { beansHint } = require('../../utils/shared/forest')
+
+// 下一顿大卡和提示跟着时间走（倒计时、过点），每分钟按现在的时间重算一次
+const REFRESH_MS = 60000
 
 Page({
   data: {
     loading: true,
     view: null,
     daily: null,
+    card: null,
     greeting: '',
     summarizing: false,
   },
 
   onShow() {
     this.load()
+  },
+
+  onHide() {
+    this.stopRefresh()
+  },
+
+  onUnload() {
+    this.stopRefresh()
   },
 
   onPullDownRefresh() {
@@ -27,12 +41,15 @@ Page({
           wx.switchTab({ url: '/pages/profile/profile' })
           return
         }
+        this.day = day
+        this.times = mealTimesOf(day.profile)
+        getApp().globalData.mealTimes = this.times
         this.setData({
           loading: false,
           view: buildDayView(day),
-          daily: beansCard(day.daily),
           greeting: greetingText(localHour(), day.profile.nickname),
         })
+        this.refresh()
       })
       .catch((err) => {
         this.setData({ loading: false })
@@ -40,12 +57,32 @@ Page({
       })
   },
 
+  refresh() {
+    const now = new Date()
+    const meals = this.day.meals || []
+    this.setData({
+      card: nextMealCard(mealStatus(meals, this.times, now)),
+      daily: beansCard({ ...this.day.daily, hint: beansHint(meals, this.times, now) }),
+    })
+    this.stopRefresh()
+    const clock = this.clock || { set: (fn, ms) => setTimeout(fn, ms), clear: (h) => clearTimeout(h) }
+    this.refreshTimer = clock.set(() => this.refresh(), REFRESH_MS)
+  },
+
+  stopRefresh() {
+    if (!this.refreshTimer) return
+    const clock = this.clock || { clear: (h) => clearTimeout(h) }
+    clock.clear(this.refreshTimer)
+    this.refreshTimer = null
+  },
+
   goGarden() {
     wx.switchTab({ url: '/pages/camp/camp' })
   },
 
-  goCheckin() {
-    wx.navigateTo({ url: '/pages/checkin/checkin' })
+  goCheckin(e) {
+    const mealType = e && e.currentTarget.dataset.mealType
+    wx.navigateTo({ url: mealType ? `/pages/checkin/checkin?mealType=${mealType}` : '/pages/checkin/checkin' })
   },
 
   openMeal(e) {
