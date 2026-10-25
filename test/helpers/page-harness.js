@@ -21,7 +21,7 @@ function setPath(obj, key, value) {
 }
 
 function createWx(main) {
-  const log = { toasts: [], modals: [], nav: [], uploads: [], downloads: [] }
+  const log = { toasts: [], modals: [], nav: [], uploads: [], downloads: [], vibrations: [] }
   const wx = {
     log,
     app: { globalData: { lastGain: null } },
@@ -73,6 +73,9 @@ function createWx(main) {
     },
     stopPullDownRefresh() {},
     previewImage() {},
+    vibrateShort(o) {
+      log.vibrations.push((o && o.type) || 'heavy')
+    },
     // 庭院容器 #garden 在屏幕上的位置；其他节点（如体重图 canvas）在测试里拿不到
     gardenRect: { left: 16, top: 100 },
     // 大地图 #world 在屏幕上的位置和宽度，测试里按拖动、缩放设置
