@@ -178,8 +178,7 @@ async function record(name, sc, browser) {
       const shadow = pet.previousElementSibling
       pet.style.transitionDuration = `${s.duration}ms`
       pet.style.zIndex = s.z
-      pet.style.left = `${s.left}px`
-      pet.style.bottom = `${s.bottom}px`
+      pet.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
       pet.style.width = `${s.width}px`
       const body = pet.querySelector('.pet-body')
       body.style.height = `${s.width}px`
@@ -216,8 +215,7 @@ async function record(name, sc, browser) {
       }
       shadow.style.transitionDuration = `${s.duration}ms`
       shadow.style.zIndex = s.z - 1
-      shadow.style.left = `${s.shadow.left}px`
-      shadow.style.bottom = `${s.shadow.bottom}px`
+      shadow.style.transform = `translate3d(${s.shadow.left}px, ${-s.shadow.bottom}px, 0)`
       shadow.style.width = `${s.shadow.width}px`
       shadow.style.height = `${s.shadow.height}px`
     }, { i, s })

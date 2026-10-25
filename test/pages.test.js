@@ -313,6 +313,26 @@ test('营地：宠物拼图先下到本地、两张都好了才换上；之后�
   assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
 })
 
+test('营地：宠物和影子用 transform 挪（left / bottom 过渡每帧都要重排重画大画，手机上走起来一直闪）', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const dir = path.join(__dirname, '../miniprogram/pages/camp')
+  const wxml = fs.readFileSync(path.join(dir, 'camp.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(dir, 'camp.wxss'), 'utf8')
+  const tag = (cls) => wxml.split('\n').find((l) => l.includes(`class="${cls}`))
+  ;['shadow', 'pet '].forEach((cls) => {
+    const line = tag(cls)
+    assert.ok(line, cls)
+    assert.match(line, /transform: translate3d\(\{\{item\.(shadow\.)?left\}\}px, \{\{0 - item\.(shadow\.)?bottom\}\}px, 0\)/, cls)
+    assert.doesNotMatch(line, /(^|[ ;"])(left|bottom): \{\{/, cls)
+  })
+  const rule = (sel) => (wxss.match(new RegExp(`(^|\\n)\\${sel} \\{[^}]*\\}`)) || [''])[0]
+  ;['.pet', '.shadow'].forEach((sel) => {
+    assert.match(rule(sel), /transition-property: transform/, sel)
+    assert.match(rule(sel), /will-change: transform/, sel)
+  })
+})
+
 test('营地：拼图下载失败就一直用单张图', async () => {
   const cloud = createFakeCloud({ replies: [] })
   const { main } = loadCloudFunction(cloud)

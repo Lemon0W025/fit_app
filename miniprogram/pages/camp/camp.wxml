@@ -27,8 +27,8 @@
           <image wx:if="{{item.peekImage}}" class="bowl-peek" src="{{item.peekImage}}" mode="aspectFit" />
         </view>
         <block wx:for="{{pets}}" wx:key="id">
-          <view wx:if="{{!item.hidden}}" class="shadow" style="left: {{item.shadow.left}}px; bottom: {{item.shadow.bottom}}px; width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
-          <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="left: {{item.left}}px; bottom: {{item.bottom}}px; width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
+          <view wx:if="{{!item.hidden}}" class="shadow" style="transform: translate3d({{item.shadow.left}}px, {{0 - item.shadow.bottom}}px, 0); width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
+          <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
             <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />

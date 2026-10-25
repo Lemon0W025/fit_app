@@ -559,12 +559,19 @@ button.btn-small {
 
 .shadow {
   position: absolute;
+  left: 0;
+  bottom: 0;
   border-radius: 50%;
   /* 接触阴影：中间深、边上化开，像压在草上 */
   background: radial-gradient(ellipse at center, rgba(30, 40, 20, 0.42) 0%, rgba(30, 40, 20, 0.22) 45%, rgba(30, 40, 20, 0) 72%);
   pointer-events: none;
-  transition-property: left, bottom;
+  /* 和宠物一样用 transform 挪（见 .pet） */
+  transform: translate3d(0, 0, 0);
+  transition-property: transform;
   transition-timing-function: linear;
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .b1 { background: #f4b740; --dx: -120rpx; --dy: -200rpx; }
@@ -655,8 +662,10 @@ button.btn-small {
 .bag-tab.on { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 .bag-hint { margin-top: 8rpx; }
 
-/* 宠物：单张图时按动作挂动画；走路 gait-on 时上下颠 */
-.pet { position: absolute; transition-property: left, bottom; transition-timing-function: linear; }
+/* 宠物：单张图时按动作挂动画；走路 gait-on 时上下颠。
+   走路用 transform 挪（贴在左下角 0,0 再平移）：left / bottom 过渡每一帧都要重新排版、重画底下放大了的整张画，手机上走起来一直闪；
+   transform 交给显卡单独一层挪，初始的 transform 和 transition 都先写在这儿，开头不闪 */
+.pet { position: absolute; left: 0; bottom: 0; transform: translate3d(0, 0, 0); transition-property: transform; transition-timing-function: linear; will-change: transform; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .pet-body { position: relative; width: 100%; }
 .pet-body.flip { transform: scaleX(-1); }
 .pet-img { display: block; width: 100%; transform-origin: 50% 100%; }
