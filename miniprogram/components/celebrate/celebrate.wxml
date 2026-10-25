@@ -1,0 +1,16 @@
+<view wx:if="{{mode === 'burst'}}" class="cel-burst">
+  <canvas type="2d" id="confetti" class="cel-confetti"></canvas>
+</view>
+<view wx:elif="{{mode === 'milestone'}}" class="cel-mask" bindtap="close">
+  <view class="cel-card" catchtap="noop">
+    <view class="cel-medal">
+      <medal days="{{milestone.days}}" tier="{{milestone.tier}}" glow="{{milestone.glow}}" size="{{200}}" />
+    </view>
+    <view class="cel-title">{{milestone.title}}</view>
+    <view wx:if="{{milestone.sub}}" class="cel-sub">{{milestone.sub}}</view>
+    <view class="cel-line">{{milestone.line}}</view>
+    <button class="cel-btn" bindtap="close">收下纪念章</button>
+    <image class="cel-peek" src="{{milestone.image}}" mode="aspectFit" />
+  </view>
+  <canvas type="2d" id="confetti" class="cel-confetti"></canvas>
+</view>

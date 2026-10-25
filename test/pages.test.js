@@ -46,7 +46,7 @@ for (const name of PAGES) {
   })
 }
 
-const COMPONENTS = ['medal']
+const COMPONENTS = ['medal', 'celebrate']
 
 for (const name of COMPONENTS) {
   test(`组件 ${name}：标签配对、事件处理函数存在、变量都在属性 / data 里`, () => {
@@ -78,6 +78,29 @@ test('页面和组件注册的自定义组件文件都在', () => {
   for (const c of COMPONENTS) {
     assert.equal(JSON.parse(fs.readFileSync(path.join(root, `components/${c}/${c}.json`), 'utf8')).component, true)
   }
+})
+
+const MILESTONE_VIEW = { days: 7, tier: 'bronze', glow: false, title: '连续打卡 7 天！', sub: '', line: '一周都没落下，身体会记得的', image: '/images/camp/pets/doudou.png' }
+
+test('庆祝组件：burst 播完自己关；milestone 中等震动、点「收下」关掉、不留定时器；拿不到 canvas 也不出错', () => {
+  const wx = createWx(async () => ({ ok: true, data: null }))
+  const burst = loadComponent('celebrate', wx, { mode: 'burst' })
+  burst.clock = manualClock()
+  burst.attach()
+  burst.clock.advance(1300)
+  assert.deepEqual(burst.events, [])
+  burst.clock.advance(200)
+  assert.deepEqual(burst.events, [['close', {}]])
+
+  const card = loadComponent('celebrate', wx, { mode: 'milestone', milestone: MILESTONE_VIEW })
+  card.clock = manualClock()
+  card.attach()
+  card.clock.advance(500)
+  assert.deepEqual(wx.log.vibrations, ['medium'])
+  card.close()
+  assert.deepEqual(card.events, [['close', {}]])
+  assert.equal(card.clock.count(), 0)
+  card.detach()
 })
 
 test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删除 → 总结 → 体重', async (t) => {

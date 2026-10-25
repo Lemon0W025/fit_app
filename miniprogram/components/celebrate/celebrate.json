@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "medal": "/components/medal/medal"
+  }
+}
