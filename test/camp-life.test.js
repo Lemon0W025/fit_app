@@ -412,7 +412,7 @@ test('在装饰上玩、睡的宠物盖在那件装饰上面（不被吊床、�
 
 test('光、火星、萤火虫、热气这些层不挡点击（都在宠物上面）', () => {
   const css = require('fs').readFileSync(require('path').join(__dirname, '../miniprogram/pages/camp/camp.wxss'), 'utf8')
-  ;['fx-fire', 'fx-fireglow', 'fx-glow', 'fx-ember', 'fx-firefly', 'fx-wisp', 'tint', 'cut', 'bowl-rim'].forEach((cls) => {
+  ;['fx-fire', 'fx-fireglow', 'fx-glow', 'fx-ember', 'fx-firefly', 'fx-wisp', 'tint', 'cut'].forEach((cls) => {
     const rule = new RegExp(`\\.${cls} \\{[^}]*\\}`).exec(css)
     assert.ok(rule, cls)
     assert.match(rule[0], /pointer-events: none/, cls)

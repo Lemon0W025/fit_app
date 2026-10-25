@@ -194,6 +194,13 @@ function onPot(x, y) {
   return pointInPoly(x, y, SCENE.cutouts.pot.poly) || pointInPoly(x, y, SCENE.nogo.fire)
 }
 
+// 点锅的地方：锅身连底下的火（比抠图框窄，三脚架的腿不算）；排在锅那层上面、锅前面的宠物下面
+const POT_HIT = [1780, 2250, 2440, 2960]
+function potHitView(L) {
+  const [l, t, r, b] = POT_HIT
+  return { left: fmt(l * L.k), top: fmt(t * L.k), width: fmt((r - l) * L.k), height: fmt((b - t) * L.k), z: zOf(SCENE.cutouts.pot.zy) + 2 }
+}
+
 // 点锅时说一句：锅里煮着什么
 function potNote(pot) {
   const names = ((pot && pot.foods) || []).map((id) => foodById(id)).filter(Boolean).map((f) => f.name)
@@ -270,6 +277,6 @@ function changedPaths(prefix, prev, next) {
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potNote, visitorNote, cutoutViews, isNight,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
   frontAt, cutoutStrips, BOWL_PX, backdropImage, changedPaths,
 }

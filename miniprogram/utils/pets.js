@@ -2,7 +2,7 @@
 
 const { petById } = require('./shared/pets')
 
-// 一天的时段：5～8 早上（围食盆）、8～17 白天、17～19 傍晚（围篝火）、其余夜里（睡觉）
+// 一天的时段：5～8 早上（围着锅）、8～17 白天、17～19 傍晚（火着着就围着锅坐）、其余夜里（困了的多）
 function periodOf(hour) {
   if (hour >= 5 && hour < 8) return 'morning'
   if (hour >= 8 && hour < 17) return 'day'

@@ -21,11 +21,7 @@
           <image class="decor {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" binderror="onDecorError" data-uid="{{item.uid}}" catchtap="tapDecor" bindlongpress="liftDecor" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.light || 'none'}}" />
           <image wx:if="{{item.night && item.moon}}" class="decor decor-moon {{mode === 'view' ? '' : 'ghosted'}}" src="{{item.image}}" mode="scaleToFill" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}; filter: {{item.moonLight}}; opacity: {{mode === 'view' ? item.moon : item.moon * 0.6}}" />
         </block>
-        <view wx:for="{{bowls}}" wx:key="index" class="bowl" data-index="{{item.index}}" catchtap="tapBowl" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px; z-index: {{item.z}}">
-          <image wx:if="{{item.foodImage}}" class="bowl-pile" src="{{item.foodImage}}" mode="scaleToFill" style="left: {{item.pile.left}}px; top: {{item.pile.top}}px; width: {{item.pile.width}}px; height: {{item.pile.height}}px; filter: {{item.light || 'none'}}" />
-          <image wx:if="{{item.foodImage}}" class="bowl-rim" src="{{item.rimImage}}" webp="{{true}}" mode="scaleToFill" binderror="onCutError" />
-          <image wx:if="{{item.peekImage}}" class="bowl-peek" src="{{item.peekImage}}" mode="aspectFit" />
-        </view>
+        <view wx:if="{{potHit}}" class="pot-hit" catchtap="tapPot" style="left: {{potHit.left}}px; top: {{potHit.top}}px; width: {{potHit.width}}px; height: {{potHit.height}}px; z-index: {{potHit.z}}"></view>
         <block wx:for="{{pets}}" wx:key="id">
           <view wx:if="{{!item.hidden}}" class="shadow" style="transform: translate3d({{item.shadow.left}}px, {{0 - item.shadow.bottom}}px, 0); width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
           <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
@@ -111,7 +107,7 @@
     </view>
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
-      <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖到小动物身上喂它，或者拖进食盆引新住户' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
+      <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖进锅里煮上，或者拖到小动物身上喂它' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
       <view class="placing-btns">
         <button class="btn-plain btn-small" bindtap="cancel">取消</button>
       </view>
@@ -135,7 +131,7 @@
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
-        <view class="muted small bag-hint">点一样拿在手里：拖到小动物身上喂它，拖进食盆引新住户</view>
+        <view class="muted small bag-hint">点一样拿在手里：拖进锅里煮上（爱吃的小动物闻着香味就来），或者拖到小动物身上喂它</view>
       </block>
       <block wx:else>
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
@@ -165,7 +161,7 @@
           <text class="res-go">去看看 ›</text>
         </view>
       </view>
-      <view wx:else class="muted small">还没有小动物住进来。把食物放进食盆，下次打卡就会来～</view>
+      <view wx:else class="muted small">还没有小动物住进来。把食物放进锅里煮上，闻着香味来的小动物下次拍正餐就住下～</view>
     </view>
   </block>
 
@@ -173,7 +169,7 @@
     <view class="welcome" catchtap="noop">
       <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
       <view class="welcome-title">欢迎来到暖暖营地！</view>
-      <view class="welcome-text">豆豆已经在篝火边等你了。送你 {{welcome.beans}} 暖豆：每天好好吃饭打卡攒暖豆，扭蛋抽食物放进食盆，爱吃的小动物就会搬来；每次打卡都算喂它们一顿，越喂越亲～</view>
+      <view class="welcome-text">豆豆已经在篝火边等你了。送你 {{welcome.beans}} 暖豆：每天好好吃饭打卡攒暖豆，扭蛋抽食物放进锅里煮，爱吃的小动物闻着香味就来，下次拍正餐就住下；每次打卡都算喂它们一顿，越喂越亲～</view>
       <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
       <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
     </view>

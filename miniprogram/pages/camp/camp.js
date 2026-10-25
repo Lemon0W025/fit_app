@@ -13,6 +13,7 @@ const DOUBLE_TAP_MS = 300
 const HOUR_CHECK_MS = 60000
 const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
 const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
+const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -40,7 +41,7 @@ Page({
     frame: [],
     decor: [],
     pets: [],
-    bowls: [],
+    potHit: null,
     fx: [],
     cuts: [],
     tint: '',
@@ -117,10 +118,12 @@ Page({
     this.camp = view
     const foodBag = V.foodBag(view.foods)
     const decorBag = V.decorBag(view.decor.unplaced)
-    const peeking = view.bowls.map((b) => b.peeking).filter(Boolean).map((id) => petById(id).name)
     const treats = view.term && view.term.treats.length ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
-    if (view.daily !== undefined) this.potLevel = V.potLevel(view.daily)
-    const potLevel = this.potLevel || 0
+    // 锅里煮着几样就几层；第一样下锅就点火
+    if (view.pot) this.pot = view.pot
+    const wasLit = (this.potLevel || 0) > 0
+    this.potLevel = V.potLevel(this.pot)
+    const potLevel = this.potLevel
     const night = V.isNight(this.nowHour())
     if (!this.data.base.length || this.baseNight !== night) this.baseNight = night
     const patch = {
@@ -132,11 +135,11 @@ Page({
       base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
       frame: this.data.frame.length && this.data.frame[0].image.indexOf(night ? 'night-u00' : '/u00') !== -1 ? this.data.frame : V.frameTiles(L, this.baseFailed ? '' : config.campArt || '', night),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night, potLevel > 0),
-      bowls: V.bowlViews(view.bowls, L, night, this.cutBase(), potLevel > 0),
+      potHit: V.potHitView(L),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
-      peekText: peeking.length ? `👀 ${peeking.join('、')}在树林边张望…下次打卡就来了` : '',
+      peekText: V.visitorNote(view.visitors),
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
       foodBag,
       decorBag,
@@ -146,7 +149,7 @@ Page({
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
     // 带云存储图的几层没变就不重发：云存储的图 setData 一次就重新取一次，切回营地、喂完、买完都会闪一下
-    ;['cuts', 'fx', 'decor', 'bowls'].forEach((k) => {
+    ;['cuts', 'fx', 'decor', 'potHit'].forEach((k) => {
       if (JSON.stringify(this.data[k]) === JSON.stringify(patch[k])) delete patch[k]
     })
     const first = !this.centered
@@ -158,6 +161,8 @@ Page({
     // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
     if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
+    // 夜里火刚点着：小动物马上换成火光下的颜色（不等它下一步）
+    if (this.life && !fresh && wasLit !== potLevel > 0) view.pets.concat(view.visitors || []).forEach((p) => this.life.refresh(p.id))
     if (!this.hourTimer) this.watchHour()
     if (view.testGift) {
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，扭蛋、买装饰随便试试`, showCancel: false, confirmText: '好的' })
@@ -220,7 +225,6 @@ Page({
     this.setData({
       cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
       fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
-      bowls: V.bowlViews(this.camp ? this.camp.bowls : [], this.L, this.baseNight, '', (this.potLevel || 0) > 0),
     })
   },
 
@@ -253,8 +257,11 @@ Page({
       pets: view.pets,
       decor: view.decor.placed,
       arrivals: view.arrivals || [],
+      visitors: view.visitors || [],
+      saved: this.savedSpots(),
       hour: this.hour || undefined,
       lit: () => (this.potLevel || 0) > 0,
+      pot: () => (this.pot && this.pot.foods) || [],
       clock: this.clock || undefined,
       random: this.random || undefined,
       sheets: SHEETS,
@@ -308,10 +315,33 @@ Page({
     })
   },
 
+  // 离开营地（切 tab、关页面、重新进来前）记下小动物各自在哪，回来从原地接着来；本地存储失败就只记在内存里
   stopLife() {
-    if (this.life) this.life.stop()
+    if (this.life) {
+      this.saveSpots(this.life.snapshot())
+      this.life.stop()
+    }
     this.life = null
     this.stopWatchHour()
+  },
+
+  saveSpots(spots) {
+    getApp().globalData.campSpots = spots
+    try {
+      wx.setStorageSync(SPOTS_KEY, spots)
+    } catch (e) {
+      // 存不了就算了：这次打开期间还记在 globalData 里
+    }
+  },
+
+  savedSpots() {
+    const g = getApp().globalData
+    if (g.campSpots) return g.campSpots
+    try {
+      return wx.getStorageSync(SPOTS_KEY) || null
+    } catch (e) {
+      return null
+    }
   },
 
   // 页面一直开着跨过 6 / 17 / 19 点：换日景 / 夜景整套、傍晚的色调（宠物自己每走一步就按新钟点上色，画也要跟上）
@@ -389,7 +419,7 @@ Page({
       })
   },
 
-  // ---------------------------------------------------------------- 背包、食盆
+  // ---------------------------------------------------------------- 背包、锅
 
   openBag() {
     this.setData({ bagOpen: true })
@@ -421,11 +451,11 @@ Page({
     this.queryWorldRect()
   },
 
-  tapBowl(e) {
+  // 点锅：空着就打开背包的「吃的」；煮着东西就说一句煮着什么（还能再放就问要不要再放一样）
+  tapPot() {
     if (this.data.mode !== 'view') return
-    const index = e.currentTarget.dataset.index
-    const bowl = this.camp.bowls[index]
-    if (!bowl.food) {
+    const foods = (this.pot && this.pot.foods) || []
+    if (!foods.length) {
       if (!this.data.foodBag.length) {
         wx.showToast({ title: '背包里没有吃的，去扭蛋机抽一个吧', icon: 'none' })
         return
@@ -433,13 +463,15 @@ Page({
       this.setData({ bagOpen: true, bagTab: 'food' })
       return
     }
-    const name = foodById(bowl.food).name
+    const more = foods.length < 3 && this.data.foodBag.length > 0
     wx.showModal({
-      title: '食盆',
-      content: bowl.peeking ? `${name}放着呢，${petById(bowl.peeking).name}在树林边张望。拿回背包吗？` : `${name}放着呢，暂时没有小动物来吃。拿回背包吗？`,
-      confirmText: '拿回来',
+      title: '暖暖锅',
+      content: V.potNote(this.pot),
+      showCancel: more,
+      cancelText: '好的',
+      confirmText: more ? '再放一样' : '好的',
       success: (res) => {
-        if (res.confirm) this.save('camp.takeFood', { bowl: index })
+        if (more && res.confirm) this.setData({ bagOpen: true, bagTab: 'food' })
       },
     })
   },
@@ -520,7 +552,7 @@ Page({
     this.setData({ drag: V.ghostView(sel.decorId, p.x, p.y, this.L, !problem) })
   },
 
-  // 松手时手指在谁身上：宠物（外框）或食盆
+  // 松手时手指在谁身上：住户（外框，客人不能喂）或锅
   hitTarget(p) {
     const L = this.L
     const px = p.x * L.k
@@ -528,13 +560,11 @@ Page({
     const pets = this.data.pets
     for (let i = pets.length - 1; i >= 0; i--) {
       const s = pets[i]
-      if (s.hidden) continue
+      if (s.hidden || s.visitor) continue
       const top = L.height - s.bottom - s.width
       if (px >= s.left && px <= s.left + s.width && py >= top && py <= L.height - s.bottom) return { pet: i }
     }
-    for (const b of this.data.bowls) {
-      if (px >= b.left && px <= b.left + b.width && py >= b.top && py <= b.top + b.height) return { bowl: b.index }
-    }
+    if (V.onPot(p.x, p.y)) return { pot: true }
     return null
   },
 
@@ -542,11 +572,11 @@ Page({
     const sel = this.selected
     const hit = this.hitTarget(p)
     if (!hit) {
-      wx.showToast({ title: '拖到小动物或者食盆上松手', icon: 'none' })
+      wx.showToast({ title: '拖到锅里或者小动物身上松手', icon: 'none' })
       return
     }
-    if (hit.bowl !== undefined) {
-      this.save('camp.putFood', { bowl: hit.bowl, foodId: sel.foodId })
+    if (hit.pot) {
+      this.cook(sel.foodId)
       return
     }
     const sprite = this.data.pets[hit.pet]
@@ -559,6 +589,31 @@ Page({
         wx.showToast({ title: view.liked ? `${sprite.name}吃得很开心，亲密 +${view.gain}` : `${sprite.name}不太爱吃，亲密 +${view.gain}`, icon: 'none' })
       })
       .catch((err) => api.showError(err))
+  },
+
+  // 下锅：火点上；爱吃的住户跑过来吃，闻着香味来的客人从营地边上进来
+  cook(foodId) {
+    if (this.saving) return
+    this.saving = true
+    api.call('camp.putFood', { foodId })
+      .then((view) => {
+        this.saving = false
+        this.cancel()
+        this.render(view)
+        const cooked = view.cooked || { eaters: [] }
+        if (this.life) {
+          if (cooked.visitor) this.life.addVisitor({ id: cooked.visitor, foodId })
+          this.life.cook(cooked.eaters)
+        }
+        const food = foodById(foodId)
+        const names = cooked.eaters.map((id) => petById(id)).filter(Boolean).map((p) => p.name)
+        const title = cooked.visitor ? `${food.name}下锅啦，香味飘出去了…` : names.length ? `${food.name}下锅啦，${names.slice(0, 3).join('、')}跑来吃` : `${food.name}下锅啦，火点上了`
+        wx.showToast({ title, icon: 'none', duration: 2500 })
+      })
+      .catch((err) => {
+        this.saving = false
+        api.showError(err)
+      })
   },
 
   placeAt(p) {

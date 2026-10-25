@@ -652,10 +652,8 @@ button.btn-small {
 .cut-img { position: absolute; top: 0; display: block; max-width: none; }
 .decor { position: absolute; display: block; }
 .ghosted { opacity: 0.6; }
-.bowl { position: absolute; }
-.bowl-pile { position: absolute; display: block; }
-.bowl-rim { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
-.bowl-peek { position: absolute; left: 62%; top: -48%; width: 52%; height: 60%; border-radius: 50%; background: rgba(255, 255, 255, 0.85); animation: float 1.6s ease-in-out infinite; }
+/* 点锅的地方：透明，排在锅那层上面、锅前面的宠物下面 */
+.pot-hit { position: absolute; }
 .hud-note-gold { background: rgba(255, 244, 214, 0.95); color: #9a6b12; }
 .bag-tabs { display: flex; gap: 24rpx; }
 .bag-tab { padding: 8rpx 24rpx; border-radius: 999rpx; font-size: 30rpx; color: var(--muted); }

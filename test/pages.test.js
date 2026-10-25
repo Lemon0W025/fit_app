@@ -512,7 +512,7 @@ test('营地：宠物拼图先下到本地、两张都好了才换上；之后�
   camp.onShow()
   await settle()
   assert.equal(wx.log.downloads.length, 2)
-  assert.ok(!sent.some((k) => ['cuts', 'fx', 'decor', 'bowls'].indexOf(k) !== -1), sent.join(' '))
+  assert.ok(!sent.some((k) => ['cuts', 'fx', 'decor', 'potHit'].indexOf(k) !== -1), sent.join(' '))
   assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
 })
 
@@ -566,7 +566,7 @@ test('图册：12 只都到齐了封面换成全家福', async () => {
   }
 })
 
-test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡后搬来 → 喂 → 商店买装饰摆放 → 找它', async () => {
+test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 → 打卡后住下 → 喂 → 商店买装饰摆放 → 找它', async () => {
   const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
   const { main } = loadCloudFunction(cloud)
   const wx = createWx(main)
@@ -585,9 +585,9 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.equal(camp.data.beans, 60)
   assert.equal(camp.data.base.length, 16)
   assert.ok(camp.data.base[0].image.endsWith('/t00.jpg')) // 白天的日景块（填了 campArt 就是云存储的）
-  assert.equal(camp.data.bowls.length, 2)
+  assert.ok(camp.data.potHit && camp.data.potHit.width > 0)
   assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou'])
-  // 今天还没打卡：锅是空的、火没点（没有火苗，盖着熄了火的那块）
+  // 锅是空的、火没点（没有火苗，盖着熄了火的那块）
   assert.ok(!camp.data.fx.some((f) => f.kind === 'fire' || f.kind === 'fireglow' || f.kind === 'ember'))
   assert.ok(camp.data.fx.some((f) => f.kind === 'patch'))
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-0')
@@ -609,29 +609,60 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   camp.clock.advance(5000)
   assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
 
-  // 食盆空的：提示去扭蛋；塞一份胡萝卜后能放
-  camp.tapBowl(event({ index: 0 }))
+  // 锅空着、背包也空：点锅提示去扭蛋；塞一份胡萝卜、一份小米，点锅打开背包
+  camp.tapPot()
   assert.equal(wx.log.toasts.pop(), '背包里没有吃的，去扭蛋机抽一个吧')
   const doc = cloud.db.collections.get('gardens').get('u1')
   cloud.db.collections.get('gardens').set('u1', { ...doc, foods: { huluobo: 1, xiaomi: 1 } })
   camp.onShow()
   await settle()
   assert.equal(camp.data.bagCount, 2)
-  camp.openBag()
+  camp.tapPot()
+  assert.deepEqual([camp.data.bagOpen, camp.data.bagTab], [true, 'food'])
+  // 拿着胡萝卜：拖到锅上松手就下锅
   camp.pickFood(event({ id: 'huluobo' }))
   assert.equal(camp.data.mode, 'feed')
   wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
   camp.worldRect = wx.worldRect
-  const bowl = camp.data.bowls[0]
   const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
-  camp.onDragStart(touchAt(bowl.left + bowl.width / 2, bowl.top + bowl.height / 2))
+  const potAt = touchAt(SCENE.fire[0] * camp.L.k, (SCENE.fire[1] - 300) * camp.L.k)
+  camp.onDragStart(potAt)
   await settle()
   assert.equal(camp.data.drag.ok, true)
-  camp.onDragEnd(touchAt(bowl.left + bowl.width / 2, bowl.top + bowl.height / 2))
+  camp.onDragEnd(potAt)
   await settle()
   assert.equal(camp.data.mode, 'view')
-  assert.equal(camp.data.bowls[0].peeking, 'nuonuo')
-  assert.match(camp.data.peekText, /糯糯/)
+  assert.equal(wx.log.toasts.pop(), '胡萝卜下锅啦，香味飘出去了…')
+  // 火点上了（锅里一层、有火苗、没有熄火的补丁）；糯糯闻着香味从营地边上进来当客人
+  assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
+  assert.ok(!camp.data.fx.some((f) => f.kind === 'patch'))
+  assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
+  assert.equal(camp.data.peekText, '👀 糯糯闻着香味来了…下次拍正餐就住下')
+  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.visitor]), [['doudou', false], ['nuonuo', true]])
+  camp.clock.advance(100)
+  assert.equal(camp.data.pets[1].action, 'walk')
+  // 点锅：说锅里煮着什么，还能再放（确认就打开背包）
+  camp.closeBag()
+  camp.tapPot()
+  assert.equal(wx.log.modals.pop(), '锅里煮着：胡萝卜。爱吃的小动物会过来')
+  assert.equal(camp.data.bagOpen, true)
+  camp.closeBag()
+  // 客人不能喂：拿着小米拖到糯糯身上，不算喂它
+  camp.pickFood(event({ id: 'xiaomi' }))
+  const nv = camp.data.pets[1]
+  assert.equal(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), null)
+  camp.cancel()
+
+  // 切走再回来：小动物都在原地（记在本地存储里）
+  camp.clock.advance(3000)
+  const where = camp.life.snapshot()
+  camp.onHide()
+  assert.deepEqual(Object.keys(wx.storage.campSpots).sort(), ['doudou', 'nuonuo'])
+  wx.app.globalData.campSpots = null // 重开小程序：内存里的没了，读本地存储
+  camp.onShow()
+  await settle()
+  const back = camp.life.snapshot()
+  ;['doudou', 'nuonuo'].forEach((id) => assert.ok(Math.hypot(back[id].x - where[id].x, back[id].y - where[id].y) < 1e-6, id))
 
   // 打卡 → 糯糯搬来；回到营地先庆祝
   const checkin = loadPage('checkin', wx)
@@ -644,14 +675,13 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
-  assert.match(meal.data.arrival.text, /糯糯/)
+  assert.equal(meal.data.arrival.text, '糯糯闻着胡萝卜的香味，住进营地啦！')
   wx.app.globalData.celebrate = true
   camp.onShow()
   await settle()
-  assert.deepEqual(camp.data.pets.map((p) => p.id), ['doudou', 'nuonuo'])
-  // 打了第一顿：锅里一层、火点上了
-  assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
-  assert.ok(!camp.data.fx.some((f) => f.kind === 'patch'))
+  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.visitor]), [['doudou', false], ['nuonuo', false]])
+  assert.equal(camp.data.peekText, '')
+  // 锅照样煮着（打卡不加层）
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
   camp.clock.advance(50)
   assert.ok(camp.data.pets.some((p) => p.action === 'walk' || p.action === 'jump'))
@@ -659,6 +689,7 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   // 直接喂：小米拖到豆豆身上
   camp.openBag()
   camp.pickFood(event({ id: 'xiaomi' }))
+  wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
   // 松手的点：在豆豆身上、不在糯糯身上（两只挨着的时候点到上面那只）
   const dd = camp.data.pets[0]
   const nn = camp.data.pets[1]
@@ -738,4 +769,26 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.equal(camp.data.view.scale, scaleNow)
   camp.onUnload()
   assert.equal(camp.clock.count(), 0)
+})
+
+test('营地：本地存储用不了也照常（位置只记在内存里）', async () => {
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  wx.failStorage = true
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const camp = loadPage('camp', wx)
+  camp.clock = manualClock()
+  camp.hour = () => 10
+  camp.onLoad()
+  camp.onShow()
+  await settle()
+  camp.clock.advance(5000)
+  const before = camp.life.snapshot().doudou
+  camp.onHide()
+  assert.deepEqual(wx.app.globalData.campSpots.doudou, before)
+  camp.onShow()
+  await settle()
+  assert.deepEqual(camp.life.snapshot().doudou, before)
+  camp.onUnload()
 })

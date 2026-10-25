@@ -77,6 +77,16 @@ function createWx(main) {
     vibrateShort(o) {
       log.vibrations.push((o && o.type) || 'heavy')
     },
+    // 本地存储：每个 wx 一份；wx.failStorage 设成 true 就都抛错（和真机存满 / 没权限一样）
+    storage: {},
+    setStorageSync(key, value) {
+      if (wx.failStorage) throw new Error('setStorageSync:fail')
+      wx.storage[key] = clone(value)
+    },
+    getStorageSync(key) {
+      if (wx.failStorage) throw new Error('getStorageSync:fail')
+      return wx.storage[key] === undefined ? '' : clone(wx.storage[key])
+    },
     // 庭院容器 #garden 在屏幕上的位置；其他节点（如体重图 canvas）在测试里拿不到
     gardenRect: { left: 16, top: 100 },
     // 大地图 #world 在屏幕上的位置和宽度，测试里按拖动、缩放设置
