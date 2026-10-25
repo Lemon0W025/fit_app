@@ -20,7 +20,7 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
     assert.ok(exists('camp', 'foods', 'bowl', `${f.id}.png`), `碗里的 ${f.id}`)
   })
   DECOR.forEach((d) => assert.ok(exists('camp', 'decor', `${d.id}.png`), d.id))
-  ;['backdrop.jpg', 'night-backdrop.jpg'].forEach((f) => assert.ok(exists('camp', 'base', f), f))
+  ;['world.jpg', 'night-world.jpg'].forEach((f) => assert.ok(exists('camp', 'base', f), f))
   const { SCENE } = require('../cloudfunctions/api/lib/shared/camp')
   ;['', 'night-'].forEach((pfx) => {
     Object.keys(SCENE.cutouts).forEach((key) => {

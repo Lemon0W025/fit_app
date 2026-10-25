@@ -10,14 +10,23 @@ const { nightLook, nightFilter } = require('./camp-light')
 
 const Z_DECOR = 100
 const BOWL_PX = 270 // 食盆在画上的直径（像素，照画量的）
+const HOME_ZOOM = 0.72 // 默认视角：画的高度铺满屏幕的 0.72 倍（锅占屏幕宽度四成多，看得到营地边上的树林和草地）
+const DETAIL_ZOOM = 2 // 最多放大到「画的高度铺满屏幕」的 2 倍
+const TILE = 1024 // 底图一块（画的像素）
 
 const fmt = (n) => Math.round(n * 100) / 100
 
-// 1 倍时正方形的画正好盖满屏幕（竖屏是铺满高度，左右多出来的拖着看），movable-view 就是画本身、四周不留白：
-// 配上 scale-min 1 和 out-of-bounds=false，怎么拖、怎么捏都看不到画的边
+// 整个世界 = 营地画（W×H）+ 上面补的天空、下面补的草地（SCENE.frame，scripts/camp/extend_art.py），movable-view 就是整个世界、不留白。
+// 1 倍是默认视角（k：画的像素 → 屏幕像素）；minScale 是全景（整幅宽度正好放进屏幕），maxScale 看细节；
+// 配上 out-of-bounds=false，怎么拖、怎么捏都盖满屏幕、看不到边。width / height / top 是营地画（#world）的大小和在世界里的位置
 function campLayout(win) {
-  const k = Math.max(win.width / W, win.height / H)
-  return { W, H, k, width: W * k, height: H * k }
+  const { top, bottom } = SCENE.frame
+  const k = Math.max((HOME_ZOOM * win.height) / H, win.width / W)
+  const worldWidth = W * k
+  const worldHeight = (H + top + bottom) * k
+  const minScale = Math.min(1, Math.max(0.5, Math.ceil(Math.max(win.width / worldWidth, win.height / worldHeight) * 1000) / 1000)) // 0.5：组件最小只认到这儿
+  const maxScale = Math.max(1, Math.round(((DETAIL_ZOOM * win.height) / H / k) * 100) / 100)
+  return { W, H, k, width: W * k, height: H * k, top: top * k, worldWidth, worldHeight, minScale, maxScale }
 }
 
 function toScreen(x, y, L) {
@@ -33,8 +42,8 @@ function fromTouch(clientX, clientY, rect, L) {
 // 夜里（19～6 点）换整套夜景底图和抠图（文件名加 night-），白天 / 傍晚用日景（傍晚再叠一层橙色）
 const isNight = (hour) => hour >= 19 || hour < 6
 
-// 包里垫的整张画（768 宽的低清版）：一打开就有画，高清切块（云存储）下完盖在上面；切块之间缩放时露的细缝透出来的也是同一张画
-const backdropImage = (night) => `/images/camp/base/${night ? 'night-' : ''}backdrop.jpg`
+// 包里垫的整个世界（768 宽的低清版，含上下补的天空和草地）：一打开就有画，高清块（云存储）下完盖在上面；块之间缩放时露的细缝透出来的也是同一张画
+const backdropImage = (night) => `/images/camp/base/${night ? 'night-' : ''}world.jpg`
 
 // 高清切块（云存储 4×4）；没有云端前缀（没配或加载失败过）就不铺，只剩垫图
 function baseTiles(L, base, night) {
@@ -48,6 +57,22 @@ function baseTiles(L, base, night) {
       tiles.push({ key: `t${row}${col}`, image: `${prefix}t${row}${col}.jpg`, left: fmt(col * tw), top: fmt(row * th), width: fmt(tw), height: fmt(th) })
     }
   }
+  return tiles
+}
+
+// 上下补的天空、草地的高清块（和底图同一个云端前缀）：天空 u0*、u1*，草地 d0*（多盖住画最下面 overlap 那段发虚的）、d1*，每行 4 块。
+// 坐标是在整个世界（movable-view）里的；画在 #world 后面，盖得住画最下面那段
+function frameTiles(L, base, night) {
+  if (!base) return []
+  const { top, overlap } = SCENE.frame
+  const rows = [['u0', 0, TILE], ['u1', TILE, 2 * TILE], ['d0', top + H - overlap, top + H + TILE], ['d1', top + H + TILE, top + H + 2 * TILE]]
+  const prefix = base + (night ? 'night-' : '')
+  const tiles = []
+  rows.forEach(([row, y0, y1]) => {
+    for (let col = 0; col < 4; col++) {
+      tiles.push({ key: `${row}${col}`, image: `${prefix}${row}${col}.jpg`, left: fmt(col * TILE * L.k), top: fmt(y0 * L.k), width: fmt(TILE * L.k), height: fmt((y1 - y0) * L.k) })
+    }
+  })
   return tiles
 }
 
@@ -169,18 +194,18 @@ function arrivalCard(arrival) {
   return { image: petImage(arrival.ate), text: `${p ? p.name : ''}把食盆里的${arrival.foodName}吃了，营地里没有别的小动物爱吃它啦` }
 }
 
-// 让画上的点 (x, y) 尽量停在屏幕正中。movable-view 的 x / y 是缩放后画的左上角在屏幕上的位置；
-// 推到边上的拉回来（画始终盖满屏幕，和组件 out-of-bounds=false 自己的限位一样）
+// 让营地画上的点 (x, y) 尽量停在屏幕正中。movable-view 的 x / y 是缩放后整个世界的左上角在屏幕上的位置；
+// 推到边上的拉回来（世界始终盖满屏幕，和组件 out-of-bounds=false 自己的限位一样）
 function focusOffset(x, y, L, win, scale = 1) {
   const fit = (v, lo) => fmt(Math.min(0, Math.max(lo, v)))
   return {
-    x: fit(win.width / 2 - scale * x * L.k, win.width - scale * L.width),
-    y: fit(win.height / 2 - scale * y * L.k, win.height - scale * L.height),
+    x: fit(win.width / 2 - scale * x * L.k, win.width - scale * L.worldWidth),
+    y: fit(win.height / 2 - scale * (L.top + y * L.k), win.height - scale * L.worldHeight),
     scale,
   }
 }
 
-// 首页默认视角：1 倍（画正好铺满屏幕高度）、横向对准篝火（暖暖锅）；正方形的画一屏看到一半多宽，两边拖着看，捏一下能放大
+// 首页默认视角：1 倍、篝火（暖暖锅）横着在屏幕正中、营地画竖着居中；捏小看全景（整幅宽度），捏大看细节
 function homeView(L, win) {
   return focusOffset(SCENE.fire[0], H / 2, L, win, 1)
 }
@@ -244,7 +269,7 @@ function cutoutViews(L, potLevel, base, night) {
 }
 
 module.exports = {
-  Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, decorViews, ghostView, zOf,
+  Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, bowlViews, tintFor, arrivalCard, focusOffset, homeView, potLevel, cutoutViews, isNight,
   frontAt, cutoutStrips, BOWL_PX, backdropImage,
 }

@@ -58,6 +58,14 @@
       "kind": "painting"
     },
     {
+      "file": "art/raw/camp/out-sky.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/camp/out-night-sky.png",
+      "kind": "painting"
+    },
+    {
       "file": "art/raw/ui/foods.png",
       "kind": "grid",
       "cols": 6,

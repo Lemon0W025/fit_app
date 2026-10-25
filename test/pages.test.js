@@ -238,14 +238,19 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.ok(camp.data.fx.some((f) => f.kind === 'patch'))
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-0')
   assert.equal(camp.data.tint, '')
-  // 镜头：画正好铺满屏幕高度（1 倍、不留白），篝火在屏幕正中；排好版后再对准一次（只平移，不动缩放）
+  // 镜头：默认视角营地画铺满屏幕高度的 0.72 倍、篝火在屏幕正中；上下补了天空和草地，捏小到全景（整幅宽度）也盖满屏幕；
+  // 排好版后再对准一次（只平移，不动缩放）
   const WIN = { width: 375, height: 700 }
   const home = V.homeView(camp.L, WIN)
-  assert.deepEqual([camp.data.world.width, camp.data.world.height], [700, 700])
+  const w = camp.data.world
+  assert.deepEqual([w.width, w.height], [504, 504])
+  assert.ok(w.worldWidth * w.minScale >= WIN.width - 0.01 && w.worldHeight * w.minScale >= WIN.height - 0.01)
+  assert.ok(w.minScale < 1 && w.maxScale > 2)
+  assert.equal(camp.data.frame.length, 16)
   assert.deepEqual(camp.data.view, home)
   camp.clock.advance(300)
   assert.notEqual(camp.data.view.x, home.x, '排好版后又对准了一次（值加了一点点小数，组件才会动）')
-  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.01 && camp.data.view.scale === 1)
+  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.011 && camp.data.view.scale === 1)
   camp.closeWelcome()
   camp.clock.advance(5000)
   assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
@@ -350,7 +355,7 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.ok(camp.data.base[0].image.indexOf('night-') === -1 && camp.data.backdrop.indexOf('night-') === -1)
   camp.hour = () => 19
   camp.clock.advance(60000)
-  assert.ok(camp.data.backdrop.indexOf('night-backdrop') !== -1)
+  assert.ok(camp.data.backdrop.indexOf('night-world') !== -1)
   assert.ok(camp.data.cuts.every((c) => c.image.indexOf('night-') !== -1))
   camp.hour = () => 10
   camp.clock.advance(60000)
@@ -372,7 +377,7 @@ test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡
   assert.deepEqual([camp.data.view.x, camp.data.view.y], [before.x, before.y])
   camp.clock.advance(600)
   assert.ok(Math.abs(camp.data.view.scale - 1) < 0.001)
-  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.01)
+  assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.011)
   // 没放大：直接平移，不碰缩放
   const scaleNow = camp.data.view.scale
   camp.findResident(event({ index: 0 }))

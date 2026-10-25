@@ -52,6 +52,8 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
    （帐篷、锅「去掉」的版本不用画了：抠图已经直接从画上抠出精确轮廓。）
 3b. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
    in-night-fire-off.png（夜景被火照亮的那一大圈），按第 1d 节用 edit 画 out-fire-off.png、out-night-fire-off.png（尺寸和 in 一样）。
+3c. （可选）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、in-night-sky.png，
+   按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
 4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
@@ -226,6 +228,27 @@ of the night scene. The small lantern on the stump stays lit with its own small 
 UNIFIED STYLE.
 ```
 
+### 1e. （可选）营地上面的天空 `art/raw/camp/out-sky.png`、`out-night-sky.png`
+
+营地画的上下各补了一截（缩小看全景时竖着的手机屏也能铺满）：下面的草地是从画上的草一块块拼的，很自然；上面的天空是脚本画的
+（渐变 + 几朵简单的云，被画顶切掉的云长了圆顶），你画的会更像这幅画。
+
+1. `python3 scripts/camp/extend_art.py --crop` 裁出 `art/raw/camp/in-sky.png`（日景）、`in-night-sky.png`（夜景）：1024 见方，上半张是补的天空，下半张是营地画的上半截。
+2. 用 edit **只重画上半张**（下半张的山、树林、帐篷一概不动），尺寸不变：
+   - 白天：和画上一样的蓝天，越往上蓝得越深一点；几朵和画上一样的蓬松白云，画顶那几朵被切掉的云往上长完整
+   - 夜里：深蓝的夜空，越往上越深；稀稀落落几颗画上那种四角小星；画顶那几朵淡淡的夜云往上长完整
+3. 再跑 `python3 scripts/camp/extend_art.py`，它会用你画的上半张当天空（紧挨着画顶那一小段自动接回画上）。
+
+```
+PROMPT（白天）: Edit this image: repaint ONLY the upper half as open sky above the camp scene — the same soft blue as the
+sky at the top of the painting, getting gently deeper toward the top, with a few fluffy white cumulus clouds in the
+same painted style; the clouds cut off at the middle line continue upward naturally. The lower half (mountains, forest,
+tent, grass) must stay pixel-identical. UNIFIED STYLE.
+PROMPT（夜里）: Edit this image: repaint ONLY the upper half as the night sky above the camp — the same deep blue,
+getting darker toward the top, a few small four-pointed stars like the ones in the painting, the faint night clouds
+cut off at the middle line continue upward naturally. The lower half must stay pixel-identical. UNIFIED STYLE.
+```
+
 ---
 
 ## 2. 装饰（24 件 + 金色小帐篷，`art/raw/decor/out-<id>.png`）
@@ -392,10 +415,10 @@ in this order: … Cells 34–36 empty.
 
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
-- 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `npm run wx:art` 传云存储 → `config.campArt`
+- 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `extend_art.py`（上下补天空和草地的 16 块 + 包里垫的整个世界 `world.jpg`；Codex 画了 `out-sky.png` 就用它的天空）→ `npm run wx:art` 传云存储 → `config.campArt`
 - 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
 - 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
-- 底图：`cut_art.py` 顺手把 768 宽的垫图写进包里（`images/camp/base/backdrop.jpg`、`night-backdrop.jpg`）
+- 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）
 - 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）
 - 食物、界面：`slice-art.py` 加两条 SHEETS（`ui/foods.png` → `images/camp/foods/`，`ui/camp-icons.png` → `images/garden/ui/`）切成单张

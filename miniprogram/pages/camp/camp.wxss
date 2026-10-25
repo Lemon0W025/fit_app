@@ -631,6 +631,8 @@ button.btn-small {
 /* ---- 营地专用 ---- */
 .backdrop { position: absolute; left: 0; top: 0; display: block; }
 .base { position: absolute; display: block; }
+/* 上下补的天空、草地：草地第一行盖住营地画最下面发虚的那段，要压得住画上的「熄火」补丁（z 2），又在所有站在地上的东西（z ≥ 99）下面 */
+.frame-tile { z-index: 3; }
 .cut { position: absolute; overflow: hidden; pointer-events: none; }
 .cut-img { position: absolute; top: 0; display: block; max-width: none; }
 .decor { position: absolute; display: block; }

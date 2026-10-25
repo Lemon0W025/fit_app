@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night home-phone home-phone-night（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -36,7 +36,7 @@ const mapSrc = (src) => {
 const SCENARIOS = {
   // 白天，镜头对着锅：杞杞从锅后面横穿（被锅身和两条腿挡住）、薯薯从锅前面绕到左边（过木盖时前后要对）、糯糯从提灯右边往下走、花花从三脚架顶后面走过
   'pot-day': {
-    hour: 10, potLevel: 2, focus: [SCENE.fire[0], 2560], scale: 1.4, seconds: 14,
+    hour: 10, potLevel: 2, focus: [SCENE.fire[0], 2560], scale: 1.95, seconds: 14,
     pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan'],
     plan: [
       [0, 0, 1550, 2380], [0, 1, 2550, 3300], [0, 2, 2960, 2560], [0, 3, 1900, 2080],
@@ -46,7 +46,7 @@ const SCENARIOS = {
   },
   // 夜里：从远处暗的地方走到火边亮起来、暖起来；火光一闪一闪照在宠物身上
   'pot-night': {
-    hour: 22, potLevel: 3, focus: [SCENE.fire[0], 2800], scale: 1.2, seconds: 12,
+    hour: 22, potLevel: 3, focus: [SCENE.fire[0], 2800], scale: 1.67, seconds: 12,
     pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan'],
     plan: [
       [0, 0, 1500, 3400], [0, 1, 3450, 3600], [0, 2, 2400, 2150], [0, 3, 2950, 2560],
@@ -55,7 +55,7 @@ const SCENARIOS = {
   },
   // 夜里帐篷门口：三只走到门口的睡觉点，要盖在门帘上面（不被帐篷挡住）
   'tent-night': {
-    hour: 22, potLevel: 1, focus: [1050, 1300], scale: 1.3, seconds: 10,
+    hour: 22, potLevel: 1, focus: [1050, 1300], scale: 1.8, seconds: 10,
     pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan'],
     plan: [[0, 0, 1700, 1750], [0, 1, 800, 1850], [0, 2, 1650, 1450], [500, 0, 1210, 1460], [500, 1, 1000, 1530], [500, 2, 1420, 1400]],
   },
@@ -74,8 +74,13 @@ const SCENARIOS = {
   // 手机上一进来：默认视角、带界面；今天还没打卡（锅是空的，火没点）
   'home-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
   'home-phone-night': { phone: true, hour: 21, potLevel: 0, focus: null, scale: null, seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
+  // 手机上捏到最小：全景（整幅宽度），上下是补出来的天空和草地，看不到边
+  'panorama-phone': { phone: true, hour: 10, potLevel: 2, focus: [2048, 2048], scale: 'min', seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'], plan: [] },
+  'panorama-phone-night': { phone: true, hour: 22, potLevel: 2, focus: [2048, 2048], scale: 'min', seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'], plan: [] },
+  // 捏到最大
+  'detail-phone': { phone: true, hour: 10, potLevel: 2, focus: [SCENE.fire[0], 2700], scale: 'max', seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
-  'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.0, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
+  'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
 }
 
 async function build(sc) {
@@ -125,7 +130,8 @@ async function record(name, sc, browser) {
   const d = snap(camp)
   d.cuts = V.cutoutViews(L, sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt, night)
   d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, [], sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt)
-  d.view = sc.focus ? V.focusOffset(sc.focus[0], sc.focus[1], L, winOf(sc), sc.scale) : V.homeView(L, winOf(sc))
+  const scale = sc.scale === 'min' ? L.minScale : sc.scale === 'max' ? L.maxScale : sc.scale
+  d.view = sc.focus ? V.focusOffset(sc.focus[0], sc.focus[1], L, winOf(sc), scale) : V.homeView(L, winOf(sc))
   d.daily = null
   d.termText = ''
   d.peekText = ''

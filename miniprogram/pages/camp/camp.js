@@ -35,8 +35,9 @@ Page({
     hud: { top: 28, height: 32, below: 72 },
     world: null,
     view: { x: 0, y: 0, scale: 1 },
-    backdrop: '/images/camp/base/backdrop.jpg',
+    backdrop: '/images/camp/base/world.jpg',
     base: [],
+    frame: [],
     decor: [],
     pets: [],
     bowls: [],
@@ -126,9 +127,10 @@ Page({
       loaded: true,
       beans: view.beans,
       canSpin: view.beans >= view.spinCost,
-      world: { width: L.width, height: L.height, night },
+      world: { width: L.width, height: L.height, top: L.top, worldWidth: L.worldWidth, worldHeight: L.worldHeight, minScale: L.minScale, maxScale: L.maxScale, night },
       backdrop: V.backdropImage(night),
       base: this.data.base.length && this.data.base[0].image.indexOf(night ? 'night-t00' : '/t00') !== -1 ? this.data.base : V.baseTiles(L, this.baseFailed ? '' : config.campArt || '', night),
+      frame: this.data.frame.length && this.data.frame[0].image.indexOf(night ? 'night-u00' : '/u00') !== -1 ? this.data.frame : V.frameTiles(L, this.baseFailed ? '' : config.campArt || '', night),
       decor: V.decorViews(view.decor.placed, L, config.decorArt || '', night, potLevel > 0),
       bowls: V.bowlViews(view.bowls, L, night, this.cutBase(), potLevel > 0),
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
@@ -195,11 +197,11 @@ Page({
     this.moveView(V.homeView(this.L, this.win()))
   },
 
-  // 云端高清切块加载失败：不再铺切块，只剩包里的垫图（整张画的低清版）
+  // 云端高清块（营地画和上下补的天空、草地）加载失败：都不再铺，只剩包里垫的整个世界（低清版）
   onBaseError() {
-    if (this.baseFailed || !this.data.base.length) return
+    if (this.baseFailed || (!this.data.base.length && !this.data.frame.length)) return
     this.baseFailed = true
-    this.setData({ base: [] })
+    this.setData({ base: [], frame: [] })
   },
 
   // 帐篷 / 锅的抠图层和火苗逐帧图的前缀；云存储的图加载失败过一次就一直用包里的
