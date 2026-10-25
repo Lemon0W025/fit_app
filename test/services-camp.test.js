@@ -12,10 +12,10 @@ function sequence(values) {
 }
 
 // NOW 是 2026-10-22 04:00Z，即北京时间 12 点；hourOf 可注入
-function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant } = {}) {
+function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets } = {}) {
   const repo = createFakeRepo()
   if (camp) repo.state.gardens.set('u1', camp)
-  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant })
+  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets })
   return { repo, service }
 }
 
@@ -50,6 +50,23 @@ test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
   const again = await service.get('u1')
   assert.equal(again.testGift, 0)
   assert.deepEqual(again.arrivals, [])
+})
+
+test('get：测试期间（config.testPets）还没来的宠物一次全放出来，1 级、不弹新住户；只放一次，过了日子不放', async () => {
+  const { PETS } = require('../cloudfunctions/api/lib/shared/pets')
+  const { repo, service } = setup({ camp: rich({ pets: [{ id: 'doudou', since: '2026-10-20', fed: 9, fedToday: { date: '', n: 0 } }] }), getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }) })
+  const v = await service.get('u1')
+  assert.deepEqual(v.pets.map((p) => p.id).sort(), PETS.map((p) => p.id).sort())
+  assert.deepEqual(v.pets.find((p) => p.id === 'doudou').fed, 9, '已经住着的不动')
+  assert.ok(v.pets.filter((p) => p.id !== 'doudou').every((p) => p.fed === 0 && p.level === 1 && p.since === TODAY))
+  assert.deepEqual(v.arrivals, [])
+  assert.equal(v.full, true)
+  assert.equal((await repo.getGarden('u1')).pets.length, PETS.length)
+  const again = await service.get('u1')
+  assert.equal(again.pets.length, PETS.length)
+
+  const late = setup({ camp: rich(), getTestPets: () => ({ id: 'all-pets-1', until: '2026-10-21' }) })
+  assert.deepEqual((await late.service.get('u1')).pets.map((p) => p.id), ['doudou'])
 })
 
 test('spin：扣 30 暖豆，按随机数抽食物，保底，节气点心入池', async () => {

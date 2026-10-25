@@ -21,7 +21,8 @@ const TASTE_HINT = {
 }
 
 // hourOf：本地钟点（礼物 5 点后才有；云函数默认按北京时间算）
-function createCampService({ repo, now, random = Math.random, getGrant = () => null, forest = null, hourOf = null }) {
+// getTestPets：测试期间把宠物都放出来（config.testPets）
+function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, forest = null, hourOf = null }) {
   const today = () => dateKey(now())
   const hour = () => (hourOf ? hourOf() : (now().getUTCHours() + 8) % 24)
 
@@ -123,6 +124,14 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         camp.grants = camp.grants.concat(grant.id)
         camp.beans = { ...camp.beans, bonus: camp.beans.bonus + grant.beans }
         testGift = grant.beans
+        dirty = true
+      }
+      // 测试期间：还没来的宠物一次全放出来（1 级、不弹新住户），每个账号只放一次
+      const testPets = getTestPets()
+      if (testPets && today() <= testPets.until && camp.grants.indexOf(testPets.id) === -1) {
+        camp.grants = camp.grants.concat(testPets.id)
+        const have = residentIds(camp)
+        camp.pets = camp.pets.concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
         dirty = true
       }
       const result = view(camp, { welcome, testGift })

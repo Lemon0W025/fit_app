@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -99,6 +99,8 @@ const SCENARIOS = {
     plan: [[0, 0, 2550, 3300], [0, 1, 1700, 3400], [0, 2, 3150, 2500], [0, 3, 2200, 3700],
       [500, 0, 2950, 3500], [500, 1, 1350, 3050], [1500, 2, 2600, 2200], [1500, 3, 3300, 3600]],
   },
+  // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
+  'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
   'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
 }
