@@ -158,9 +158,10 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
 }
 
 // 用假的 wx-server-sdk 加载一份全新的云函数入口
-// 测试默认不发测试福利、也不把宠物全放出来，免得暖豆数和住户对不上；要测的用例自己打开
+// 测试默认不发测试福利、不把宠物全放出来、也不挪走宠物，免得暖豆数和住户对不上；要测的用例自己打开
 require('../../cloudfunctions/api/config').testGrant = null
 require('../../cloudfunctions/api/config').testPets = null
+require('../../cloudfunctions/api/config').testVisitors = null
 
 function loadCloudFunction(fakeCloud) {
   const indexPath = path.join(__dirname, '../../cloudfunctions/api/index.js')

@@ -23,7 +23,8 @@ const TASTE_HINT = {
 
 // hourOf：本地钟点（礼物 5 点后才有；云函数默认按北京时间算）
 // getTestPets：测试期间把宠物都放出来（config.testPets）
-function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, forest = null, hourOf = null }) {
+// getTestVisitors：测试「客人」那一步（config.testVisitors）：挪走几只、送能引它们来的食物
+function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, getTestVisitors = () => null, forest = null, hourOf = null }) {
   const today = () => dateKey(now())
   const hour = () => (hourOf ? hourOf() : (now().getUTCHours() + 8) % 24)
 
@@ -137,6 +138,21 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         const have = residentIds(camp)
         camp.pets = camp.pets.concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
         camp.visitors = []
+        dirty = true
+      }
+      // 测试客人：remove 里的几只先搬走（再下锅才能引来），送 foods 里的食物；今天锅里煮的退回背包、锅清空。每个账号只做一次
+      const testVisitors = getTestVisitors()
+      if (testVisitors && today() <= testVisitors.until && camp.grants.indexOf(testVisitors.id) === -1) {
+        const gone = testVisitors.remove || []
+        camp.grants = camp.grants.concat(testVisitors.id)
+        camp.pets = camp.pets.filter((p) => gone.indexOf(p.id) === -1)
+        camp.arrivals = camp.arrivals.filter((id) => gone.indexOf(id) === -1)
+        camp.visitors = camp.visitors.filter((v) => gone.indexOf(v.id) === -1)
+        potFoods(camp).forEach((id) => addToBag(camp, id))
+        camp.pot = { date: '', foods: [] }
+        Object.keys(testVisitors.foods || {}).forEach((id) => {
+          if (foodById(id)) camp.foods = { ...camp.foods, [id]: (camp.foods[id] || 0) + testVisitors.foods[id] }
+        })
         dirty = true
       }
       const result = view(camp, { welcome, testGift })

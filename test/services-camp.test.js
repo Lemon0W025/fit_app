@@ -12,10 +12,10 @@ function sequence(values) {
 }
 
 // NOW 是 2026-10-22 04:00Z，即北京时间 12 点；hourOf 可注入
-function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets } = {}) {
+function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets, getTestVisitors } = {}) {
   const repo = createFakeRepo()
   if (camp) repo.state.gardens.set('u1', camp)
-  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets })
+  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets, getTestVisitors })
   return { repo, service }
 }
 
@@ -84,6 +84,29 @@ test('spin：扣 30 暖豆，按随机数抽食物，保底，节气点心入池
   assert.equal((await repo.getGarden('u1')).gacha.sincePity, 0)
   const poor = setup({ camp: rich({ beans: { earned: {}, bonus: 20, spent: 0 } }) })
   await assert.rejects(poor.service.spin('u1'), { code: 'NO_BEANS' })
+})
+
+test('get：测试客人（config.testVisitors）：挪走几只、送能引它们来的食物，锅里煮的退回背包；每个账号一次，过了日子不做', async () => {
+  const { PETS } = require('../cloudfunctions/api/lib/shared/pets')
+  const all = PETS.map((p) => ({ id: p.id, since: TODAY, fed: p.id === 'doudou' ? 9 : 0, fedToday: { date: '', n: 0 } }))
+  const conf = { id: 'visitors-1', until: '2026-11-30', remove: ['nuonuo', 'qiqi'], foods: { huluobo: 1, kaohongshu: 1 } }
+  const camp = rich({ pets: all, foods: { xiaomi: 1 }, pot: { date: TODAY, foods: ['xiaomi', 'yumili', 'lianzi'] }, arrivals: ['qiqi'], grants: ['all-pets-1'] })
+  const { repo, service } = setup({ camp, random: () => 0, getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }), getTestVisitors: () => conf })
+  const v = await service.get('u1')
+  assert.deepEqual(v.pets.map((p) => p.id).sort(), PETS.map((p) => p.id).filter((id) => id !== 'nuonuo' && id !== 'qiqi').sort())
+  assert.equal(v.pets.find((p) => p.id === 'doudou').fed, 9, '留下的不动')
+  assert.deepEqual(v.pot, { foods: [] }, '锅清空，今天能再煮三样')
+  assert.deepEqual(v.foods, [{ id: 'xiaomi', count: 2 }, { id: 'yumili', count: 1 }, { id: 'huluobo', count: 1 }, { id: 'lianzi', count: 1 }, { id: 'kaohongshu', count: 1 }])
+  assert.equal(v.full, false)
+  assert.deepEqual((await repo.getGarden('u1')).arrivals, [])
+  // 胡萝卜下锅：糯糯当客人来
+  assert.equal((await service.putFood('u1', { foodId: 'huluobo' })).cooked.visitor, 'nuonuo')
+  // 只做一次（testPets 也不会再把它们放回来）
+  const again = await service.get('u1')
+  assert.deepEqual(again.visitors, [{ id: 'nuonuo', foodId: 'huluobo' }])
+  assert.equal(again.pets.length, PETS.length - 2)
+  const late = setup({ camp: rich(), getTestVisitors: () => ({ ...conf, until: '2026-10-21' }) })
+  assert.equal((await late.service.get('u1')).foods.length, 0)
 })
 
 test('putFood：下锅点火，一天最多 3 样、同一样不能两次；爱吃的住户 +3、点心 +5；同档没来过的当客人', async () => {

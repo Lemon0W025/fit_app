@@ -25,4 +25,14 @@ module.exports = {
   // 测试：until 这天（含）之前打开营地的账号，还没来的宠物一次全放出来（1 级），不用扭蛋喂食等它们搬来。
   // 只给开发测试用，上传体验版给家人之前改成 null
   testPets: { id: 'all-pets-1', until: '2026-11-30' },
+
+  // 测试「客人」那一步：until 这天（含）之前打开营地的账号，remove 里的几只先搬走、送 foods 里能引它们来的食物
+  // （胡萝卜→糯糯、莲子→莲莲、柿子→柿柿、烤红薯→杞杞、核桃→薯薯、小鱼干→花花、竹笋→笋宝），今天锅里煮的退回背包。每个账号一次（id 换了再来一次）。
+  // 只给开发测试用，上传体验版给家人之前改成 null
+  testVisitors: {
+    id: 'visitors-1',
+    until: '2026-11-30',
+    remove: ['nuonuo', 'lianlian', 'shishi', 'qiqi', 'shushu', 'huahua', 'sunbao'],
+    foods: { huluobo: 1, lianzi: 1, shizi: 1, kaohongshu: 1, hetao: 1, xiaoyugan: 1, zhusun: 1 },
+  },
 }
