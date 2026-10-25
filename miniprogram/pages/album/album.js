@@ -19,7 +19,9 @@ Page({
         }))
         const foods = a.foods.map((f) => ({ ...f, image: foodImage(f.id), rarityLabel: rarityOf(f.rarity).label, rarityColor: rarityOf(f.rarity).color, termName: f.term ? termName(f.term) : '' }))
         const decor = a.decor.map((d) => ({ ...d, image: decorImage(d.id) }))
-        const pages = [{ kind: 'cover', key: 'cover', progress: a.progress, full: a.full }].concat(pets, [{ kind: 'foods', key: 'foods', foods }, { kind: 'decor', key: 'decor', decor }])
+        // 12 只都到齐了封面换成全家福
+        const cover = { kind: 'cover', key: 'cover', progress: a.progress, full: a.full, image: a.full ? '/images/camp/family.jpg' : '/images/garden/ui/book.png' }
+        const pages = [cover].concat(pets, [{ kind: 'foods', key: 'foods', foods }, { kind: 'decor', key: 'decor', decor }])
         this.setData({ loaded: true, pages, progress: `${a.progress.pets} / ${a.progress.total}`, full: a.full })
       })
       .catch((err) => api.showError(err))

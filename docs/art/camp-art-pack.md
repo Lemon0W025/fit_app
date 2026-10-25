@@ -4,12 +4,12 @@
 「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
 生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
 
-设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。第 1 批已经做完接进来了，剩下的（原来的第 2、3 批加一张返工）合成一次做完：
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。两批都已经做完接进来了（10/25）：所有图齐了，以后只剩返工和新加的东西。
 
 | 批 | 内容 |
 |---|---|
 | 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已完成，10/25 接入）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
-| 2（剩下的全部） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
+| 2（剩下的全部，已完成，10/25 接入） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
 
 ## 执行流程（照这个顺序喂 Codex）
 
@@ -72,7 +72,7 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
 
 **第 1 批回来之后**：告诉 Claude「第 1 批图在分支 codex/art-batch-1」，Claude 按第 7 节接入、发预览二维码。第 1 批的图接进来后都在 `claude/mini-program-dev-nzn2n0` 分支上，剩下的照样先切到这个分支 `git pull` 再做。
 
-**剩下的全部：开场指令**（整段粘给 Codex。第 1 步出完 8 只宠物的定稿会停下来给你看，你回「可以」或写改意见，之后一口气做完）：
+**剩下的全部：已完成**（分支 `codex/art-batch-2`，10/25 接入）。下面这段只在要重做时用（整段粘给 Codex。第 1 步出完 8 只宠物的定稿会停下来给你看，你回「可以」或写改意见，之后一口气做完）：
 
 ```
 你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 把剩下的图做完（返工 1 张 + 新图 50 张）。
@@ -466,6 +466,6 @@ in this order: … Cells 34–36 empty.
 - 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
-- 宠物：`pack_anim.py` 打包两张 6×6（回写 `utils/anim-sheets.js`）→ `npm run wx:art -- anim` → `config.animArt`；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位）
+- 宠物：`pack_anim.py` 打包两张 6×6（回写 `utils/anim-sheets.js`）→ `npm run wx:art -- anim` → `config.animArt`；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）
 - 食物、界面：`slice-art.py`（`ui/foods.png` 6×6 → `images/camp/foods/<id>.png` 128px；`ui/camp-icons.png` → `images/garden/ui/` 的 campfire / book / shop / bag / gift / paw / camera，食盆和回家暂时没用上）
 - 每批接完 `npm test`、`node scripts/preview/record-camp.js` 录屏逐帧看（锅后面、木盖旁、提灯旁、帐篷门口、夜里的光）、`npm run wx:preview`

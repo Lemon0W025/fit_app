@@ -2,6 +2,8 @@
 .book { height: 80vh; }
 .leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #fffdf7; border-radius: 28rpx; box-shadow: 0 8rpx 24rpx rgba(80, 60, 30, 0.12); overflow-y: auto; }
 .cover-img { width: 240rpx; height: 240rpx; display: block; margin: 40rpx auto 24rpx; }
+/* 12 只都到齐：封面换成全家福 */
+.cover-family { width: 100%; display: block; margin: 8rpx 0 24rpx; border-radius: 20rpx; }
 .cover-title { text-align: center; font-size: 44rpx; font-weight: 700; }
 .cover-progress { text-align: center; font-size: 36rpx; color: var(--primary); margin: 16rpx 0; }
 .cover-full { text-align: center; color: #9a6b12; margin-bottom: 16rpx; }

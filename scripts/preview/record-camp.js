@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -39,6 +39,14 @@ const mapSrc = (src) => {
 const DECOR_1B = [['tent', 3150, 2150], ['strawbed', 2450, 3560], ['picnic', 1450, 3250], ['ball', 2950, 3350],
   ['flowerbed', 1250, 2650], ['sapling', 3500, 2700], ['windmill', 3550, 3350], ['lantern', 1850, 3650]]
   .map(([id, x, y], i) => ({ uid: `d${i}`, id, x, y }))
+// 第 2 批的 17 件（位置都过了 placeProblem）
+const DECOR_2 = [['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_tent', 3450, 3450],
+  ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
+  ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]]
+  .map(([id, x, y], i) => ({ uid: `e${i}`, id, x, y }))
+const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
+const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
+  [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
 const SCENARIOS = {
   // 白天，镜头对着锅：杞杞从锅后面横穿（被锅身和两条腿挡住）、薯薯从锅前面绕到左边（过木盖时前后要对）、糯糯从提灯右边往下走、花花从三脚架顶后面走过
@@ -99,6 +107,9 @@ const SCENARIOS = {
     plan: [[0, 0, 2550, 3300], [0, 1, 1700, 3400], [0, 2, 3150, 2500], [0, 3, 2200, 3700],
       [500, 0, 2950, 3500], [500, 1, 1350, 3050], [1500, 2, 2600, 2200], [1500, 3, 3300, 3600]],
   },
+  // 第 2 批的 17 件装饰和 8 只宠物：拉远看一大片（白天录早上 8 点，鹤鹤只在 5～9 点在）
+  'decor2-day': { hour: 8, potLevel: 2, focus: [2250, 3150], scale: 0.85, seconds: 10, decor: DECOR_2, pets: PETS_2, plan: PLAN_2 },
+  'decor2-night': { hour: 22, potLevel: 2, focus: [2250, 3150], scale: 0.85, seconds: 8, decor: DECOR_2, pets: PETS_2, plan: PLAN_2 },
   // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
   'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙

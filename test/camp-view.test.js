@@ -79,10 +79,17 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
   assert.equal(views[0].z, V.Z_DECOR + Math.round(1500 / 4))
   assert.ok(views[1].z > views[0].z)
   assert.equal(V.decorViews([{ uid: 'x', id: 'nope', x: 1, y: 1 }], L, '').length, 0)
-  // 云端只有画好了的（utils/decor-art.js 列的）高清块，还没画的用包里的占位
-  const drawn = V.decorViews([{ uid: 'a', id: 'tent', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
-  assert.equal(drawn.find((v) => v.id === 'tent').image, 'cloud://x/camp/decor/tent.png')
-  assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')
+  // 云端只有画好了的（utils/decor-art.js 列的）高清块，还没画的用包里的占位（现在都画了，临时从清单里拿掉一件试）
+  const art = require('../miniprogram/utils/decor-art')
+  const at = art.indexOf('hammock')
+  art.splice(at, 1)
+  try {
+    const drawn = V.decorViews([{ uid: 'a', id: 'tent', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
+    assert.equal(drawn.find((v) => v.id === 'tent').image, 'cloud://x/camp/decor/tent.png')
+    assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')
+  } finally {
+    art.splice(at, 0, 'hammock')
+  }
   const ghost = V.ghostView('ball', 1500, 3000, L, false)
   assert.equal(ghost.ok, false)
   assert.ok(ghost.foot.width > 0 && ghost.width > ghost.foot.width)

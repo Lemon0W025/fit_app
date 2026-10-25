@@ -5,4 +5,12 @@ module.exports = {
   nuonuo: { top: 0.3 },
   lianlian: { top: 0.19 },
   shishi: { top: 0.23 },
+  huahua: { top: 0.28 },
+  guigui: { top: 0.25 },
+  qiqi: { top: 0.22 },
+  shushu: { top: 0.28 },
+  jutuan: { top: 0.32 },
+  sunbao: { top: 0.19 },
+  chacha: { top: 0.23 },
+  hehe: { top: 0.29 },
 }

@@ -349,6 +349,20 @@ test('营地：拼图下载失败就一直用单张图', async () => {
   assert.equal(camp.data.pets[0].image, '/images/camp/pets/doudou.png')
 })
 
+test('图册：12 只都到齐了封面换成全家福', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  for (const full of [false, true]) {
+    const album = { pets: [], progress: { pets: full ? 12 : 3, total: 12 }, full, foods: [], decor: [] }
+    const page = loadPage('album', createWx(async () => ({ ok: true, data: album })))
+    page.onShow()
+    await settle()
+    const cover = page.data.pages[0]
+    assert.equal(cover.image, full ? '/images/camp/family.jpg' : '/images/garden/ui/book.png')
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'miniprogram', cover.image)))
+  }
+})
+
 test('暖暖营地首页：欢迎 → 底图 → 扭蛋 → 放食盆 → 打卡后搬来 → 喂 → 商店买装饰摆放 → 找它', async () => {
   const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
   const { main } = loadCloudFunction(cloud)

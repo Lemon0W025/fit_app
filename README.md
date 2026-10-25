@@ -89,7 +89,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、食盆、喂、商店、摆放、礼物、图册）
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
-scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch、宠物图册小图和头像 pet_art
+scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch、宠物图册小图、头像和全家福 pet_art
 scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）+ WXML 渲染器
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
 art/guide/camp-blockout.jpg 营地布局示意（blockout.py 生成）
@@ -202,7 +202,7 @@ npm test
 - 美术原图在 `art/raw/`。**全套正式美术由 Codex 按 `docs/art/camp-art-pack.md` 生成**：营地整图、装饰原地重绘、12 只宠物各 4 张、食物和界面图标。`python3 scripts/art/check_art.py` 自检；每批回来怎么接见工单第 7 节和 `CLAUDE.md` 的表
 - 营地整图：`scripts/camp/cut_art.py` 切块，`extend_art.py` 补上下的天空和草地，`npm run wx:art -- base` 传云存储（`campArt`）；云端的图加载失败就只剩包里垫的低清整张
 - 装饰：`decor_crop.py` 裁空草地给 Codex 画；`decor_patch.py --local` 抠出装饰和影子，去掉 Codex 顺手画的草皮，并写 `utils/decor-art.js`；然后 `npm run wx:art -- decor`（`decorArt`）。还没画的装饰用包里的占位块
-- 宠物：`scripts/pack_anim.py` 对齐打包动画拼图（回写 `utils/anim-sheets.js`），`npm run wx:art -- anim`（`animArt`）；`scripts/camp/pet_art.py` 出包里的图册小图和头像。没拼图或加载失败的那只退回单张图 + CSS 步态
+- 宠物：`scripts/pack_anim.py` 对齐打包动画拼图（回写 `utils/anim-sheets.js`），`npm run wx:art -- anim`（`animArt`）；`scripts/camp/pet_art.py` 出包里的图册小图、头像和全家福（12 只到齐后图册的封面）。没拼图或加载失败的那只退回单张图 + CSS 步态
 - 帐篷 / 锅 / 木盖 / 提灯的抠图层、篝火逐帧、熄火补丁：`cutouts.py`、`fx_art.py`、`fire_off.py`，`npm run wx:art -- cut`（`cutArt`）
 - 食物、界面图标、表情：`python3 scripts/slice-art.py`；`scripts/draw-images.py` 画 tab 图标
 - 云存储里每类图在 `camp/<类>-vN/`，版本号在 `scripts/wechat.js` 的 `ART_VERSION`：重新生成过就加一再传（同名覆盖的话 CDN 和手机会继续用旧图一阵子）

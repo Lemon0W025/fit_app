@@ -3,7 +3,8 @@
     python3 scripts/camp/decor_patch.py [--ids tent,ball] [--local]
 
 读 art/raw/decor/in-<id>.png、out-<id>.png 和 boxes.json。装饰在哪：out 和 in 不一样的地方；Codex 在装饰脚下顺手画的那圈草皮去掉，
-只留比原来暗的影子；裁的块大小 = shared/decor.js 的 patch，块里的 anchor 对准装饰的底边中点，画得太小的放大（FILL）。
+只留比原来暗的影子；被装饰围住、Codex 没动过的空洞（秋千、梯子中间透出来的草）留空；离装饰远的零星小块（它顺手改的花）不要；
+裁的块大小 = shared/decor.js 的 patch，块里的 anchor 对准装饰的底边中点，按 anchor 往上、往两边能放多少缩放，画得太小的放大（FILL）。
 输出 art/decor/<id>.png（高清块，和营地高清图一样的分辨率，npm run wx:art -- decor 传到 camp/decor-vN/）；
 加 --local 再写一份 1/4 大小到 miniprogram/images/camp/decor/（替换占位块，商店、背包、图册也用它，注意包大小）。
 Codex 可能把 in 放大到 1024 见方再画（boxes.json 的 box 是裁的时候在高清图上的范围），按 in 实际的宽换算。
@@ -16,16 +17,16 @@ import os
 import subprocess
 
 import numpy as np
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
 
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 RAW = os.path.join(REPO, 'art', 'raw', 'decor')
 OUT = os.path.join(REPO, 'art', 'decor')
 LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'decor')
 MANIFEST = os.path.join(REPO, 'miniprogram', 'utils', 'decor-art.js')
-DIFF_MIN = 40      # 三通道差之和超过这个算「画了东西」
 FEATHER = 24       # 羽化宽度（画的像素）
 FILL = (0.55, 0.7) # 装饰至少占块宽的 55% 或块高的 70%：Codex 画小了就放大（块在屏幕上本来就小，再小就看不清、点不着）
+MARGIN = 6         # 装饰离块边至少留这么多（画的像素）
 BINS = 32          # 草的颜色直方图每个通道分几格
 GRASS = 0.02       # 颜色在原来这块草地里出现得够多（相对最常见的颜色）才算草；草里零星的白花不算
 LOW = 0.45         # 装饰下面这么高的一截里才找草皮（上面的树冠、帐篷绿得像草也不动）
@@ -37,22 +38,27 @@ def decor_table():
     return {d['id']: d for d in json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))}
 
 
-def diff_box(a, b):
-    """out 和 in 不一样的像素的外框（去掉零星噪点）"""
-    d = np.abs(a.astype(int) - b.astype(int)).sum(axis=2) > DIFF_MIN
-    mask = Image.fromarray((d * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(7))
-    ys, xs = np.nonzero(np.array(mask) > 0)
-    if not len(ys):
-        return None
-    return xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
-
-
 def fill_holes(m):
     """bool 数组：从四边灌水灌不到的空洞也算进去"""
     pad = Image.new('L', (m.shape[1] + 2, m.shape[0] + 2), 0)
     pad.paste(Image.fromarray(m.astype(np.uint8) * 255), (1, 1))
     ImageDraw.floodfill(pad, (0, 0), 128)
     return np.asarray(pad)[1:-1, 1:-1] != 128
+
+
+def parts(m):
+    """bool 数组的连通块（四连通），一块一个 bool 数组，大的在前"""
+    img = Image.fromarray(m.astype(np.uint8) * 255).copy()
+    found = []
+    while True:
+        ys, xs = np.nonzero(np.asarray(img) == 255)
+        if not len(ys):
+            break
+        ImageDraw.floodfill(img, (int(xs[0]), int(ys[0])), 100)
+        part = np.asarray(img) == 100
+        found.append(part)
+        img.paste(50, mask=Image.fromarray(part.astype(np.uint8) * 255))
+    return sorted(found, key=lambda p: -p.sum())
 
 
 def from_outside(cand, region):
@@ -68,13 +74,23 @@ def split_object(out, inp, k):
     """Codex 画了东西的地方（它别处一个像素都没动）分成两部分：装饰本身留着；它在装饰脚下顺手画的一小圈草皮去掉，只留比原来暗的影子。
     带着草皮的话，摆到别处草的深浅对不上，夜里更是一圈白天的草（月光层一染就是一圈亮边）。
     草皮 = 颜色在原来这块草地里（in 整块都是草）、在装饰下半截、从外面连进来的；被装饰围住的草（花坛里的叶子）不算。
-    返回 (RGB, L)：影子是黑色、透明度按比原来暗了多少"""
+    返回 (RGB, L, L)：颜色、透明度（影子是黑色、透明度按比原来暗了多少）、只有装饰本身的透明度"""
     o = np.asarray(out).astype(int)
     i = np.asarray(inp).astype(int)
     changed = np.abs(o - i).sum(axis=2) > 8
     r = 2 * max(1, round(2 * k)) + 1
-    m = Image.fromarray(changed.astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(r)).filter(ImageFilter.MinFilter(r))
-    drawn = fill_holes(np.asarray(m) > 0)
+    m = np.asarray(Image.fromarray(changed.astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(r)).filter(ImageFilter.MinFilter(r))) > 0
+    # 远处零星的小块（Codex 顺手改了几朵花、几根草）不要：只留比最大那块的 3% 大的
+    blobs = parts(m)
+    m = np.zeros_like(m)
+    for b in blobs:
+        if b.sum() >= 0.03 * blobs[0].sum():
+            m |= b
+    # 被装饰围住的空洞：Codex 没动过的（秋千、梯子、栅栏、把手中间透出来的草）留空，改过的（装饰本身的一部分）和针眼大的补上
+    drawn = m.copy()
+    for hole in parts(fill_holes(m) & ~m):
+        if hole.sum() <= 4 * k * k or changed[hole].mean() > 0.5:
+            drawn |= hole
     # 草的颜色：in 的颜色直方图（3×3×3 抹匀），归一到最常见的颜色
     q = i // (256 // BINS)
     hist = np.zeros((BINS,) * 3)
@@ -96,7 +112,8 @@ def split_object(out, inp, k):
     shade = np.clip((1 - lum(blur(o)) / np.maximum(lum(blur(i)), 1) - 0.06) / 0.94, 0, 0.7) * drawn * (1 - a_obj)
     alpha = a_obj + shade * (1 - a_obj)
     rgb = o * (a_obj / np.maximum(alpha, 1e-3))[..., None]
-    return Image.fromarray(np.uint8(np.clip(rgb, 0, 255) + 0.5)), Image.fromarray(np.uint8(alpha * 255 + 0.5))
+    return (Image.fromarray(np.uint8(np.clip(rgb, 0, 255) + 0.5)), Image.fromarray(np.uint8(alpha * 255 + 0.5)),
+            Image.fromarray(np.uint8(a_obj * 255 + 0.5)))
 
 
 def feather_alpha(w, h, inner_margin, feather):
@@ -128,29 +145,37 @@ def main():
         k0 = meta['k']                                              # 高清图：每画像素多少像素
         k = k0 * inp.width / (meta['box'][2] - meta['box'][0])      # in 图（Codex 可能放大过）
         out = Image.open(dst).convert('RGB').resize(inp.size, Image.LANCZOS)
-        box = diff_box(np.array(out), np.array(inp))
-        if not box:
+        rgb, alpha, solid = split_object(out, inp, k)
+        ys, xs = np.nonzero(np.asarray(solid) > 40)
+        if not len(ys):
             print(f'  ✗  {decor_id}  out 和 in 看不出区别')
             continue
+        box = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
         # 装饰底边中点 = 落脚点；块按 patch 大小裁，anchor 对准它
         x0, y0, x1, y1 = box
         foot_x = (x0 + x1) / 2
         foot_y = y1
         pw, ph = d['patch']['w'] * k, d['patch']['h'] * k
         ow, oh = x1 - x0, y1 - y0
-        # zoom：块里的装饰放大多少。比块还大就缩小放进去（底下留一点）；画得太小就放大到 FILL，但不超出块
-        need = max(ow / pw, (oh + 0.1 * ph) / ph)
-        zoom = 1 / need if need > 1 else min(max(1, min(FILL[0] * pw / ow, FILL[1] * ph / oh)), 0.9 * pw / ow, 0.9 * ph / oh)
+        # zoom：块里的装饰放大多少。落脚点往上、往左右能放多少按 anchor 算（四周留 MARGIN），放不下就缩小；
+        # 画得太小就放大到 FILL，但也不超出
+        up = (d['anchor']['y'] - MARGIN) * k
+        side = (min(d['anchor']['x'], d['patch']['w'] - d['anchor']['x']) - MARGIN) * k
+        fit = min(up / oh, side / (ow / 2))
+        zoom = min(max(1, min(FILL[0] * pw / ow, FILL[1] * ph / oh)), fit)
         left = foot_x - d['anchor']['x'] * k / zoom
         top = foot_y - d['anchor']['y'] * k / zoom
         rect = (round(left), round(top), round(left + pw / zoom), round(top + ph / zoom))
-        rgb, alpha = split_object(out, inp, k)
         crop = rgb.crop(rect).convert('RGBA')
         crop.putalpha(alpha.crop(rect))
         # 存成和营地高清图一样的分辨率：块多大（画的像素）× k0
-        hd = crop.resize((round(d['patch']['w'] * k0), round(d['patch']['h'] * k0)), Image.LANCZOS)
-        edge = feather_alpha(hd.width, hd.height, round(FEATHER * k0 * 0.3), round(FEATHER * k0))
-        hd.putalpha(ImageChops.multiply(edge, hd.getchannel('A')))
+        size = (round(d['patch']['w'] * k0), round(d['patch']['h'] * k0))
+        hd = crop.resize(size, Image.LANCZOS)
+        # 块边羽化只淡影子，装饰本身不淡（以前整块一起淡，顶到块边的邮箱、水壶顶上就糊了）
+        edge = np.asarray(feather_alpha(hd.width, hd.height, round(FEATHER * k0 * 0.3), round(FEATHER * k0))).astype(float) / 255
+        a_all = np.asarray(hd.getchannel('A')).astype(float)
+        a_obj = np.minimum(np.asarray(solid.crop(rect).resize(size, Image.LANCZOS)).astype(float), a_all)
+        hd.putalpha(Image.fromarray(np.uint8(np.clip(a_obj + (a_all - a_obj) * edge, 0, 255) + 0.5)))
         hd.save(os.path.join(OUT, f'{decor_id}.png'), optimize=True)
         if a.local:
             os.makedirs(LOCAL, exist_ok=True)

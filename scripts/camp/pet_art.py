@@ -5,7 +5,8 @@
 art/raw/pets/<id>-album.png（Codex 出的图册插画，透明底，见 docs/art/camp-art-pack.md 3.3）→
     miniprogram/images/camp/pets/<id>.png        320 见方、脚踩在底边、256 色：图册、搬来的横幅；拼图加载失败时营地里也用它（底边对着落脚点）
     miniprogram/images/camp/pets/<id>-face.png   96 见方的头像：人物最上面一个正方形（和占位的取法一样），偷看食盆、「找它」、图册里没来的
-有 -album 的才换，别的留着占位。需要 Pillow。
+有 -album 的才换，别的留着占位。
+art/raw/camp/family.png（全家福，第 6 节）→ miniprogram/images/camp/family.jpg：12 只都到齐后图册的封面。需要 Pillow。
 """
 import os
 
@@ -14,7 +15,9 @@ from PIL import Image
 REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..'))
 RAW = os.path.join(REPO, 'art', 'raw', 'pets')
 OUT = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'pets')
+FAMILY = os.path.join(REPO, 'art', 'raw', 'camp', 'family.png')
 PET_PX, FACE_PX = 320, 96
+FAMILY_W = 840      # 图册一页约 620rpx 宽，3 倍屏够清楚
 MARGIN = 0.04       # 人物四周留的空（边长的比例）
 
 
@@ -54,6 +57,12 @@ def main():
         done.append(pet_id)
         print(f'  ✓  {pet_id}.png {a // 1024} KB、{pet_id}-face.png {b // 1024} KB')
     print(f'{len(done)} 只换上了图册插画 → {OUT}' if done else 'art/raw/pets/ 里还没有 -album.png')
+    if os.path.exists(FAMILY):
+        img = Image.open(FAMILY).convert('RGB')
+        img = img.resize((FAMILY_W, round(img.height * FAMILY_W / img.width)), Image.LANCZOS)
+        path = os.path.join(OUT, '..', 'family.jpg')
+        img.save(path, quality=80, optimize=True, progressive=True)
+        print(f'  ✓  全家福 family.jpg {img.width}×{img.height} {os.path.getsize(path) // 1024} KB')
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@
   <swiper-item wx:for="{{pages}}" wx:key="key" wx:for-item="pg">
     <view class="leaf">
       <block wx:if="{{pg.kind === 'cover'}}">
-        <image class="cover-img" src="/images/garden/ui/book.png" mode="aspectFit" />
+        <image class="{{pg.full ? 'cover-family' : 'cover-img'}}" src="{{pg.image}}" mode="{{pg.full ? 'widthFix' : 'aspectFit'}}" />
         <view class="cover-title">暖暖营地图册</view>
         <view class="cover-progress">住户 {{pg.progress.pets}} / {{pg.progress.total}}</view>
         <view wx:if="{{pg.full}}" class="cover-full">🎉 全员到齐，金色小帐篷已经送到背包</view>
