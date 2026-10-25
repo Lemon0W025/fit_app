@@ -273,12 +273,12 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   assert.deepEqual(garden.beans.earned, {})
 })
 
-const peekingCamp = () => ({ camp: 1, welcomed: true, pets: [], bowls: ['zhusun', null], peeking: ['sunbao', null] })
+const peekingCamp = () => ({ camp: 2, welcomed: true, pets: [], pot: { date: TODAY, foods: ['zhusun'] }, visitors: [{ id: 'sunbao', foodId: 'zhusun', since: TODAY }] })
 
-test('analyze：正餐打卡后，食盆里有竹笋、笋宝在张望 → 笋宝搬来', async () => {
+test('analyze：正餐打卡后，闻着锅里竹笋来的笋宝住下', async () => {
   const { repo, service } = setup({ results: [analysisJson()], garden: peekingCamp() })
   const meal = await service.analyze('u1', { mealType: 'lunch', note: '米饭青菜' })
-  assert.deepEqual(meal.arrival, { id: 'sunbao', name: '笋宝', foodId: 'zhusun', foodName: '竹笋' })
+  assert.deepEqual(meal.arrival, { pets: [{ id: 'sunbao', name: '笋宝', foodId: 'zhusun', foodName: '竹笋' }] })
   assert.equal(repo.state.meals.find((m) => m._id === meal._id).arrival, undefined)
   assert.deepEqual((await repo.getGarden('u1')).pets.map((p) => p.id), ['sunbao'])
 })
@@ -291,7 +291,7 @@ test('analyze：加餐不搬家；AI 失败的正餐照样搬', async () => {
   const failed = setup({ results: [new Error('down'), new Error('down')], garden: peekingCamp() })
   const m = await failed.service.analyze('u1', { mealType: 'dinner', note: '面条' })
   assert.equal(m.status, 'failed')
-  assert.equal(m.arrival.id, 'sunbao')
+  assert.equal(m.arrival.pets[0].id, 'sunbao')
 })
 
 test('reanalyze 不触发搬家', async () => {

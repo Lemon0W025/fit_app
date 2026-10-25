@@ -19,7 +19,7 @@ function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, ge
   return { repo, service }
 }
 
-const rich = (extra = {}) => ({ camp: 1, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
+const rich = (extra = {}) => ({ camp: 2, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
 
 test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', async () => {
   const { repo, service } = setup()
@@ -27,7 +27,8 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
   assert.deepEqual(first.welcome, { beans: 60, petId: 'doudou' })
   assert.equal(first.beans, 60)
   assert.deepEqual(first.pets.map((p) => [p.id, p.level, p.next]), [['doudou', 1, 3]])
-  assert.deepEqual(first.bowls, [{ food: null, peeking: null }, { food: null, peeking: null }])
+  assert.deepEqual([first.pot, first.visitors], [{ foods: [] }, []])
+  assert.ok(!('bowls' in first))
   assert.equal(first.spinCost, 30)
   assert.equal(first.pityLeft, PITY)
   assert.deepEqual(first.rates.map((r) => r.weight), [65, 25, 8, 2])
@@ -38,7 +39,7 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
   const second = await service.get('u1')
   assert.equal(second.welcome, null)
   assert.equal((await repo.getGarden('u1')).beans.bonus, 60)
-  assert.equal((await repo.getGarden('u1')).camp, 1)
+  assert.equal((await repo.getGarden('u1')).camp, 2)
 })
 
 test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
@@ -54,8 +55,9 @@ test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
 
 test('get：测试期间（config.testPets）还没来的宠物一次全放出来，1 级、不弹新住户；只放一次，过了日子不放', async () => {
   const { PETS } = require('../cloudfunctions/api/lib/shared/pets')
-  const { repo, service } = setup({ camp: rich({ pets: [{ id: 'doudou', since: '2026-10-20', fed: 9, fedToday: { date: '', n: 0 } }] }), getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }) })
+  const { repo, service } = setup({ camp: rich({ pets: [{ id: 'doudou', since: '2026-10-20', fed: 9, fedToday: { date: '', n: 0 } }], visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: TODAY }] }), getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }) })
   const v = await service.get('u1')
+  assert.deepEqual(v.visitors, [], '客人也一起住下了')
   assert.deepEqual(v.pets.map((p) => p.id).sort(), PETS.map((p) => p.id).sort())
   assert.deepEqual(v.pets.find((p) => p.id === 'doudou').fed, 9, '已经住着的不动')
   assert.ok(v.pets.filter((p) => p.id !== 'doudou').every((p) => p.fed === 0 && p.level === 1 && p.since === TODAY))
@@ -84,22 +86,43 @@ test('spin：扣 30 暖豆，按随机数抽食物，保底，节气点心入池
   await assert.rejects(poor.service.spin('u1'), { code: 'NO_BEANS' })
 })
 
-test('putFood / takeFood：放进食盆就定下来引谁，拿回来清掉', async () => {
-  const { repo, service } = setup({ camp: rich({ foods: { huluobo: 1, xiaomi: 1 } }), random: sequence([0]) })
-  const v = await service.putFood('u1', { bowl: 0, foodId: 'huluobo' })
-  assert.deepEqual(v.bowls[0], { food: 'huluobo', peeking: 'nuonuo' })
-  assert.deepEqual(v.foods, [{ id: 'xiaomi', count: 1 }])
-  // 小米：爱吃的豆豆已经住下了，不张望
-  await assert.rejects(service.putFood('u1', { bowl: 0, foodId: 'xiaomi' }), { code: 'BAD_REQUEST', message: '这个食盆已经有吃的了' })
-  const v2 = await service.putFood('u1', { bowl: 1, foodId: 'xiaomi' })
-  assert.deepEqual(v2.bowls[1], { food: 'xiaomi', peeking: null })
-  await assert.rejects(service.putFood('u1', { bowl: 2, foodId: 'xiaomi' }), { code: 'BAD_REQUEST' })
-  await assert.rejects(service.putFood('u1', { bowl: 0, foodId: 'nope' }), { code: 'BAD_REQUEST', message: '背包里没有这个了' })
-  const back = await service.takeFood('u1', { bowl: 0 })
-  assert.deepEqual(back.bowls[0], { food: null, peeking: null })
-  assert.deepEqual(back.foods, [{ id: 'huluobo', count: 1 }])
-  await assert.rejects(service.takeFood('u1', { bowl: 0 }), { code: 'BAD_REQUEST', message: '食盆是空的' })
-  assert.deepEqual((await repo.getGarden('u1')).peeking, [null, null])
+test('putFood：下锅点火，一天最多 3 样、同一样不能两次；爱吃的住户 +3、点心 +5；同档没来过的当客人', async () => {
+  const { repo, service } = setup({ camp: rich({ foods: { huluobo: 2, xiaomi: 1, lianzi: 1, shibing: 1 } }), random: () => 0 })
+  const v = await service.putFood('u1', { foodId: 'huluobo' })
+  assert.deepEqual(v.pot, { foods: ['huluobo'] })
+  assert.deepEqual(v.cooked, { foodId: 'huluobo', eaters: [], visitor: 'nuonuo' })
+  assert.deepEqual(v.visitors, [{ id: 'nuonuo', foodId: 'huluobo' }])
+  assert.equal(v.foods.find((f) => f.id === 'huluobo').count, 1)
+  await assert.rejects(service.putFood('u1', { foodId: 'huluobo' }), { code: 'BAD_REQUEST', message: '锅里已经有胡萝卜了，换一样吧' })
+  // 小米：豆豆爱吃，走过来吃（+3）；爱吃小米的都住下了，不引客人
+  const v2 = await service.putFood('u1', { foodId: 'xiaomi' })
+  assert.deepEqual(v2.cooked, { foodId: 'xiaomi', eaters: ['doudou'], visitor: null })
+  assert.equal(v2.pets[0].fed, 3)
+  // 节气点心：住户都爱吃（+5），不引客人
+  const v3 = await service.putFood('u1', { foodId: 'shibing' })
+  assert.deepEqual(v3.cooked, { foodId: 'shibing', eaters: ['doudou'], visitor: null })
+  assert.equal(v3.pets[0].fed, 8)
+  assert.deepEqual(v3.pot.foods, ['huluobo', 'xiaomi', 'shibing'])
+  await assert.rejects(service.putFood('u1', { foodId: 'lianzi' }), { code: 'BAD_REQUEST', message: '锅里已经煮了三样啦，明天再放' })
+  await assert.rejects(service.putFood('u1', { foodId: 'nope' }), { code: 'BAD_REQUEST', message: '背包里没有这个了' })
+  const stored = await repo.getGarden('u1')
+  assert.equal(stored.foods.lianzi, 1)
+  assert.deepEqual(stored.pot, { date: TODAY, foods: ['huluobo', 'xiaomi', 'shibing'] })
+})
+
+test('putFood：已经是客人的不再挑；锅是昨天的就当空锅；背包没有的不下锅', async () => {
+  const camp = rich({
+    foods: { huluobo: 1, niangao: 1 },
+    pot: { date: '2026-10-21', foods: ['xiaomi', 'yumili', 'lianzi'] },
+    visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: '2026-10-21' }],
+  })
+  const { service } = setup({ camp, random: () => 0 })
+  assert.deepEqual((await service.get('u1')).pot, { foods: [] })
+  const v = await service.putFood('u1', { foodId: 'niangao' })
+  assert.deepEqual(v.pot, { foods: ['niangao'] })
+  assert.equal(v.cooked.visitor, null) // 爱吃年糕的糯糯已经是客人了
+  assert.deepEqual(v.visitors.map((x) => x.id), ['nuonuo'])
+  await assert.rejects(service.putFood('u1', { foodId: 'xiaomi' }), { code: 'BAD_REQUEST', message: '背包里没有这个了' })
 })
 
 test('feed：爱吃 +3、不爱吃 +1、点心 +5，不限次数；升级后 level 变', async () => {
@@ -145,44 +168,31 @@ test('buy / place / move / stash：买了进背包，摆到草地上，挪、收
   await assert.rejects(service.buy('u1', { decorId: 'flowerbed' }), { code: 'BAD_REQUEST', message: '这件已经买够了' })
 })
 
-test('arrive：正餐打卡后全员 +1（一天最多 3 次）、张望的那只走进来、一次一只', async () => {
+test('arrive：正餐打卡后全员 +1（一天最多 3 次）；所有客人一起住下，返回名单；没客人返回 null', async () => {
   const camp = rich({
-    foods: {}, bowls: ['huluobo', 'xigua'], peeking: ['nuonuo', 'guigui'],
+    foods: {}, pot: { date: TODAY, foods: ['huluobo', 'xigua'] },
+    visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: TODAY }, { id: 'guigui', foodId: 'xigua', since: TODAY }],
     pets: [{ id: 'doudou', since: TODAY, fed: 2, fedToday: { date: TODAY, n: 2 } }],
   })
   const { repo, service } = setup({ camp })
   const a = await service.arrive('u1')
-  assert.deepEqual(a, { id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' })
+  assert.deepEqual(a, { pets: [{ id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' }, { id: 'guigui', name: '龟龟', foodId: 'xigua', foodName: '西瓜' }] })
   let stored = await repo.getGarden('u1')
-  assert.deepEqual(stored.pets.map((p) => [p.id, p.fed, p.fedToday.n]), [['doudou', 3, 3], ['nuonuo', 0, 0]])
-  assert.deepEqual(stored.bowls, [null, 'xigua'])
-  assert.deepEqual(stored.peeking, [null, 'guigui'])
-  assert.deepEqual(stored.arrivals, ['nuonuo'])
-  // 第二顿：豆豆今天已经 3 次，不再加；龟龟进来
-  const b = await service.arrive('u1')
-  assert.equal(b.id, 'guigui')
-  stored = await repo.getGarden('u1')
-  assert.deepEqual(stored.pets.map((p) => [p.id, p.fed]), [['doudou', 3], ['nuonuo', 1], ['guigui', 0]])
-  assert.deepEqual(stored.bowls, [null, null])
-  // 没人张望：返回 null，但住户照样 +1
+  assert.deepEqual(stored.pets.map((p) => [p.id, p.fed, p.fedToday.n]), [['doudou', 3, 3], ['nuonuo', 0, 0], ['guigui', 0, 0]])
+  assert.deepEqual(stored.visitors, [])
+  assert.deepEqual(stored.arrivals, ['nuonuo', 'guigui'])
+  assert.deepEqual(stored.pot.foods, ['huluobo', 'xigua']) // 锅照样煮着
+  // 第二顿：豆豆今天已经 3 次，不再加；没有客人返回 null，别的照样 +1
   assert.equal(await service.arrive('u1'), null)
-  assert.equal((await repo.getGarden('u1')).pets[1].fed, 2)
+  stored = await repo.getGarden('u1')
+  assert.deepEqual(stored.pets.map((p) => [p.id, p.fed]), [['doudou', 3], ['nuonuo', 1], ['guigui', 1]])
 })
 
-test('arrive：食物没人可引（都住下了）→ 爱吃它的住户吃掉，+3，食盆空出来', async () => {
-  const { repo, service } = setup({ camp: rich({ bowls: ['xiaomi', null], peeking: [null, null] }) })
-  const a = await service.arrive('u1')
-  assert.deepEqual(a, { id: null, ate: 'doudou', foodId: 'xiaomi', foodName: '小米' })
-  const stored = await repo.getGarden('u1')
-  assert.equal(stored.pets[0].fed, 4) // 打卡 +1，加餐 +3
-  assert.deepEqual(stored.bowls, [null, null])
-})
-
-test('arrive：第 12 只住进来送金帐篷，只送一次', async () => {
+test('arrive：旧档迁来的客人（不知道闻着什么来的）也住下；第 12 只住进来送金帐篷，只送一次', async () => {
   const ids = ['doudou', 'nuonuo', 'lianlian', 'shishi', 'huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha']
-  const { repo, service } = setup({ camp: rich({ pets: ids.map((id) => ({ id, since: TODAY, fed: 0, fedToday: { date: '', n: 0 } })), bowls: ['shanzha', null], peeking: ['hehe', null] }) })
+  const { repo, service } = setup({ camp: { ...rich({ pets: ids.map((id) => ({ id, since: TODAY, fed: 0, fedToday: { date: '', n: 0 } })) }), camp: 1, bowls: [null, null], peeking: ['hehe', null] } })
   const a = await service.arrive('u1')
-  assert.equal(a.id, 'hehe')
+  assert.deepEqual(a, { pets: [{ id: 'hehe', name: '鹤鹤', foodId: '', foodName: '' }] })
   const stored = await repo.getGarden('u1')
   assert.deepEqual(stored.decor.owned, { [GOLD_TENT]: 1 })
   assert.equal((await service.get('u1')).full, true)
@@ -239,6 +249,6 @@ test('旧档进营地：迁完存一次，暖豆退回，住户搬来', async ()
   assert.deepEqual(v.pets.map((p) => p.id), ['sunbao', 'doudou'])
   assert.equal(v.welcome, null)
   const stored = await repo.getGarden('u1')
-  assert.equal(stored.camp, 1)
+  assert.equal(stored.camp, 2)
   assert.equal(stored.inventory, undefined)
 })

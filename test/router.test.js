@@ -15,7 +15,7 @@ function setup(overrides = {}) {
     day: { get: record('day.get'), summarize: record('day.summarize') },
     weight: { save: record('weight.save'), list: record('weight.list') },
     forest: { get: record('forest.get') },
-    camp: Object.fromEntries(['get', 'spin', 'putFood', 'takeFood', 'feed', 'buy', 'place', 'move', 'stash', 'gift', 'album'].map((m) => [m, record(`camp.${m}`)])),
+    camp: Object.fromEntries(['get', 'spin', 'putFood', 'feed', 'buy', 'place', 'move', 'stash', 'gift', 'album'].map((m) => [m, record(`camp.${m}`)])),
     ...overrides,
   }
   const logs = []
@@ -40,7 +40,6 @@ test('把 action 分发到对应 service，并传入 openid 和 data', async () 
     ['camp.get', 'camp.get'],
     ['camp.spin', 'camp.spin'],
     ['camp.putFood', 'camp.putFood'],
-    ['camp.takeFood', 'camp.takeFood'],
     ['camp.feed', 'camp.feed'],
     ['camp.buy', 'camp.buy'],
     ['camp.place', 'camp.place'],

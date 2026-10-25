@@ -10,6 +10,7 @@ const { levelOf, nextLevelAt, giftDue } = require('../lib/shared/camp')
 const HIGH_RARITIES = ['epic', 'legendary']
 const STARTER_PET = 'doudou'
 const FEEDS_PER_DAY = 3
+const POT_MAX = 3 // 锅里一天最多煮几样
 const GIFT_BEANS = 5
 const GIFT_BEANS_CHANCE = 0.7
 const GIFT_LEVEL = 4
@@ -37,6 +38,14 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
   }
 
   const residentIds = (camp) => camp.pets.map((p) => p.id)
+  // 今天锅里煮着的：锅是哪天的不是今天就当空锅（半夜清空，不用定时任务）
+  const potFoods = (camp) => (camp.pot.date === today() ? camp.pot.foods : [])
+  // 住户爱不爱吃：它爱吃的两样，或者节气点心（谁都爱吃）
+  const likes = (petId, foodId) => {
+    const food = foodById(foodId)
+    const pet = petById(petId)
+    return !!food && !!pet && (!!food.term || pet.foods.indexOf(foodId) !== -1)
+  }
   const isFull = (camp) => PETS.every((p) => residentIds(camp).indexOf(p.id) !== -1)
   const giftReady = (camp) => giftDue(camp.gift, today(), hour()) && camp.pets.some((p) => levelOf(p.fed) >= GIFT_LEVEL)
 
@@ -57,7 +66,8 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       rates: RARITIES.map(({ id, label, weight }) => ({ id, label, weight })),
       term: termInfo(),
       foods: FOODS.concat(TREATS).filter((f) => camp.foods[f.id] > 0).map((f) => ({ id: f.id, count: camp.foods[f.id] })),
-      bowls: [0, 1].map((i) => ({ food: camp.bowls[i], peeking: camp.peeking[i] })),
+      pot: { foods: potFoods(camp) },
+      visitors: camp.visitors.map(({ id, foodId }) => ({ id, foodId })),
       pets: camp.pets.map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed) })),
       arrivals: camp.arrivals,
       decor: { owned: camp.decor.owned, placed: camp.decor.placed, unplaced: unplaced(camp) },
@@ -76,12 +86,6 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
 
   function addToBag(camp, foodId) {
     camp.foods = { ...camp.foods, [foodId]: (camp.foods[foodId] || 0) + 1 }
-  }
-
-  function bowlIndex(input) {
-    const bowl = (input || {}).bowl
-    if (bowl !== 0 && bowl !== 1) throw new AppError(CODES.BAD_REQUEST, '没有这个食盆')
-    return bowl
   }
 
   function findPlaced(camp, uid) {
@@ -132,6 +136,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         camp.grants = camp.grants.concat(testPets.id)
         const have = residentIds(camp)
         camp.pets = camp.pets.concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
+        camp.visitors = []
         dirty = true
       }
       const result = view(camp, { welcome, testGift })
@@ -161,29 +166,23 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       return { foodId, rarity, isNew, beans: Math.max(0, beanBalance(camp)), pityLeft: PITY - camp.gacha.sincePity }
     },
 
-    // 放进食盆：这一刻就定下来引谁（张望的就是它）
+    // 下锅：今天第一样下锅就点火、煮一整天。爱吃它的住户这就过来吃（亲密 + feedGain）；
+    // 爱吃它、和它一样稀有、还没来过的里挑一只闻着香味来当客人（下次拍正餐住下）
     async putFood(openid, input) {
-      const bowl = bowlIndex(input)
-      const camp = await load(openid)
       const foodId = (input || {}).foodId
-      takeFromBag(camp, foodId)
-      if (camp.bowls[bowl]) throw new AppError(CODES.BAD_REQUEST, '这个食盆已经有吃的了')
-      camp.bowls = camp.bowls.map((f, i) => (i === bowl ? foodId : f))
-      camp.peeking = camp.peeking.map((p, i) => (i === bowl ? arrivalFor(foodId, residentIds(camp), random()) : p))
-      await repo.saveGarden(openid, camp)
-      return view(camp)
-    },
-
-    async takeFood(openid, input) {
-      const bowl = bowlIndex(input)
       const camp = await load(openid)
-      const foodId = camp.bowls[bowl]
-      if (!foodId) throw new AppError(CODES.BAD_REQUEST, '食盆是空的')
-      addToBag(camp, foodId)
-      camp.bowls = camp.bowls.map((f, i) => (i === bowl ? null : f))
-      camp.peeking = camp.peeking.map((p, i) => (i === bowl ? null : p))
+      const cooking = potFoods(camp)
+      const food = foodById(foodId)
+      if (food && cooking.indexOf(foodId) !== -1) throw new AppError(CODES.BAD_REQUEST, `锅里已经有${food.name}了，换一样吧`)
+      if (food && cooking.length >= POT_MAX) throw new AppError(CODES.BAD_REQUEST, '锅里已经煮了三样啦，明天再放')
+      takeFromBag(camp, foodId)
+      camp.pot = { date: today(), foods: cooking.concat(foodId) }
+      const eaters = camp.pets.filter((p) => likes(p.id, foodId)).map((p) => p.id)
+      camp.pets = camp.pets.map((p) => (eaters.indexOf(p.id) !== -1 ? { ...p, fed: p.fed + feedGain(p.id, foodId) } : p))
+      const visitor = arrivalFor(foodId, residentIds(camp).concat(camp.visitors.map((v) => v.id)), random())
+      if (visitor) camp.visitors = camp.visitors.concat({ id: visitor, foodId, since: today() })
       await repo.saveGarden(openid, camp)
-      return view(camp)
+      return view(camp, { cooked: { foodId, eaters, visitor: visitor || null } })
     },
 
     // 直接喂一只：爱吃 +3、不爱吃 +1、点心 +5，不限次
@@ -284,32 +283,23 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       }
     },
 
-    // 正餐打卡后由 meal 服务调用：全员 +1；哪个食盆有张望的宠物，它就进来（一次一只）；没人可引的食物由爱吃它的住户吃掉
+    // 正餐打卡后由 meal 服务调用：全员 +1；闻着香味来的客人全部住下（锅照样煮着）
     async arrive(openid) {
       const camp = await load(openid)
       feedAll(camp)
-      let result = null
-      for (let i = 0; i < 2 && !result; i++) {
-        const foodId = camp.bowls[i]
-        if (!foodId) continue
-        const food = foodById(foodId)
-        const comer = camp.peeking[i]
-        if (comer && !camp.pets.some((p) => p.id === comer)) {
-          camp.pets = camp.pets.concat({ id: comer, since: today(), fed: 0, fedToday: { date: '', n: 0 } })
-          camp.arrivals = camp.arrivals.concat(comer)
-          result = { id: comer, name: petById(comer).name, foodId, foodName: food.name }
-        } else {
-          const eater = camp.pets.find((p) => petById(p.id).foods.indexOf(foodId) !== -1 || food.term)
-          if (!eater) continue
-          camp.pets = camp.pets.map((p) => (p.id === eater.id ? { ...p, fed: p.fed + feedGain(p.id, foodId) } : p))
-          result = { id: null, ate: eater.id, foodId, foodName: food.name }
-        }
-        camp.bowls = camp.bowls.map((f, k) => (k === i ? null : f))
-        camp.peeking = camp.peeking.map((p, k) => (k === i ? null : p))
-      }
+      const comers = camp.visitors.filter((v, i) => petById(v.id) && residentIds(camp).indexOf(v.id) === -1 && camp.visitors.findIndex((w) => w.id === v.id) === i)
+      camp.pets = camp.pets.concat(comers.map((v) => ({ id: v.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
+      camp.arrivals = camp.arrivals.concat(comers.map((v) => v.id))
+      camp.visitors = []
       if (isFull(camp) && !camp.decor.owned[GOLD_TENT]) camp.decor = { ...camp.decor, owned: { ...camp.decor.owned, [GOLD_TENT]: 1 } }
       await repo.saveGarden(openid, camp)
-      return result
+      if (!comers.length) return null
+      return {
+        pets: comers.map((v) => {
+          const food = foodById(v.foodId)
+          return { id: v.id, name: petById(v.id).name, foodId: v.foodId, foodName: food ? food.name : '' }
+        }),
+      }
     },
   }
 }

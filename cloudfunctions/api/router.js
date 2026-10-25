@@ -16,7 +16,6 @@ const ROUTES = {
   'camp.get': ['camp', 'get'],
   'camp.spin': ['camp', 'spin'],
   'camp.putFood': ['camp', 'putFood'],
-  'camp.takeFood': ['camp', 'takeFood'],
   'camp.feed': ['camp', 'feed'],
   'camp.buy': ['camp', 'buy'],
   'camp.place': ['camp', 'place'],
