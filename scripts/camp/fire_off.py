@@ -13,7 +13,7 @@
                                                    所以存成不透明的 JPG 盖上去也没有接缝（和篝火逐帧图一样）；框的位置填进 shared/camp.js 的 SCENE.flame.off
     miniprogram/images/camp/cut/fire-off.jpg …      包里的兜底小图（和包里垫的整张低清画一样 768 宽的分辨率）
 别的脚本要熄了火的整张画就调 unlit_day() / unlit_night()：cutouts.py 出空锅 pot-0 和夜里的 night-lid-off，
-bowl_food.py 出夜里的 night-bowl-N-off，light_map.py 出熄了火时宠物身上的光。
+light_map.py 出熄了火时宠物身上的光。
 画换了：重新量 LOGS（--preview 会把量的木柴框画在画上对），这几个脚本都重跑。
 Codex 画了正式的「没点火」版（工单第 1d 节：art/raw/cut/out-fire-off.png、out-night-fire-off.png）就直接用它，不再程序熄火：
 in / out 是 SCENE.flame.off 外扩成的正方形（以前裁的是框本身，两种 out 都认），只取回框里那块（外圈羽化接回原画）。
@@ -434,4 +434,4 @@ if __name__ == '__main__':
         crop()
         raise SystemExit
     patches(a.preview)
-    print('→ 接着跑 cutouts.py --from-base --local、bowl_food.py、light_map.py（熄火时的空锅、夜里的木盖 / 碗沿、光），scripts/wechat.js 的 ART_VERSION.cut 加一，npm run wx:art -- cut')
+    print('→ 接着跑 cutouts.py --from-base --local、light_map.py（熄火时的空锅、夜里的木盖、光），scripts/wechat.js 的 ART_VERSION.cut 加一，npm run wx:art -- cut')

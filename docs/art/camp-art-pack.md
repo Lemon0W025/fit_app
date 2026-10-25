@@ -428,7 +428,7 @@ changes from frame to frame enough to read as motion, while the size of the char
 
 ## 4. 食物图标 `art/raw/ui/foods.png`（1:1，6×6，前 33 格）
 
-每格一样食物，chibi 风格的小图标（像游戏道具），用在背包、扭蛋、图册里（放进食盆后，碗里那一小堆是脚本按食物的颜色画的，碗沿从画上抠，不用你画）。顺序按 `shared/foods.js`：
+每格一样食物，chibi 风格的小图标（像游戏道具），用在背包、扭蛋、图册里。顺序按 `shared/foods.js`：
 
 | 格 | 食物 |
 |---|---|
@@ -462,8 +462,8 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `extend_art.py`（上下补天空和草地的 16 块 + 包里垫的整个世界 `world.jpg`；Codex 画了 `out-sky.png` 就用它的天空）→ `npm run wx:art` 传云存储 → `config.campArt`
-- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `ART_VERSION.cut` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`，日夜各跑一次，夜里加 `--night`）只换 pot-1～3：锅身用精确轮廓，锅口往上的热气按「比原画白了多少」反推成半透明白烟（不连背后的草一起抠）
-- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
+- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `ART_VERSION.cut` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`，日夜各跑一次，夜里加 `--night`）只换 pot-1～3：锅身用精确轮廓，锅口往上的热气按「比原画白了多少」反推成半透明白烟（不连背后的草一起抠）
+- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`light_map.py`（空锅、夜里的木盖、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
 - 宠物：`pack_anim.py` 打包两张 6×6（回写 `utils/anim-sheets.js`）→ `npm run wx:art -- anim` → `config.animArt`；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）

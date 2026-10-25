@@ -1,7 +1,8 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps（不写全录）
+//   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -14,6 +15,7 @@ const { createWx, loadPage, settle } = require(`${REPO}/test/helpers/page-harnes
 const { manualClock } = require(`${REPO}/test/helpers/manual-clock`)
 const { renderPage } = require('./wxml-render')
 const { SCENE } = require(`${REPO}/miniprogram/utils/shared/camp`)
+const { dateKey } = require(`${REPO}/miniprogram/utils/shared/date`)
 const V = require(`${REPO}/miniprogram/utils/camp-view`)
 const { chromium } = require('playwright')
 const { execSync } = require('child_process')
@@ -45,6 +47,9 @@ const DECOR_2 = [['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline'
   ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]]
   .map(([id, x, y], i) => ({ uid: `e${i}`, id, x, y }))
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
+// 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
+const LAMPS = [['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]].map(([id, x, y], i) => ({ uid: `l${i}`, id, x, y }))
+const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
@@ -114,6 +119,22 @@ const SCENARIOS = {
   'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
   'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
+  // 下锅：锅里煮着小米、胡萝卜，豆豆（爱吃小米）跑来吃；闻着胡萝卜来的糯糯（客人）从树林边走到锅边
+  'pot-cook': {
+    phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12,
+    pets: ['doudou', 'qiqi', 'shushu', 'lianlian'], visitors: [{ id: 'nuonuo', foodId: 'huluobo' }],
+    plan: [[0, 0, 3300, 3600], [0, 4, 2600, 900], [600, 4, 2500, 3150]],
+    events: [[400, (life) => life.cook(['doudou'])]],
+  },
+  // 夜里火着着：全营地本来的颜色（略暗略暖），装饰也是
+  'night-lit': { hour: 22, potLevel: 2, focus: [2450, 2950], scale: 0.85, seconds: 8, decor: LAMPS, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'], plan: [[0, 0, 1500, 3450], [0, 1, 3600, 3700], [0, 2, 3200, 2450], [0, 3, 900, 2300], [0, 4, 2000, 3900], [0, 5, 3700, 2600]] },
+  // 夜里火没着：远处月光色，小灯笼 / 石灯笼 / 灯串边上的暖亮；走过灯边慢慢变
+  'night-lamps': {
+    hour: 22, potLevel: 0, focus: [2450, 2950], scale: 0.85, seconds: 12, decor: LAMPS, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
+    plan: [[0, 0, 1500, 3450], [0, 1, 3600, 3700], [0, 2, 3200, 2450], [0, 3, 900, 2300], [0, 4, 2000, 3900], [0, 5, 3700, 2600], [1000, 3, 1500, 3350], [1500, 4, 2800, 3700]],
+  },
+  // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
+  naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
 }
 
 async function build(sc) {
@@ -135,21 +156,21 @@ async function build(sc) {
   const doc = gardens.get('u1')
   const fedOf = {}
   sc.pets.forEach((id, i) => (fedOf[id] = [9, 16, 5, 3, 8, 2, 4, 1][i] || 3))
+  // 锅里煮着几样：火点没点、锅里的样子、夜里宠物 / 装饰身上的光都跟着它
   gardens.set('u1', {
     ...doc,
     foods: { xiaomi: 2 },
-    bowls: ['kaohongshu', null],
+    pot: { date: dateKey(new Date()), foods: POT_FOODS.slice(0, sc.potLevel) },
+    visitors: (sc.visitors || []).map((v) => ({ ...v, since: '' })),
     pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
     decor: { owned: {}, placed: sc.decor || [] },
     gift: '',
   })
   camp.data.giftShown = true
+  wx.app.globalData.campSpots = null
+  camp.life.stop()
+  camp.life = null
   camp.onShow()
-  await settle()
-  // 今天打了几顿正餐（锅里几层）：火点没点、锅里的样子、夜里宠物 / 食盆 / 装饰身上的光都跟着它
-  const stamps = ['breakfast', 'lunch', 'dinner'].map((meal, i) => ({ meal, state: i < sc.potLevel ? 'green' : 'none' }))
-  camp.camp.daily = { ...(camp.camp.daily || {}), stamps, beansToday: sc.potLevel * 10 }
-  camp.render(camp.camp, true)
   await settle()
   return camp
 }
@@ -162,7 +183,7 @@ async function record(name, sc, browser) {
   // 夜里也让它们醒着走（录走路的样子）：先把睡觉的叫起来
   const d = snap(camp)
   d.cuts = V.cutoutViews(L, sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt, night)
-  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, [], sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt)
+  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, sc.decor || [], sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt)
   const scale = sc.scale === 'min' ? L.minScale : sc.scale === 'max' ? L.maxScale : sc.scale
   d.view = sc.focus ? V.focusOffset(sc.focus[0], sc.focus[1], L, winOf(sc), scale) : V.homeView(L, winOf(sc))
   d.daily = null
@@ -255,18 +276,23 @@ async function record(name, sc, browser) {
     life.goTo(Number(i), x, y, 120000)
   }
   // 快进到都走到起点、停下来（goTo 到了以后歇 6～12 秒，录的时候还在那儿）
+  // 第 i 只在哪（客人不在 whereIs 里，从精灵反推）
+  const posOf = (i) => {
+    const sp = camp.data.pets[i]
+    return { id: sp.id, x: (sp.left + sp.width / 2) / L.k, y: (L.height - sp.bottom) / L.k, action: sp.action }
+  }
   const arrivedAll = () => Object.entries(starts).every(([i, [x, y]]) => {
-    const w = life.whereIs()[i]
+    const w = posOf(i)
     return Math.hypot(w.x - x, w.y - y) < 2 && w.action === 'idle'
   })
   for (let t = 0; t < 800 && !arrivedAll(); t++) {
     camp.clock.advance(100)
     Object.entries(starts).forEach(([i, [x, y]]) => {
-      const w = life.whereIs()[i]
+      const w = posOf(i)
       if (w.action !== 'walk' && Math.hypot(w.x - x, w.y - y) >= 2) life.goTo(Number(i), x, y, 120000)
     })
   }
-  if (!arrivedAll()) console.log(name, '没全走到起点', JSON.stringify(life.whereIs().map((w) => [w.id, w.x | 0, w.y | 0, w.action])))
+  if (!arrivedAll()) console.log(name, '没全走到起点', JSON.stringify(camp.data.pets.map((p, i) => posOf(i)).map((w) => [w.id, w.x | 0, w.y | 0, w.action])))
   // 起点之后都设成 0 时长瞬间到位
   await page.evaluate(() => document.querySelectorAll('.pet,.shadow').forEach((e) => (e.style.transitionDuration = '0ms')))
   last = camp.data.pets.map(() => '')
@@ -278,6 +304,7 @@ async function record(name, sc, browser) {
   let clockMs = 0
   const total = sc.seconds * 1000
   const pending = plan.filter((p) => p[0] > 0).sort((a, b) => a[0] - b[0])
+  const events = (sc.events || []).slice().sort((a, b) => a[0] - b[0])
   while (clockMs < total) {
     const now = Date.now() - t0
     const dt = now - clockMs
@@ -288,6 +315,7 @@ async function record(name, sc, browser) {
         const ok = life.goTo(i, x, y)
         if (!ok) console.log(name, 'goTo failed', i, x, y)
       }
+      while (events.length && events[0][0] <= now) events.shift()[1](life)
       camp.clock.advance(dt)
       clockMs = now
       await sync()
