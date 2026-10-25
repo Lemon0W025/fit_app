@@ -16,7 +16,7 @@
 bowl_food.py 出夜里的 night-bowl-N-off，light_map.py 出熄了火时宠物身上的光。
 画换了：重新量 LOGS（--preview 会把量的木柴框画在画上对），这几个脚本都重跑。
 Codex 画了正式的「没点火」版（工单第 1d 节：art/raw/cut/out-fire-off.png、out-night-fire-off.png）就直接用它，不再程序熄火：
-in / out 都是 SCENE.flame.off 外扩成的正方形，只取回框里那块（外圈羽化接回原画）。
+in / out 是 SCENE.flame.off 外扩成的正方形（以前裁的是框本身，两种 out 都认），只取回框里那块（外圈羽化接回原画）。
 需要 Pillow 和 numpy。
 """
 import argparse
@@ -127,10 +127,11 @@ def _codex(day_or_night, img):
     S = scene()
     k = img.width / S['W']
     off = _off_boxes()[day_or_night]
-    sq = [round(v * k) for v in _square(off, S['W'])]
+    raw = Image.open(path).convert('RGB')
+    reg = [round(v * k) for v in _codex_region(raw, img, off, S['W'], k)]
     box = [round(v * k) for v in off]
-    full = Image.open(path).convert('RGB').resize((sq[2] - sq[0], sq[3] - sq[1]), Image.LANCZOS)
-    piece = full.crop((box[0] - sq[0], box[1] - sq[1], box[2] - sq[0], box[3] - sq[1]))
+    full = raw.resize((reg[2] - reg[0], reg[3] - reg[1]), Image.LANCZOS)
+    piece = full.crop((box[0] - reg[0], box[1] - reg[1], box[2] - reg[0], box[3] - reg[1]))
     h, w = piece.height, piece.width
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
     edge = np.minimum.reduce([xx, w - 1 - xx, yy, h - 1 - yy]) / k
@@ -139,6 +140,20 @@ def _codex(day_or_night, img):
     out = img.copy()
     out.paste(Image.fromarray(np.uint8(np.asarray(piece).astype(float) * m + under * (1 - m) + 0.5)), box[:2])
     return out
+
+
+def _codex_region(out, img, off, W, k):
+    """Codex 的 out 对应画上哪一块：以前 --crop 裁的是框本身（长方形），现在是外扩成的正方形。
+    两块和 out 都缩成一样大比轮廓（亮度的梯度，火光的颜色变了也不怕），取最像的那块"""
+    def edges(im):
+        g = np.asarray(im.convert('L').resize((128, 128), Image.BILINEAR)).astype(float)
+        gy, gx = np.gradient(g)
+        e = np.hypot(gx, gy)
+        return (e - e.mean()) / (e.std() + 1e-6)
+    eo = edges(out)
+    cands = [off, _square(off, W)]
+    scores = [float((edges(img.crop([round(v * k) for v in c])) * eo).mean()) for c in cands]
+    return cands[int(np.argmax(scores))]
 
 
 def _off_boxes():

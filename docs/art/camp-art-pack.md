@@ -8,7 +8,7 @@
 
 | 批 | 内容 |
 |---|---|
-| 1 | A（已完成）：营地整图日 / 夜 + 高清。B：豆豆、糯糯、莲莲、柿柿各 4 张；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；没点火的火堆（日 / 夜）；食物图标；界面图标；（可选）营地上面的天空。锅里的三种状态不用画了（脚本画） |
+| 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已交给 Codex，在做）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、（可选）营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
 | 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
 | 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
 
@@ -39,7 +39,23 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 
 **A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
 
-**第 1 批 B：其余**（整段粘给 Codex）。一共 28 张（另有 2 张可选）。**宠物定稿放在最前面**：第 1 步出完 4 只宠物的定稿就停下来给你看，你回「可以」或者写改意见；之后它一口气做完，不用再盯着。锅里的三种状态不用它画了（脚本画在锅口里，和画上的锅严丝合缝）：
+**第 1 批 B：其余**：**已经交给 Codex 在做了**（用的是上一版开场指令，顺序是锅里三态 → 没点火 → 天空 → 装饰 → 宠物定稿（停下来给你看）→ 动画 → 图标）。之后工单又加了几条要求，在 Codex 正在做的那个对话里补贴下面这段就行，**不用重来**：
+
+```
+补充几条（不用重来，已经画好的照常保留，接着按你现在的顺序做）：
+1. 先看一眼仓库在哪个分支：git branch --show-current。不是 claude/mini-program-dev-nzn2n0 的话先切过去
+   （git checkout claude/mini-program-dev-nzn2n0；已经画好的图别丢：没提交的会跟着过去，已经提交在别的分支上的带过来），
+   再 git pull；是的话也 git pull 一下（工单 docs/art/camp-art-pack.md 和裁图脚本更新了，新要求见 3.1 和第 2 节的「屏幕上很小」）。
+2. 宠物在手机上显示得很小（默认只有约 30 像素宽）：轮廓简单饱满、2～3 种大色块、记忆点（豆芽、长耳朵、荷叶、柿子）画大、
+   颜色跳出来、眼睛大；不要细碎的花纹和细线；别和黄绿色的草地撞色（莲莲的荷叶用偏蓝的绿、边上一圈浅色）；
+   动画的动作幅度比平常大一点（宠物本身每帧一样大）。已经出的定稿按这几条检查一遍，缩到 64 像素宽认不出是谁就改。
+3. 装饰也很小（小的只有约 20 像素宽）：造型简单、大色块、别和草同色，宽度约占 in 图的一半；
+   小帐篷用天蓝色（画上的大帐篷是橄榄绿，小的别再用绿）。
+4. 没点火的火堆还没做的话，pull 之后 fire_off.py --crop 裁出来是正方形，出 1024×1024；已经做完的不用重做。
+5. 推完 codex/art-batch-1 之后 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
+```
+
+新开对话重做第 1 批 B 时才用下面这整段（已经包含上面的补充；一共 34 张，另有 2 张可选；第 1 步出完 4 只宠物的定稿就停下来给你看，之后一口气做完）：
 
 ```
 你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。
@@ -48,21 +64,23 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 只往 art/raw/ 里加图，别改代码和脚本。规矩：每张提示词都带第 0 节的 UNIFIED STYLE（拼图再带 SHEET RULES /
 ANIMATION SHEET RULES），把 art/guide/style-camp.jpg 当画风参考图；输出路径和 art/manifest.json 里的一致；每出一张就跑
 python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 修，过了再做下一张。
-宠物和装饰在手机上显示得很小（宠物默认只有约 30 像素宽），第 2 节和 3.1 的「屏幕上很小」那几条每张都要照做。
-锅里的东西不用画（第 1b 节已取消）。顺序：
+宠物和装饰在手机上显示得很小（宠物默认只有约 30 像素宽），第 2 节和 3.1 的「屏幕上很小」那几条每张都要照做。顺序：
 1. 宠物 doudou、nuonuo、lianlian、shishi 的定稿：每只按 3.1 出 art/raw/pets/<id>-ref.png，四张一起发给我看，停下来等我。
 2. 我说可以之后，每只再出 art/raw/anim/<id>-a.png、<id>-b.png（6×6，按 3.2）和 art/raw/pets/<id>-album.png（3.3），
    都以它自己的 -ref.png 为参考图，CHARACTER 用 3.4 表里那只的。
-3. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
+3. 锅的三种状态：python3 scripts/camp/cutouts.py --crop 裁出 art/raw/cut/in-pot.png，按第 1b 节用 edit 画
+   out-pot-1/2/3.png（锅里一层粥底 / 加了菜 / 满锅冒热气），只改锅口里面（和锅口上方一点热气），其他像素不动。
+   夜景同样来一遍：python3 scripts/camp/cutouts.py --crop --night 裁出 in-night-pot.png，画 out-night-pot-1/2/3.png。
+4. 装饰 8 件：python3 scripts/camp/decor_crop.py --ids tent,strawbed,picnic,ball,flowerbed,sapling,windmill,lantern，
    对每个 art/raw/decor/in-<id>.png 用 edit 按第 2 节的模板把装饰画在草地上，存 art/raw/decor/out-<id>.png
    （1024×1024，装饰以外的像素不动）。
-4. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
+5. 没点火的火堆：python3 scripts/camp/fire_off.py --crop 裁出 art/raw/cut/in-fire-off.png（日景火堆那块）和
    in-night-fire-off.png（夜景被火照亮的那一大圈），都是正方形；按第 1d 节用 edit 画 out-fire-off.png、
    out-night-fire-off.png（1024×1024）。
-5. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
-6. （可选，前面都做完再做）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、
+6. 食物图标 art/raw/ui/foods.png（第 4 节）、界面图标 art/raw/ui/camp-icons.png（第 5 节）。
+7. （可选，前面都做完再做）营地上面的天空：python3 scripts/camp/extend_art.py --crop 裁出 art/raw/camp/in-sky.png、
    in-night-sky.png，按第 1e 节用 edit 只重画上半张的天空，存 art/raw/camp/out-sky.png、out-night-sky.png（1024 见方）。
-7. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我（第 2、3 批的图和没做的可选天空显示「还没有」是对的）；
+8. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我（第 2、3 批的图和没做的可选天空显示「还没有」是对的）；
    把 art/raw/ 整个目录提交到新分支 codex/art-batch-1 并推送（推不了就打成 art-batch-1.zip 给我）；
    推完切回 claude/mini-program-dev-nzn2n0（git checkout claude/mini-program-dev-nzn2n0），别把仓库留在新分支上。
 ```
@@ -120,7 +138,7 @@ cute, friendly and calm.
 
 **尺寸与格式**：
 - 分辨率选工具支持的**最大**。image_gen 一般只有 1024×1024、1024×1536、1536×1024 三档：营地整图、定稿、拼图、插画、图标都是 1:1，用 1024×1024；全家福 1536×1024。输出原图，不要自己缩放、不要截图
-- 用 edit 改的那几样（装饰、没点火的火堆、天空），输入 `in-*.png` 都是脚本裁好的**正方形**，输出 1024×1024 就行（脚本会缩放回去对齐）；构图一点都不能挪，挪了贴回画上就错位
+- 用 edit 改的那几样（装饰、没点火的火堆、天空），输入 `in-*.png` 都是脚本裁好的**正方形**，输出 1024×1024 就行（脚本会缩放回去对齐）；锅那块不是正方形，出图和 in 一样大。构图一点都不能挪，挪了贴回画上就错位
 - 拼图和精灵图一律 **真透明 PNG**（alpha 通道），不要把棋盘格画进图里；实在做不到透明就用纯洋红 `#FF00FF` 平涂背景，物体里不能有洋红
 - 营地整图、装饰的「原地重绘」是不透明的场景图，PNG 或高质量 JPG 都行
 
@@ -195,10 +213,24 @@ Do not add or remove anything. Same lighting.
 
 然后 `python3 scripts/camp/merge_details.py` 拼成 `art/raw/camp/camp-hd.png`。
 
-### 1b. 锅的三种状态（**已取消，不用画**）
+### 1b. 锅的三种状态 `art/raw/cut/out-pot-*.png`
 
-锅里的内容（妈妈今天打了几顿正餐，锅里就有几层：粥底 / 加了菜 / 满满一锅）由脚本 `pot_fill.py` 直接画在画上的锅口里，和锅的透视、光线严丝合缝，
-不再找你画。帐篷、锅连三脚架、木盖、提灯这几层抠图也是脚本从画上抠的，你什么都不用做。
+帐篷、锅连三脚架、木盖、提灯在游戏里是从底图里抠出来单独的一层（宠物走到它们后面会被挡住）。这几层由脚本直接从画上抠精确轮廓
+（`cutouts.py --from-base`，按颜色去掉草地、只留物件本身），**不需要你画「去掉」的版本**。只要锅里的内容：妈妈今天打了几顿正餐，锅里就有几层
+（现在是脚本画的过渡版，你画的会更好看）。
+
+1. `python3 scripts/camp/cutouts.py --crop` 从高清营地图裁出锅那块 `art/raw/cut/in-pot.png`（夜景加 `--night` → `in-night-pot.png`）。
+2. 用 edit 画，**只改锅口里面（和锅口正上方一点点热气），其他像素一概不动**，尺寸和 in 一样：
+   - `out-pot-1.png`（早）：锅里一层米白的小米粥，刚没过锅底
+   - `out-pot-2.png`（午）：粥上加了青菜叶、几块胡萝卜，大半锅
+   - `out-pot-3.png`（晚）：满满一锅，表面冒着两三缕白色热气（热气画淡一点，游戏里还会叠动画）
+3. （小程序这边做，你不用跑）`python3 scripts/camp/cutouts.py` 用精确轮廓 ∪ 你画了内容的地方，合成 `pot-1`～`pot-3`。
+
+```
+PROMPT（锅里）: Edit this crop of the camp scene: fill the clay cooking pot with <一层米白的小米粥 / 粥上铺着青菜和胡萝卜块 /
+满满一锅热腾腾的粥菜，表面几缕淡淡的白色热气>, same camera angle, same soft light. Change ONLY the inside of the pot
+(and the faint steam right above it); the pot, tripod, fire, stones and grass must stay pixel-identical. UNIFIED STYLE.
+```
 
 ### 1d. 没点火的火堆 `art/raw/cut/out-fire-off.png`、`out-night-fire-off.png`
 
@@ -434,7 +466,7 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `extend_art.py`（上下补天空和草地的 16 块 + 包里垫的整个世界 `world.jpg`；Codex 画了 `out-sky.png` 就用它的天空）→ `npm run wx:art` 传云存储 → `config.campArt`
-- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。锅里三态不找 Codex 了，一直用 `pot_fill.py` 画的
+- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
 - 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是这个框外扩成的正方形，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）

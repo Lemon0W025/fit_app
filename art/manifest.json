@@ -26,6 +26,30 @@
       "minWidth": 1900
     },
     {
+      "file": "art/raw/cut/out-pot-1.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-pot-2.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-pot-3.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-1.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-2.png",
+      "kind": "painting"
+    },
+    {
+      "file": "art/raw/cut/out-night-pot-3.png",
+      "kind": "painting"
+    },
+    {
       "file": "art/raw/cut/out-fire-off.png",
       "kind": "painting",
       "aspect": 1.0
