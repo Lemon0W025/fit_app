@@ -24,12 +24,40 @@ const TASTE_HINT = {
 // hourOf：本地钟点（礼物 5 点后才有；云函数默认按北京时间算）
 // getTestPets：测试期间把宠物都放出来（config.testPets）
 // getTestVisitors：测试「客人」那一步（config.testVisitors）：挪走几只、送能引它们来的食物
-function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, getTestVisitors = () => null, forest = null, hourOf = null }) {
+// getTestUnlimited：测试期间无限资源（config.testUnlimited）：暖豆、每样食物读的时候和存的时候都补满
+function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, getTestVisitors = () => null, getTestUnlimited = () => null, forest = null, hourOf = null }) {
   const today = () => dateKey(now())
   const hour = () => (hourOf ? hourOf() : (now().getUTCHours() + 8) % 24)
 
+  // 测试无限资源：暖豆不到 beans 就补到 beans，每样食物（含节气点心）不到 foods 份就补到；返回有没有补
+  function topUp(camp) {
+    const t = getTestUnlimited()
+    if (!t || today() > t.until) return false
+    let changed = false
+    const need = (t.beans || 0) - beanBalance(camp)
+    if (need > 0) {
+      camp.beans = { ...camp.beans, bonus: camp.beans.bonus + need }
+      changed = true
+    }
+    FOODS.concat(TREATS).forEach((f) => {
+      if ((camp.foods[f.id] || 0) < (t.foods || 0)) {
+        camp.foods = { ...camp.foods, [f.id]: t.foods }
+        changed = true
+      }
+    })
+    return changed
+  }
+
   async function load(openid) {
-    return normalizeCamp(await repo.getGarden(openid))
+    const camp = normalizeCamp(await repo.getGarden(openid))
+    topUp(camp)
+    return camp
+  }
+
+  // 存之前也补满（花了、下锅了，回给页面的就已经是满的）
+  async function save(openid, camp) {
+    topUp(camp)
+    await repo.saveGarden(openid, camp)
   }
 
   function termInfo() {
@@ -140,6 +168,8 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         camp.visitors = []
         dirty = true
       }
+      // 测试无限资源：补满了就存一次（首页的暖豆也读得到）
+      if (topUp(camp)) dirty = true
       // 测试客人：remove 里的几只先搬走（再下锅才能引来），送 foods 里的食物；今天锅里煮的退回背包、锅清空。每个账号只做一次
       const testVisitors = getTestVisitors()
       if (testVisitors && today() <= testVisitors.until && camp.grants.indexOf(testVisitors.id) === -1) {
@@ -160,7 +190,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         camp.arrivals = []
         dirty = true
       }
-      if (dirty) await repo.saveGarden(openid, camp)
+      if (dirty) await save(openid, camp)
       result.hasProfile = !!(await repo.getProfile(openid))
       result.daily = null
       if (forest) result.daily = await forest.today(openid, today(), await repo.listMeals(openid, today()))
@@ -178,7 +208,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       addToBag(camp, foodId)
       if (isNew) camp.tasted = camp.tasted.concat(foodId)
       camp.gacha = { pulls: camp.gacha.pulls + 1, sincePity: HIGH_RARITIES.indexOf(rarity) !== -1 ? 0 : camp.gacha.sincePity + 1 }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return { foodId, rarity, isNew, beans: Math.max(0, beanBalance(camp)), pityLeft: PITY - camp.gacha.sincePity }
     },
 
@@ -197,7 +227,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       camp.pets = camp.pets.map((p) => (eaters.indexOf(p.id) !== -1 ? { ...p, fed: p.fed + feedGain(p.id, foodId) } : p))
       const visitor = arrivalFor(foodId, residentIds(camp).concat(camp.visitors.map((v) => v.id)), random())
       if (visitor) camp.visitors = camp.visitors.concat({ id: visitor, foodId, since: today() })
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp, { cooked: { foodId, eaters, visitor: visitor || null } })
     },
 
@@ -210,7 +240,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       takeFromBag(camp, foodId)
       const gain = feedGain(petId, foodId)
       camp.pets = camp.pets.map((p) => (p.id === petId ? { ...p, fed: p.fed + gain } : p))
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp, { gain, liked: gain >= 3, petId, foodId })
     },
 
@@ -224,7 +254,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       if (beanBalance(camp) < d.price) throw new AppError(CODES.NO_BEANS, `暖豆不够啦，${d.name}要 ${d.price} 暖豆，再攒攒`)
       camp.beans = { ...camp.beans, spent: camp.beans.spent + d.price }
       camp.decor = { ...camp.decor, owned: { ...camp.decor.owned, [decorId]: have + 1 } }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp)
     },
 
@@ -235,7 +265,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       checkSpot(camp, decorId, x, y)
       camp.seq += 1
       camp.decor = { ...camp.decor, placed: camp.decor.placed.concat({ uid: `d${camp.seq}`, id: decorId, x, y }) }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp)
     },
 
@@ -245,7 +275,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       const placed = findPlaced(camp, uid)
       checkSpot(camp, placed.id, x, y, uid)
       camp.decor = { ...camp.decor, placed: camp.decor.placed.map((p) => (p.uid === uid ? { ...p, x, y } : p)) }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp)
     },
 
@@ -254,7 +284,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       const camp = await load(openid)
       findPlaced(camp, uid)
       camp.decor = { ...camp.decor, placed: camp.decor.placed.filter((p) => p.uid !== uid) }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp)
     },
 
@@ -274,7 +304,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         addToBag(camp, gift.foodId)
       }
       camp.gift = today()
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       return view(camp, { gift })
     },
 
@@ -308,7 +338,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       camp.arrivals = camp.arrivals.concat(comers.map((v) => v.id))
       camp.visitors = []
       if (isFull(camp) && !camp.decor.owned[GOLD_TENT]) camp.decor = { ...camp.decor, owned: { ...camp.decor.owned, [GOLD_TENT]: 1 } }
-      await repo.saveGarden(openid, camp)
+      await save(openid, camp)
       if (!comers.length) return null
       return {
         pets: comers.map((v) => {

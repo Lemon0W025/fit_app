@@ -12,10 +12,10 @@ function sequence(values) {
 }
 
 // NOW 是 2026-10-22 04:00Z，即北京时间 12 点；hourOf 可注入
-function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets, getTestVisitors } = {}) {
+function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets, getTestVisitors, getTestUnlimited } = {}) {
   const repo = createFakeRepo()
   if (camp) repo.state.gardens.set('u1', camp)
-  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets, getTestVisitors })
+  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets, getTestVisitors, getTestUnlimited })
   return { repo, service }
 }
 
@@ -107,6 +107,26 @@ test('get：测试客人（config.testVisitors）：挪走几只、送能引它�
   assert.equal(again.pets.length, PETS.length - 2)
   const late = setup({ camp: rich(), getTestVisitors: () => ({ ...conf, until: '2026-10-21' }) })
   assert.equal((await late.service.get('u1')).foods.length, 0)
+})
+
+test('测试无限资源（config.testUnlimited）：暖豆和每样食物每次都补满，花了、下锅了也补回来；过了日子不补', async () => {
+  const { FOODS, TREATS } = require('../cloudfunctions/api/lib/shared/foods')
+  const conf = { until: '2026-11-30', beans: 99999, foods: 9 }
+  const { repo, service } = setup({ camp: rich({ foods: { xiaomi: 20 } }), random: () => 0, getTestUnlimited: () => conf })
+  const v = await service.get('u1')
+  assert.equal(v.beans, 99999)
+  assert.equal(v.foods.length, FOODS.length + TREATS.length)
+  assert.ok(v.foods.every((f) => f.count >= 9))
+  assert.equal(v.foods.find((f) => f.id === 'xiaomi').count, 20, '多的不收')
+  assert.equal((await repo.getGarden('u1')).foods.huluobo, 9, '存下来了（首页的暖豆也是满的）')
+  const spun = await service.spin('u1')
+  assert.equal(spun.beans, 99999)
+  assert.equal((await service.buy('u1', { decorId: 'tent' })).beans, 99999)
+  const cooked = await service.putFood('u1', { foodId: 'huluobo' })
+  assert.equal(cooked.foods.find((f) => f.id === 'huluobo').count, 9)
+  const late = setup({ camp: rich(), getTestUnlimited: () => ({ ...conf, until: '2026-10-21' }) })
+  const lv = await late.service.get('u1')
+  assert.deepEqual([lv.beans, lv.foods.length], [120, 0])
 })
 
 test('putFood：下锅点火，一天最多 3 样、同一样不能两次；爱吃的住户 +3、点心 +5；同档没来过的当客人', async () => {

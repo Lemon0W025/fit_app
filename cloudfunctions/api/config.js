@@ -35,4 +35,8 @@ module.exports = {
     remove: ['nuonuo', 'lianlian', 'shishi', 'qiqi', 'shushu', 'huahua', 'sunbao'],
     foods: { huluobo: 1, lianzi: 1, shizi: 1, kaohongshu: 1, hetao: 1, xiaoyugan: 1, zhusun: 1 },
   },
+
+  // 测试期间无限资源：until 这天（含）之前，每次读营地、每次存之前，暖豆不到 beans 就补到 beans，
+  // 每样食物（23 样 + 10 样节气点心）不到 foods 份就补到 foods 份。只给开发测试用，上传体验版给家人之前改成 null
+  testUnlimited: { until: '2026-11-30', beans: 99999, foods: 9 },
 }
