@@ -7,6 +7,7 @@ const { foodById } = require('./shared/foods')
 const { DECOR, CATEGORIES, decorById, footRect } = require('./shared/decor')
 const { SCENE } = require('./shared/camp')
 const { nightLook, nightFilter } = require('./camp-light')
+const DECOR_ART = require('./decor-art')
 
 const Z_DECOR = 100
 const BOWL_PX = 270 // 食盆在画上的直径（像素，照画量的）
@@ -79,7 +80,8 @@ function frameTiles(L, base, night) {
 const petImage = (id) => `/images/camp/pets/${id}.png`
 const petFace = (id) => `/images/camp/pets/${id}-face.png`
 const foodImage = (id) => `/images/camp/foods/${id}.png`
-const decorImage = (id, base) => `${base || '/images/camp/decor/'}${id}.png`
+// base：云端高清块的前缀（config.decorArt），只有画好了的（decor-art.js）才有；别的、和商店 / 背包里的小图都用包里的
+const decorImage = (id, base) => `${base && DECOR_ART.indexOf(id) !== -1 ? base : '/images/camp/decor/'}${id}.png`
 const zOf = (y) => Z_DECOR + Math.round(y / 4)
 
 function patchView(d, x, y, L, base) {

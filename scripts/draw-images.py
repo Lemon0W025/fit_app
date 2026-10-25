@@ -222,15 +222,12 @@ def draw_garden(force=False):
         'bean.png': lambda: bottom_anchored(emoji_image('🫘', 120), margin=20),
         'gift.png': lambda: bottom_anchored(emoji_image('🎁', 130)),
         'book.png': lambda: bottom_anchored(emoji_image('📗', 130)),
-        'shovel.png': lambda: bottom_anchored(emoji_image('⛏️', 130)),
         'gacha.png': draw_gacha_machine,
         'capsule-common.png': lambda: draw_capsule((214, 210, 204)),
         'capsule-rare.png': lambda: draw_capsule((84, 160, 232)),
         'capsule-epic.png': lambda: draw_capsule((168, 104, 224), glow=(190, 130, 255)),
         'capsule-legendary.png': lambda: draw_capsule((240, 192, 48), glow=(255, 214, 90)),
         'calendar.png': lambda: bottom_anchored(emoji_image('📅', 130)),
-        'basket.png': lambda: bottom_anchored(emoji_image('🧺', 130)),
-        'home.png': lambda: bottom_anchored(emoji_image('🏠', 130)),
     }
     for name, fn in ui.items():
         if missing('garden', 'ui', name):

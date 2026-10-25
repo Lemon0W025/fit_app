@@ -83,8 +83,10 @@ def check_grid(path, spec, problems):
 def check_painting(path, spec, problems):
     img = load(path)
     ratio = img.width / img.height
-    if 'aspect' in spec and abs(ratio - spec['aspect']) > 0.05:
-        problems.append(f'比例应为 {spec["aspect"]:.2f}:1，现在是 {ratio:.2f}:1')
+    # aspect 可以是几种都行（比如以前按长方形裁的、现在按正方形裁的，脚本都认）
+    want = spec['aspect'] if isinstance(spec.get('aspect'), list) else [spec['aspect']] if 'aspect' in spec else []
+    if want and all(abs(ratio - a) > 0.05 for a in want):
+        problems.append(f'比例应为 {" 或 ".join(f"{a:.2f}:1" for a in want)}，现在是 {ratio:.2f}:1')
     if img.width < spec.get('minWidth', 0):
         problems.append(f'太小：{img.width} 宽，至少 {spec["minWidth"]}')
 

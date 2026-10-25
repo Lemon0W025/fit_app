@@ -52,12 +52,12 @@
     {
       "file": "art/raw/cut/out-fire-off.png",
       "kind": "painting",
-      "aspect": 1.0
+      "aspect": [1.0, 1.42]
     },
     {
       "file": "art/raw/cut/out-night-fire-off.png",
       "kind": "painting",
-      "aspect": 1.0
+      "aspect": [1.0, 1.25]
     },
     {
       "file": "art/raw/camp/out-sky.png",

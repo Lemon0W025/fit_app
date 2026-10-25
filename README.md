@@ -89,7 +89,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、食盆、喂、商店、摆放、礼物、图册）
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
-scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch
+scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、碗沿和碗里的吃的 bowl_food、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch、宠物图册小图和头像 pet_art
 scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）+ WXML 渲染器
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
 art/guide/camp-blockout.jpg 营地布局示意（blockout.py 生成）
@@ -195,19 +195,19 @@ npm test
 - `cloudfunctions/api/lib/shared/` 和 `miniprogram/utils/shared/` 两份文件必须一模一样（测试会检查），改了一边记得复制到另一边
 - 云函数响应统一为 `{ ok: true, data }` 或 `{ ok: false, code, message }`，`message` 会直接展示给用户
 - 提示词在 `cloudfunctions/api/lib/prompts.js`，想调整小暖的说话风格改这里
-- 饭点、准时窗口、首页大卡的状态在 `cloudfunctions/api/lib/shared/timing.js`；每天的暖豆和印章在 `cloudfunctions/api/lib/shared/forest.js`；扭蛋概率、物件清单（含能摆的地面、占几格）、节气在 `cloudfunctions/api/lib/shared/garden.js`；院子、墙、门、壳里的地面、修整价格、能不能摆 / 走在 `cloudfunctions/api/lib/shared/estate.js`
+- 饭点、准时窗口、首页大卡的状态在 `cloudfunctions/api/lib/shared/timing.js`；每天的暖豆和印章在 `cloudfunctions/api/lib/shared/forest.js`；扭蛋稀有度、节气在 `cloudfunctions/api/lib/shared/garden.js`；营地的场景数据（草地、禁区、篝火、锅、食盆、坐点、上下补的天空草地）在 `camp.js`，宠物 / 食物 / 装饰在 `pets.js` / `foods.js` / `decor.js`
 
 ### 图片
 
-- 美术原图在 `art/raw/`（Codex 生成的 8 张 3×3 整图，格子顺序见 `art/raw/中文物件索引.txt`）；`python3 scripts/slice-art.py` 把它们切成单张图，覆盖 `miniprogram/images/` 下的花园物件和界面图（需要 Pillow 和 numpy）
-- 加新物件：在 `lib/shared/garden.js` 的 ITEMS 里加一项，按 `docs/art/codex-art-pack.md` 的拼图规则出图放进 `art/raw/`，在 `slice-art.py` 的 SHEETS 里写上格子对应的物件 id，再跑一遍
-- `scripts/draw-images.py` 画 tab 图标、修整木牌、亮格；还没有正式美术的物件和图标，它会补一张 emoji 占位图（已有的不覆盖）
-- `python3 scripts/estate/blockout.py` 按 `estate.js` 的布局画宅院白模：切成 16 块 jpg 当占位底图（`images/garden/estate/`）、画云朵、输出 `art/guide/estate-blockout*.jpg`
-- **全套正式美术由 Codex 按 `docs/art/codex-art-pack.md` 生成**（宅院整图、云、图标、表情、新物件、11 张小动物动画拼图），输出到 `art/raw/`，`python3 scripts/art/check_art.py` 自检
-- 宅院原画到了：`python3 scripts/estate/cut_art.py art/raw/estate/estate.png --pad32` 切块到 `art/estate/`，`npm run wx:art` 传云存储，把打印的 fileID 前缀填进 `miniprogram/config.js` 的 `estateArt`，再 `npm run wx:preview`；加载失败页面会自动退回白模。要更清楚：`detail_crops.py` 切块给 Codex 逐块重绘，`merge_details.py` 拼回高清图再切
-- 动画拼图到了：`python3 scripts/pack_anim.py` 对齐打包到 `art/anim/`，`npm run wx:art` 一并上传，前缀填进 `config.animArt`；没图或加载失败的那只自动退回单张图 + CSS 步态。`--demo` 用现在的单张图合成示意拼图验证播放
-- 遮挡：墙、月亮门、大门、建筑会挡住站在后面的物件和小动物（`utils/occlusion.js`，从底图上按多边形抠一块盖上去，只在需要时生成）。原画的墙比白模高矮不同就调里面的 `WALL_H` / `BUILDINGS`
-- 小程序主包上限 2MB，现在约 1.5MB；加图后看一眼 `du -sh --apparent-size miniprogram`
+- 美术原图在 `art/raw/`。**全套正式美术由 Codex 按 `docs/art/camp-art-pack.md` 生成**：营地整图、装饰原地重绘、12 只宠物各 4 张、食物和界面图标。`python3 scripts/art/check_art.py` 自检；每批回来怎么接见工单第 7 节和 `CLAUDE.md` 的表
+- 营地整图：`scripts/camp/cut_art.py` 切块，`extend_art.py` 补上下的天空和草地，`npm run wx:art -- base` 传云存储（`campArt`）；云端的图加载失败就只剩包里垫的低清整张
+- 装饰：`decor_crop.py` 裁空草地给 Codex 画；`decor_patch.py --local` 抠出装饰和影子，去掉 Codex 顺手画的草皮，并写 `utils/decor-art.js`；然后 `npm run wx:art -- decor`（`decorArt`）。还没画的装饰用包里的占位块
+- 宠物：`scripts/pack_anim.py` 对齐打包动画拼图（回写 `utils/anim-sheets.js`），`npm run wx:art -- anim`（`animArt`）；`scripts/camp/pet_art.py` 出包里的图册小图和头像。没拼图或加载失败的那只退回单张图 + CSS 步态
+- 帐篷 / 锅 / 木盖 / 提灯的抠图层、篝火逐帧、熄火补丁：`cutouts.py`、`fx_art.py`、`fire_off.py`，`npm run wx:art -- cut`（`cutArt`）
+- 食物、界面图标、表情：`python3 scripts/slice-art.py`；`scripts/draw-images.py` 画 tab 图标
+- 云存储里每类图在 `camp/<类>-vN/`，版本号在 `scripts/wechat.js` 的 `ART_VERSION`：重新生成过就加一再传（同名覆盖的话 CDN 和手机会继续用旧图一阵子）
+- 改了营地画面就 `node scripts/preview/record-camp.js` 录屏逐帧看（输出 `.preview/camp/`）
+- 小程序主包上限 2MB，现在约 1.7MB；加图后看一眼 `du -sh --apparent-size miniprogram`
 
 ## 第二期计划
 

@@ -88,11 +88,11 @@
         <view wx:if="{{canSpin}}" class="dot"></view>
       </view>
       <view class="side-btn" bindtap="goShop">
-        <image class="side-icon" src="/images/garden/ui/tools.png" mode="aspectFit" />
+        <image class="side-icon" src="/images/garden/ui/shop.png" mode="aspectFit" />
         <text class="side-label">商店</text>
       </view>
       <view class="side-btn" bindtap="openBag">
-        <image class="side-icon" src="/images/garden/ui/basket.png" mode="aspectFit" />
+        <image class="side-icon" src="/images/garden/ui/bag.png" mode="aspectFit" />
         <text class="side-label">背包</text>
         <view wx:if="{{bagCount}}" class="badge">{{bagCount}}</view>
       </view>
@@ -103,7 +103,7 @@
     </view>
 
     <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">
-      <image class="recenter-icon" src="/images/garden/ui/home.png" mode="aspectFit" />
+      <image class="recenter-icon" src="/images/garden/ui/campfire.png" mode="aspectFit" />
     </view>
     <view wx:if="{{mode === 'view'}}" class="checkin-btn" bindtap="goCheckin">
       <image class="checkin-icon" src="/images/garden/ui/camera.png" mode="aspectFit" />

@@ -299,9 +299,9 @@ test('夜里宠物按站的位置调亮度和暖色（火边亮、远处暗）�
   assert.ok(lightAt(2130, 3200, false).warm < -0.5, '火边不暖了')
   assert.equal(b(nightFilter(1210, 1460, false)), b(nightFilter(1210, 1460)))
   assert.ok(b(nightFilter(2750, 2750, false)) > b(nightFilter(2130, 3200, false)) + 0.1, '提灯边上还亮')
-  // 一开始都站在火堆前面：火没点就盖上月光层
-  const off = make({ hour: 22, lit: false }).life.sprites()[0]
-  const on = make({ hour: 22 }).life.sprites()[0]
-  assert.ok(off.moon > on.moon + 0.5, '火没点：火边的宠物盖上月光层')
-  assert.ok(b(off.light) < b(on.light))
+  // 一开始都站在火堆边上：火没点就都暗下来、偏冷；火堆正前面的盖上月光层（提灯边上的那只还被提灯照着一点）
+  const off = make({ hour: 22, lit: false }).life.sprites()
+  const on = make({ hour: 22 }).life.sprites()
+  off.forEach((s, i) => assert.ok(s.moon > on[i].moon && b(s.light) < b(on[i].light), s.id))
+  assert.ok(off.some((s, i) => s.moon > on[i].moon + 0.5), '火没点：火边的宠物盖上月光层')
 })

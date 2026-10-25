@@ -8,8 +8,8 @@
 
 | 批 | 内容 |
 |---|---|
-| 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已交给 Codex，在做）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、（可选）营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
-| 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰 |
+| 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已完成，10/25 接入）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
+| 2 | 花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶各 4 张；剩下 16 件装饰；重画小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝） |
 | 3 | 鹤鹤 4 张；金色小帐篷；全家福 |
 
 ## 执行流程（照这个顺序喂 Codex）
@@ -39,23 +39,9 @@ python3 scripts/camp/merge_details.py --dir night-detail --out art/raw/camp/nigh
 
 **A 回来之后**：告诉 Claude「营地图在分支 codex/art-batch-1a」，Claude 用 `scripts/camp/overlay.py` 在画上量出 `SCENE`（草地、帐篷、篝火、锅、食盆、抠图块、坐点……），更新白模和占位图，推送后你 `git pull`，再给 Codex 第 1 批 B。
 
-**第 1 批 B：其余**：**已经交给 Codex 在做了**（用的是上一版开场指令，顺序是锅里三态 → 没点火 → 天空 → 装饰 → 宠物定稿（停下来给你看）→ 动画 → 图标）。之后工单又加了几条要求，在 Codex 正在做的那个对话里补贴下面这段就行，**不用重来**：
+**第 1 批 B：其余**：**已完成**（分支 `codex/art-batch-1`，10/25 接入）。锅里三态、没点火、天空、8 件装饰、4 只宠物、食物和界面图标都用上了。下面这整段只在要重做时用。
 
-```
-补充几条（不用重来，已经画好的照常保留，接着按你现在的顺序做）：
-1. 先看一眼仓库在哪个分支：git branch --show-current。不是 claude/mini-program-dev-nzn2n0 的话先切过去
-   （git checkout claude/mini-program-dev-nzn2n0；已经画好的图别丢：没提交的会跟着过去，已经提交在别的分支上的带过来），
-   再 git pull；是的话也 git pull 一下（工单 docs/art/camp-art-pack.md 和裁图脚本更新了，新要求见 3.1 和第 2 节的「屏幕上很小」）。
-2. 宠物在手机上显示得很小（默认只有约 30 像素宽）：轮廓简单饱满、2～3 种大色块、记忆点（豆芽、长耳朵、荷叶、柿子）画大、
-   颜色跳出来、眼睛大；不要细碎的花纹和细线；别和黄绿色的草地撞色（莲莲的荷叶用偏蓝的绿、边上一圈浅色）；
-   动画的动作幅度比平常大一点（宠物本身每帧一样大）。已经出的定稿按这几条检查一遍，缩到 64 像素宽认不出是谁就改。
-3. 装饰也很小（小的只有约 20 像素宽）：造型简单、大色块、别和草同色，宽度约占 in 图的一半；
-   小帐篷用天蓝色（画上的大帐篷是橄榄绿，小的别再用绿）。
-4. 没点火的火堆还没做的话，pull 之后 fire_off.py --crop 裁出来是正方形，出 1024×1024；已经做完的不用重做。
-5. 推完 codex/art-batch-1 之后 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
-```
-
-新开对话重做第 1 批 B 时才用下面这整段（已经包含上面的补充；一共 34 张，另有 2 张可选；第 1 步出完 4 只宠物的定稿就停下来给你看，之后一口气做完）：
+重做第 1 批 B 用的整段（一共 34 张，另有 2 张可选；第 1 步出完 4 只宠物的定稿就停下来给你看，之后一口气做完）：
 
 ```
 你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 做「第 1 批 B」。
@@ -94,9 +80,11 @@ python3 scripts/art/check_art.py <那张的路径>，没过就重出或用 edit 
 每张 check_art.py、「屏幕上很小」那几条）。先 git checkout claude/mini-program-dev-nzn2n0 && git pull。顺序：
 1. 宠物 huahua、guigui、qiqi、shushu、jutuan、sunbao、chacha：先 7 张 -ref.png 一起给我看，停下来等我；
    我说可以之后每只再出 -a、-b、-album。
-2. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
-   每块按第 2 节模板 edit 成 art/raw/decor/out-<id>.png。
-3. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送，
+2. 重画小帐篷：上一批的 art/raw/decor/out-tent.png 画成了浅绿色，在草地上看不出来。用现有的 art/raw/decor/in-tent.png
+   （别重新裁）按第 2 节模板再 edit 一次，帐篷布用天蓝色（浅蓝 + 白边），覆盖 out-tent.png。
+3. 装饰剩下 16 件：python3 scripts/camp/decor_crop.py --ids hammock,treehouse,table,kettle,swing,ladder,slide,pumpkins,sunflower,lights,bunting,mailbox,stonelamp,fence,clothesline,scarecrow，
+   每块按第 2 节模板 edit 成 art/raw/decor/out-<id>.png。装饰别画太小：宽度约占 in 图的一半（小灯笼上次只画了四分之一宽）。
+4. python3 scripts/art/check_art.py 全跑，把输出贴给我，art/raw/ 提交到新分支 codex/art-batch-2 并推送，
    推完切回 claude/mini-program-dev-nzn2n0。
 ```
 
@@ -466,10 +454,10 @@ in this order: … Cells 34–36 empty.
 ## 7. 交付之后小程序这边做什么（你不用管，写给我自己看）
 
 - 营地：`cut_art.py art/raw/camp/camp-hd.png` 切 16 块 → `extend_art.py`（上下补天空和草地的 16 块 + 包里垫的整个世界 `world.jpg`；Codex 画了 `out-sky.png` 就用它的天空）→ `npm run wx:art` 传云存储 → `config.campArt`
-- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `CUT_VERSION` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`）只换 pot-1～3
-- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是这个框外扩成的正方形，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
+- 抠图层：画换了就 `cutouts.py --from-base --local`（精确轮廓，日夜一起出，`--check 目录` 存品红底的检查图；`SEEDS` 是物件身上的几个点，画换了要重量）→ `fx_art.py` 重出篝火逐帧 → `bowl_food.py` 重抠碗沿 → `light_map.py` 重算夜里的光 → `scripts/wechat.js` 的 `ART_VERSION.cut` 加一 → `npm run wx:art -- cut` → `config.cutArt`。Codex 画了锅里三态就 `cutouts.py --crop` 之后 `cutouts.py`（不带 `--from-base`，日夜各跑一次，夜里加 `--night`）只换 pot-1～3：锅身用精确轮廓，锅口往上的热气按「比原画白了多少」反推成半透明白烟（不连背后的草一起抠）
+- 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`bowl_food.py`、`light_map.py`（空锅、夜里的木盖和碗沿、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
-- 装饰：`decor_crop.py` 先出 in → Codex 出 out → `decor_patch.py` → `npm run wx:art` → `config.decorArt`。待办：`decor_patch.py` 比对出范围后，再用 `cutouts.py` 的 `objectness` 去掉块里的草（只留物件和脚下的影子），夜里才不会带着白天的草（现在夜里靠月光层压着）
-- 宠物：`pack_anim.py` 打包两张 6×6 → `npm run wx:art` → `config.animArt`；图册插画缩成 320px 放 `images/camp/pets/<id>.png`，头像 96px 放 `<id>-face.png`（替换占位）
-- 食物、界面：`slice-art.py` 加两条 SHEETS（`ui/foods.png` → `images/camp/foods/`，`ui/camp-icons.png` → `images/garden/ui/`）切成单张
+- 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
+- 宠物：`pack_anim.py` 打包两张 6×6（回写 `utils/anim-sheets.js`）→ `npm run wx:art -- anim` → `config.animArt`；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位）
+- 食物、界面：`slice-art.py`（`ui/foods.png` 6×6 → `images/camp/foods/<id>.png` 128px；`ui/camp-icons.png` → `images/garden/ui/` 的 campfire / book / shop / bag / gift / paw / camera，食盆和回家暂时没用上）
 - 每批接完 `npm test`、`node scripts/preview/record-camp.js` 录屏逐帧看（锅后面、木盖旁、提灯旁、帐篷门口、夜里的光）、`npm run wx:preview`

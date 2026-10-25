@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night home-phone home-phone-night panorama-phone panorama-phone-night detail-phone（不写全录）
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -28,10 +28,15 @@ const MP = `${REPO}/miniprogram`
 const mapSrc = (src) => {
   src = String(src)
   if (src.startsWith('/images/')) return `file://${MP}${src}`
-  const m = src.match(/cloud:\/\/.*\/camp\/(base|cut[^/]*)\/(.+)$/)
-  if (m) return `file://${REPO}/art/${m[1] === 'base' ? 'camp' : 'cut'}/${m[2]}`
+  const m = src.match(/cloud:\/\/.*\/camp\/(base|cut|decor|anim)(-v\d+)?\/(.+)$/)
+  if (m) return `file://${REPO}/art/${m[1] === 'base' ? 'camp' : m[1]}/${m[3]}`
   return src
 }
+
+// 第 1 批 B 画好的 8 件装饰，摆在火堆周围的草地上
+const DECOR_1B = [['tent', 3150, 2150], ['strawbed', 2450, 3560], ['picnic', 1450, 3250], ['ball', 2950, 3350],
+  ['flowerbed', 1250, 2650], ['sapling', 3500, 2700], ['windmill', 3550, 3350], ['lantern', 1850, 3650]]
+  .map(([id, x, y], i) => ({ uid: `d${i}`, id, x, y }))
 
 const SCENARIOS = {
   // 白天，镜头对着锅：杞杞从锅后面横穿（被锅身和两条腿挡住）、薯薯从锅前面绕到左边（过木盖时前后要对）、糯糯从提灯右边往下走、花花从三脚架顶后面走过
@@ -79,6 +84,19 @@ const SCENARIOS = {
   'panorama-phone-night': { phone: true, hour: 22, potLevel: 2, focus: [2048, 2048], scale: 'min', seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'], plan: [] },
   // 捏到最大
   'detail-phone': { phone: true, hour: 10, potLevel: 2, focus: [SCENE.fire[0], 2700], scale: 'max', seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
+  // 第 1 批 B 的装饰和四只有逐帧动画的宠物：在装饰中间走来走去（装饰要像长在草上、宠物走到装饰后面被挡住）
+  'decor-day': {
+    hour: 10, potLevel: 2, focus: [2450, 2950], scale: 1.1, seconds: 12, decor: DECOR_1B,
+    pets: ['doudou', 'nuonuo', 'lianlian', 'shishi'],
+    plan: [[0, 0, 2550, 3300], [0, 1, 1700, 3400], [0, 2, 3150, 2500], [0, 3, 2200, 3700],
+      [500, 0, 2950, 3500], [500, 1, 1350, 3050], [1500, 2, 2600, 2200], [1500, 3, 3300, 3600]],
+  },
+  'decor-night': {
+    hour: 22, potLevel: 2, focus: [2450, 2950], scale: 1.1, seconds: 10, decor: DECOR_1B,
+    pets: ['doudou', 'nuonuo', 'lianlian', 'shishi'],
+    plan: [[0, 0, 2550, 3300], [0, 1, 1700, 3400], [0, 2, 3150, 2500], [0, 3, 2200, 3700],
+      [500, 0, 2950, 3500], [500, 1, 1350, 3050], [1500, 2, 2600, 2200], [1500, 3, 3300, 3600]],
+  },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
   'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
 }
@@ -107,7 +125,7 @@ async function build(sc) {
     foods: { xiaomi: 2 },
     bowls: ['kaohongshu', null],
     pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
-    decor: { owned: {}, placed: [] },
+    decor: { owned: {}, placed: sc.decor || [] },
     gift: '',
   })
   camp.data.giftShown = true
@@ -162,6 +180,23 @@ async function record(name, sc, browser) {
       const body = pet.querySelector('.pet-body')
       body.style.height = `${s.width}px`
       body.className = `wx-view pet-body ${s.flip ? 'flip' : ''}`
+      // 有逐帧拼图的：换行（动作）、拼图（a / b 张）、快慢、光
+      const strips = body.querySelectorAll('.anim-strip')
+      if (strips.length && s.anim) {
+        const frame = body.querySelector('.anim-frame')
+        frame.style.width = `${s.width}px`
+        frame.style.height = `${s.width}px`
+        strips.forEach((img, k) => {
+          if (img.getAttribute('src') !== s.sheetSrc) img.setAttribute('src', s.sheetSrc)
+          img.className = `wx-image anim-strip anim-f${s.anim.frames}${k ? ' moon' : ''}`
+          img.style.marginTop = `-${s.anim.row * 100}%`
+          img.style.animationDuration = `${s.anim.ms}ms`
+          img.style.filter = k ? s.moonLight : s.light || 'none'
+          if (k) img.style.opacity = s.moon
+          img.style.transition = `filter ${s.duration}ms linear, opacity ${s.duration}ms linear`
+        })
+        return
+      }
       const imgs = body.querySelectorAll('img')
       const gait = `${s.cssAction} gait-${s.action === 'walk' || s.action === 'fly' || s.action === 'gift' ? 'on' : 'off'}`
       if (imgs[0]) {
@@ -195,7 +230,8 @@ async function record(name, sc, browser) {
       const j = JSON.stringify(now[i])
       if (j !== last[i]) {
         last[i] = j
-        await apply(i, jump ? { ...now[i], duration: 0 } : now[i])
+        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '' }
+        await apply(i, jump ? { ...s, duration: 0 } : s)
       }
     }
   }

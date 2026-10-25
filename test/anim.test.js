@@ -24,5 +24,10 @@ test('两张 6×6：每个动作一行', () => {
   assert.equal(A.facingFor(5, false), true)
   assert.equal(A.facingFor(-5, true), false)
   assert.equal(A.facingFor(0, true), true)
-  assert.deepEqual(SHEETS, {})
+  // 有拼图的宠物（scripts/pack_anim.py 回写）：都是认识的宠物，头顶空白在格高的一半以内
+  const { PETS } = require('../miniprogram/utils/shared/pets')
+  Object.entries(SHEETS).forEach(([id, s]) => {
+    assert.ok(PETS.some((p) => p.id === id), id)
+    assert.ok(s.top >= 0 && s.top < 0.5, id)
+  })
 })

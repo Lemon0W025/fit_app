@@ -17,6 +17,7 @@ bowl_food.py 出夜里的 night-bowl-N-off，light_map.py 出熄了火时宠物�
 画换了：重新量 LOGS（--preview 会把量的木柴框画在画上对），这几个脚本都重跑。
 Codex 画了正式的「没点火」版（工单第 1d 节：art/raw/cut/out-fire-off.png、out-night-fire-off.png）就直接用它，不再程序熄火：
 in / out 是 SCENE.flame.off 外扩成的正方形（以前裁的是框本身，两种 out 都认），只取回框里那块（外圈羽化接回原画）。
+裁的时候的框记在 art/raw/cut/fire-off.json：用了 Codex 的图以后补丁变小、SCENE.flame.off 跟着改成补丁的框，Codex 那两块还按裁的框对回去。
 需要 Pillow 和 numpy。
 """
 import argparse
@@ -126,7 +127,7 @@ def _codex(day_or_night, img):
         return None
     S = scene()
     k = img.width / S['W']
-    off = _off_boxes()[day_or_night]
+    off = _crop_boxes()[day_or_night]
     raw = Image.open(path).convert('RGB')
     reg = [round(v * k) for v in _codex_region(raw, img, off, S['W'], k)]
     box = [round(v * k) for v in off]
@@ -161,6 +162,12 @@ def _off_boxes():
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
+def _crop_boxes():
+    """给 Codex 裁那两块时用的框（crop() 记下来的）；没记就是现在的 SCENE.flame.off"""
+    path = os.path.join(CODEX, 'fire-off.json')
+    return json.load(open(path)) if os.path.exists(path) else _off_boxes()
+
+
 def _square(box, size):
     """把框外扩成正方形（中心不变，碰到画边往里挪）：图像模型的 edit 只出 1024×1024，给它正方形的 in，回来的 out 才不会变形"""
     side = max(box[2] - box[0], box[3] - box[1])
@@ -182,6 +189,7 @@ def crop():
         piece = img.crop((round(x0 * k), round(y0 * k), round(x0 * k) + side, round(y0 * k) + side))
         piece.save(os.path.join(CODEX, name))
         print(f'  ✓  art/raw/cut/{name}  {piece.width}×{piece.height}')
+    json.dump(boxes, open(os.path.join(CODEX, 'fire-off.json'), 'w'))
     print('Codex 按工单第 1d 节画 out-fire-off.png、out-night-fire-off.png（正方形，1024×1024 就行），回来再跑 python3 scripts/camp/fire_off.py')
 
 
@@ -426,4 +434,4 @@ if __name__ == '__main__':
         crop()
         raise SystemExit
     patches(a.preview)
-    print('→ 接着跑 cutouts.py --from-base --local、bowl_food.py、light_map.py（熄火时的空锅、夜里的木盖 / 碗沿、光），CUT_VERSION 加一，npm run wx:art -- cut')
+    print('→ 接着跑 cutouts.py --from-base --local、bowl_food.py、light_map.py（熄火时的空锅、夜里的木盖 / 碗沿、光），scripts/wechat.js 的 ART_VERSION.cut 加一，npm run wx:art -- cut')

@@ -37,7 +37,9 @@ def main():
     k = img.width / d['W']
     want = set(a.ids.split(',')) if a.ids else None
     os.makedirs(OUT, exist_ok=True)
-    boxes = {}
+    # 一批只裁几件（--ids）时，别的批裁过的框留着（decor_patch.py 还要用）
+    path = os.path.join(OUT, 'boxes.json')
+    boxes = json.load(open(path)) if os.path.exists(path) else {}
     spots = d['spots']
     if not spots:
         raise SystemExit('草地里找不到离禁区够远的空地，检查 SCENE')
@@ -54,8 +56,8 @@ def main():
         box = [x0, y0, x0 + n, y0 + n]
         img.crop(box).save(os.path.join(OUT, f'in-{dc["id"]}.png'))
         boxes[dc['id']] = {'box': box, 'anchor': [cx, cy], 'k': k}
-    json.dump(boxes, open(os.path.join(OUT, 'boxes.json'), 'w'), indent=1)
-    print(f'{len(boxes)} 块空草地 → {OUT}/in-*.png；Codex 画完存 out-<id>.png，然后 python3 scripts/camp/decor_patch.py')
+    json.dump(boxes, open(path, 'w'), indent=1)
+    print(f'裁好 → {OUT}/in-*.png（boxes.json 里共 {len(boxes)} 件）；Codex 画完存 out-<id>.png，然后 python3 scripts/camp/decor_patch.py')
 
 
 if __name__ == '__main__':

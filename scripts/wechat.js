@@ -9,7 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base/、camp/decor/、camp/anim/、camp/cut/
+//   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base-vN/、decor-vN/、anim-vN/、cut-vN/
 
 const fs = require('fs')
 const path = require('path')
@@ -84,21 +84,23 @@ async function main() {
     ignores: ['node_modules/**/*', 'test/**/*', 'docs/**/*', 'scripts/**/*', '.wechat/**/*'],
   })
 
-  // art/cut 的版本：帐篷 / 锅抠图、火苗逐帧图、熄了火的补丁改过就加一（传到 camp/cut-vN/，再把打印的前缀填进 config.cutArt）
-  const CUT_VERSION = 4
+  // 云存储里每类图的版本：重新生成过就加一（同名覆盖的话 CDN 和手机会继续用旧图一阵子），传到 camp/<类>-vN/，再把打印的前缀填进 config
+  // base：营地画和上下补的天空 / 草地；decor：装饰块；anim：宠物动画拼图；cut：帐篷 / 锅抠图、火苗逐帧图、熄了火的补丁
+  const ART_VERSION = { base: 2, decor: 1, anim: 1, cut: 5 }
 
   if (command === 'art') {
     const env = envId()
-    // 营地底图切块 art/camp/ → camp/base/；装饰块 art/decor/ → camp/decor/；宠物动画拼图 art/anim/ → camp/anim/。有哪个传哪个
+    // 营地底图切块 art/camp/、装饰块 art/decor/、宠物动画拼图 art/anim/、抠图层 art/cut/ → camp/<类>-vN/。有哪个传哪个
     // 只传某几类：npm run wx:art -- cut（base / decor / anim / cut）；不写就全传
     const only = process.argv.slice(3)
     const jobs = [
-      { name: 'base', dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', remote: 'camp/base', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
-      { name: 'decor', dir: path.join(ROOT, 'art/decor'), check: null, remote: 'camp/decor', key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
-      { name: 'anim', dir: path.join(ROOT, 'art/anim'), check: null, remote: 'camp/anim', key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
-      // 抠图层和火苗逐帧图重新生成过就把版本号加一：同名覆盖的话 CDN 和手机会继续用旧图一阵子
-      { name: 'cut', dir: path.join(ROOT, 'art/cut'), check: 'pot-0.webp', remote: `camp/cut-v${CUT_VERSION}`, key: 'cutArt', hint: 'python3 scripts/camp/fire_off.py && python3 scripts/camp/cutouts.py --from-base && python3 scripts/camp/fx_art.py' },
-    ].filter((j) => (!only.length || only.includes(j.name)) && fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png|webp)$/.test(f)))
+      { name: 'base', dir: path.join(ROOT, 'art/camp'), check: 't00.jpg', key: 'campArt', hint: 'python3 scripts/camp/cut_art.py art/raw/camp/camp-hd.png' },
+      { name: 'decor', dir: path.join(ROOT, 'art/decor'), check: null, key: 'decorArt', hint: 'python3 scripts/camp/decor_patch.py' },
+      { name: 'anim', dir: path.join(ROOT, 'art/anim'), check: null, key: 'animArt', hint: 'python3 scripts/pack_anim.py' },
+      { name: 'cut', dir: path.join(ROOT, 'art/cut'), check: 'pot-0.webp', key: 'cutArt', hint: 'python3 scripts/camp/fire_off.py && python3 scripts/camp/cutouts.py --from-base && python3 scripts/camp/fx_art.py' },
+    ]
+      .map((j) => ({ ...j, remote: `camp/${j.name}-v${ART_VERSION[j.name]}` }))
+      .filter((j) => (!only.length || only.includes(j.name)) && fs.existsSync(j.dir) && (!j.check || fs.existsSync(path.join(j.dir, j.check))) && fs.readdirSync(j.dir).some((f) => /\.(jpg|png|webp)$/.test(f)))
     if (!jobs.length) fail('art/camp/、art/decor/、art/anim/、art/cut/ 里都没有切好的图：先跑 python3 scripts/camp/cut_art.py、decor_patch.py、pack_anim.py 或 cutouts.py')
     let bucket = ''
     try {

@@ -30,9 +30,6 @@ REPO = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 RAW = os.path.join(REPO, 'art', 'raw', 'cut')
 OUT = os.path.join(REPO, 'art', 'cut')
 LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'cut')
-DIFF_MIN = 40
-LOCAL_SCALE = 0.3      # 本地小图相对云端图的比例（只是云端加载失败时的兜底）
-CLOUD_SCALE = 0.5      # 兜底比例（没传 scale 时）
 DAY_RES = 0.75         # 日景抠图的分辨率（相对 4096 的画）：和日景底图切块一样，盖上去像素对得上、不糊
 NIGHT_RES = 0.5        # 夜景：和夜景底图切块一样
 LOCAL_RES = 0.16       # 包里的兜底小图
@@ -193,12 +190,6 @@ def crop(image, pfx):
     print(f'裁好 → {RAW}/in-{pfx}tent.png、in-{pfx}pot.png；Codex 画 out-{pfx}*.png 后再跑 python3 scripts/camp/cutouts.py' + (' --night' if pfx else ''))
 
 
-def mask_between(a, b):
-    """两张图不一样的地方（去噪点、略扩、羽化）→ L 模式的 alpha"""
-    d = np.abs(np.array(a).astype(int) - np.array(b).astype(int)).sum(axis=2) > DIFF_MIN
-    return Image.fromarray((d * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(15)).filter(ImageFilter.GaussianBlur(3))
-
-
 def load(name, size=None):
     path = os.path.join(RAW, name)
     if not os.path.exists(path):
@@ -215,19 +206,29 @@ def small_png(rgba, scale):
     return Image.fromarray(a).quantize(colors=256, method=Image.Quantize.FASTOCTREE)
 
 
-def emit(rgb, alpha, name, local, scale=CLOUD_SCALE):
-    rgba = rgb.convert('RGBA')
-    rgba.putalpha(alpha)
-    out = small_png(rgba, scale)
-    out.save(os.path.join(OUT, name), optimize=True)
-    if local:
-        os.makedirs(LOCAL, exist_ok=True)
-        small_png(rgba, scale * LOCAL_SCALE).save(os.path.join(LOCAL, name), optimize=True)
-    print(f'  ✓  {name}  {out.width}×{out.height}  {os.path.getsize(os.path.join(OUT, name)) // 1024} KB')
+def with_steam(pot_in, out, base_alpha, rim_y):
+    """锅身以内直接用 Codex 的 out；锅外面它只画了锅口飘上去的热气（半透明白烟）。不能把 out 和 in 不一样的那一圈连背后的草一起抠
+    （宠物走到锅后面会被一块假草盖住），按「比原画白了多少」反推白烟本身的颜色 S 和透明度 a（out = in·(1−a) + S·a），只取锅口往上的"""
+    I = np.asarray(pot_in).astype(float)
+    O = np.asarray(out).astype(float)
+    b = np.asarray(base_alpha).astype(float) / 255
+    lift = (O - I).mean(-1)
+    above = np.arange(I.shape[0])[:, None] < rim_y
+    smoke = (lift > 12) & (b < 0.5) & above
+    if smoke.sum() < 50:
+        return out, base_alpha
+    # 白烟本身是白的（偏一点暖），只取它多亮：画上最浓的地方也还透着背后的草，直接取颜色会发绿
+    L = np.percentile(O[smoke].max(-1), 99)
+    S = np.array([L, L, L * 0.97])
+    D = S - I
+    a = np.clip(((O - I) * D).sum(-1) / np.maximum((D * D).sum(-1), 1), 0, 1) * smooth(6, 16, lift) * above
+    alpha = b + a * (1 - b)
+    rgb = (O * b[..., None] + S * (a * (1 - b))[..., None]) / np.maximum(alpha, 1e-3)[..., None]
+    return Image.fromarray(np.uint8(np.clip(rgb, 0, 255) + 0.5)), Image.fromarray(np.uint8(alpha * 255 + 0.5))
 
 
 def build(local, pfx):
-    """Codex 画好了锅里三态（out-pot-1～3）：锅的范围用从画上抠的精确轮廓，再并上 Codex 画了东西的地方（锅里的内容、锅口上的热气）。
+    """Codex 画好了锅里三态（out-pot-1～3）：锅的范围用从画上抠的精确轮廓，锅口往上加 Codex 画的热气（with_steam）。
     帐篷、空锅不用 Codex 的「去掉」版了（from_base 直接抠得准），这里只换锅里的 1～3 层。"""
     S = scene()
     c = S['cutouts']['pot']
@@ -238,6 +239,7 @@ def build(local, pfx):
     base_alpha = object_alpha(Image.open(DAY_HD).convert('RGB'), 'pot', S).resize(pot_in.size, Image.LANCZOS)
     res = NIGHT_RES if pfx else DAY_RES
     size = (round((c['box'][2] - c['box'][0]) * res), round((c['box'][3] - c['box'][1]) * res))
+    rim_y = (c['rim'][1] - c['box'][1]) * pot_in.width / (c['box'][2] - c['box'][0])
     os.makedirs(OUT, exist_ok=True)
     done = 0
     for n in (1, 2, 3):
@@ -245,10 +247,10 @@ def build(local, pfx):
         if not out:
             print(f'  ·  还没有 out-{pfx}pot-{n}.png')
             continue
-        alpha = Image.fromarray(np.maximum(np.array(base_alpha), np.array(mask_between(pot_in, out))))
-        emit_full(out.resize(size, Image.LANCZOS), alpha.resize(size, Image.LANCZOS), f'{pfx}pot-{n}.png', local, res)
+        rgb, alpha = with_steam(pot_in, out, base_alpha, rim_y)
+        emit_full(rgb.resize(size, Image.LANCZOS), alpha.resize(size, Image.LANCZOS), f'{pfx}pot-{n}.png', local, res)
         done += 1
-    print(f'→ {OUT}（锅里 {done} 层换成 Codex 画的）；scripts/wechat.js 的 CUT_VERSION 加一，npm run wx:art -- cut，把前缀填进 config.cutArt')
+    print(f'→ {OUT}（锅里 {done} 层换成 Codex 画的）；scripts/wechat.js 的 ART_VERSION.cut 加一，npm run wx:art -- cut，把前缀填进 config.cutArt')
 
 
 def main():
