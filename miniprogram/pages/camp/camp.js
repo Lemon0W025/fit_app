@@ -274,7 +274,8 @@ Page({
       },
     })
     this.setData({ pets: this.life.sprites() })
-    this.loadSheets(view.pets.map((p) => p.id))
+    // 住户和客人都要（客人没拼图就退回单张图、按 CSS 一跳一跳地走，还闪）
+    this.loadSheets(view.pets.concat(view.visitors || []).map((p) => p.id))
     if (this.data.mode === 'view') this.life.start()
   },
 
@@ -602,7 +603,10 @@ Page({
         this.render(view)
         const cooked = view.cooked || { eaters: [] }
         if (this.life) {
-          if (cooked.visitor) this.life.addVisitor({ id: cooked.visitor, foodId })
+          if (cooked.visitor) {
+            this.life.addVisitor({ id: cooked.visitor, foodId })
+            this.loadSheets([cooked.visitor])
+          }
           this.life.cook(cooked.eaters)
         }
         const food = foodById(foodId)
