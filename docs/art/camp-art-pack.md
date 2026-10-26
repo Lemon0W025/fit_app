@@ -4,12 +4,13 @@
 「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
 生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
 
-设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。两批都已经做完接进来了（10/25）：所有图齐了，以后只剩返工和新加的东西。
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。前两批都已经做完接进来了（10/25）；第 3 批（正面 / 背影，`specs/2026-10-26-daily-menu-and-facing-design.md`）待做。
 
 | 批 | 内容 |
 |---|---|
 | 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已完成，10/25 接入）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
 | 2（剩下的全部，已完成，10/25 接入） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
+| 3（正面 / 背影，待做） | 12 只各一张 C 张拼图 `art/raw/anim/<id>-c.png`（第 3.5 节）：往远处走看背影、朝镜头走看正面，背对着站 / 吃 / 坐，正面站着 |
 
 ## 执行流程（照这个顺序喂 Codex）
 
@@ -101,6 +102,24 @@ UNIFIED STYLE（拼图再带 SHEET RULES / ANIMATION SHEET RULES），把 art/gu
 ```
 
 **回来之后**：告诉 Claude「剩下的图在分支 codex/art-batch-2」，Claude 按第 7 节接入、发预览二维码。
+
+**第 3 批：正面 / 背影**（整段粘给 Codex。先出 3 只停下来给你看，你回「可以」或写改意见，之后一口气做完）：
+
+```
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 第 3.5 节给 12 只宠物各画一张 C 张拼图
+art/raw/anim/<id>-c.png（6×6，正面 / 背影）。先切到最新代码：git checkout claude/mini-program-dev-nzn2n0 && git pull，
+再把这个文件的第 0、3 节读一遍（尤其 3.2 的 ANIMATION SHEET RULES 和 3.5）。只往 art/raw/ 里加图，别改代码和脚本。
+每张提示词都带第 0 节的 UNIFIED STYLE、3.5 的 FACING SHEET RULES 和 3.4 表里那只的 CHARACTER；参考图给它自己的
+art/raw/pets/<id>-ref.png 和 art/raw/anim/<id>-a.png（同一只、同样大小、同样画风），再加 art/guide/style-camp.jpg。
+每出一张就跑 python3 scripts/art/check_art.py art/raw/anim/<id>-c.png，没过就重出或用 edit 修。顺序：
+1. 先出 doudou、nuonuo、jutuan 三张（小鸡、兔子、胖猫，背影最难认的三种），发给我看，停下来等我。
+2. 我说可以之后出剩下 9 只：lianlian、shishi、huahua、guigui、qiqi、shushu、sunbao、chacha、hehe（鹤鹤第 1、2 行是飞）。
+3. 最后 python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支 codex/art-batch-3 并推送
+   （推不了就打成 art-batch-3.zip 给我）；推完 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
+中途断了：新开对话粘同一段，先跑 python3 scripts/art/check_art.py，已经通过的别重做，从「还没有」的接着做。
+```
+
+**回来之后**：告诉 Claude「正面背影在分支 codex/art-batch-3」，Claude 按第 7 节接入、发预览二维码。
 
 ---
 
@@ -420,9 +439,40 @@ changes from frame to frame enough to read as motion, while the size of the char
 | chacha | 茶茶 | a small cream-colored deer with white spots, slim legs, and small antlers with pink-white camellia flowers blooming on them, gentle attentive eyes, long lashes | elegant stride, legs lifting high | lowers its head toward the viewer and the camellias on its antlers open from buds to full bloom |
 | hehe | 鹤鹤 | an elegant white crane with black wing tips, long legs, and a bright red hawthorn berry on its crown instead of the red patch, aloof calm expression | row 1 is FLYING: slow wing beats in the air, legs trailing (6 frames) | stands on one leg, eyes slowly close, dozes, sways slightly |
 
-参考 `art/raw/pets/<id>-ref.png`（同一只）；A 张和 B 张分开出，每张都要带 CHARACTER。
+参考 `art/raw/pets/<id>-ref.png`（同一只）；A 张、B 张、C 张分开出，每张都要带 CHARACTER。
 
 **分得开**：12 只在手机上只有 30 像素宽，光看剪影和颜色就要认得出。已经有的四只是黄色小鸡（豆豆）、白兔（糯糯）、顶荷叶的黄色小鸭（莲莲）、背柿子的棕色刺猬（柿柿）。橘团、杞杞、花花三只都带橘色，最容易撞：橘团是一整个圆滚滚的亮橘黄球、绿叶尾巴画大；杞杞瘦长、尖耳朵、大尾巴、偏红的橙色、白胸口、脖子上一串红枸杞；花花是白底三花（白色占一半以上），尾巴尖一朵黄菊花。龟龟、笋宝、茶茶别和草同色：龟壳上的苔藓用偏蓝的深绿，笋帽画大，茶茶的奶白身子和粉白山茶要跳出来。
+
+### 3.5 正面 / 背影 C 张 `art/raw/anim/<id>-c.png`（1:1，6 列 × 6 行 = 36 格，透明底）
+
+游戏里小动物往画面上方（远处）走的时候用背影、往下方（朝镜头）走的时候用正面，在锅前面吃、围着篝火坐的时候面朝锅也是背影；
+左右走、别的动作还用 A / B 张的侧面。所以 C 张要和 A 张**是同一只、同样大小、同样画风**，放在一起切换时不能跳。
+
+| 行 | 内容 |
+|---|---|
+| 1 | **背影走路**：背对镜头往远处走，看到后脑勺、背、尾巴（兔子是蹦、乌龟是爬、鹤鹤是**背影飞**），6 帧一个完整步幅 |
+| 2 | **正面走路**：朝镜头走过来，看到脸，6 帧（鹤鹤是**正面飞**） |
+| 3 | **背对着站**：背对镜头站着 / 待着，6 帧轻微呼吸、耳朵或尾巴动一动 |
+| 4 | **背对着吃**：背对镜头低头吃、抬头嚼，6 帧（看不到嘴，只看到头一低一抬、背一起一伏） |
+| 5 | **背对着坐**：背对镜头坐着（像在烤火），6 帧轻微呼吸 |
+| 6 | **正面站着看你**：正对镜头站着，6 帧呼吸、眨眼 |
+
+```
+FACING SHEET RULES: square image, an invisible grid of 6 columns x 6 rows of equal cells (36 frames).
+The SAME character as the attached reference sheet and animation sheet: same proportions, colors, markings,
+size in the cell and art style; only the viewing direction changes. Rows 1, 3, 4 and 5 show the character
+from BEHIND (we see the back of the head, the back and the tail; the face is hidden), row 2 and row 6 show it
+from the FRONT facing the viewer. Rows 1 and 2 walk straight away from / toward the viewer (not sideways).
+Same soft lighting from the upper left in every frame. Feet on the same baseline in every frame (about 15%
+above the cell bottom), centered horizontally, at least 8% of the cell empty on every side, nothing crosses
+a cell border. Each row is one looping action of 6 frames. No props, no ground, no shadow, no text, no frame
+numbers. Transparent background. The character is tiny on a phone, so the back view must still be easy to
+recognize: keep its signature features clearly visible from behind (the sprout, the ears, the lotus leaf,
+the persimmons, the flower tail, the moss shell, the goji necklace strings, the bushy tail, the leaf tail,
+the bamboo-shoot hat, the camellia antlers, the red hawthorn crown) and the motion a little exaggerated.
+```
+
+背影最容易认不出来：每只的记忆点从后面也要看得见（豆豆头顶的豆芽、糯糯的长耳朵、莲莲的荷叶、柿柿背上的柿子、花花的菊花尾巴、龟龟的苔藓壳、杞杞的大尾巴、薯薯的大尾巴、橘团的叶子尾巴、笋宝的笋帽、茶茶的山茶鹿角、鹤鹤头顶的山楂）。大小和 A 张一样（脚底在同一条线、身体占格子的比例一样），不然一转身就忽大忽小。
 
 ---
 
@@ -466,6 +516,6 @@ in this order: … Cells 34–36 empty.
 - 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`light_map.py`（空锅、夜里的木盖、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
-- 宠物：`pack_anim.py` 打包两张 6×6（回写 `utils/anim-sheets.js`）→ `npm run wx:art -- anim` → `config.animArt`；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）
+- 宠物：`pack_anim.py` 打包两张 6×6（有 `<id>-c.png` 的连 C 张一起，`utils/anim-sheets.js` 里记 `c: true`，页面三张都下好才换上）→ `scripts/wechat.js` 的 `ART_VERSION.anim` 加一 → `npm run wx:art -- anim` → `config.animArt`；第 3 批回来录屏看往上 / 往下走、锅前面吃和坐转身时大小不跳；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）
 - 食物、界面：`slice-art.py`（`ui/foods.png` 6×6 → `images/camp/foods/<id>.png` 128px；`ui/camp-icons.png` → `images/garden/ui/` 的 campfire / book / shop / bag / gift / paw / camera，食盆和回家暂时没用上）
 - 每批接完 `npm test`、`node scripts/preview/record-camp.js` 录屏逐帧看（锅后面、木盖旁、提灯旁、帐篷门口、夜里的光）、`npm run wx:preview`

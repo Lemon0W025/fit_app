@@ -430,6 +430,54 @@
       "kind": "anim"
     },
     {
+      "file": "art/raw/anim/doudou-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/nuonuo-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/lianlian-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/shishi-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/huahua-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/guigui-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/qiqi-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/shushu-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/jutuan-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/sunbao-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/chacha-c.png",
+      "kind": "anim"
+    },
+    {
+      "file": "art/raw/anim/hehe-c.png",
+      "kind": "anim"
+    },
+    {
       "file": "art/raw/pets/hehe-album.png",
       "kind": "grid",
       "cols": 1,
