@@ -192,11 +192,59 @@ page {
   filter: grayscale(0.5) drop-shadow(0 14rpx 12rpx rgba(40, 30, 10, 0.35));
 }
 
-.placing-text {
+.placing-main {
   flex: 1;
+}
+
+.placing-text {
   font-size: 30rpx;
   font-weight: 600;
   color: #8a6a1e;
+}
+
+/* 今天闻着这样食物会来的小动物：头像一排，没来过的压成黑影 */
+.smell {
+  display: flex;
+  justify-content: center;
+  margin-top: 6rpx;
+}
+
+.smell-wide {
+  justify-content: flex-start;
+  align-items: center;
+  margin-top: 12rpx;
+}
+
+.smell-label {
+  font-size: 26rpx;
+  color: #8a6a1e;
+  margin-right: 10rpx;
+}
+
+.smell-face {
+  width: 42rpx;
+  height: 42rpx;
+  margin: 0 2rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.smell-wide .smell-face {
+  width: 56rpx;
+  height: 56rpx;
+  margin-right: 8rpx;
+}
+
+.smell-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 只把头像本身压黑（白底在外面那层），看得出是谁的轮廓 */
+.smell-unknown {
+  filter: brightness(0);
+  opacity: 0.55;
 }
 
 button.btn-small {

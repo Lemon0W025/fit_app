@@ -121,13 +121,16 @@ function rarityOf(id) {
   return RARITIES.find((r) => r.id === id) || RARITIES[0]
 }
 
-function foodBag(foods) {
+// smell：今天闻着这样食物会来的（今日菜单 menu），住下的和客人显示头像，还没来过的显示剪影（known: false）
+function foodBag(foods, menu, residents, visitors) {
+  const known = (residents || []).concat(visitors || [])
   return (foods || [])
     .map(({ id, count }) => {
       const f = foodById(id)
       if (!f) return null
       const r = rarityOf(f.rarity)
-      return { id, name: f.name, count, rarity: r.id, rarityLabel: r.label, rarityColor: r.color, image: foodImage(id), term: f.term || '' }
+      const smell = ((menu && menu[id]) || []).filter((p) => petById(p)).map((p) => ({ id: p, face: petFace(p), known: known.indexOf(p) !== -1 }))
+      return { id, name: f.name, count, rarity: r.id, rarityLabel: r.label, rarityColor: r.color, image: foodImage(id), term: f.term || '', smell }
     })
     .filter(Boolean)
 }

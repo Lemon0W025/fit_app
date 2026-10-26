@@ -107,7 +107,13 @@
     </view>
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
-      <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖进锅里煮上，或者拖到小动物身上喂它' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
+      <view class="placing-main">
+        <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖进锅里煮上，或者拖到小动物身上喂它' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
+        <view wx:if="{{mode === 'feed' && selectedSmell.length}}" class="smell smell-wide">
+          <text class="smell-label">今天闻着它会来</text>
+          <view wx:for="{{selectedSmell}}" wx:for-item="pet" wx:key="id" class="smell-face"><image class="smell-img {{pet.known ? '' : 'smell-unknown'}}" src="{{pet.face}}" mode="aspectFit" /></view>
+        </view>
+      </view>
       <view class="placing-btns">
         <button class="btn-plain btn-small" bindtap="cancel">取消</button>
       </view>
@@ -128,10 +134,13 @@
             <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
             <view class="bag-name">{{item.name}}</view>
             <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
+            <view wx:if="{{item.smell.length}}" class="smell">
+              <view wx:for="{{item.smell}}" wx:for-item="pet" wx:key="id" class="smell-face"><image class="smell-img {{pet.known ? '' : 'smell-unknown'}}" src="{{pet.face}}" mode="aspectFit" /></view>
+            </view>
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
-        <view class="muted small bag-hint">点一样拿在手里：拖进锅里煮上（爱吃的小动物闻着香味就来），或者拖到小动物身上喂它</view>
+        <view class="muted small bag-hint">点一样拿在手里：拖进锅里煮上（下面是今天闻着它会来的小动物，黑影是还没来过的），或者拖到小动物身上喂它</view>
       </block>
       <block wx:else>
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">

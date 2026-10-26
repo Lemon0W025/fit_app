@@ -140,6 +140,19 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.equal(V.potLevel({ foods: ['a', 'b', 'c', 'd'] }), 3)
 })
 
+test('背包里的吃的：今天闻着它会来的头像，住下的和客人亮着、没来过的是剪影；点心和没有菜单时没有', () => {
+  const menu = { huluobo: ['nuonuo', 'doudou', 'shishi'], xiaomi: ['doudou'] }
+  const bag = V.foodBag([{ id: 'huluobo', count: 2 }, { id: 'xiaomi', count: 1 }, { id: 'shibing', count: 1 }], menu, ['doudou'], ['nuonuo'])
+  assert.deepEqual(bag[0].smell, [
+    { id: 'nuonuo', face: '/images/camp/pets/nuonuo-face.png', known: true },
+    { id: 'doudou', face: '/images/camp/pets/doudou-face.png', known: true },
+    { id: 'shishi', face: '/images/camp/pets/shishi-face.png', known: false },
+  ])
+  assert.deepEqual(bag[1].smell.map((p) => p.known), [true])
+  assert.deepEqual(bag[2].smell, [])
+  assert.deepEqual(V.foodBag([{ id: 'huluobo', count: 1 }])[0].smell, [])
+})
+
 test('锅：拖到锅身或篝火上算下锅；锅里煮着什么；客人的提示条', () => {
   assert.equal(V.onPot(SCENE.fire[0], SCENE.fire[1]), true)
   assert.equal(V.onPot(2070, 2300), true) // 锅身

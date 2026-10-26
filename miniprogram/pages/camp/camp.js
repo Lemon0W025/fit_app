@@ -49,6 +49,7 @@ Page({
     termText: '',
     mode: 'view',
     selectedName: '',
+    selectedSmell: [],
     drag: null,
     bagOpen: false,
     bagTab: 'food',
@@ -116,7 +117,8 @@ Page({
     if (!this.L) this.L = V.campLayout(win)
     const L = this.L
     this.camp = view
-    const foodBag = V.foodBag(view.foods)
+    // 背包里每样吃的下面：今天闻着它会来的（今日菜单），没来过的是剪影
+    const foodBag = V.foodBag(view.foods, view.menu, view.pets.map((p) => p.id), (view.visitors || []).map((v) => v.id))
     const decorBag = V.decorBag(view.decor.unplaced)
     const treats = view.term && view.term.treats.length ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
     // 锅里煮着几样就几层；第一样下锅就点火
@@ -437,8 +439,9 @@ Page({
   pickFood(e) {
     const { id } = e.currentTarget.dataset
     const f = foodById(id)
+    const item = this.data.foodBag.find((x) => x.id === id)
     this.selected = { type: 'feed', foodId: id }
-    this.setData({ bagOpen: false, mode: 'feed', selectedName: f ? f.name : '' })
+    this.setData({ bagOpen: false, mode: 'feed', selectedName: f ? f.name : '', selectedSmell: item ? item.smell : [] })
     if (this.life) this.life.pause()
     this.queryWorldRect()
   },

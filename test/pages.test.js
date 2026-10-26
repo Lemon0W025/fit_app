@@ -620,9 +620,14 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(camp.data.bagCount, 2)
   camp.tapPot()
   assert.deepEqual([camp.data.bagOpen, camp.data.bagTab], [true, 'food'])
+  // 背包里的胡萝卜下面：今天闻着它会来的（豆豆住着亮着，别的还没来过是剪影）
+  const carrot = camp.data.foodBag.find((f) => f.id === 'huluobo')
+  assert.deepEqual(carrot.smell.map((p) => p.id), camp.camp.menu.huluobo)
+  carrot.smell.forEach((p) => assert.equal(p.known, p.id === 'doudou', p.id))
   // 拿着胡萝卜：拖到锅上松手就下锅
   camp.pickFood(event({ id: 'huluobo' }))
   assert.equal(camp.data.mode, 'feed')
+  assert.deepEqual(camp.data.selectedSmell, carrot.smell)
   wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
   camp.worldRect = wx.worldRect
   const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
