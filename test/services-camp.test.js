@@ -153,6 +153,20 @@ test('putFood：下锅点火，一天最多 3 样、同一样不能两次；爱�
   assert.deepEqual(stored.pot, { date: TODAY, foods: ['huluobo', 'xiaomi', 'shibing'] })
 })
 
+test('putFood：客人从今日菜单里挑（本来爱吃的住下了，名单里别的还能来）；名单里都来过了就没有客人；view 带今天的菜单', async () => {
+  const { dailyMenu } = require('../cloudfunctions/api/lib/menu')
+  const menu = dailyMenu(TODAY)
+  // 豆豆本来爱吃小米 / 玉米粒，它已经住下了；挑一样今天名单里还有别人的
+  const food = ['xiaomi', 'yumili'].find((id) => menu[id].some((p) => p !== 'doudou'))
+  assert.ok(food, '这天小米、玉米粒的名单里都只有豆豆，换个日子测')
+  const { service } = setup({ camp: rich({ foods: { [food]: 1 } }), random: () => 0 })
+  const v = await service.putFood('u1', { foodId: food })
+  assert.deepEqual(v.menu, menu)
+  assert.equal(v.cooked.visitor, menu[food].find((p) => p !== 'doudou'))
+  const all = setup({ camp: rich({ foods: { [food]: 1 }, pets: menu[food].map((id) => ({ id, since: TODAY, fed: 0, fedToday: { date: '', n: 0 } })) }) })
+  assert.equal((await all.service.putFood('u1', { foodId: food })).cooked.visitor, null)
+})
+
 test('putFood：已经是客人的不再挑；锅是昨天的就当空锅；背包没有的不下锅', async () => {
   const camp = rich({
     foods: { huluobo: 1, niangao: 1 },

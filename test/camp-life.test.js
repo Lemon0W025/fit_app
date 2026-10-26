@@ -449,3 +449,18 @@ test('夜里宠物按站的位置上色，白天不调；火没点时远处的�
   const lamp = make({ hour: 22, lit: false, saved, decor: [{ uid: 'd1', id: 'lantern', x: 3560, y: 3520 }] }).life.sprites()
   assert.ok(lamp[0].moon < off[0].moon - 0.3, `${lamp[0].moon}`)
 })
+
+test('不瞬移：离开时正好走到锅后面（路过可以、停不行的地方）也站回原地，接着走出来，不在那儿歇', () => {
+  const [[hx0, hy0], , [hx1, hy1]] = SCENE.hide[0]
+  const x = (hx0 + hx1) / 2
+  const y = (hy0 + hy1) / 2
+  assert.ok(hiddenAt(x, y) && inGrass(x, y), `${x},${y}`)
+  const { life, clock } = make({ hour: 12, pets: [{ id: 'doudou', level: 1, fed: 0 }], saved: { doudou: { x, y, right: true, action: 'idle', until: 0 } } })
+  const w = life.whereIs()[0]
+  assert.ok(Math.hypot(w.x - x, w.y - y) < 1e-6, `站回原地 ${w.x},${w.y}`)
+  life.start()
+  clock.advance(20000)
+  const after = life.whereIs()[0]
+  assert.ok(!hiddenAt(after.x, after.y), `还在锅后面 ${after.x | 0},${after.y | 0} ${after.action}`)
+  life.stop()
+})

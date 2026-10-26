@@ -3,7 +3,8 @@ const { normalizeCamp, migrated } = require('../lib/camp-state')
 const { dateKey } = require('../lib/shared/date')
 const { RARITIES, SPIN_COST, WELCOME_BEANS, PITY, beanBalance, rollRarity, currentTerm } = require('../lib/shared/garden')
 const { PETS, petById } = require('../lib/shared/pets')
-const { FOODS, TREATS, foodById, pickFood, feedGain, arrivalFor } = require('../lib/shared/foods')
+const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
+const { dailyMenu } = require('../lib/menu')
 const { DECOR, GOLD_TENT, decorById, placeProblem } = require('../lib/shared/decor')
 const { levelOf, nextLevelAt, giftDue } = require('../lib/shared/camp')
 
@@ -96,6 +97,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       term: termInfo(),
       foods: FOODS.concat(TREATS).filter((f) => camp.foods[f.id] > 0).map((f) => ({ id: f.id, count: camp.foods[f.id] })),
       pot: { foods: potFoods(camp) },
+      menu: dailyMenu(today()),
       visitors: camp.visitors.map(({ id, foodId }) => ({ id, foodId })),
       pets: camp.pets.map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed) })),
       arrivals: camp.arrivals,
@@ -213,7 +215,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
     },
 
     // 下锅：今天第一样下锅就点火、煮一整天。爱吃它的住户这就过来吃（亲密 + feedGain）；
-    // 爱吃它、和它一样稀有、还没来过的里挑一只闻着香味来当客人（下次拍正餐住下）
+    // 今日菜单里这样食物的名单（lib/menu.js）中，挑一只还没住下、也不是客人的闻着香味来当客人（下次拍正餐住下）
     async putFood(openid, input) {
       const foodId = (input || {}).foodId
       const camp = await load(openid)
@@ -225,7 +227,9 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       camp.pot = { date: today(), foods: cooking.concat(foodId) }
       const eaters = camp.pets.filter((p) => likes(p.id, foodId)).map((p) => p.id)
       camp.pets = camp.pets.map((p) => (eaters.indexOf(p.id) !== -1 ? { ...p, fed: p.fed + feedGain(p.id, foodId) } : p))
-      const visitor = arrivalFor(foodId, residentIds(camp).concat(camp.visitors.map((v) => v.id)), random())
+      const here = residentIds(camp).concat(camp.visitors.map((v) => v.id))
+      const smells = (dailyMenu(today())[foodId] || []).filter((id) => here.indexOf(id) === -1)
+      const visitor = smells.length ? smells[Math.min(smells.length - 1, Math.floor(random() * smells.length))] : null
       if (visitor) camp.visitors = camp.visitors.concat({ id: visitor, foodId, since: today() })
       await save(openid, camp)
       return view(camp, { cooked: { foodId, eaters, visitor: visitor || null } })

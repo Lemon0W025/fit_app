@@ -529,6 +529,11 @@ function createLife({
       return rest(a)
     }
     if (a.action !== 'idle') return rest(a)
+    // 站在锅身 / 提灯正后面（回来时接着上次走到一半的地方）：先走出来再说
+    if (hiddenAt(a.x, a.y)) {
+      const out = nearFire(a) || randomGrass(a)
+      if (out && walkTo(a, out, (b) => rest(b))) return
+    }
     if (drowsy(a)) return nap(a)
     if (period === 'morning') {
       const spot = nearFire(a)
@@ -626,9 +631,10 @@ function createLife({
     })
   }
 
-  // 上次离开时它在哪：站得住（草地上、看得见、不在装饰脚下——除非就在那件装饰上的点）就站回去；没睡完的接着睡（不超过上限）
+  // 上次离开时它在哪：站得住（草地上、不在装饰脚下——除非就在那件装饰上的点）就站回去；没睡完的接着睡（不超过上限）。
+  // 正好走到锅后面（路过可以、停不行的地方）也站回去，下一回合先走出来（turn 里），不然回来就瞬移到火边
   function restore(a, s) {
-    if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.y) || !inGrass(s.x, s.y) || hiddenAt(s.x, s.y)) return false
+    if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.y) || !inGrass(s.x, s.y)) return false
     const spot = decorSpotAt(s.x, s.y)
     if (!spot && inDecorFoot(s.x, s.y)) return false
     a.x = s.x

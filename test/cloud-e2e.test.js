@@ -165,17 +165,19 @@ test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后�
   const put = await main({ action: 'camp.putFood', data: { foodId: 'huluobo' } })
   assert.equal(put.ok, true, put.message)
   assert.deepEqual(put.data.pot, { foods: ['huluobo'] })
-  assert.deepEqual(put.data.visitors, [{ id: 'nuonuo', foodId: 'huluobo' }])
-  assert.equal(put.data.cooked.visitor, 'nuonuo')
+  // 客人是今天菜单里胡萝卜那几只中、还没住下的一只
+  const guest = put.data.cooked.visitor
+  assert.ok(put.data.menu.huluobo.includes(guest) && guest !== 'doudou', guest)
+  assert.deepEqual(put.data.visitors, [{ id: guest, foodId: 'huluobo' }])
   const again = await main({ action: 'camp.putFood', data: { foodId: 'huluobo' } })
   assert.equal(again.ok, false)
 
   const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭青菜' } })
   assert.equal(meal.ok, true, meal.message)
-  assert.deepEqual(meal.data.arrival.pets.map((p) => p.id), ['nuonuo'])
+  assert.deepEqual(meal.data.arrival.pets.map((p) => p.id), [guest])
   const after = await main({ action: 'camp.get', data: { markSeen: true } })
-  assert.deepEqual(after.data.pets.map((p) => p.id), ['doudou', 'nuonuo'])
-  assert.deepEqual(after.data.arrivals, ['nuonuo'])
+  assert.deepEqual(after.data.pets.map((p) => p.id), ['doudou', guest])
+  assert.deepEqual(after.data.arrivals, [guest])
   assert.equal(after.data.beans, 50) // 30 + 午饭准时 15 + 绿 5
 
   const buy = await main({ action: 'camp.buy', data: { decorId: 'ball' } })
