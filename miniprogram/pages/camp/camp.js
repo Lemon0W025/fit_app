@@ -267,7 +267,7 @@ Page({
       clock: this.clock || undefined,
       random: this.random || undefined,
       sheets: SHEETS,
-      sheetSrc: (id, sheet) => this.sheetSrc(id, sheet),
+      sheetSrc: (id) => this.sheetSrc(id),
       bad: this.badSheets,
       // 只发变了的字段：拼图的 src 一样也重发的话，宠物每换个动作就闪一下
       onChange: (i, sprite) => {
@@ -281,23 +281,16 @@ Page({
     if (this.data.mode === 'view') this.life.start()
   },
 
-  // 宠物的动画拼图在云存储里，先下到本地再用（云存储的图 setData 一次就重新取一次，会闪）；a、b 两张（有 C 张的连 c 三张）都下好了才换上，
-  // 点它换到 b 张、往上走换到 c 张时也不用现下。下好的记在 globalData，切回营地不用再下；下载失败的先用单张图，下次进营地再试
-  sheetNames(id) {
-    return SHEETS[id] && SHEETS[id].c ? ['a', 'b', 'c'] : ['a', 'b']
-  },
-
+  // 宠物的动画拼图在云存储里，先下到本地再用（云存储的图 setData 一次就重新取一次，会闪）。一只一张（A、B、C 上下拼着），
+  // 换动作、转身只挪行、不换图（换图也会闪）。下好的记在 globalData，切回营地不用再下；下载失败的先用单张图，下次进营地再试
   sheetFiles() {
     const g = getApp().globalData
     return (g.animFiles = g.animFiles || {})
   },
 
-  sheetSrc(id, sheet) {
+  sheetSrc(id) {
     const base = config.animArt || ''
-    const files = this.sheetFiles()
-    const ready = this.sheetNames(id).map((s) => files[`${base}${id}-${s}.png`])
-    if (!base || ready.some((f) => !f)) return ''
-    return files[`${base}${id}-${sheet}.png`] || ready[0]
+    return (base && this.sheetFiles()[`${base}${id}.png`]) || ''
   },
 
   loadSheets(ids) {
@@ -305,18 +298,16 @@ Page({
     if (!base) return
     const files = this.sheetFiles()
     ids.filter((id) => SHEETS[id]).forEach((id) => {
-      this.sheetNames(id).forEach((sheet) => {
-        const fileID = `${base}${id}-${sheet}.png`
-        if (files[fileID] !== undefined) return
-        files[fileID] = ''
-        wx.cloud.downloadFile({
-          fileID,
-          success: (res) => {
-            files[fileID] = res.tempFilePath || ''
-            if (this.life) this.life.refresh(id)
-          },
-          fail: () => delete files[fileID],
-        })
+      const fileID = `${base}${id}.png`
+      if (files[fileID] !== undefined) return
+      files[fileID] = ''
+      wx.cloud.downloadFile({
+        fileID,
+        success: (res) => {
+          files[fileID] = res.tempFilePath || ''
+          if (this.life) this.life.refresh(id)
+        },
+        fail: () => delete files[fileID],
       })
     })
   },

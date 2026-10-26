@@ -8,7 +8,7 @@ const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
-const { COLS, ROWS, frameFor, facingFor, dirOf } = require('./anim')
+const { COLS, frameFor, facingFor, dirOf, stackRow } = require('./anim')
 const { petImage, petFace, zOf, cutoutStrips, BOWL_PX, isNight } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 
@@ -80,8 +80,8 @@ function depthCuts(from, to, half, lines) {
 function createLife({
   L, pets, decor, arrivals = [], visitors = [], saved = null, hour = realHour, lit = () => true, pot = () => [], random = Math.random, clock = realClock, onChange = () => {},
   sheets = {}, animBase = '', bad = new Set(),
-  // 拼图从哪儿来（页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
-  sheetSrc = (id, sheet) => (animBase ? `${animBase}${id}-${sheet}.png` : ''),
+  // 拼图从哪儿来（一只一张，页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
+  sheetSrc = (id) => (animBase ? `${animBase}${id}.png` : ''),
 }) {
   let placed = decor
   let lamps = lampsOf(placed)
@@ -170,10 +170,11 @@ function createLife({
   function sheetOf(a) {
     const s = sheets[a.id]
     if (!s || bad.has(a.id)) return null
-    const anim = frameFor(a.action, { sleepStyle: a.sleepStyle, dir: a.dir, c: !!s.c })
-    const src = sheetSrc(a.id, anim.sheet)
+    const src = sheetSrc(a.id)
     if (!src) return null
-    return { sheet: src, anim: { ...anim, cols: COLS, rows: ROWS }, top: s.top }
+    // 一只一张拼好的图：换动作、转身只换行（anim.sheet 留着是哪一段，看着方便）
+    const anim = frameFor(a.action, { sleepStyle: a.sleepStyle, dir: a.dir, c: !!s.c })
+    return { sheet: src, anim: { ...anim, cols: COLS, ...stackRow(anim, !!s.c) }, top: s.top }
   }
 
   function sprite(a) {

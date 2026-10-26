@@ -1,7 +1,8 @@
 // 宠物的逐帧动画：每只两张 6×6 的拼图（见 docs/art/camp-art-pack.md）。A 张：走、坐着待机、睡姿 A、睡姿 B、吃、小动作；
 // B 张：开心蹭你、被戳打滚、被摸眯眼、叼礼物走、庆祝蹦、专属动作。每行 6 帧循环。拼图里都朝右，往左走镜像。纯函数，有单测
 // C 张（可选，anim-sheets.js 里 c: true 的才有）：背影走、正面走、背对着站、背对着吃、背对着坐、正面站着。往上走（远离镜头）用背影，
-// 往下走用正面，在锅前面吃 / 坐面朝锅也是背影；没有 C 张照旧用 A / B 张的侧面
+// 往下走用正面，在锅前面吃 / 坐面朝锅也是背影；没有 C 张照旧用 A / B 张的侧面。
+// 打包时 A、B（、C）上下拼成一张（scripts/pack_anim.py → <id>.png，6 列 × 12 / 18 行）：换动作、转身只挪行，不换图（换图会闪一下）
 
 const COLS = 6
 const ROWS = 6
@@ -43,6 +44,12 @@ function facingFor(dx, current) {
   return current
 }
 
+// 拼成一张以后在第几行：A 张 0～5、B 张 6～11、C 张 12～17；rows 是整张一共几行
+const SHEET_ORDER = ['a', 'b', 'c']
+function stackRow(anim, c) {
+  return { row: SHEET_ORDER.indexOf(anim.sheet) * ROWS + anim.row, rows: ROWS * (c ? 3 : 2) }
+}
+
 // 走一小段 (dx, dy) 时朝哪：往上（远离镜头）back、往下 front、横着 side；没动保持原来的
 function dirOf(dx, dy, current = 'side') {
   if (!dx && !dy) return current
@@ -50,4 +57,4 @@ function dirOf(dx, dy, current = 'side') {
   return 'side'
 }
 
-module.exports = { COLS, ROWS, SHEET_ROWS, frameFor, facingFor, dirOf }
+module.exports = { COLS, ROWS, SHEET_ROWS, frameFor, facingFor, dirOf, stackRow }

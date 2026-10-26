@@ -56,3 +56,11 @@ test('C 张（正面 / 背影）：有 C 张时往上走看背影、往下走看
   assert.equal(A.dirOf(100, -100), 'side')
   assert.equal(A.dirOf(0, 0, 'back'), 'back')
 })
+
+test('一只一张：A、B、C 上下拼成一张（6 列 × 12 或 18 行），换动作、转身只挪行，不换图', () => {
+  assert.deepEqual(A.stackRow(A.frameFor('walk'), false), { row: 0, rows: 12 })
+  assert.deepEqual(A.stackRow(A.frameFor('happy'), false), { row: 6, rows: 12 })
+  assert.deepEqual(A.stackRow(A.frameFor('happy'), true), { row: 6, rows: 18 })
+  assert.deepEqual(A.stackRow(A.frameFor('walk', { dir: 'back', c: true }), true), { row: 12, rows: 18 })
+  assert.deepEqual(A.stackRow(A.frameFor('idle', { dir: 'front', c: true }), true), { row: 17, rows: 18 })
+})

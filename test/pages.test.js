@@ -493,35 +493,30 @@ test('营地：宠物拼图先下到本地、两张都好了才换上；之后�
   camp.onShow()
   await settle()
   assert.ok(SHEETS.doudou && config.animArt, '豆豆有拼图、填了 animArt')
-  // 有正面 / 背影 C 张的连 c 一起下（三张都好了才换上）
-  const sheets = SHEETS.doudou.c ? ['a', 'b', 'c'] : ['a', 'b']
-  assert.deepEqual(wx.log.downloads.slice().sort(), sheets.map((x) => `${config.animArt}doudou-${x}.png`))
-  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
+  // 一只一张（A、B、C 上下拼着），下这一张就够
+  assert.deepEqual(wx.log.downloads, [`${config.animArt}doudou.png`])
+  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou.png')
   camp.closeWelcome()
   const sent = []
-  const sheetsSent = []
   const setData = camp.setData
   camp.setData = function (patch, cb) {
     sent.push(...Object.keys(patch))
-    Object.keys(patch).filter((k) => /\.sheet$/.test(k)).forEach((k) => sheetsSent.push(patch[k]))
     return setData.call(this, patch, cb)
   }
   camp.clock.advance(30000)
   const petKeys = sent.filter((k) => k.startsWith('pets'))
   assert.ok(petKeys.length > 0, '宠物在动')
-  // 不整只重发、不重发单张图和头像；拼图只在下到本地的那几张之间换（往上 / 往下走换到 C 张），从不发云存储地址
-  assert.ok(!petKeys.some((k) => /^pets(\[\d+\])?$/.test(k) || /\.(image|face)$/.test(k)), petKeys.join(' '))
-  const local = sheets.map((x) => `wxfile://tmp/doudou-${x}.png`)
-  assert.ok(sheetsSent.every((src) => local.includes(src)), sheetsSent.join(' '))
+  // 不整只重发、图一张都不重发（换动作、转身都只挪行；换图会闪一下）
+  assert.ok(!petKeys.some((k) => /^pets(\[\d+\])?$/.test(k) || /\.(sheet|image|face)$/.test(k)), petKeys.join(' '))
   assert.deepEqual(camp.data.pets, camp.life.sprites(), '只发变了的字段，拼起来和整只一样')
   // 切到别的 tab 再回来：拼图下过了不再下；抠图层、火、食盆、装饰没变就不重发
   sent.length = 0
   camp.onHide()
   camp.onShow()
   await settle()
-  assert.equal(wx.log.downloads.length, sheets.length)
+  assert.equal(wx.log.downloads.length, 1)
   assert.ok(!sent.some((k) => ['cuts', 'fx', 'decor', 'potHit'].indexOf(k) !== -1), sent.join(' '))
-  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
+  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou.png')
 })
 
 test('营地：宠物和影子用 transform 挪（left / bottom 过渡每帧都要重排重画大画，手机上走起来一直闪）', () => {
@@ -824,28 +819,25 @@ test('营地：客人也用逐帧拼图（先下到本地），不退回单张�
   camp.onLoad()
   camp.onShow()
   await settle()
-  assert.ok(wx.log.downloads.includes(`${config.animArt}nuonuo-a.png`) && wx.log.downloads.includes(`${config.animArt}nuonuo-b.png`), wx.log.downloads.join(' '))
+  assert.ok(wx.log.downloads.includes(`${config.animArt}nuonuo.png`), wx.log.downloads.join(' '))
   const bunny = camp.data.pets.find((p) => p.id === 'nuonuo')
   assert.equal(bunny.visitor, true)
-  assert.match(bunny.sheet, /^wxfile:\/\/tmp\/nuonuo-[abc]\.png$/) // 正朝着镜头走进来时是 C 张（正面）
+  assert.equal(bunny.sheet, 'wxfile://tmp/nuonuo.png')
   // 烤红薯下锅：今天菜单里闻着它来的那只（杞杞或者别的），它的拼图也下
   camp.closeWelcome()
   camp.cook('kaohongshu')
   await settle()
   const comer = gardens.get('u1').visitors.map((v) => v.id).find((id) => id !== 'nuonuo')
   assert.ok(comer, '烤红薯没引来客人')
-  assert.ok(wx.log.downloads.includes(`${config.animArt}${comer}-a.png`), wx.log.downloads.join(' '))
+  assert.ok(wx.log.downloads.includes(`${config.animArt}${comer}.png`), wx.log.downloads.join(' '))
   const fox = camp.data.pets.find((p) => p.id === comer)
   assert.equal(fox.visitor, true)
-  assert.ok(fox.sheet.startsWith(`wxfile://tmp/${comer}-`), fox.sheet)
+  assert.equal(fox.sheet, `wxfile://tmp/${comer}.png`)
   camp.onUnload()
 })
 
-test('营地：有 C 张（正面 / 背影）的宠物三张都下好了才换上拼图', async (t) => {
+test('营地：拼图下好以前用单张图，下好了换上那一张；之后再也不换图', async () => {
   const config = require('../miniprogram/config')
-  const SHEETS = require('../miniprogram/utils/anim-sheets')
-  SHEETS.doudou.c = true
-  t.after(() => delete SHEETS.doudou.c)
   const cloud = createFakeCloud({ replies: [] })
   const { main } = loadCloudFunction(cloud)
   const wx = createWx(main)
@@ -856,11 +848,8 @@ test('营地：有 C 张（正面 / 背影）的宠物三张都下好了才换�
   camp.onLoad()
   camp.onShow()
   await settle()
-  assert.deepEqual(wx.log.downloads.filter((f) => f.includes('doudou')).sort(), ['a', 'b', 'c'].map((s) => `${config.animArt}doudou-${s}.png`))
-  assert.equal(camp.sheetSrc('doudou', 'c'), 'wxfile://tmp/doudou-c.png')
-  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
-  // C 张还没下好：先都用单张图
-  delete getApp().globalData.animFiles[`${config.animArt}doudou-c.png`]
-  assert.equal(camp.sheetSrc('doudou', 'a'), '')
+  assert.equal(camp.sheetSrc('doudou'), 'wxfile://tmp/doudou.png')
+  delete getApp().globalData.animFiles[`${config.animArt}doudou.png`]
+  assert.equal(camp.sheetSrc('doudou'), '')
   camp.onUnload()
 })

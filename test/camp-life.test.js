@@ -288,8 +288,8 @@ test('装饰变了：正在玩的东西没了就不玩了', () => {
 test('有拼图时用拼图、按动作选行；拼图坏了退回单张图', () => {
   const { life } = make({ sheets: { doudou: { top: 0.1 } }, animBase: 'cloud://x/anim/' })
   const s = life.sprites()[0]
-  assert.equal(s.sheet, 'cloud://x/anim/doudou-a.png')
-  assert.deepEqual([s.anim.cols, s.anim.rows, s.anim.row], [6, 6, 1])
+  assert.equal(s.sheet, 'cloud://x/anim/doudou.png') // 一只一张（A、B 上下拼着）
+  assert.deepEqual([s.anim.cols, s.anim.rows, s.anim.row], [6, 12, 1])
   life.noSheet('doudou')
   assert.equal(life.sprites()[0].sheet, '')
 })
@@ -421,17 +421,16 @@ test('光、火星、萤火虫、热气这些层不挡点击（都在宠物上�
 
 test('拼图的来源由页面给（下到本地的文件）：还没下好用单张图，下好了 refresh 换上', () => {
   const ready = {}
-  const { life, sprites } = make({ sheets: { doudou: { top: 0.2 } }, sheetSrc: (id, s) => ready[`${id}-${s}`] || '' })
+  const { life, sprites } = make({ sheets: { doudou: { top: 0.2 } }, sheetSrc: (id) => ready[id] || '' })
   assert.equal(life.sprites()[0].sheet, '')
   assert.equal(life.sprites()[0].image, '/images/camp/pets/doudou.png')
-  ready['doudou-a'] = 'wxfile://tmp/doudou-a.png'
-  ready['doudou-b'] = 'wxfile://tmp/doudou-b.png'
+  ready.doudou = 'wxfile://tmp/doudou.png'
   life.refresh('doudou')
-  assert.equal(sprites[0].sheet, 'wxfile://tmp/doudou-a.png')
+  assert.equal(sprites[0].sheet, 'wxfile://tmp/doudou.png')
   assert.equal(sprites[0].anim.row, 1)
   // 不给 sheetSrc 就按 animBase 拼云存储的路径（预览录屏、老用法）
   const old = make({ sheets: { doudou: { top: 0.2 } }, animBase: 'cloud://x/camp/anim-v1/' })
-  assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou-a.png')
+  assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou.png')
 })
 
 test('夜里宠物按站的位置上色，白天不调；火没点时远处的盖上月光层、灯边的不盖，点着了全都是本来的颜色', () => {
@@ -468,7 +467,11 @@ test('不瞬移：离开时正好走到锅后面（路过可以、停不行的�
 test('朝向：有 C 张的往上走用背影、往下走用正面、横着走侧面；停下保持；在锅前面吃是背影；蹭你回到侧面', () => {
   const saved = { doudou: { x: 3400, y: 3700, right: true, action: 'idle', until: 0 } }
   const { life, clock, sprites } = make({ hour: 12, seed: 3, pets: [{ id: 'doudou', level: 1, fed: 0 }], saved, sheets: { doudou: { top: 0.2, c: true } }, animBase: 'cloud://x/anim/' })
-  const row = () => [sprites[0].anim.sheet === 'cloud://x/anim/doudou-c.png' ? 'c' : sprites[0].sheet.slice(-5, -4), sprites[0].anim.row]
+  // 一只一张：哪张（a / b / c）、那张里的第几行；图一直是同一张
+  const row = () => {
+    assert.equal(sprites[0].sheet, 'cloud://x/anim/doudou.png')
+    return [sprites[0].anim.sheet, sprites[0].anim.row % 6]
+  }
   life.start()
   // 往上走（远离镜头）
   assert.equal(life.goTo(0, 3450, 3150, 60000), true)
@@ -500,7 +503,7 @@ test('朝向：有 C 张的往上走用背影、往下走用正面、横着走�
   const plain = make({ hour: 12, pets: [{ id: 'doudou', level: 1, fed: 0 }], saved, sheets: { doudou: { top: 0.2 } }, animBase: 'cloud://x/anim/' })
   plain.life.start()
   plain.life.goTo(0, 3450, 3150, 60000)
-  assert.equal(plain.sprites[0].sheet, 'cloud://x/anim/doudou-a.png')
-  assert.equal(plain.sprites[0].anim.row, 0)
+  assert.equal(plain.sprites[0].sheet, 'cloud://x/anim/doudou.png')
+  assert.deepEqual([plain.sprites[0].anim.sheet, plain.sprites[0].anim.row, plain.sprites[0].anim.rows], ['a', 0, 12])
   plain.life.stop()
 })

@@ -46,7 +46,7 @@
 
 - `anim.js`：`SHEET_ROWS.c`；`frameFor(action, { sleepStyle, dir, c })`：有 C 张时，`dir === 'back'` 的 走 / 飞 / 待机 / 吃 / 坐 换成背影那几行，`dir === 'front'` 的 走 / 飞 / 待机 换成正面；别的动作、或者没有 C 张，照旧用 A / B 张（侧面）。
 - `camp-life.js`：每只记 `dir`（side / back / front）。走每一小段时按方向定：竖着的位移比横着的大 1.2 倍以上就是 back（往上）/ front（往下），否则 side；停下来待机保持最后走的方向；在锅边吃、围火坐、客人在锅边闻时，站在锅前面（比篝火靠下）的面朝锅 = back；做别的动作（蹭你、打滚、被摸、睡觉……）回到 side。
-- `anim-sheets.js`：打包时有 C 张的记 `c: true`（`pack_anim.py` 认 `<id>-c.png`，可选）；页面 `loadSheets` 有 C 张的三张都下好了才换上。
+- `anim-sheets.js`：打包时有 C 张的记 `c: true`（`pack_anim.py` 认 `<id>-c.png`，可选）。**一只一张**：A、B、C 上下拼成 6 × 18 格（`anim.stackRow`），换动作、转身只挪行、不换图——一开始是三张分开、转身换 src，真机上转身会闪一下，10/26 改成拼一张。
 - 没画 C 张之前一切照旧。
 
 ## 三、测试
