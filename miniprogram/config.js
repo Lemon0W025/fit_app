@@ -8,5 +8,5 @@ module.exports = {
   // 帐篷 / 锅 / 木盖 / 提灯抠图层和篝火逐帧图的前缀（…/camp/cut-vN/，tent.webp、pot-0～3.webp、lid / lantern.webp、fire.jpg，夜里加 night-）；留空用包里的小图
   cutArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/cut-v5/',
   // 宠物动画拼图的前缀（…/camp/anim-vN/，<id>-a.png / <id>-b.png）；留空用单张图 + CSS 步态
-  animArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/anim-v3/',
+  animArt: 'cloud://cloud1-d0gc0a24t697e8d8b.636c-cloud1-d0gc0a24t697e8d8b-1514373455/camp/anim-v4/',
 }

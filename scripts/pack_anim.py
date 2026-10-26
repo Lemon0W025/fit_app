@@ -84,21 +84,33 @@ def height_of(packed, rows):
     return float(np.median(hs)) if hs else 0
 
 
+# C 张每行对着 A 张哪一行比个头：背影走 / 正面走 ↔ 走，背对站 / 背对坐 / 正面站 ↔ 坐着待机，背对吃 ↔ 吃
+C_PAIRS = {0: 0, 1: 0, 2: 1, 3: 4, 4: 1, 5: 1}
+ROW_SPREAD = 1.15   # 每行在整张的缩放上最多再大 / 小这么多（坐、趴本来就矮一点，别硬拉）
+
+
 def match_size(packed_c, packed_a):
-    """C 张按 A 张的个头缩放：背对着站 / 正面站着（第 3、6 行）的身高对齐 A 张坐着待机（第 2 行）。
-    模型画正面 / 背影常常画大一圈，不缩的话一转身就忽大忽小。以脚底中点为圆心缩放，脚还在同一条线上"""
+    """C 张按 A 张的个头缩放。模型画正面 / 背影常常画大一圈（或者某几行画大），不缩的话一转身就忽大忽小。
+    整张先按「背对着站 / 正面站着（第 3、6 行）对 A 张坐着待机（第 2 行）」定一个倍数，
+    每行再往它对应的那行 A 张（见 C_PAIRS，走路最要紧：侧面、背影、正面一直在换）靠，最多偏 ROW_SPREAD。
+    以脚底中点为圆心缩放，脚还在同一条线上；返回 (缩好的图, 整张的倍数, 每行的倍数)"""
     target, now = height_of(packed_a, [1]), height_of(packed_c, [2, 5])
-    if not target or not now or abs(now / target - 1) < 0.03:
-        return packed_c, 1.0
-    k = target / now
+    k = target / now if target and now else 1.0
+    rows = []
+    for r in range(ROWS):
+        want, have = height_of(packed_a, [C_PAIRS[r]]), height_of(packed_c, [r])
+        rk = want / have if want and have else k
+        rows.append(min(k * ROW_SPREAD, max(k / ROW_SPREAD, rk)))
+    if all(abs(rk - 1) < 0.03 for rk in rows):
+        return packed_c, 1.0, [1.0] * ROWS
     out = Image.new('RGBA', packed_c.size, (0, 0, 0, 0))
     foot = CELL * (1 - FOOT)
-    size = max(1, round(CELL * k))
     for r in range(ROWS):
+        size = max(1, round(CELL * rows[r]))
         for c in range(COLS):
             cell = packed_c.crop((c * CELL, r * CELL, (c + 1) * CELL, (r + 1) * CELL)).resize((size, size), Image.LANCZOS)
-            out.alpha_composite(cell, (c * CELL + round(CELL / 2 - size / 2), r * CELL + round(foot - foot * k)))
-    return out, k
+            out.alpha_composite(cell, (c * CELL + round(CELL / 2 - size / 2), r * CELL + round(foot - foot * rows[r])))
+    return out, k, rows
 
 
 def top_of(packed_a):
@@ -184,9 +196,9 @@ def main():
         for sheet in OPTIONAL:
             path = os.path.join(RAW, f'{pet_id}-{sheet}.png')
             if os.path.exists(path):
-                packed_c, k = match_size(pack(Image.open(path).convert('RGBA')), packed[0])
+                packed_c, k, rows = match_size(pack(Image.open(path).convert('RGBA')), packed[0])
                 if k != 1.0:
-                    print(f'  {pet_id}-{sheet}: 比 A 张{"大" if k < 1 else "小"}，缩放 {k:.2f} 对齐个头')
+                    print(f'  {pet_id}-{sheet}: 比 A 张{"大" if k < 1 else "小"}，整张缩放 {k:.2f}，每行 ' + ' '.join(f'{x:.2f}' for x in rows))
                 total += save(packed_c, os.path.join(OUT, f'{pet_id}-{sheet}.png'))
                 with_c.add(pet_id)
         print(f'  {pet_id}: {2 + (pet_id in with_c)} 张 {COLS * CELL}×{ROWS * CELL}，头顶空白 {tops[pet_id]}')

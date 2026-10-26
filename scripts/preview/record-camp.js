@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -132,6 +132,14 @@ const SCENARIOS = {
   'night-lamps': {
     hour: 22, potLevel: 0, focus: [2450, 2950], scale: 0.85, seconds: 12, decor: LAMPS, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 1500, 3450], [0, 1, 3600, 3700], [0, 2, 3200, 2450], [0, 3, 900, 2300], [0, 4, 2000, 3900], [0, 5, 3700, 2600], [1000, 3, 1500, 3350], [1500, 4, 2800, 3700]],
+  },
+  // 正面 / 背影（C 张）：四只往上（远处）走、过一会儿再走回来，豆豆从锅前面过去吃（背对着吃）
+  facing: {
+    hour: 10, potLevel: 1, focus: [2900, 3250], scale: 1.3, seconds: 16, pets: ['nuonuo', 'jutuan', 'sunbao', 'qiqi', 'doudou'],
+    plan: [[0, 0, 2500, 3700], [0, 1, 2900, 3750], [0, 2, 3300, 3700], [0, 3, 3650, 3450], [0, 4, 2300, 3500],
+      [500, 0, 2550, 2950], [700, 1, 2950, 3000], [900, 2, 3350, 2950], [1100, 3, 3650, 2800],
+      [8500, 0, 2500, 3700], [8700, 1, 2900, 3750], [8900, 2, 3300, 3700], [9100, 3, 3650, 3450]],
+    events: [[300, (life) => life.cook(['doudou'])]],
   },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
