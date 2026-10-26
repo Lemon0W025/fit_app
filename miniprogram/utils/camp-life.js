@@ -8,7 +8,7 @@ const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
-const { COLS, ROWS, frameFor, facingFor } = require('./anim')
+const { COLS, ROWS, frameFor, facingFor, dirOf } = require('./anim')
 const { petImage, petFace, zOf, cutoutStrips, BOWL_PX, isNight } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 
@@ -26,6 +26,8 @@ const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
+// 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
+const DIR_ACTIONS = ['idle', 'eat', 'sit']
 const START_MS = [300, 1500]
 const BUBBLE_MS = 3000
 const TAP_MS = 600
@@ -89,7 +91,7 @@ function createLife({
   const pick = (list) => list[Math.min(list.length - 1, Math.floor(random() * list.length))]
   const makeAnimal = (pet, level, index, visitor) => ({
     pet, level, index, visitor, id: pet.id, x: SCENE.fire[0], y: SCENE.fire[1] + 700, right: true, action: 'idle', goal: null, duration: 0, hidden: false,
-    bubble: '', emoji: '', tapping: false, sleepStyle: 'A', until: 0, timer: null, bubbleTimer: null, tapTimer: null, holdGift: false,
+    bubble: '', emoji: '', tapping: false, sleepStyle: 'A', dir: 'side', until: 0, timer: null, bubbleTimer: null, tapTimer: null, holdGift: false,
   })
   const animals = []
   pets.forEach((p) => {
@@ -168,7 +170,7 @@ function createLife({
   function sheetOf(a) {
     const s = sheets[a.id]
     if (!s || bad.has(a.id)) return null
-    const anim = frameFor(a.action, { sleepStyle: a.sleepStyle })
+    const anim = frameFor(a.action, { sleepStyle: a.sleepStyle, dir: a.dir, c: !!s.c })
     const src = sheetSrc(a.id, anim.sheet)
     if (!src) return null
     return { sheet: src, anim: { ...anim, cols: COLS, rows: ROWS }, top: s.top }
@@ -359,6 +361,7 @@ function createLife({
       next = cuts[0]
     }
     a.right = facingFor(next.x - a.x, a.right)
+    a.dir = dirOf(next.x - a.x, next.y - a.y, a.dir)
     // 切开的小段照原来的速度走（不设最短时长，不然走到切点会顿一下）
     const ms = Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000)
     a.duration = next.piece ? Math.max(16, ms) : Math.max(300, ms)
@@ -389,6 +392,7 @@ function createLife({
     a.action = action
     a.emoji = emoji
     if (action !== 'sleep') a.until = 0
+    if (DIR_ACTIONS.indexOf(action) === -1) a.dir = 'side'
     if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
     emit(a)
     schedule(a, ms)
@@ -471,10 +475,16 @@ function createLife({
     })
   }
 
+  // 面朝锅：站在锅前面（比篝火靠下）的是背对着我们（背影），两边的侧着
+  function facePot(b) {
+    b.right = SCENE.fire[0] > b.x
+    b.dir = b.y > SCENE.fire[1] + 60 ? 'back' : 'side'
+  }
+
   // 走到锅边（锅的前面和两边）对着锅吃；走不过去就原地吃
   function eatAtPot(a, ms, line) {
     const eat = (b) => {
-      b.right = SCENE.fire[0] > b.x
+      facePot(b)
       if (line) say(b, line)
       doFor(b, 'eat', ms, '😋')
     }
@@ -525,7 +535,7 @@ function createLife({
     if (period === 'dusk' && fire) {
       const [sx, sy] = SCENE.seats[a.index % SCENE.seats.length]
       if (a.action === 'sit' && dist(a.x, a.y, sx, sy) < 1) return doFor(a, 'sit', between(DO_MS))
-      if (walkTo(a, { x: sx, y: sy, action: 'sit' }, (b) => doFor(b, 'sit', between(DO_MS)))) return
+      if (walkTo(a, { x: sx, y: sy, action: 'sit' }, (b) => { facePot(b); doFor(b, 'sit', between(DO_MS)) })) return
       return rest(a)
     }
     if (a.action !== 'idle') return rest(a)
@@ -612,7 +622,7 @@ function createLife({
           doFor(b, 'fidget', SNIFF_MS)
         }
       : (b) => {
-          b.right = SCENE.fire[0] > b.x
+          facePot(b)
           doFor(b, 'eat', EAT_MS, '')
         }
     a.goal = { spot, then, path: detour({ x: a.x, y: a.y }, spot) || [spot] }

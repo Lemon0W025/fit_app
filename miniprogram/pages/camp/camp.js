@@ -281,8 +281,12 @@ Page({
     if (this.data.mode === 'view') this.life.start()
   },
 
-  // 宠物的动画拼图在云存储里，先下到本地再用（云存储的图 setData 一次就重新取一次，会闪）；a、b 两张都下好了才换上，
-  // 点它换到 b 张时也不用现下。下好的记在 globalData，切回营地不用再下；下载失败的先用单张图，下次进营地再试
+  // 宠物的动画拼图在云存储里，先下到本地再用（云存储的图 setData 一次就重新取一次，会闪）；a、b 两张（有 C 张的连 c 三张）都下好了才换上，
+  // 点它换到 b 张、往上走换到 c 张时也不用现下。下好的记在 globalData，切回营地不用再下；下载失败的先用单张图，下次进营地再试
+  sheetNames(id) {
+    return SHEETS[id] && SHEETS[id].c ? ['a', 'b', 'c'] : ['a', 'b']
+  },
+
   sheetFiles() {
     const g = getApp().globalData
     return (g.animFiles = g.animFiles || {})
@@ -291,10 +295,9 @@ Page({
   sheetSrc(id, sheet) {
     const base = config.animArt || ''
     const files = this.sheetFiles()
-    const a = files[`${base}${id}-a.png`]
-    const b = files[`${base}${id}-b.png`]
-    if (!base || !a || !b) return ''
-    return sheet === 'b' ? b : a
+    const ready = this.sheetNames(id).map((s) => files[`${base}${id}-${s}.png`])
+    if (!base || ready.some((f) => !f)) return ''
+    return files[`${base}${id}-${sheet}.png`] || ready[0]
   },
 
   loadSheets(ids) {
@@ -302,7 +305,7 @@ Page({
     if (!base) return
     const files = this.sheetFiles()
     ids.filter((id) => SHEETS[id]).forEach((id) => {
-      ;['a', 'b'].forEach((sheet) => {
+      this.sheetNames(id).forEach((sheet) => {
         const fileID = `${base}${id}-${sheet}.png`
         if (files[fileID] !== undefined) return
         files[fileID] = ''

@@ -464,3 +464,43 @@ test('不瞬移：离开时正好走到锅后面（路过可以、停不行的�
   assert.ok(!hiddenAt(after.x, after.y), `还在锅后面 ${after.x | 0},${after.y | 0} ${after.action}`)
   life.stop()
 })
+
+test('朝向：有 C 张的往上走用背影、往下走用正面、横着走侧面；停下保持；在锅前面吃是背影；蹭你回到侧面', () => {
+  const saved = { doudou: { x: 3400, y: 3700, right: true, action: 'idle', until: 0 } }
+  const { life, clock, sprites } = make({ hour: 12, seed: 3, pets: [{ id: 'doudou', level: 1, fed: 0 }], saved, sheets: { doudou: { top: 0.2, c: true } }, animBase: 'cloud://x/anim/' })
+  const row = () => [sprites[0].anim.sheet === 'cloud://x/anim/doudou-c.png' ? 'c' : sprites[0].sheet.slice(-5, -4), sprites[0].anim.row]
+  life.start()
+  // 往上走（远离镜头）
+  assert.equal(life.goTo(0, 3450, 3150, 60000), true)
+  assert.deepEqual(row(), ['c', 0])
+  clock.advance(20000)
+  assert.equal(sprites[0].action, 'idle')
+  assert.deepEqual(row(), ['c', 2], '停下背对着站')
+  // 往下走（朝镜头）
+  life.goTo(0, 3400, 3750, 60000)
+  assert.deepEqual(row(), ['c', 1])
+  clock.advance(20000)
+  assert.deepEqual(row(), ['c', 5], '停下正面站着')
+  // 横着走
+  life.goTo(0, 2600, 3800, 60000)
+  assert.deepEqual(row(), ['a', 0])
+  clock.advance(20000)
+  // 点它：蹭你（B 张），之后待机回到侧面
+  life.doubleTap(0)
+  assert.deepEqual(row(), ['b', 1])
+  // 下锅了：从锅前面走过去吃，面朝锅 = 背影吃
+  life.cook(['doudou'])
+  for (let i = 0; i < 60 && sprites[0].action !== 'eat'; i++) clock.advance(500)
+  assert.equal(sprites[0].action, 'eat')
+  const w = life.whereIs()[0]
+  if (w.y > SCENE.fire[1] + 60) assert.deepEqual(row(), ['c', 3])
+  else assert.deepEqual(row(), ['a', 4])
+  life.stop()
+  // 没有 C 张：照旧用 A 张侧面走
+  const plain = make({ hour: 12, pets: [{ id: 'doudou', level: 1, fed: 0 }], saved, sheets: { doudou: { top: 0.2 } }, animBase: 'cloud://x/anim/' })
+  plain.life.start()
+  plain.life.goTo(0, 3450, 3150, 60000)
+  assert.equal(plain.sprites[0].sheet, 'cloud://x/anim/doudou-a.png')
+  assert.equal(plain.sprites[0].anim.row, 0)
+  plain.life.stop()
+})

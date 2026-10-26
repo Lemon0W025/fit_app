@@ -833,3 +833,27 @@ test('营地：客人也用逐帧拼图（先下到本地），不退回单张�
   assert.equal(fox.sheet, `wxfile://tmp/${comer}-a.png`)
   camp.onUnload()
 })
+
+test('营地：有 C 张（正面 / 背影）的宠物三张都下好了才换上拼图', async (t) => {
+  const config = require('../miniprogram/config')
+  const SHEETS = require('../miniprogram/utils/anim-sheets')
+  SHEETS.doudou.c = true
+  t.after(() => delete SHEETS.doudou.c)
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  const wx = createWx(main)
+  await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
+  const camp = loadPage('camp', wx)
+  camp.clock = manualClock()
+  camp.hour = () => 10
+  camp.onLoad()
+  camp.onShow()
+  await settle()
+  assert.deepEqual(wx.log.downloads.filter((f) => f.includes('doudou')).sort(), ['a', 'b', 'c'].map((s) => `${config.animArt}doudou-${s}.png`))
+  assert.equal(camp.sheetSrc('doudou', 'c'), 'wxfile://tmp/doudou-c.png')
+  assert.equal(camp.data.pets[0].sheet, 'wxfile://tmp/doudou-a.png')
+  // C 张还没下好：先都用单张图
+  delete getApp().globalData.animFiles[`${config.animArt}doudou-c.png`]
+  assert.equal(camp.sheetSrc('doudou', 'a'), '')
+  camp.onUnload()
+})

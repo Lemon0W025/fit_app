@@ -1,6 +1,7 @@
 """把 Codex 出的宠物动画拼图（每只两张 6×6，见 docs/art/camp-art-pack.md）对齐、统一尺寸、压小，给小程序用
 
     python3 scripts/pack_anim.py              # art/raw/anim/<id>-a.png、<id>-b.png → art/anim/<id>-a.png、<id>-b.png，并回写 utils/anim-sheets.js
+                                              # 有 <id>-c.png（正面 / 背影，第 3.5 节）的一起打包，anim-sheets.js 里记 c: true
     python3 scripts/pack_anim.py --demo       # 没有正式图时，用占位单张图合成示意拼图到 art/anim-demo/（只用来验证播放）
 
 对齐：上下按行（一个动作的 6 帧一起平移，让这行的脚底平均落在格底往上 10% 处），不把模型画的步幅起伏、跳起来抹掉；
@@ -26,6 +27,7 @@ CELL = 192
 FOOT = 0.10        # 脚底离格底的距离（格高比例）
 ALPHA_MIN = 8
 SHEETS = ['a', 'b']
+OPTIONAL = ['c']   # C 张：背影走、正面走、背对着站 / 吃 / 坐、正面站着；没有就只用 A、B 张的侧面
 GROUPS = [list(range(r * COLS, (r + 1) * COLS)) for r in range(ROWS)]
 
 
@@ -84,13 +86,14 @@ def save(img, path):
     return os.path.getsize(path)
 
 
-def write_sheets(tops):
+def write_sheets(tops, with_c=()):
     """anim-sheets.js 整个重写：只列有拼图的宠物"""
     lines = ['// 有逐帧拼图的宠物（拼图在云存储 config.animArt 下，<id>-a.png / <id>-b.png；scripts/pack_anim.py 打包时回写）',
-             '// top：待机帧头顶上空白占格高的比例（定气泡的高度）。没列到的宠物页面用单张图 + CSS 步态',
+             '// top：待机帧头顶上空白占格高的比例（定气泡的高度）；c：有 <id>-c.png（正面 / 背影）。没列到的宠物页面用单张图 + CSS 步态',
              'module.exports = {']
     for pet_id, top in tops.items():
-        lines.append(f'  {pet_id}: {{ top: {top} }},')
+        extra = ', c: true' if pet_id in with_c else ''
+        lines.append(f'  {pet_id}: {{ top: {top}{extra} }},')
     lines.append('}')
     open(SHEETS_JS, 'w', encoding='utf-8').write('\n'.join(lines) + '\n')
 
@@ -133,12 +136,13 @@ def main():
         os.makedirs(DEMO, exist_ok=True)
         total = 0
         for pet_id in ids:
-            for sheet in SHEETS:
+            for sheet in SHEETS + OPTIONAL:
                 total += save(pack(demo_sheet(pet_id, sheet)), os.path.join(DEMO, f'{pet_id}-{sheet}.png'))
-        print(f'示意拼图 {len(ids) * 2} 张 → {DEMO}，共 {total // 1024} KB（只用来验证播放，不要上传）')
+        print(f'示意拼图 {len(ids) * 3} 张 → {DEMO}，共 {total // 1024} KB（只用来验证播放，不要上传）')
         return
     os.makedirs(OUT, exist_ok=True)
     tops = {}
+    with_c = set()
     total = 0
     for pet_id in ids:
         paths = [os.path.join(RAW, f'{pet_id}-{s}.png') for s in SHEETS]
@@ -149,9 +153,14 @@ def main():
         for sheet, img in zip(SHEETS, packed):
             total += save(img, os.path.join(OUT, f'{pet_id}-{sheet}.png'))
         tops[pet_id] = top_of(packed[0])
-        print(f'  {pet_id}: 2 张 {COLS * CELL}×{ROWS * CELL}，头顶空白 {tops[pet_id]}')
+        for sheet in OPTIONAL:
+            path = os.path.join(RAW, f'{pet_id}-{sheet}.png')
+            if os.path.exists(path):
+                total += save(pack(Image.open(path).convert('RGBA')), os.path.join(OUT, f'{pet_id}-{sheet}.png'))
+                with_c.add(pet_id)
+        print(f'  {pet_id}: {2 + (pet_id in with_c)} 张 {COLS * CELL}×{ROWS * CELL}，头顶空白 {tops[pet_id]}')
     if tops:
-        write_sheets(tops)
+        write_sheets(tops, with_c)
         print(f'共 {len(tops)} 只 {total // 1024} KB → {OUT}；已重写 utils/anim-sheets.js。接着 npm run wx:art')
     else:
         print('art/raw/anim/ 里还没有拼图')
