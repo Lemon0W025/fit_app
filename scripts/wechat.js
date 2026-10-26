@@ -86,7 +86,7 @@ async function main() {
 
   // 云存储里每类图的版本：重新生成过就加一（同名覆盖的话 CDN 和手机会继续用旧图一阵子），传到 camp/<类>-vN/，再把打印的前缀填进 config
   // base：营地画和上下补的天空 / 草地；decor：装饰块；anim：宠物动画拼图；cut：帐篷 / 锅抠图、火苗逐帧图、熄了火的补丁
-  const ART_VERSION = { base: 2, decor: 2, anim: 5, cut: 5 }
+  const ART_VERSION = { base: 3, decor: 3, anim: 5, cut: 6 }
 
   if (command === 'art') {
     const env = envId()

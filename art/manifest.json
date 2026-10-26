@@ -474,6 +474,22 @@
       "kind": "anim"
     },
     {
+      "file": "art/raw/anim/jutuan-walk.png",
+      "kind": "anim",
+      "cols": 3,
+      "rows": 2,
+      "cells": 6,
+      "aspect": 1.5
+    },
+    {
+      "file": "art/raw/anim/chacha-walk.png",
+      "kind": "anim",
+      "cols": 3,
+      "rows": 2,
+      "cells": 6,
+      "aspect": 1.5
+    },
+    {
       "file": "art/raw/anim/hehe-c.png",
       "kind": "anim"
     },

@@ -4,13 +4,14 @@
 「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
 生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
 
-设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。前两批都已经做完接进来了（10/25）；第 3 批（正面 / 背影，`specs/2026-10-26-daily-menu-and-facing-design.md`）待做。
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。前三批都已经做完接进来了（10/25、10/26）；第 4 批（橘团、茶茶重画走路，第 3.6 节）待做。
 
 | 批 | 内容 |
 |---|---|
 | 1 | A（已完成）：营地整图日 / 夜 + 高清。B（已完成，10/25 接入）：锅里三种状态（日 / 夜）、没点火的火堆（日 / 夜）、营地上面的天空；装饰 8 件（小帐篷、草窝、野餐垫、滚球、花坛、小树、风车、小灯笼）；豆豆、糯糯、莲莲、柿柿各 4 张；食物图标；界面图标 |
 | 2（剩下的全部，已完成，10/25 接入） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
-| 3（正面 / 背影，待做） | 12 只各一张 C 张拼图 `art/raw/anim/<id>-c.png`（第 3.5 节）：往远处走看背影、朝镜头走看正面，背对着站 / 吃 / 坐，正面站着 |
+| 3（正面 / 背影，已完成，10/26 接入） | 12 只各一张 C 张拼图 `art/raw/anim/<id>-c.png`（第 3.5 节）：往远处走看背影、朝镜头走看正面，背对着站 / 吃 / 坐，正面站着 |
+| 4（重画走路，待做） | 橘团、茶茶各一张 `art/raw/anim/<id>-walk.png`（第 3.6 节）：A 张的走路画坏了（橘团一只后脚一直翘着、看着像瘸了；茶茶只有前腿在走、后腿钉着不动），单独重画侧面走路的 6 帧 |
 
 ## 执行流程（照这个顺序喂 Codex）
 
@@ -119,7 +120,26 @@ art/raw/pets/<id>-ref.png 和 art/raw/anim/<id>-a.png（同一只、同样大小
 中途断了：新开对话粘同一段，先跑 python3 scripts/art/check_art.py，已经通过的别重做，从「还没有」的接着做。
 ```
 
-**回来之后**：告诉 Claude「正面背影在分支 codex/art-batch-3」，Claude 按第 7 节接入、发预览二维码。
+**回来之后**：告诉 Claude「正面背影在分支 codex/art-batch-3」，Claude 按第 7 节接入、发预览二维码。（已完成，10/26 接入）
+
+**第 4 批：橘团、茶茶重画走路**（整段粘给 Codex。每出一张停下来给你看，你回「可以」或写改意见）：
+
+```
+你在仓库根目录，用你内置的图像生成 / 编辑能力，按 docs/art/camp-art-pack.md 第 3.6 节重画两只宠物侧面走路的 6 帧：
+art/raw/anim/jutuan-walk.png 和 art/raw/anim/chacha-walk.png（3:2，1536×1024，3 列 × 2 行 = 6 帧，透明底）。
+先切到最新代码：git checkout claude/mini-program-dev-nzn2n0 && git pull，再把这个文件的第 0、3 节读一遍（尤其 3.2 和 3.6）。
+只往 art/raw/ 里加这两张，别改代码和脚本，已有的 -a / -b / -c 张一张都别动。每张提示词都带第 0 节的 UNIFIED STYLE、
+3.6 的 WALK SHEET RULES、3.6 表里那只的走法和 3.4 表里那只的 CHARACTER；参考图给它自己的 art/raw/pets/<id>-ref.png 和
+art/raw/anim/<id>-a.png（同一只、同样画风、同样颜色），再加 art/guide/style-camp.jpg。
+每出一张就跑 python3 scripts/art/check_art.py art/raw/anim/<id>-walk.png，没过就重出或用 edit 修；
+再对着 3.6 的 6 帧表逐帧看腿：四条腿都在动、按对角两两交替，没有一只脚翘在身子后面，没有哪一帧突然一大步。
+1. 先出 jutuan-walk.png，发给我看，停下来等我。
+2. 我说可以之后出 chacha-walk.png，也发给我看，停下来等我。
+3. 都可以了：python3 scripts/art/check_art.py 全跑一遍，把输出贴给我；把 art/raw/ 整个目录提交到新分支 codex/art-batch-4 并推送
+   （推不了就打成 art-batch-4.zip 给我）；推完 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
+```
+
+**回来之后**：告诉 Claude「走路在分支 codex/art-batch-4」，Claude 按第 7 节接入、发预览二维码。
 
 ---
 
@@ -476,6 +496,46 @@ the bamboo-shoot hat, the camellia antlers, the red hawthorn crown) and the moti
 
 背影最容易认不出来：每只的记忆点从后面也要看得见（豆豆头顶的豆芽、糯糯的长耳朵、莲莲的荷叶、柿柿背上的柿子、花花的菊花尾巴、龟龟的苔藓壳、杞杞的大尾巴、薯薯的大尾巴、橘团的叶子尾巴、笋宝的笋帽、茶茶的山茶鹿角、鹤鹤头顶的山楂）。大小和 A 张一样（脚底在同一条线、身体占格子的比例一样），不然一转身就忽大忽小。
 
+### 3.6 重画走路 `art/raw/anim/<id>-walk.png`（3:2，1536×1024，3 列 × 2 行 = 6 帧，透明底）
+
+第 2 批出的 A 张第 1 行（侧面走路），橘团和茶茶的画坏了（10/26 用户在手机上看出来的）：
+- **橘团**：6 帧身子几乎一样，一只后脚一直翘在身子后面，走起来像瘸了一条腿、单脚跳；
+- **茶茶**：前腿在迈，后腿 6 帧里有 5 帧钉在原地，第 4 帧突然一大步，看着像只用前脚走、一跳一跳的。
+
+只重画这一行：单独一张 6 帧（格子比 6×6 大得多，腿能画清楚），从左到右、先上一行再下一行，第 6 帧接回第 1 帧是一个完整的步子。
+打包脚本拿它换掉 A 张的第 1 行，个头自动按原来那行缩放；其他行、B 张、C 张都不动。
+
+```
+WALK SHEET RULES: 3:2 image (1536x1024), an invisible grid of 3 columns x 2 rows of equal square cells = 6 frames,
+read left to right, top row first. The SAME character as the attached reference sheet and animation sheet: same
+proportions, colors, face, markings, size in the cell and art style. Three-quarter side view facing RIGHT, walking
+in place (no forward travel inside the cells). The 6 frames are ONE complete stride cycle that loops smoothly from
+frame 6 back to frame 1. All four legs walk: they move in diagonal pairs (near front leg with far hind leg, near
+hind leg with far front leg), and the hind legs move exactly as much as the front legs. Every foot is either planted
+on the ground line or lifted a little while swinging forward under the body; no foot ever sticks up or points
+backward behind the body, no kicking, no hopping, no frame with a much bigger stride than the others. The body dips
+slightly when a pair of feet lands (frames 1 and 4) and rises a little in between; the head stays steady; the tail
+sways gently with the steps. Feet on the same baseline in every frame (about 15% above the cell bottom), centered
+horizontally, at least 8% of the cell empty on every side, nothing crosses a cell border. No props, no ground, no
+shadow, no text, no frame numbers. Transparent background.
+```
+
+6 帧怎么走（近 = 离镜头近的那侧腿）：
+
+| 帧 | 腿 |
+|---|---|
+| 1 | 近前腿 + 远后腿往前伸、刚落地；近后腿 + 远前腿在后面、脚尖蹬地。身子最低 |
+| 2 | 四只脚都着地，前后腿往中间收；身子回到中间 |
+| 3 | 近后腿 + 远前腿抬起来（抬一点点），在身子底下往前摆；身子最高 |
+| 4 | 和 1 反过来：近后腿 + 远前腿往前、刚落地；近前腿 + 远后腿在后面。身子最低 |
+| 5 | 和 2 一样，四只脚着地往中间收 |
+| 6 | 和 3 反过来：近前腿 + 远后腿抬起来往前摆；身子最高，接回第 1 帧 |
+
+| id | 走法（写进提示词） |
+|---|---|
+| jutuan | a very fat round tangerine-shaped cat on four short stubby legs; all four little feet are clearly visible under the round belly in every frame and step in the diagonal rhythm above; a heavy, slow, cosy waddle: the round body rocks gently (tilts a few degrees forward and back) and dips with each step, the belly sways, the big green leaf tail swings from side to side; the feet never point up or backward |
+| chacha | a slim fawn with long legs: an elegant walk, each leg lifting high with the knee and hock clearly bending, front AND hind legs stepping in the diagonal rhythm above; the head with the camellia antlers nods slightly with each step; the little white tail flicks; never hopping |
+
 ---
 
 ## 4. 食物图标 `art/raw/ui/foods.png`（1:1，6×6，前 33 格）
@@ -519,5 +579,6 @@ in this order: … Cells 34–36 empty.
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
 - 宠物：`pack_anim.py` 把 A、B（有 `<id>-c.png` 的连 C）各自对齐后上下拼成一只一张 `art/anim/<id>.png`（6 列 × 12 / 18 行，每格 160px；`utils/anim-sheets.js` 里有 C 的记 `c: true`），页面换动作、转身只挪行不换图→ `scripts/wechat.js` 的 `ART_VERSION.anim` 加一 → `npm run wx:art -- anim` → `config.animArt`；第 3 批回来录屏看往上 / 往下走、锅前面吃和坐转身时大小不跳；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）
+- 重画的走路（第 4 批）：`pack_anim.py` 看到 `art/raw/anim/<id>-walk.png` 就拿它换掉 A 张第 1 行（个头按原来那行缩放，打印倍数），其余照上一条；录屏 `facing` / `all-pets-phone` 逐帧看腿
 - 食物、界面：`slice-art.py`（`ui/foods.png` 6×6 → `images/camp/foods/<id>.png` 128px；`ui/camp-icons.png` → `images/garden/ui/` 的 campfire / book / shop / bag / gift / paw / camera，食盆和回家暂时没用上）
 - 每批接完 `npm test`、`node scripts/preview/record-camp.js` 录屏逐帧看（锅后面、木盖旁、提灯旁、帐篷门口、夜里的光）、`npm run wx:preview`

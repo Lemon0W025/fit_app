@@ -19,7 +19,7 @@ function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, ge
   return { repo, service }
 }
 
-const rich = (extra = {}) => ({ camp: 2, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
+const rich = (extra = {}) => ({ camp: 3, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
 
 test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', async () => {
   const { repo, service } = setup()
@@ -39,7 +39,7 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
   const second = await service.get('u1')
   assert.equal(second.welcome, null)
   assert.equal((await repo.getGarden('u1')).beans.bonus, 60)
-  assert.equal((await repo.getGarden('u1')).camp, 2)
+  assert.equal((await repo.getGarden('u1')).camp, 3)
 })
 
 test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
@@ -306,6 +306,6 @@ test('旧档进营地：迁完存一次，暖豆退回，住户搬来', async ()
   assert.deepEqual(v.pets.map((p) => p.id), ['sunbao', 'doudou'])
   assert.equal(v.welcome, null)
   const stored = await repo.getGarden('u1')
-  assert.equal(stored.camp, 2)
+  assert.equal(stored.camp, 3)
   assert.equal(stored.inventory, undefined)
 })

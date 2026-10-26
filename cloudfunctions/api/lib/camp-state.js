@@ -2,10 +2,11 @@
 
 const { WELCOME_BEANS } = require('./shared/garden')
 const { OLD_TO_PET } = require('./shared/pets')
+const { placeProblem } = require('./shared/decor')
 
 const LEGACY_FIELDS = ['estate', 'opened', 'inventory', 'placed', 'residents', 'collected', 'plots', 'unseen', 'currentSpecies', 'unlocked']
-// 2：食物下锅（pot）、闻香来的客人（visitors），去掉两个食盆
-const CAMP_VERSION = 2
+// 2：食物下锅（pot）、闻香来的客人（visitors），去掉两个食盆；3：装饰放大 2.5 倍，摆着放不下的收回背包
+const CAMP_VERSION = 3
 
 function pet(id, since) {
   return { id, since: since || '', fed: 0, fedToday: { date: '', n: 0 } }
@@ -51,8 +52,18 @@ function dropBowls(src) {
   return out
 }
 
+// camp 3 之前摆的装饰：按摆的先后一件件重新放，放大以后挤着了、出了草地的收回背包（owned 不变，就回到「没摆的」里）
+function refitDecor(src) {
+  if (!src.decor || (src.camp || 0) >= 3) return src
+  const kept = []
+  ;(src.decor.placed || []).forEach((p) => {
+    if (!placeProblem(kept, p.id, p.x, p.y)) kept.push(p)
+  })
+  return { ...src, decor: { ...src.decor, placed: kept } }
+}
+
 function normalizeCamp(doc) {
-  const src = dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {}))
+  const src = refitDecor(dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {})))
   LEGACY_FIELDS.forEach((k) => delete src[k])
   const beans = src.beans || {}
   const gacha = src.gacha || {}

@@ -11,15 +11,23 @@ const CATEGORIES = [
   { id: 'mood', label: '气氛' },
 ]
 
-const SIZES = { s: { w: 240, h: 200 }, m: { w: 360, h: 300 }, l: { w: 520, h: 420 } }
-const FOOT_RATIO = 0.6
+// 块的大小 = 原来定的大小 × DECOR_SCALE（10/26 用户嫌装饰太迷你：小帐篷才和小鸡一样大，整体放大 2.5 倍）。
+// 裁给 Codex 的草地（decor_crop.py）还按原来的大小，Codex 照原来的比例画，decor_patch.py 裁块时再放大
+const DECOR_SCALE = 2.5
+const BASE_SIZES = { s: { w: 240, h: 200 }, m: { w: 360, h: 300 }, l: { w: 520, h: 420 } }
+const SIZES = {}
+Object.keys(BASE_SIZES).forEach((k) => {
+  SIZES[k] = { w: BASE_SIZES[k].w * DECOR_SCALE, h: BASE_SIZES[k].h * DECOR_SCALE }
+})
+// 落脚框：宽占块的 0.6、深（上下）占 0.4——放大以后前后可以挨得近一点（后面的被前面的挡一点，45 度俯视本来就这样），24 件全买齐也摆得下
+const FOOT_RATIO = { w: 0.6, h: 0.4 }
 const OVERLAP_MARGIN = 16
 const GOLD_TENT = 'gold_tent'
 
 // 一个块：size 小中大；spots 按块的比例给（x 从左、y 从上），下面展开成像素
 function decor(id, name, category, price, size, extra = {}) {
   const patch = SIZES[size]
-  const foot = { w: Math.round(patch.w * FOOT_RATIO), h: Math.round(patch.h * FOOT_RATIO) }
+  const foot = { w: Math.round(patch.w * FOOT_RATIO.w), h: Math.round(patch.h * FOOT_RATIO.h) }
   const spots = (extra.spots || []).map((s) => ({ x: Math.round(s.x * patch.w), y: Math.round(s.y * patch.h), action: s.action }))
   return { id, name, category, price, size, max: extra.max || 1, patch, foot, anchor: { x: Math.round(patch.w / 2), y: Math.round(patch.h * 0.82) }, spots, fx: extra.fx || '' }
 }
@@ -88,4 +96,4 @@ function placeProblem(placed, decorId, x, y, ignoreUid) {
   return ''
 }
 
-module.exports = { CATEGORIES, SIZES, DECOR, GOLD_TENT, decorById, footRect, patchRect, placeProblem }
+module.exports = { CATEGORIES, DECOR_SCALE, SIZES, DECOR, GOLD_TENT, decorById, footRect, patchRect, placeProblem }

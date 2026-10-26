@@ -5,6 +5,9 @@
                                               # 有 <id>-c.png（正面 / 背影，第 3.5 节）的 anim-sheets.js 里记 c: true
     python3 scripts/pack_anim.py --demo       # 没有正式图时，用占位单张图合成示意拼图到 art/anim-demo/（只用来验证播放）
 
+单独重画的走路 <id>-walk.png（3:2，3 列 × 2 行 = 6 帧，从左到右、从上到下；工单第 3.6 节）有的话换掉 A 张第 1 行，
+个头按原来那行走路缩放（橘团、茶茶 A 张的走路画坏了：一只脚翘着拖、后腿不动）。
+
 对齐：上下按行（一个动作的 6 帧一起平移，让这行的脚底平均落在格底往上 10% 处），不把模型画的步幅起伏、跳起来抹掉；
 左右按帧（每帧的身体重心放在格子正中）：模型画的 6 格常常越画越偏（一行里漂 10～18 像素），按行对齐的话每转一圈宠物就往回跳一下，
 看着一抽一抽的；在地上走、跳的位移都是页面在挪，拼图里本来就该原地。输出每格 CELL px、6×6 格、256 色 PNG，传云存储（npm run wx:art）。
@@ -114,6 +117,27 @@ def match_size(packed_c, packed_a):
     return out, k, rows
 
 
+def pack_walk(src, packed_a):
+    """<id>-walk.png（3 列 × 2 行 = 6 帧）换掉 A 张第 1 行（走路）：6 帧排进一张 6×6 的第 1 行，照 pack() 对齐，
+    再按原来那行走路的身高缩放（脚底中点不动）；返回 (换好的 A 张, 倍数)"""
+    cw, ch = src.width / 3, src.height / 2
+    grid = Image.new('RGBA', (round(cw * COLS), round(ch * ROWS)), (0, 0, 0, 0))
+    for i in range(COLS):
+        c, r = i % 3, i // 3
+        grid.paste(src.crop((round(c * cw), round(r * ch), round((c + 1) * cw), round((r + 1) * ch))), (round(i * cw), 0))
+    walk = pack(grid)
+    want, have = height_of(packed_a, [0]), height_of(walk, [0])
+    k = want / have if want and have else 1.0
+    out = packed_a.copy()
+    out.paste(Image.new('RGBA', (COLS * CELL, CELL), (0, 0, 0, 0)), (0, 0))
+    foot = CELL * (1 - FOOT)
+    size = max(1, round(CELL * k))
+    for c in range(COLS):
+        cell = walk.crop((c * CELL, 0, (c + 1) * CELL, CELL)).resize((size, size), Image.LANCZOS)
+        out.alpha_composite(cell, (c * CELL + round(CELL / 2 - size / 2), round(foot - foot * k)))
+    return out, k
+
+
 def top_of(packed_a):
     """头顶空白：按 A 张第 2 行（坐着待机）第一格量"""
     idle = bbox(np.array(packed_a.crop((0, CELL, CELL, 2 * CELL)))[:, :, 3] >= ALPHA_MIN)
@@ -202,6 +226,10 @@ def main():
             print('  跳过（a、b 两张没出齐）', pet_id)
             continue
         packed = [pack(Image.open(p).convert('RGBA')) for p in paths]
+        walk = os.path.join(RAW, f'{pet_id}-walk.png')
+        if os.path.exists(walk):
+            packed[0], k = pack_walk(Image.open(walk).convert('RGBA'), packed[0])
+            print(f'  {pet_id}-walk: 换掉 A 张的走路，缩放 {k:.2f}')
         tops[pet_id] = top_of(packed[0])
         for sheet in OPTIONAL:
             path = os.path.join(RAW, f'{pet_id}-{sheet}.png')

@@ -2,7 +2,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createLife, depthCuts, PET_ZOOM } = require('../miniprogram/utils/camp-life')
-const { campLayout, cutoutStrips, zOf, BOWL_PX } = require('../miniprogram/utils/camp-view')
+const { campLayout, cutoutStrips, zOf } = require('../miniprogram/utils/camp-view')
 const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
 const { manualClock } = require('./helpers/manual-clock')
@@ -193,9 +193,13 @@ test('下锅：爱吃的住户走到锅边吃；白天锅里有它爱吃的会�
   life.start()
   life.cook(['doudou'])
   assert.equal(sprites[0].action, 'walk')
-  clock.advance(30000)
-  const w = life.whereIs()[0]
-  assert.ok(sprites[0].action === 'eat' || Math.hypot(w.x - SCENE.fire[0], w.y - SCENE.fire[1]) < 900, `豆豆没去锅边 ${w.x | 0},${w.y | 0} ${sprites[0].action}`)
+  let fed = false
+  for (let i = 0; i < 30 && !fed; i++) {
+    clock.advance(1000)
+    const w = life.whereIs()[0]
+    fed = sprites[0].action === 'eat' && Math.hypot(w.x - SCENE.fire[0], w.y - SCENE.fire[1]) < 900
+  }
+  assert.ok(fed, '豆豆 30 秒里没到锅边吃')
   life.stop()
   const hungry = make({ hour: 12, seed: 13, pot: ['xiaomi'], pets: [{ id: 'doudou', level: 1, fed: 0 }] })
   hungry.life.start()
@@ -313,13 +317,12 @@ test('depthCuts：跨过挨着的那条线就切开，旁边经过、不跨的�
   assert.deepEqual(both.map((c) => c.y), [2800, 3000])
 })
 
-// 模拟一整天（多种随机种子、早中晚夜）：每走一小段，沿路取点，只要那一点身子横着挨着某样东西（抠图层的条、食盆、装饰），
+// 模拟一整天（多种随机种子、早中晚夜）：每走一小段，沿路取点，只要那一点身子横着挨着某样东西（抠图层的条、装饰），
 // 宠物在它前面还是后面就必须和这一小段排的 z（按中点）一致；停下来歇着的地方不在锅身、提灯正后面；走的路不穿任何禁区
-test('走路时和锅、帐篷、提灯、食盆、装饰的前后每一刻都对；停下来的地方看得见；路不穿禁区', () => {
+test('走路时和锅、帐篷、提灯、装饰的前后每一刻都对；停下来的地方看得见；路不穿禁区', () => {
   const decor = [{ uid: 'd1', id: 'ball', x: 2500, y: 2300 }, { uid: 'd2', id: 'flowerbed', x: 1700, y: 3400 }, { uid: 'd3', id: 'hammock', x: 3300, y: 3300 }]
   const { patchRect, decorById } = require('../miniprogram/utils/shared/decor')
   const lines = cutoutStrips().map((c) => ({ l: c.l, r: c.r, y: c.zy }))
-    .concat(SCENE.bowls.map(([bx, by]) => ({ l: bx - BOWL_PX / 2, r: bx + BOWL_PX / 2, y: by })))
     .concat(decor.filter((d) => decorById(d.id)).map((d) => { const r = patchRect(d.id, d.x, d.y); return { l: r.left, r: r.right, y: d.y } }))
   let pieces = 0
   let rests = 0

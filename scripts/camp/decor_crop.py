@@ -23,7 +23,7 @@ def data():
     js = ("const C=require('./cloudfunctions/api/lib/shared/camp'),D=require('./cloudfunctions/api/lib/shared/decor');"
           "const spots=[];for(let y=900;y<C.H-300;y+=150)for(let x=300;x<C.W-300;x+=150){const r={left:x-330,top:y-290,right:x+330,bottom:y+60};"
           "if(C.rectInPoly(r,C.SCENE.grass)&&!C.hitsNogo(r,120))spots.push([x,y])}"
-          "console.log(JSON.stringify({W:C.W,decor:D.DECOR,spots}))")
+          "console.log(JSON.stringify({W:C.W,decor:D.DECOR,scale:D.DECOR_SCALE,spots}))")
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
@@ -47,11 +47,13 @@ def main():
         if want and dc['id'] not in want:
             continue
         cx, cy = spots[i % len(spots)]
-        w, h = dc['patch']['w'] * MARGIN, dc['patch']['h'] * MARGIN
+        # 按原来的大小裁（patch ÷ DECOR_SCALE），Codex 照这个比例画，decor_patch.py 裁块时再放大
+        s = d['scale']
+        w, h = dc['patch']['w'] / s * MARGIN, dc['patch']['h'] / s * MARGIN
         # 以落脚点为准：块的 anchor 对着 (cx, cy)，再往外扩成正方形
         side = max(w, h)
-        left = cx - dc['anchor']['x'] * MARGIN - (side - w) / 2
-        top = cy - dc['anchor']['y'] * MARGIN - (side - h) / 2
+        left = cx - dc['anchor']['x'] / s * MARGIN - (side - w) / 2
+        top = cy - dc['anchor']['y'] / s * MARGIN - (side - h) / 2
         x0, y0, n = round(left * k), round(top * k), round(side * k)
         box = [x0, y0, x0 + n, y0 + n]
         img.crop(box).save(os.path.join(OUT, f'in-{dc["id"]}.png'))

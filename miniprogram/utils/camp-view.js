@@ -10,7 +10,6 @@ const { nightLook, lampsOf } = require('./camp-light')
 const DECOR_ART = require('./decor-art')
 
 const Z_DECOR = 100
-const BOWL_PX = 270 // 画上两个碗（摆设，走路要绕、排前后）的直径（像素，照画量的）
 const HOME_ZOOM = 0.72 // 默认视角：画的高度铺满屏幕的 0.72 倍（锅占屏幕宽度四成多，看得到营地边上的树林和草地）
 const DETAIL_ZOOM = 2 // 最多放大到「画的高度铺满屏幕」的 2 倍
 const TILE = 1024 // 底图一块（画的像素）
@@ -281,5 +280,5 @@ function changedPaths(prefix, prev, next) {
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
-  frontAt, cutoutStrips, BOWL_PX, backdropImage, changedPaths,
+  frontAt, cutoutStrips, backdropImage, changedPaths,
 }

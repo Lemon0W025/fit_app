@@ -55,8 +55,6 @@ def main():
         dot = lambda x, y, fill, r=6: d.ellipse([x * k - r, y * k - r, x * k + r, y * k + r], fill=fill)
         for x, y in S['seats']:
             dot(x, y, (255, 255, 255, 240))
-        for x, y in S['bowls']:
-            dot(x, y, (255, 200, 0, 240), 10)
         for x, y in S['entries']:
             dot(x, y, (0, 200, 255, 240), 8)
         for x, y in S['shade'] + S['tent']['spots'] + S['sun']:

@@ -29,7 +29,7 @@ CATEGORY_COLOR = {'nest': (230, 200, 120), 'eat': (236, 180, 150), 'play': (160,
 
 def data():
     js = ("const P=require('./cloudfunctions/api/lib/shared/pets'),F=require('./cloudfunctions/api/lib/shared/foods'),D=require('./cloudfunctions/api/lib/shared/decor');"
-          "console.log(JSON.stringify({pets:P.PETS,foods:F.FOODS.concat(F.TREATS),decor:D.DECOR}))")
+          "console.log(JSON.stringify({pets:P.PETS,foods:F.FOODS.concat(F.TREATS),decor:D.DECOR,decorScale:D.DECOR_SCALE}))")
     return json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
 
 
@@ -75,13 +75,15 @@ def face(img):
     return canvas
 
 
-def decor_patch(dc):
-    w, h = round(dc['patch']['w'] * PATCH_SCALE), round(dc['patch']['h'] * PATCH_SCALE)
+def decor_patch(dc, scale):
+    # 包里的图按原来的大小（patch ÷ DECOR_SCALE）× PATCH_SCALE，放大装饰不让包变大
+    k = PATCH_SCALE / scale
+    w, h = round(dc['patch']['w'] * k), round(dc['patch']['h'] * k)
     # 透明底：正式图是连草地一起重绘的块，占位只画一个色块和影子，贴在真画上不扎眼
     img = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    fw, fh = round(dc['foot']['w'] * PATCH_SCALE), round(dc['foot']['h'] * PATCH_SCALE)
-    ax, ay = round(dc['anchor']['x'] * PATCH_SCALE), round(dc['anchor']['y'] * PATCH_SCALE)
+    fw, fh = round(dc['foot']['w'] * k), round(dc['foot']['h'] * k)
+    ax, ay = round(dc['anchor']['x'] * k), round(dc['anchor']['y'] * k)
     color = CATEGORY_COLOR[dc['category']]
     shadow = Image.new('RGBA', (w, h), (0, 0, 0, 0))
     ImageDraw.Draw(shadow).ellipse([ax - fw // 2 - 4, ay - 8, ax + fw // 2 + 4, ay + 6], fill=(40, 60, 20, 90))
@@ -105,7 +107,7 @@ def main():
     D = data()
     if '--decor' in sys.argv:
         for dc in D['decor']:
-            save(decor_patch(dc), 'camp', 'decor', f"{dc['id']}.png")
+            save(decor_patch(dc, D['decorScale']), 'camp', 'decor', f"{dc['id']}.png")
         print(f"装饰 {len(D['decor'])} 张占位图已重画（透明底）")
         return
     for p in D['pets']:
@@ -113,7 +115,7 @@ def main():
         save(img, 'camp', 'pets', f"{p['id']}.png")
         save(face(img), 'camp', 'pets', f"{p['id']}-face.png")
     for dc in D['decor']:
-        save(decor_patch(dc), 'camp', 'decor', f"{dc['id']}.png")
+        save(decor_patch(dc, D['decorScale']), 'camp', 'decor', f"{dc['id']}.png")
     for f in D['foods']:
         save(food_icon(f), 'camp', 'foods', f"{f['id']}.png")
     print(f"宠物 {len(D['pets'])}×2、装饰 {len(D['decor'])}、食物 {len(D['foods'])} 张占位图已写入 miniprogram/images/camp/")

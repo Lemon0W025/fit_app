@@ -158,7 +158,7 @@ test('锅：拖到锅身或篝火上算下锅；锅里煮着什么；客人的�
   assert.equal(V.onPot(2070, 2300), true) // 锅身
   assert.equal(V.onPot(2070, 1900), true) // 三脚架顶上（抠图轮廓里）
   assert.equal(V.onPot(3500, 3500), false)
-  assert.equal(V.onPot(SCENE.bowls[0][0], SCENE.bowls[0][1]), false)
+  assert.equal(V.onPot(2708, 3082), false) // 以前画上碗的地方
   assert.equal(V.potNote({ foods: ['huluobo', 'xiaomi'] }), '锅里煮着：胡萝卜、小米。爱吃的小动物会过来')
   assert.equal(V.potNote({ foods: [] }), '')
   assert.equal(V.visitorNote([{ id: 'nuonuo', foodId: 'huluobo' }]), '👀 糯糯闻着香味来了…下次拍正餐就住下')

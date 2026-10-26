@@ -17,6 +17,7 @@ const { renderPage } = require('./wxml-render')
 const { SCENE } = require(`${REPO}/miniprogram/utils/shared/camp`)
 const { dateKey } = require(`${REPO}/miniprogram/utils/shared/date`)
 const V = require(`${REPO}/miniprogram/utils/camp-view`)
+const { placeProblem } = require(`${REPO}/miniprogram/utils/shared/decor`)
 const { chromium } = require('playwright')
 const { execSync } = require('child_process')
 
@@ -37,18 +38,35 @@ const mapSrc = (src) => {
   return src
 }
 
+// 按想放的位置一件件摆（和游戏里一样过 placeProblem）：放不下就在附近一圈圈往外找（装饰 10/26 放大了 2.5 倍，以前的位置挤）
+function layout(list, prefix) {
+  const placed = []
+  list.forEach(([id, x, y]) => {
+    for (let r = 0; r <= 2000; r += 50) {
+      const n = r ? Math.ceil((2 * Math.PI * r) / 50) : 1
+      for (let i = 0; i < n; i++) {
+        const px = Math.round(x + r * Math.cos((2 * Math.PI * i) / n))
+        const py = Math.round(y + r * Math.sin((2 * Math.PI * i) / n))
+        if (!placeProblem(placed, id, px, py)) {
+          placed.push({ uid: `${prefix}${placed.length}`, id, x: px, y: py })
+          return
+        }
+      }
+    }
+    console.warn(`  ${id} 摆不下`)
+  })
+  return placed
+}
 // 第 1 批 B 画好的 8 件装饰，摆在火堆周围的草地上
-const DECOR_1B = [['tent', 3150, 2150], ['strawbed', 2450, 3560], ['picnic', 1450, 3250], ['ball', 2950, 3350],
-  ['flowerbed', 1250, 2650], ['sapling', 3500, 2700], ['windmill', 3550, 3350], ['lantern', 1850, 3650]]
-  .map(([id, x, y], i) => ({ uid: `d${i}`, id, x, y }))
-// 第 2 批的 17 件（位置都过了 placeProblem）
-const DECOR_2 = [['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_tent', 3450, 3450],
+const DECOR_1B = layout([['tent', 3300, 2150], ['strawbed', 2600, 3700], ['picnic', 1300, 3400], ['ball', 3000, 3400],
+  ['flowerbed', 1100, 2600], ['sapling', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
+// 第 2 批的 17 件
+const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_tent', 3450, 3450],
   ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
-  ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]]
-  .map(([id, x, y], i) => ({ uid: `e${i}`, id, x, y }))
+  ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]], 'e')
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
-const LAMPS = [['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]].map(([id, x, y], i) => ({ uid: `l${i}`, id, x, y }))
+const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]

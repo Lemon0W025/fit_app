@@ -40,7 +40,7 @@
 - **扭蛋抽食物**：30 暖豆一抽；普通 65% · 稀有 25% · 珍稀 8% · 传说 2%；连续 9 次没出珍稀，第 10 次必出珍稀以上。23 样食物按宠物爱吃的定，稀有度跟宠物走；10 样节气点心（霜降柿饼、冬至饺子、清明青团……）只在当季进池
 - **食物下锅引宠物**：把背包里的食物拖到锅上就下锅，火点上、煮一整天（一天最多 3 样不同的，下了拿不出来，半夜清空）。爱吃它的住户跑到锅边吃（亲密 +3，节气点心 +5）；每样食物每天有一份「今日菜单」：本来爱吃它的那只，加上当天轮换的一两只（同稀有度或低一档），里面还没来过的会闻着香味从营地边上跑来当「客人」，下次拍正餐它们就一起住下。背包里每样吃的下面有今天会来的小动物头像，还没来过的是剪影。点锅看看锅里煮着什么
 - **喂熟**：每次正餐打卡所有住户都算吃了一顿（亲密度 +1，一天最多 3 次）；从背包把食物拖到某一只身上直接喂（爱吃 +3，不爱吃 +1，节气点心 +5）。五级：来了 → 新睡姿 → 小动作 → 点它会蹭过来 → 专属动作，每升一级图册里多一句小故事
-- **商店买装饰**：24 件，30～150 暖豆（窝、吃喝、玩、花草、气氛），买了拖到草地任意位置放，长按挪动或收回。装饰是在营地原图上原地画出来的整块（连一圈草地一起裁、边缘羽化），不会浮在地上
+- **商店买装饰**：24 件，30～150 暖豆（窝、吃喝、玩、花草、气氛），买了拖到草地任意位置放（装饰按小动物的个头画，小帐篷能睡两只），长按挪动或收回。装饰是在营地原图上原地画出来的整块（连一圈草地一起裁、边缘羽化），不会浮在地上
 - **早上的礼物**：4 级以上的住户每天早上叼来一份礼物（5 暖豆或一份普通食物），点它收下
 - **图册**：每只宠物一页（没来的是剪影加提示），尝过的食物、买过的装饰各一页；12 只到齐送金色小帐篷
 - 规则细节见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`
@@ -94,7 +94,7 @@ cloudfunctions/api/          唯一的云函数，按 action 路由
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、下锅、喂、商店、摆放、礼物、图册）
   lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
-scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、装饰原地重绘 decor_crop / decor_patch、宠物图册小图、头像和全家福 pet_art
+scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、把画上火边两个碗擦掉 erase_bowls、装饰原地重绘 decor_crop / decor_patch、宠物图册小图、头像和全家福 pet_art
 scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）、打卡动效录屏 record-checkin.js + WXML 渲染器（认自定义组件）
 scripts/pack_anim.py        宠物动画拼图打包；scripts/art/check_art.py 出图自检
 art/guide/camp-blockout.jpg 营地布局示意（blockout.py 生成）
@@ -200,7 +200,7 @@ npm test
 - `cloudfunctions/api/lib/shared/` 和 `miniprogram/utils/shared/` 两份文件必须一模一样（测试会检查），改了一边记得复制到另一边
 - 云函数响应统一为 `{ ok: true, data }` 或 `{ ok: false, code, message }`，`message` 会直接展示给用户
 - 提示词在 `cloudfunctions/api/lib/prompts.js`，想调整小暖的说话风格改这里
-- 饭点、准时窗口、首页大卡的状态在 `cloudfunctions/api/lib/shared/timing.js`；每天的暖豆和印章在 `cloudfunctions/api/lib/shared/forest.js`；扭蛋稀有度、节气在 `cloudfunctions/api/lib/shared/garden.js`；营地的场景数据（草地、禁区、篝火、锅、食盆、坐点、上下补的天空草地）在 `camp.js`，宠物 / 食物 / 装饰在 `pets.js` / `foods.js` / `decor.js`
+- 饭点、准时窗口、首页大卡的状态在 `cloudfunctions/api/lib/shared/timing.js`；每天的暖豆和印章在 `cloudfunctions/api/lib/shared/forest.js`；扭蛋稀有度、节气在 `cloudfunctions/api/lib/shared/garden.js`；营地的场景数据（草地、禁区、篝火、锅、坐点、上下补的天空草地）在 `camp.js`，宠物 / 食物 / 装饰在 `pets.js` / `foods.js` / `decor.js`
 
 ### 图片
 

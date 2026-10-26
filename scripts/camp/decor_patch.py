@@ -5,8 +5,9 @@
 读 art/raw/decor/in-<id>.png、out-<id>.png 和 boxes.json。装饰在哪：out 和 in 不一样的地方；Codex 在装饰脚下顺手画的那圈草皮去掉，
 只留比原来暗的影子；被装饰围住、Codex 没动过的空洞（秋千、梯子中间透出来的草）留空；离装饰远的零星小块（它顺手改的花）不要；
 裁的块大小 = shared/decor.js 的 patch，块里的 anchor 对准装饰的底边中点，按 anchor 往上、往两边能放多少缩放，画得太小的放大（FILL）。
+Codex 是照原来的大小画的（patch ÷ DECOR_SCALE，decor_crop.py 也按它裁），先按原来的大小算好从 out 上裁哪块，再整块放大 DECOR_SCALE 倍。
 输出 art/decor/<id>.png（高清块，和营地高清图一样的分辨率，npm run wx:art -- decor 传到 camp/decor-vN/）；
-加 --local 再写一份 1/4 大小到 miniprogram/images/camp/decor/（替换占位块，商店、背包、图册也用它，注意包大小）。
+加 --local 再写一份原来大小的 1/4 到 miniprogram/images/camp/decor/（替换占位块，商店、背包、图册也用它，注意包大小）。
 Codex 可能把 in 放大到 1024 见方再画（boxes.json 的 box 是裁的时候在高清图上的范围），按 in 实际的宽换算。
 最后重写 miniprogram/utils/decor-art.js：列出 art/decor/ 里有高清块的装饰，页面只对它们用云端的图（还没画的用包里的占位）。
 需要 Pillow 和 numpy。
@@ -34,8 +35,9 @@ LOCAL_SCALE = 0.25
 
 
 def decor_table():
-    js = "const D=require('./cloudfunctions/api/lib/shared/decor');console.log(JSON.stringify(D.DECOR))"
-    return {d['id']: d for d in json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))}
+    js = "const D=require('./cloudfunctions/api/lib/shared/decor');console.log(JSON.stringify({decor:D.DECOR,scale:D.DECOR_SCALE}))"
+    d = json.loads(subprocess.check_output(['node', '-e', js], cwd=REPO))
+    return {x['id']: x for x in d['decor']}, d['scale']
 
 
 def fill_holes(m):
@@ -127,7 +129,7 @@ def main():
     ap.add_argument('--ids', default='')
     ap.add_argument('--local', action='store_true')
     a = ap.parse_args()
-    table = decor_table()
+    table, scale = decor_table()
     boxes = json.load(open(os.path.join(RAW, 'boxes.json')))
     want = set(a.ids.split(',')) if a.ids else None
     os.makedirs(OUT, exist_ok=True)
@@ -155,34 +157,38 @@ def main():
         x0, y0, x1, y1 = box
         foot_x = (x0 + x1) / 2
         foot_y = y1
-        pw, ph = d['patch']['w'] * k, d['patch']['h'] * k
+        # 按原来的大小（Codex 画的比例）算：块多大、anchor 在哪
+        bw, bh = d['patch']['w'] / scale, d['patch']['h'] / scale
+        ax, ay = d['anchor']['x'] / scale, d['anchor']['y'] / scale
+        pw, ph = bw * k, bh * k
         ow, oh = x1 - x0, y1 - y0
         # zoom：块里的装饰放大多少。落脚点往上、往左右能放多少按 anchor 算（四周留 MARGIN），放不下就缩小；
         # 画得太小就放大到 FILL，但也不超出
-        up = (d['anchor']['y'] - MARGIN) * k
-        side = (min(d['anchor']['x'], d['patch']['w'] - d['anchor']['x']) - MARGIN) * k
+        up = (ay - MARGIN) * k
+        side = (min(ax, bw - ax) - MARGIN) * k
         fit = min(up / oh, side / (ow / 2))
         zoom = min(max(1, min(FILL[0] * pw / ow, FILL[1] * ph / oh)), fit)
-        left = foot_x - d['anchor']['x'] * k / zoom
-        top = foot_y - d['anchor']['y'] * k / zoom
+        left = foot_x - ax * k / zoom
+        top = foot_y - ay * k / zoom
         rect = (round(left), round(top), round(left + pw / zoom), round(top + ph / zoom))
         crop = rgb.crop(rect).convert('RGBA')
         crop.putalpha(alpha.crop(rect))
-        # 存成和营地高清图一样的分辨率：块多大（画的像素）× k0
+        # 存成和营地高清图一样的分辨率：块多大（画的像素，已经放大过 DECOR_SCALE 倍）× k0
         size = (round(d['patch']['w'] * k0), round(d['patch']['h'] * k0))
         hd = crop.resize(size, Image.LANCZOS)
-        # 块边羽化只淡影子，装饰本身不淡（以前整块一起淡，顶到块边的邮箱、水壶顶上就糊了）
-        edge = np.asarray(feather_alpha(hd.width, hd.height, round(FEATHER * k0 * 0.3), round(FEATHER * k0))).astype(float) / 255
+        # 块边羽化只淡影子，装饰本身不淡（以前整块一起淡，顶到块边的邮箱、水壶顶上就糊了）；羽化也跟着放大
+        fk = k0 * scale
+        edge = np.asarray(feather_alpha(hd.width, hd.height, round(FEATHER * fk * 0.3), round(FEATHER * fk))).astype(float) / 255
         a_all = np.asarray(hd.getchannel('A')).astype(float)
         a_obj = np.minimum(np.asarray(solid.crop(rect).resize(size, Image.LANCZOS)).astype(float), a_all)
         hd.putalpha(Image.fromarray(np.uint8(np.clip(a_obj + (a_all - a_obj) * edge, 0, 255) + 0.5)))
         hd.save(os.path.join(OUT, f'{decor_id}.png'), optimize=True)
         if a.local:
             os.makedirs(LOCAL, exist_ok=True)
-            small = hd.resize((round(d['patch']['w'] * LOCAL_SCALE), round(d['patch']['h'] * LOCAL_SCALE)), Image.LANCZOS)
+            small = hd.resize((round(bw * LOCAL_SCALE), round(bh * LOCAL_SCALE)), Image.LANCZOS)
             small.quantize(colors=256, method=Image.Quantize.FASTOCTREE).save(os.path.join(LOCAL, f'{decor_id}.png'), optimize=True)
         done += 1
-        print(f'  ✓  {decor_id}  {hd.width}×{hd.height}' + (f'（装饰在块里放大 {zoom:.2f} 倍）' if abs(zoom - 1) > 0.01 else ''))
+        print(f'  ✓  {decor_id}  {hd.width}×{hd.height}' + (f'（Codex 画得{"小" if zoom > 1 else "大"}了，在块里缩放 {zoom:.2f} 倍）' if abs(zoom - 1) > 0.01 else ''))
     drawn = write_manifest(table)
     print(f'{done} 块 → {OUT}；utils/decor-art.js 列了 {len(drawn)} 件有高清块的。接着 npm run wx:art，把前缀填进 miniprogram/config.js 的 decorArt')
 

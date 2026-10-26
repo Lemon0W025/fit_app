@@ -9,7 +9,7 @@ const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
 const { COLS, frameFor, facingFor, dirOf, stackRow } = require('./anim')
-const { petImage, petFace, zOf, cutoutStrips, BOWL_PX, isNight } = require('./camp-view')
+const { petImage, petFace, zOf, cutoutStrips, isNight } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 
 const REST_MS = [3000, 7000]
@@ -333,7 +333,7 @@ function createLife({
     return true
   }
 
-  // 会挡住宠物 / 被宠物挡住的东西，各自按一条横线排前后：抠图层（帐篷一条条）、装饰、食盆
+  // 会挡住宠物 / 被宠物挡住的东西，各自按一条横线排前后：抠图层（帐篷一条条）、装饰
   const cutLines = cutoutStrips().map((c) => ({ l: c.l, r: c.r, y: c.zy }))
   function occluders() {
     const out = cutLines.slice()
@@ -342,7 +342,6 @@ function createLife({
       const rect = patchRect(p.id, p.x, p.y)
       out.push({ l: rect.left, r: rect.right, y: p.y })
     })
-    SCENE.bowls.forEach(([bx, by]) => out.push({ l: bx - BOWL_PX / 2, r: bx + BOWL_PX / 2, y: by }))
     return out
   }
 

@@ -17,11 +17,11 @@ GUIDE = os.path.join(REPO, 'art', 'guide')
 GUIDE_W = 1152
 
 DAY = dict(GRASS=(150, 205, 95), GRASS_DARK=(128, 182, 80), FOREST=(62, 118, 70), MOUNTAIN=(170, 196, 205), SKY=(218, 236, 244),
-           FIRE=(236, 120, 60), STONE=(170, 165, 150), TRUNK=(120, 86, 56), CANOPY=(88, 150, 78), BOWL=(210, 200, 180),
+           FIRE=(236, 120, 60), STONE=(170, 165, 150), TRUNK=(120, 86, 56), CANOPY=(88, 150, 78),
            TENT=(244, 226, 196), TENT_DARK=(214, 190, 156), TENT_DOOR=(222, 132, 80), POT=(96, 70, 56), POT_RIM=(130, 98, 78), POT_IN=(60, 44, 36),
            PORRIDGE=(246, 222, 160), VEG=(120, 170, 90), CARROT=(230, 130, 70), GLOW=None, STARS=False)
 NIGHT = dict(GRASS=(66, 104, 72), GRASS_DARK=(54, 88, 62), FOREST=(26, 56, 46), MOUNTAIN=(48, 62, 96), SKY=(26, 36, 78),
-             FIRE=(255, 160, 70), STONE=(118, 112, 104), TRUNK=(78, 54, 36), CANOPY=(38, 80, 58), BOWL=(150, 142, 130),
+             FIRE=(255, 160, 70), STONE=(118, 112, 104), TRUNK=(78, 54, 36), CANOPY=(38, 80, 58),
              TENT=(168, 156, 136), TENT_DARK=(130, 118, 102), TENT_DOOR=(255, 196, 96), POT=(70, 52, 44), POT_RIM=(96, 72, 58), POT_IN=(40, 30, 26),
              PORRIDGE=(214, 192, 140), VEG=(96, 136, 76), CARROT=(200, 112, 60), GLOW=(255, 170, 70), STARS=True)
 C = dict(DAY)
@@ -100,13 +100,11 @@ def draw(width, labels=False):
         img.paste(Image.alpha_composite(img.convert('RGBA'), glow).convert('RGB'))
         d = ImageDraw.Draw(img)
     draw_tent(d, S, k)
-    # 篝火圈、火、旁边一根木头、食盆
+    # 篝火圈、火、旁边一根木头
     d.ellipse([(fx - 260) * k, (fy - 170) * k, (fx + 260) * k, (fy + 170) * k], fill=C['STONE'])
     d.ellipse([(fx - 150) * k, (fy - 110) * k, (fx + 150) * k, (fy + 80) * k], fill=C['FIRE'])
     d.rectangle([(fx + 300) * k, (fy + 120) * k, (fx + 560) * k, (fy + 190) * k], fill=C['TRUNK'])
     draw_pot(d, S, k, 0)
-    for bx, by in S['bowls']:
-        d.ellipse([(bx - 100) * k, (by - 65) * k, (bx + 100) * k, (by + 65) * k], fill=C['BOWL'], outline=C['STONE'], width=max(1, int(5 * k)))
     if labels:
         font = ImageFont.load_default()
         def tag(x, y, text):
@@ -114,7 +112,6 @@ def draw(width, labels=False):
         tag(fx, fy, 'fire 篝火')
         tag(fx + 320, fy - 560, 'pot 暖暖锅')
         tag(S['nogo']['tent'][0][0], S['nogo']['tent'][0][1] + 20, 'tent 大帐篷')
-        tag(S['bowls'][0][0], S['bowls'][0][1] - 120, 'bowls 食盆')
         tag(S['sun'][0][0], S['sun'][0][1], 'sun 晒太阳')
         tag(60, 400, 'forest 树林（只在后面当背景）')
         for key, c in S['cutouts'].items():

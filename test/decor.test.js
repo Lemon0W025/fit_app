@@ -21,7 +21,9 @@ test('24 件装饰 + 金帐篷：类别、价钱、块和落脚框', () => {
   assert.equal(D.decorById('gold_tent').spots.filter((s) => s.action === 'sleep').length, 2)
   assert.equal(D.decorById('flowerbed').max, 3)
   assert.equal(D.decorById('nope'), null)
-  assert.deepEqual(D.SIZES, { s: { w: 240, h: 200 }, m: { w: 360, h: 300 }, l: { w: 520, h: 420 } })
+  // 原来的大小 × 2.5（10/26 放大）
+  assert.equal(D.DECOR_SCALE, 2.5)
+  assert.deepEqual(D.SIZES, { s: { w: 600, h: 500 }, m: { w: 900, h: 750 }, l: { w: 1300, h: 1050 } })
 })
 
 test('footRect / patchRect：落脚框贴着落脚点往上', () => {
@@ -44,6 +46,7 @@ test('placeProblem：每种不能放的原因', () => {
   assert.equal(P('ball', 3800, 3800), '') // 右下角的空草坪
   assert.equal(P('ball', 1520, 1810), '和别的东西挤着了')
   assert.equal(P('ball', 1520, 1810, 'd1'), '')
+  assert.equal(P('tent', 2000, 3400), '这儿放不下，挪开一点') // 放大以后顶到篝火
   assert.equal(P('tent', 2000, 3650), '')
   assert.equal(P('ball', 2000, 3500), '')
 })

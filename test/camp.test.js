@@ -16,7 +16,7 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   assert.ok(C.SCENE.grass.length >= 4 && C.SCENE.grass.every(inside))
   assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['fire', 'lantern', 'lid', 'tent'])
   assert.equal(C.SCENE.seats.length, 12)
-  assert.equal(C.SCENE.bowls.length, 2)
+  assert.ok(!('bowls' in C.SCENE) && !('bowl' in C.SCENE)) // 画上两个碗 10/26 擦掉了
   assert.equal(C.SCENE.entries.length, 3)
   assert.equal(C.SCENE.shade.length, 4)
   assert.equal(C.SCENE.tent.spots.length, 3)
@@ -48,9 +48,8 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   C.SCENE.cutouts.pot.poly.filter(([x]) => x > 1900 && x < 2300).forEach(([x, y]) => assert.ok(y <= 2712, `pot cutout reaches into the flames ${x},${y}`))
   // 坐点是开口朝后的马蹄形：没人坐在锅正后面
   C.SCENE.seats.forEach(([x, y]) => assert.ok(y > C.SCENE.fire[1] - 120 || Math.abs(x - C.SCENE.fire[0]) > 320, `seat ${x},${y}`))
-  // 坐点、食盆、树荫、帐篷门口、晒太阳点都是能站的草地
+  // 坐点、树荫、帐篷门口、晒太阳点都是能站的草地
   C.SCENE.seats.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `seat ${x},${y}`))
-  C.SCENE.bowls.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `bowl ${x},${y}`))
   C.SCENE.shade.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `shade ${x},${y}`))
   C.SCENE.entries.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `entry ${x},${y}`))
   C.SCENE.tent.spots.concat(C.SCENE.sun).forEach(([x, y]) => assert.ok(C.inGrass(x, y), `spot ${x},${y}`))
@@ -103,7 +102,7 @@ test('hiddenAt：锅身、提灯正后面会被整个挡住，坐点、晒太阳
   assert.equal(C.hiddenAt(2100, 2000), false) // 锅上方的草坪（三脚架中间看得见）
   assert.equal(C.hiddenAt(2130, 3300), false) // 锅前面
   const S = C.SCENE
-  S.seats.concat(S.sun, S.shade, S.tent.spots, S.bowls, S.entries).forEach(([x, y]) => assert.equal(C.hiddenAt(x, y), false, `${x},${y}`))
+  S.seats.concat(S.sun, S.shade, S.tent.spots, S.entries).forEach(([x, y]) => assert.equal(C.hiddenAt(x, y), false, `${x},${y}`))
   assert.ok(C.nogoPolys().length >= 4)
 })
 
