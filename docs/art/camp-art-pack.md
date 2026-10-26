@@ -472,6 +472,8 @@ the persimmons, the flower tail, the moss shell, the goji necklace strings, the 
 the bamboo-shoot hat, the camellia antlers, the red hawthorn crown) and the motion a little exaggerated.
 ```
 
+第一张（糯糯，10/26）看下来的两条，后面每张都照这个来：**大小**——它画得比 A 张大了一圈（身高大 15%，耳朵快碰到格子边），打包脚本会自动按 A 张的个头缩回去，但耳朵、尾巴别画出格子（四边留 8%）；**颜色**——比 A 张偏橘、偏粉，要和 A 张一模一样（拿 `<id>-a.png` 对着取色，别比它更暖更艳）。
+
 背影最容易认不出来：每只的记忆点从后面也要看得见（豆豆头顶的豆芽、糯糯的长耳朵、莲莲的荷叶、柿柿背上的柿子、花花的菊花尾巴、龟龟的苔藓壳、杞杞的大尾巴、薯薯的大尾巴、橘团的叶子尾巴、笋宝的笋帽、茶茶的山茶鹿角、鹤鹤头顶的山楂）。大小和 A 张一样（脚底在同一条线、身体占格子的比例一样），不然一转身就忽大忽小。
 
 ---

@@ -73,6 +73,34 @@ def pack(src):
     return out
 
 
+def height_of(packed, rows):
+    """这几行每帧身体（不透明部分）的高度，取中位数（格高的比例）"""
+    hs = []
+    for r in rows:
+        for c in range(COLS):
+            b = bbox(np.array(packed.crop((c * CELL, r * CELL, (c + 1) * CELL, (r + 1) * CELL)))[:, :, 3] >= ALPHA_MIN)
+            if b:
+                hs.append((b[3] - b[1]) / CELL)
+    return float(np.median(hs)) if hs else 0
+
+
+def match_size(packed_c, packed_a):
+    """C 张按 A 张的个头缩放：背对着站 / 正面站着（第 3、6 行）的身高对齐 A 张坐着待机（第 2 行）。
+    模型画正面 / 背影常常画大一圈，不缩的话一转身就忽大忽小。以脚底中点为圆心缩放，脚还在同一条线上"""
+    target, now = height_of(packed_a, [1]), height_of(packed_c, [2, 5])
+    if not target or not now or abs(now / target - 1) < 0.03:
+        return packed_c, 1.0
+    k = target / now
+    out = Image.new('RGBA', packed_c.size, (0, 0, 0, 0))
+    foot = CELL * (1 - FOOT)
+    size = max(1, round(CELL * k))
+    for r in range(ROWS):
+        for c in range(COLS):
+            cell = packed_c.crop((c * CELL, r * CELL, (c + 1) * CELL, (r + 1) * CELL)).resize((size, size), Image.LANCZOS)
+            out.alpha_composite(cell, (c * CELL + round(CELL / 2 - size / 2), r * CELL + round(foot - foot * k)))
+    return out, k
+
+
 def top_of(packed_a):
     """头顶空白：按 A 张第 2 行（坐着待机）第一格量"""
     idle = bbox(np.array(packed_a.crop((0, CELL, CELL, 2 * CELL)))[:, :, 3] >= ALPHA_MIN)
@@ -156,7 +184,10 @@ def main():
         for sheet in OPTIONAL:
             path = os.path.join(RAW, f'{pet_id}-{sheet}.png')
             if os.path.exists(path):
-                total += save(pack(Image.open(path).convert('RGBA')), os.path.join(OUT, f'{pet_id}-{sheet}.png'))
+                packed_c, k = match_size(pack(Image.open(path).convert('RGBA')), packed[0])
+                if k != 1.0:
+                    print(f'  {pet_id}-{sheet}: 比 A 张{"大" if k < 1 else "小"}，缩放 {k:.2f} 对齐个头')
+                total += save(packed_c, os.path.join(OUT, f'{pet_id}-{sheet}.png'))
                 with_c.add(pet_id)
         print(f'  {pet_id}: {2 + (pet_id in with_c)} 张 {COLS * CELL}×{ROWS * CELL}，头顶空白 {tops[pet_id]}')
     if tops:
