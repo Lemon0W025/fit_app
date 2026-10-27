@@ -14,10 +14,7 @@
 
     <view class="field">
       <view class="field-label">性别</view>
-      <view class="chips">
-        <view class="chip {{form.sex === 'female' ? 'chip-on' : ''}}" data-field="sex" data-value="female" bindtap="onPick">女</view>
-        <view class="chip {{form.sex === 'male' ? 'chip-on' : ''}}" data-field="sex" data-value="male" bindtap="onPick">男</view>
-      </view>
+      <segmented options="{{sexOptions}}" value="{{form.sex}}" data-field="sex" bindchange="onSegment" />
     </view>
 
     <view class="field-row">
@@ -57,7 +54,7 @@
     <view class="field">
       <view class="field-label">平时活动量</view>
       <view class="chips chips-col">
-        <view wx:for="{{activityOptions}}" wx:key="value" class="chip {{form.activity === item.value ? 'chip-on' : ''}}" data-field="activity" data-value="{{item.value}}" bindtap="onPick">{{item.label}}</view>
+        <view wx:for="{{activityOptions}}" wx:key="value" class="chip {{form.activity === item.value ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-field="activity" data-value="{{item.value}}" bindtap="onPick">{{item.label}}</view>
       </view>
     </view>
 

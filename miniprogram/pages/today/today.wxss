@@ -52,44 +52,18 @@
   color: var(--muted);
 }
 
-.hero-main {
-  margin: 12rpx 0 20rpx;
+/* 热量圆环（components/ring）居中 */
+.hero-ring {
+  display: flex;
+  justify-content: center;
+  margin: 24rpx 0 8rpx;
 }
 
-.hero-num {
-  font-size: 80rpx;
-  font-weight: 700;
-  color: var(--primary);
-  line-height: 1.2;
-}
-
-.hero-unit {
-  font-size: 28rpx;
-  color: var(--muted);
-  margin-left: 12rpx;
-}
-
-.bar {
-  height: 20rpx;
-  border-radius: 10rpx;
-  background: var(--gray-soft);
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  border-radius: 10rpx;
-  background: var(--primary);
-  transition: width 0.4s;
-}
-
-.bar-over {
-  background: var(--red);
-}
-
+/* 超了才多说一句（还能吃多少圆环里已经写了） */
 .hero-status {
   margin-top: 16rpx;
   font-size: 30rpx;
+  text-align: center;
 }
 
 .hero-status-over {

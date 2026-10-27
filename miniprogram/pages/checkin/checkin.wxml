@@ -1,8 +1,6 @@
 <view class="page">
   <view class="section-title section-first">这是哪一餐？</view>
-  <view class="chips">
-    <view wx:for="{{mealTypes}}" wx:key="value" class="chip {{mealType === item.value ? 'chip-on' : ''}}" data-value="{{item.value}}" bindtap="pickMealType">{{item.label}}</view>
-  </view>
+  <segmented options="{{mealTypes}}" value="{{mealType}}" bindchange="pickMealType" />
   <view wx:if="{{timingText}}" class="timing {{timingOn ? 'timing-on' : ''}}">{{timingText}}</view>
 
   <view class="section-title">拍下这一餐</view>

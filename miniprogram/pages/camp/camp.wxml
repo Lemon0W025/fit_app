@@ -119,16 +119,13 @@
       </view>
     </view>
 
-    <view wx:if="{{bagOpen}}" class="drawer-mask" catchtap="closeBag"></view>
-    <view class="drawer {{bagOpen ? 'drawer-open' : ''}}">
-      <view class="drawer-head">
-        <view class="bag-tabs">
-          <text class="bag-tab {{bagTab === 'food' ? 'on' : ''}}" data-tab="food" catchtap="switchBag">食物</text>
-          <text class="bag-tab {{bagTab === 'decor' ? 'on' : ''}}" data-tab="decor" catchtap="switchBag">装饰</text>
-        </view>
-        <text class="drawer-close" catchtap="closeBag">✕</text>
+    <sheet show="{{bagOpen}}" bindclose="closeBag">
+      <view slot="head" class="bag-tabs">
+        <segmented options="{{bagTabs}}" value="{{bagTab}}" bindchange="switchBag" />
       </view>
-      <block wx:if="{{bagTab === 'food'}}">
+      <!-- 两页叠在一起（抽屉高度按高的那页，切换时不跳），淡入淡出 -->
+      <view class="bag-panes">
+      <view class="bag-pane {{bagTab === 'food' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{foodBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
           <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood">
             <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
@@ -141,8 +138,8 @@
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
         <view class="muted small bag-hint">点一样拿在手里：拖进锅里煮上（下面是今天闻着它会来的小动物，黑影是还没来过的），或者拖到小动物身上喂它</view>
-      </block>
-      <block wx:else>
+      </view>
+      <view class="bag-pane {{bagTab === 'decor' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
           <view wx:for="{{decorBag}}" wx:key="id" class="bag-item" data-id="{{item.id}}" bindtap="pickDecor">
             <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
@@ -151,15 +148,12 @@
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有待摆的装饰，去商店挑一件吧～</view>
-      </block>
-    </view>
-
-    <view wx:if="{{residentsOpen}}" class="drawer-mask" catchtap="closeResidents"></view>
-    <view class="drawer {{residentsOpen ? 'drawer-open' : ''}}">
-      <view class="drawer-head">
-        <text class="drawer-title">住户（点一下，带你去找它）</text>
-        <text class="drawer-close" catchtap="closeResidents">✕</text>
+        <view class="muted small bag-hint">点一件拿在手里，拖到草地上松手就摆好了；摆好的再点一下，能挪个地方、收回背包</view>
       </view>
+      </view>
+    </sheet>
+
+    <sheet show="{{residentsOpen}}" title="住户（点一下，带你去找它）" bindclose="closeResidents">
       <view wx:if="{{residents.length}}" class="res-list">
         <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
           <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
@@ -171,7 +165,7 @@
         </view>
       </view>
       <view wx:else class="muted small">还没有小动物住进来。把食物放进锅里煮上，闻着香味来的小动物下次拍正餐就住下～</view>
-    </view>
+    </sheet>
   </block>
 
   <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">

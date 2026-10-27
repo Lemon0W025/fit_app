@@ -34,14 +34,10 @@
         <text>{{view.dateLabel}}</text>
         <text>每日预算 {{view.dailyKcal}} 千卡</text>
       </view>
-      <view class="hero-main">
-        <text class="hero-num">{{view.totals.kcal}}</text>
-        <text class="hero-unit">千卡已吃</text>
+      <view class="hero-ring">
+        <ring value="{{view.totals.kcal}}" max="{{view.dailyKcal}}" size="{{320}}" />
       </view>
-      <view class="bar">
-        <view class="bar-fill {{view.over ? 'bar-over' : ''}}" style="width: {{view.percent}}%"></view>
-      </view>
-      <view class="hero-status {{view.over ? 'hero-status-over' : ''}}">{{view.statusText}}</view>
+      <view wx:if="{{view.over}}" class="hero-status hero-status-over">{{view.statusText}}</view>
       <view class="macros">
         <view class="macro">
           <view class="macro-num">{{view.totals.protein}}g</view>

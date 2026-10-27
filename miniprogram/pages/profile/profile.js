@@ -42,6 +42,10 @@ Page({
     saving: false,
     form: EMPTY_FORM,
     previewKcal: 0,
+    sexOptions: [
+      { label: '女', value: 'female' },
+      { label: '男', value: 'male' },
+    ],
     activityOptions: Object.keys(ACTIVITY_LABELS).map((value) => ({ value, label: ACTIVITY_LABELS[value] })),
     mealRows: mealRows(EMPTY_FORM),
   },
@@ -73,6 +77,11 @@ Page({
   onPick(e) {
     const { field, value } = e.currentTarget.dataset
     this.update(field, value)
+  },
+
+  // 分段控制器（components/segmented）：哪个字段写在 data-field 上，选的值在 detail.value
+  onSegment(e) {
+    this.update(e.currentTarget.dataset.field, e.detail.value)
   },
 
   onMealTime(e) {

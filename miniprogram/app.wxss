@@ -130,12 +130,14 @@ button.btn-plain[disabled] {
   flex-direction: column;
 }
 
+/* 和商店的标签一样：按下缩到 0.96 再回来（hover-class="chip-press"），选中 / 取消时底色、字色、边框 200ms 过渡 */
 .chip {
   padding: 16rpx 36rpx;
   border-radius: 40rpx;
   background: var(--gray-soft);
   color: var(--text);
   border: 2rpx solid transparent;
+  transition: transform 0.15s, background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .chip-on {
@@ -143,6 +145,10 @@ button.btn-plain[disabled] {
   color: var(--primary);
   border-color: var(--primary);
   font-weight: 600;
+}
+
+.chip-press {
+  transform: scale(0.96);
 }
 
 /* 评级标签 */
@@ -409,12 +415,6 @@ button.btn-plain[disabled] {
   50% { transform: scale(1.035); }
 }
 
-@keyframes fx-bounce {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
 .fx-rise { animation: fx-rise 0.45s cubic-bezier(0.2, 0.8, 0.3, 1) backwards; }
 .fx-pop { animation: fx-pop 0.35s ease-out backwards; }
 .fx-d1 { animation-delay: 100ms; }
@@ -454,10 +454,9 @@ button.btn-plain[disabled] {
 .fx-breathe-warn { animation: fx-breathe-warn 2.5s ease-in-out infinite; }
 .fx-nudge { animation: fx-nudge 2s ease-in-out infinite; }
 
-/* 按下去缩一点，松手弹回：按钮用自带的 button-hover，卡片、小块用 hover-class="fx-press" */
+/* 按下去缩一点，松手弹回：按钮用自带的 button-hover，卡片、小块用 hover-class="fx-press"（选项小块 .chip 的过渡在上面） */
 button,
-.card,
-.chip {
+.card {
   transition: transform 0.15s, opacity 0.15s;
 }
 
@@ -468,10 +467,6 @@ button.button-hover {
 .fx-press {
   transform: scale(0.96);
   opacity: 0.9;
-}
-
-.chip-on {
-  animation: fx-bounce 0.25s ease-out;
 }
 
 /* 点一下就跳到结束 */

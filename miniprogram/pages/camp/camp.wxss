@@ -120,52 +120,6 @@ page {
   box-shadow: 0 6rpx 16rpx rgba(60, 50, 30, 0.16);
 }
 
-/* 背包抽屉 */
-.drawer-mask {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  z-index: 60;
-  background: rgba(47, 42, 36, 0.35);
-}
-
-.drawer {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 61;
-  background: var(--card);
-  border-radius: 32rpx 32rpx 0 0;
-  padding: 28rpx 32rpx 40rpx;
-  transform: translateY(110%);
-  transition: transform 0.25s ease-out;
-}
-
-.drawer-open {
-  transform: translateY(0);
-}
-
-.drawer-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20rpx;
-}
-
-.drawer-title {
-  font-size: 32rpx;
-  font-weight: 700;
-}
-
-.drawer-close {
-  font-size: 36rpx;
-  color: var(--gray);
-  padding: 0 8rpx;
-}
-
 /* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
 .drag-layer {
   position: absolute;
@@ -652,12 +606,7 @@ button.btn-small {
   line-height: 1.1;
 }
 
-/* 住户列表 */
-.res-list {
-  max-height: 50vh;
-  overflow-y: auto;
-}
-
+/* 住户列表（在抽屉 components/sheet 里，多了在抽屉里滚） */
 .res-row {
   display: flex;
   align-items: center;
@@ -703,10 +652,14 @@ button.btn-small {
 /* 点锅的地方：透明，排在锅那层上面、锅前面的宠物下面 */
 .pot-hit { position: absolute; }
 .hud-note-gold { background: rgba(255, 244, 214, 0.95); color: #9a6b12; }
-.bag-tabs { display: flex; gap: 24rpx; }
-.bag-tab { padding: 8rpx 24rpx; border-radius: 999rpx; font-size: 30rpx; color: var(--muted); }
-.bag-tab.on { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+/* 背包抽屉（components/sheet）顶上的「食物 / 装饰」（components/segmented） */
+.bag-tabs { width: 360rpx; }
 .bag-hint { margin-top: 8rpx; }
+/* 食物、装饰两页叠在同一格：一排两个 100% 宽、第二个往左挪回来，高度按高的那页，切换只淡入淡出、抽屉不跳 */
+.bag-panes { display: flex; align-items: flex-start; }
+.bag-pane { flex: 0 0 100%; min-width: 0; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.bag-pane + .bag-pane { margin-left: -100%; }
+.bag-pane-on { opacity: 1; pointer-events: auto; }
 
 /* 宠物：单张图时按动作挂动画；走路 gait-on 时上下颠。
    走路用 transform 挪（贴在左下角 0,0 再平移）：left / bottom 过渡每一帧都要重新排版、重画底下放大了的整张画，手机上走起来一直闪；

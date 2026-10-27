@@ -1,0 +1,113 @@
+/* 环形进度（docs/superpowers/specs/2026-10-27-ui-controls-design.md 第 2 节）。类名都带 ring- 前缀：预览渲染器没有样式隔离。
+   两个半圆：各自装在只露半边的盒子里，里面是一整个圆框、只有两条边有颜色（正好半圈），rotate 转进来多少就露多少。
+   数字每 40ms 一步（countUp），圆环跟着转、每步之间 40ms 线性过渡，看着是连续的 */
+.ring {
+  --ring-color: var(--primary, #4e7d5b);
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+}
+
+.ring-warn {
+  --ring-color: var(--red, #d1543f);
+}
+
+.ring-track,
+.ring-arc,
+.ring-full {
+  position: absolute;
+  top: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  border-radius: 50%;
+}
+
+.ring-track {
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-color: var(--gray-soft, #f1ede6);
+}
+
+.ring-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ring-half-r {
+  left: 50%;
+}
+
+.ring-half-l {
+  left: 0;
+}
+
+/* 一整个圆、圆心在半边盒子的边上 */
+.ring-arc {
+  width: 200%;
+  height: 100%;
+  transition: transform 40ms linear, border-color 200ms;
+}
+
+/* 过了一半：右半边直接到位（不过渡），不然左半边已经开始走、右半边还差一点，6 点那儿会闪一道缝 */
+.ring-done .ring-arc {
+  transition: border-color 200ms;
+}
+
+/* 右半边：上、右两条边有颜色（10 点半到 4 点半），转 45° 正好是右半圈 */
+.ring-arc-r {
+  left: -100%;
+  border-color: var(--ring-color) var(--ring-color) transparent transparent;
+}
+
+/* 左半边：下、左两条边有颜色（4 点半到 10 点半），转 45° 正好是左半圈 */
+.ring-arc-l {
+  left: 0;
+  border-color: transparent transparent var(--ring-color) var(--ring-color);
+}
+
+/* 满了（和超了）：盖一整圈，两个半圆接缝的地方不露细线 */
+.ring-full {
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-color: var(--ring-color);
+  transition: border-color 200ms;
+}
+
+.ring-center {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25;
+}
+
+.ring-num {
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ring-color);
+  transition: color 200ms;
+}
+
+.ring-unit {
+  color: var(--muted, #7a7166);
+}
+
+.ring-sub {
+  margin-top: 6rpx;
+  font-weight: 600;
+  color: var(--text, #2f2a24);
+}
+
+.ring-warn .ring-sub {
+  color: var(--red, #d1543f);
+}
