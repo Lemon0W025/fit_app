@@ -58,6 +58,10 @@ Page({
     swayOn: {},
     bagOpen: false,
     bagTab: 'food',
+    bagTabs: [
+      { label: '食物', value: 'food' },
+      { label: '装饰', value: 'decor' },
+    ],
     foodBag: [],
     decorBag: [],
     bagCount: 0,
@@ -456,8 +460,9 @@ Page({
     this.setData({ bagOpen: false })
   },
 
+  // 背包顶上的「食物 / 装饰」（components/segmented）
   switchBag(e) {
-    this.setData({ bagTab: e.currentTarget.dataset.tab })
+    this.setData({ bagTab: e.detail.value })
   },
 
   pickFood(e) {

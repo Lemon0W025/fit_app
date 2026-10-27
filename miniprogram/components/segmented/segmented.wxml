@@ -1,0 +1,6 @@
+<view class="seg seg-p{{phase}} {{ready ? 'seg-ready' : ''}}" bindtouchstart="onTouch">
+  <view class="seg-piece seg-cap" style="top: {{pill.top}}px; width: {{pill.h}}px; height: {{pill.h}}px; transform: translate3d({{pill.l}}px, 0, 0)"></view>
+  <view class="seg-piece seg-mid" style="top: {{pill.top}}px; height: {{pill.h}}px; transform: translate3d({{pill.m}}px, 0, 0) scaleX({{pill.s}})"></view>
+  <view class="seg-piece seg-cap" style="top: {{pill.top}}px; width: {{pill.h}}px; height: {{pill.h}}px; transform: translate3d({{pill.r}}px, 0, 0)"></view>
+  <view wx:for="{{options}}" wx:key="value" class="seg-opt {{index === active ? 'seg-on' : ''}}" hover-class="seg-press" hover-stay-time="100" data-index="{{index}}" bindtap="onTap">{{item.label}}</view>
+</view>

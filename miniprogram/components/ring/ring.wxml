@@ -1,0 +1,15 @@
+<view class="ring {{warn ? 'ring-warn' : ''}}" style="width: {{size}}rpx; height: {{size}}rpx">
+  <view class="ring-track" style="border-width: {{size * 0.08}}rpx"></view>
+  <view class="ring-half ring-half-r {{leftOn ? 'ring-done' : ''}}">
+    <view class="ring-arc ring-arc-r" style="border-width: {{size * 0.08}}rpx; opacity: {{rightOn ? 1 : 0}}; transform: rotate({{right}}deg)"></view>
+  </view>
+  <view class="ring-half ring-half-l">
+    <view class="ring-arc ring-arc-l" style="border-width: {{size * 0.08}}rpx; opacity: {{leftOn ? 1 : 0}}; transform: rotate({{left}}deg)"></view>
+  </view>
+  <view class="ring-full" style="border-width: {{size * 0.08}}rpx; opacity: {{full ? 1 : 0}}"></view>
+  <view class="ring-center">
+    <text class="ring-num" style="font-size: {{size * 0.22}}rpx">{{shown}}</text>
+    <text class="ring-unit" style="font-size: {{size * 0.085}}rpx">千卡已吃</text>
+    <text wx:if="{{sub}}" class="ring-sub" style="font-size: {{size * 0.09}}rpx">{{sub}}</text>
+  </view>
+</view>

@@ -30,8 +30,9 @@ Page({
     this.updateTiming()
   },
 
+  // 分段控制器（components/segmented）选了哪一餐
   pickMealType(e) {
-    this.setData({ mealType: e.currentTarget.dataset.value })
+    this.setData({ mealType: e.detail.value })
     this.updateTiming()
   },
 

@@ -1,4 +1,5 @@
-// 极简 WXML → HTML 渲染器：把页面的 wxml + wxss + data 渲染成一张 HTML，在浏览器里预览样式、录屏（scripts/preview/record-camp.js 用）
+// 极简 WXML → HTML 渲染器：把页面的 wxml + wxss + data 渲染成一张 HTML，在浏览器里预览样式、录屏（scripts/preview/record-camp.js 用）。
+// 自定义组件按它自己的 JS 算出稳定下来的 data 再画（settledData），认 <slot>；<wxs> 不画（只有真机的渲染层跑）
 const fs = require('fs')
 const path = require('path')
 
@@ -61,6 +62,8 @@ function renderChildren(children, scope, ctx) {
       prev = null
       continue
     }
+    // <wxs> 只在真机的渲染层跑（跟手的拖动之类），预览里不画
+    if (c.tag === 'wxs') continue
     const a = c.attrs
     if ('wx:if' in a) {
       prev = !!interp(a['wx:if'], scope)
@@ -89,24 +92,75 @@ function renderChildren(children, scope, ctx) {
   return out
 }
 
-// 页面 / 组件 json 里的 usingComponents → { 标签: { name, dir, ast, defaults, using } }
+// 组件的 JS：拿到 Component({...}) 的定义（属性默认值、data、生命周期、方法）
+function loadDef(file) {
+  let def = null
+  const prev = global.Component
+  global.Component = (d) => {
+    def = d
+  }
+  try {
+    delete require.cache[require.resolve(file)]
+    require(file)
+  } finally {
+    global.Component = prev
+  }
+  return def || {}
+}
+
+function setPath(obj, key, value) {
+  const parts = key.replace(/\[(\d+)\]/g, '.$1').split('.')
+  let cur = obj
+  for (let i = 0; i < parts.length - 1; i++) cur = cur[parts[i]] == null ? (cur[parts[i]] = {}) : cur[parts[i]]
+  cur[parts[parts.length - 1]] = value
+}
+
+// 按组件自己的逻辑算出它稳定下来的 data：属性 + data，跑一遍 attached / ready，定时器（圆环滚数字、抽屉下一拍打开……）一口气走完。
+// 量不到节点位置（selectorQuery 都给 null），要量的组件（分段控制器）就是还没量好的样子
+function settledData(def, props) {
+  const defaults = {}
+  Object.entries(def.properties || {}).forEach(([k, p]) => (defaults[k] = p && typeof p === 'object' && 'value' in p ? p.value : null))
+  const timers = []
+  const inst = {
+    ...(def.methods || {}),
+    data: JSON.parse(JSON.stringify({ ...defaults, ...(def.data || {}), ...props })),
+    setData(patch, cb) {
+      Object.entries(patch).forEach(([k, v]) => setPath(this.data, k, v))
+      if (cb) cb()
+    },
+    triggerEvent() {},
+    createSelectorQuery() {
+      let n = 0
+      const q = {
+        select: () => ((n += 1), q),
+        selectAll: () => ((n += 1), q),
+        fields: () => q,
+        boundingClientRect: () => q,
+        exec: (cb) => cb(Array.from({ length: n }, () => null)),
+      }
+      return q
+    },
+    clock: { set: (fn) => timers.push(fn), clear: (h) => (timers[h - 1] = null) },
+  }
+  const life = def.lifetimes || {}
+  if (life.attached) life.attached.call(inst)
+  if (life.ready) life.ready.call(inst)
+  for (let i = 0; i < timers.length && i < 10000; i++) {
+    const fn = timers[i]
+    timers[i] = null
+    if (fn) fn()
+  }
+  return inst.data
+}
+
+// 页面 / 组件 json 里的 usingComponents → { 标签: { name, dir, ast, def, using } }
 function loadComponents(using) {
   const out = {}
   Object.entries(using || {}).forEach(([tag, ref]) => {
     const dir = path.join(MP, ref)
     const name = path.basename(ref)
     const json = JSON.parse(fs.readFileSync(`${dir}.json`, 'utf8'))
-    const src = fs.readFileSync(`${dir}.js`, 'utf8')
-    const defaults = {}
-    // 只认 properties 里 { type, value } 的默认值（我们的组件都这么写）
-    for (const m of src.matchAll(/(\w+):\s*\{\s*type:\s*\w+,\s*value:\s*([^}]+?)\s*\}/g)) {
-      try {
-        defaults[m[1]] = Function(`return (${m[2]})`)()
-      } catch (e) {
-        defaults[m[1]] = null
-      }
-    }
-    out[tag] = { name, dir, ast: parse(fs.readFileSync(`${dir}.wxml`, 'utf8')), defaults, using: loadComponents(json.usingComponents) }
+    out[tag] = { name, dir, ast: parse(fs.readFileSync(`${dir}.wxml`, 'utf8')), def: loadDef(`${dir}.js`), using: loadComponents(json.usingComponents) }
   })
   return out
 }
@@ -126,13 +180,20 @@ const TAGS = { 'movable-area': 'div', 'movable-view': 'div', 'scroll-view': 'div
 
 function renderNode(node, scope, ctx) {
   if (node.tag === 'block') return renderChildren(node.children, scope, ctx)
+  // 组件里的 <slot>：画页面塞进来的那几个节点（按 slot="名字" 分，用页面的数据）
+  if (node.tag === 'slot') {
+    const s = ctx.slot
+    if (!s) return ''
+    const name = node.attrs.name || ''
+    return renderChildren(s.children.filter((c) => ((c.attrs && c.attrs.slot) || '') === name), s.scope, s.ctx)
+  }
   const comp = ctx.components && ctx.components[node.tag]
   if (comp) {
-    const props = {}
+    const props = { ...(comp.props || {}) }
     Object.entries(node.attrs).forEach(([k, v]) => {
       if (!/^(bind|catch|wx:|class$|style$)/.test(k)) props[k.replace(/-(\w)/g, (_, c) => c.toUpperCase())] = interp(v, scope)
     })
-    const inner = renderChildren(comp.ast.children, { ...comp.defaults, ...props }, { ...ctx, components: comp.using })
+    const inner = renderChildren(comp.ast.children, settledData(comp.def, props), { ...ctx, components: comp.using, slot: { children: node.children, scope, ctx } })
     return `<div class="wx-comp wx-${node.tag} ${esc(interp(node.attrs.class || '', scope))}">${inner}</div>`
   }
   const a = node.attrs
@@ -141,6 +202,8 @@ function renderNode(node, scope, ctx) {
   let attrs = ` class="${esc(cls)}"`
   let style = a.style ? rpx(interp(a.style, scope)) : ''
   if (node.tag === 'movable-area') style = 'position:relative;overflow:hidden;' + style
+  // 竖着滚的 scroll-view：照常换行（横着滚的才不换行）
+  if (node.tag === 'scroll-view' && a['scroll-y']) style = 'overflow-x:hidden;overflow-y:auto;white-space:normal;' + style
   if (node.tag === 'movable-view') {
     const x = Number(interp(a.x, scope)) || 0
     const y = Number(interp(a.y, scope)) || 0
@@ -230,7 +293,8 @@ function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = f
     ? `<div class="status status-float"><span>9:41</span><span>●●● 5G ▮</span></div><span class="capsule capsule-float">··· ◉</span>`
     : `<div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
 <div class="nav">${back ? '<span class="back">‹</span>' : ''}${esc(json.navigationBarTitleText)}<span class="capsule">··· ◉</span></div>`
-  const customCss = custom ? `.frame{position:relative}.content{flex:none;position:relative;height:${812 - (tab ? 76 : 0)}px;overflow:hidden}.screen{height:100%!important;width:375px!important}
+  // （translateZ：页面里 position: fixed 的东西——抽屉、弹层——和真机一样只盖页面这块，不盖底部 tab）
+  const customCss = custom ? `.frame{position:relative}.content{flex:none;position:relative;height:${812 - (tab ? 76 : 0)}px;overflow:hidden;transform:translateZ(0)}.screen{height:100%!important;width:375px!important}
 .status-float{position:absolute;left:0;right:0;top:0;background:transparent;z-index:999}.capsule-float{position:absolute;top:24px;right:7px;width:87px;height:32px;border-radius:16px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-around;font-size:14px;z-index:999}` : ''
   return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}\n${pageCss(name, components)}\n${customCss}</style></head>
 <body><div class="frame">${head}
@@ -241,7 +305,7 @@ function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = f
 function renderComponent(ref, props, mapSrc) {
   const tag = path.basename(ref)
   const components = loadComponents({ [tag]: ref })
-  const withProps = { [tag]: { ...components[tag], defaults: { ...components[tag].defaults, ...props } } }
+  const withProps = { [tag]: { ...components[tag], props } }
   const html = renderChildren([{ tag, attrs: {}, children: [] }], {}, { mapSrc, components: withProps })
   return { html, css: rpx(componentCss(components)) }
 }

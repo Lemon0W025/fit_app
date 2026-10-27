@@ -9,3 +9,44 @@
 .cell-image { width: 160rpx; height: 130rpx; }
 .cell-name { font-size: 28rpx; text-align: center; }
 .cell-btn { width: 100%; }
+.card.empty { padding: 64rpx 32rpx; }
+
+/* 标签筛选（docs/superpowers/specs/2026-10-27-ui-controls-design.md 第 4 节）：单选；没选中浅色底，选中主题绿实色白字；
+   按下缩到 0.96 再回来，底色、字色、边框 200ms 过渡。往下翻的时候贴在顶上 */
+.tags {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 12rpx;
+  margin: 0 -8rpx 20rpx;
+  padding: 12rpx 8rpx;
+  background: var(--bg);
+}
+
+.tag {
+  flex: 1 1 auto;
+  height: 68rpx;
+  padding: 0 14rpx;
+  border-radius: 34rpx;
+  line-height: 64rpx;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 30rpx;
+  box-sizing: border-box;
+  background: var(--card);
+  color: var(--text);
+  border: 2rpx solid var(--line);
+  transition: transform 0.15s, background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.tag-on {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+
+.tag-press {
+  transform: scale(0.96);
+}

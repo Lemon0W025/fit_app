@@ -1,0 +1,26 @@
+<wxs module="drag" src="./sheet.wxs"></wxs>
+<view wx:if="{{rendered}}" class="sheet {{open ? 'sheet-open' : ''}}">
+  <!-- 遮罩：点了关；挡住手势，背后的营地拖不动 -->
+  <view class="sheet-mask" catchtap="onClose" catchtouchmove="noop">
+    <view class="sheet-dim"></view>
+  </view>
+  <view class="sheet-panel" change:prop="{{drag.onOpen}}" prop="{{open}}">
+    <view class="sheet-move">
+      <view class="sheet-head" bindtouchstart="{{drag.startHead}}" bindtouchmove="{{drag.move}}" bindtouchend="{{drag.end}}" bindtouchcancel="{{drag.end}}">
+        <view class="sheet-grip"></view>
+        <view class="sheet-bar">
+          <view class="sheet-title-box">
+            <text wx:if="{{title}}" class="sheet-title">{{title}}</text>
+            <slot name="head"></slot>
+          </view>
+          <view class="sheet-close" hover-class="sheet-close-press" hover-stay-time="100" catchtap="onClose">✕</view>
+        </view>
+      </view>
+      <scroll-view class="sheet-body" scroll-y enhanced bounces="{{false}}" show-scrollbar="{{false}}" bindscroll="{{drag.scroll}}" bindtouchstart="{{drag.startBody}}" bindtouchmove="{{drag.move}}" bindtouchend="{{drag.end}}" bindtouchcancel="{{drag.end}}">
+        <view class="sheet-inner">
+          <slot></slot>
+        </view>
+      </scroll-view>
+    </view>
+  </view>
+</view>

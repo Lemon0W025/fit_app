@@ -47,7 +47,7 @@ for (const name of PAGES) {
   })
 }
 
-const COMPONENTS = ['medal', 'celebrate']
+const COMPONENTS = ['medal', 'celebrate', 'sheet', 'ring', 'segmented']
 
 for (const name of COMPONENTS) {
   test(`组件 ${name}：标签配对、事件处理函数存在、变量都在属性 / data 里`, () => {
@@ -147,7 +147,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   // 3. 打卡：拍照 + 备注
   const checkin = loadPage('checkin', wx)
   checkin.onLoad()
-  checkin.pickMealType(event({ value: 'lunch' }))
+  checkin.pickMealType(event({}, { value: 'lunch' }))
   assert.equal(checkin.data.timingText, '现在拍午饭：准时 ✓')
   assert.equal(checkin.data.timingOn, true)
   checkin.choosePhoto()
@@ -206,7 +206,7 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   // 7. 只写文字再打一餐，然后生成总结
   const checkin2 = loadPage('checkin', wx)
   checkin2.onLoad()
-  checkin2.pickMealType(event({ value: 'dinner' }))
+  checkin2.pickMealType(event({}, { value: 'dinner' }))
   assert.equal(checkin2.data.timingText, '还没到晚饭时间（17:00～19:00），提前拍也算数')
   checkin2.onNote(event({}, { value: '一碗面条' }))
   checkin2.submit()
@@ -414,7 +414,7 @@ test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡',
   assert.equal(today.clock.count(), 0)
 })
 
-test('今日页：热量从上次显示的数滚到新数，进度条跟着长；离开页面不留定时器', async (t) => {
+test('今日页：热量圆环从上次显示的数滚到新数（页面给最后的数，圆环自己滚）；离开页面不留定时器', async (t) => {
   fixDate(t, '2026-10-22T12:10:00+08:00')
   const cloud = createFakeCloud({ replies: [analysisJson({ totalKcal: 520 })] })
   const { main } = loadCloudFunction(cloud)
@@ -425,14 +425,24 @@ test('今日页：热量从上次显示的数滚到新数，进度条跟着长�
   today.onShow()
   await settle()
   assert.equal(today.data.view.totals.kcal, 0)
-  assert.equal(today.data.view.percent, 0)
+  assert.match(readWxml('today'), /<ring value="\{\{view\.totals\.kcal\}\}" max="\{\{view\.dailyKcal\}\}"/)
+  // 圆环拿页面的数（属性变了用 setData 模拟）
+  const ring = loadComponent('ring', wx, { value: today.data.view.totals.kcal, max: today.data.view.dailyKcal })
+  ring.clock = manualClock()
+  ring.attach()
+  assert.deepEqual([ring.data.shown, ring.data.percent, ring.data.sub], [0, 0, `还能吃 ${today.data.view.dailyKcal}`])
   await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭' } })
   today.onShow()
   await settle()
-  assert.equal(today.data.view.totals.kcal, 0)
-  today.clock.advance(1000)
   assert.equal(today.data.view.totals.kcal, 520)
-  assert.ok(today.data.view.percent > 0)
+  ring.setData({ value: today.data.view.totals.kcal })
+  assert.equal(ring.data.shown, 0)
+  ring.clock.advance(400)
+  assert.ok(ring.data.shown > 260 && ring.data.shown < 520, String(ring.data.shown))
+  ring.clock.advance(400)
+  assert.equal(ring.data.shown, 520)
+  assert.equal(ring.data.percent, Math.round((520 / today.data.view.dailyKcal) * 100))
+  assert.equal(ring.clock.count(), 0)
   today.onHide()
   assert.equal(today.clock.count(), 0)
 })
@@ -678,7 +688,7 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   // 打卡 → 糯糯搬来；回到营地先庆祝
   const checkin = loadPage('checkin', wx)
   checkin.onLoad()
-  checkin.pickMealType(event({ value: 'lunch' }))
+  checkin.pickMealType(event({}, { value: 'lunch' }))
   checkin.onNote(event({}, { value: '米饭青菜' }))
   checkin.submit()
   await settle()
@@ -727,7 +737,8 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   camp.onShow()
   await settle()
   camp.openBag()
-  camp.switchBag(event({ tab: 'decor' }))
+  camp.switchBag(event({}, { value: 'decor' }))
+  assert.equal(camp.data.bagTab, 'decor')
   camp.pickDecor(event({ id: 'ball' }))
   assert.equal(camp.data.mode, 'place')
   const g = (x, y) => touchAt(x * camp.L.k, y * camp.L.k)

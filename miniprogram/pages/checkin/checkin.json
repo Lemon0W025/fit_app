@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "打卡这一餐"
+  "navigationBarTitleText": "打卡这一餐",
+  "usingComponents": {
+    "segmented": "/components/segmented/segmented"
+  }
 }
