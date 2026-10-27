@@ -6,7 +6,7 @@
         <image class="{{pg.full ? 'cover-family' : 'cover-img'}}" src="{{pg.image}}" mode="{{pg.full ? 'widthFix' : 'aspectFit'}}" />
         <view class="cover-title">暖暖营地图册</view>
         <view class="cover-progress">住户 {{pg.progress.pets}} / {{pg.progress.total}}</view>
-        <view wx:if="{{pg.full}}" class="cover-full">🎉 全员到齐，金色小帐篷已经送到背包</view>
+        <view wx:if="{{pg.full}}" class="cover-full">🎉 全员到齐，金色秋千已经送到背包</view>
         <view class="muted small">左右翻页，看每一只的故事</view>
       </block>
       <block wx:elif="{{pg.kind === 'pet'}}">

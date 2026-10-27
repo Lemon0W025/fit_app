@@ -2,11 +2,12 @@
 
 const { WELCOME_BEANS } = require('./shared/garden')
 const { OLD_TO_PET } = require('./shared/pets')
-const { placeProblem } = require('./shared/decor')
+const { placeProblem, RETIRED, GOLD_SWING } = require('./shared/decor')
 
 const LEGACY_FIELDS = ['estate', 'opened', 'inventory', 'placed', 'residents', 'collected', 'plots', 'unseen', 'currentSpecies', 'unlocked']
-// 2：食物下锅（pot）、闻香来的客人（visitors），去掉两个食盆；3：装饰放大 2.5 倍，摆着放不下的收回背包
-const CAMP_VERSION = 3
+// 2：食物下锅（pot）、闻香来的客人（visitors），去掉两个食盆；3：装饰放大 2.5 倍，摆着放不下的收回背包；
+// 4：小帐篷、小树下架（按原价退暖豆），金色小帐篷换成金色秋千
+const CAMP_VERSION = 4
 
 function pet(id, since) {
   return { id, since: since || '', fed: 0, fedToday: { date: '', n: 0 } }
@@ -62,8 +63,30 @@ function refitDecor(src) {
   return { ...src, decor: { ...src.decor, placed: kept } }
 }
 
+// camp 4 之前：下架的（小帐篷、小树）按原价退暖豆、从草地上收走；金色小帐篷换成金色秋千（原地换，放不下就收回背包）
+function retireDecor(src) {
+  if (!src.decor || (src.camp || 0) >= 4) return src
+  const owned = { ...(src.decor.owned || {}) }
+  let refund = 0
+  Object.keys(RETIRED).forEach((id) => {
+    refund += (owned[id] || 0) * RETIRED[id].price
+    delete owned[id]
+  })
+  const gold = owned.gold_tent
+  delete owned.gold_tent
+  if (gold) owned[GOLD_SWING] = 1
+  const kept = []
+  ;(src.decor.placed || []).forEach((p) => {
+    if (RETIRED[p.id]) return
+    const q = p.id === 'gold_tent' ? { ...p, id: GOLD_SWING } : p
+    if (q.id !== GOLD_SWING || !placeProblem(kept, q.id, q.x, q.y)) kept.push(q)
+  })
+  const beans = src.beans || {}
+  return { ...src, beans: { ...beans, spent: Math.max(0, (beans.spent || 0) - refund) }, decor: { ...src.decor, owned, placed: kept } }
+}
+
 function normalizeCamp(doc) {
-  const src = refitDecor(dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {})))
+  const src = retireDecor(refitDecor(dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {}))))
   LEGACY_FIELDS.forEach((k) => delete src[k])
   const beans = src.beans || {}
   const gacha = src.gacha || {}

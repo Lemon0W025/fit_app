@@ -22,7 +22,9 @@ Object.keys(BASE_SIZES).forEach((k) => {
 // 落脚框：宽占块的 0.6、深（上下）占 0.4——放大以后前后可以挨得近一点（后面的被前面的挡一点，45 度俯视本来就这样），24 件全买齐也摆得下
 const FOOT_RATIO = { w: 0.6, h: 0.4 }
 const OVERLAP_MARGIN = 16
-const GOLD_TENT = 'gold_tent'
+const GOLD_SWING = 'gold_swing'
+// 下架了的（10/27：已经有大帐篷，小帐篷重复；后面一整片树林，不要小树）：旧档里买过的按原价退暖豆（camp-state 迁移）
+const RETIRED = { tent: { name: '小帐篷', price: 120 }, sapling: { name: '小树', price: 80 } }
 
 // 一个块：size 小中大；spots 按块的比例给（x 从左、y 从上），下面展开成像素
 function decor(id, name, category, price, size, extra = {}) {
@@ -33,7 +35,6 @@ function decor(id, name, category, price, size, extra = {}) {
 }
 
 const DECOR = [
-  decor('tent', '小帐篷', 'nest', 120, 'l', { spots: [{ x: 0.38, y: 0.72, action: 'sleep' }, { x: 0.62, y: 0.72, action: 'sleep' }] }),
   decor('hammock', '吊床', 'nest', 100, 'l', { spots: [{ x: 0.5, y: 0.55, action: 'sleep' }] }),
   decor('treehouse', '树洞小屋', 'nest', 150, 'l', { spots: [{ x: 0.5, y: 0.7, action: 'sleep' }] }),
   decor('strawbed', '草窝', 'nest', 50, 's', { spots: [{ x: 0.5, y: 0.6, action: 'sleep' }] }),
@@ -46,7 +47,6 @@ const DECOR = [
   decor('slide', '小滑梯', 'play', 110, 'l', { spots: [{ x: 0.3, y: 0.4, action: 'play' }] }),
   decor('flowerbed', '花坛', 'plant', 50, 'm', { max: 3, fx: 'butterfly' }),
   decor('pumpkins', '南瓜堆', 'plant', 60, 'm', { spots: [{ x: 0.5, y: 0.5, action: 'sit' }] }),
-  decor('sapling', '小树', 'plant', 80, 'l', { max: 3, spots: [{ x: 0.5, y: 0.88, action: 'sleep' }], fx: 'bird' }),
   decor('sunflower', '向日葵', 'plant', 50, 's', { max: 3 }),
   decor('lights', '灯串', 'mood', 90, 'l', { fx: 'glow' }),
   decor('bunting', '彩旗', 'mood', 60, 'm'),
@@ -58,7 +58,7 @@ const DECOR = [
   decor('clothesline', '晾衣绳', 'mood', 50, 'm'),
   decor('scarecrow', '稻草人', 'mood', 70, 'm', { spots: [{ x: 0.5, y: 0.15, action: 'perch' }] }),
   // 全收集奖励，商店买不到
-  decor(GOLD_TENT, '金色小帐篷', 'nest', 0, 'l', { spots: [{ x: 0.38, y: 0.72, action: 'sleep' }, { x: 0.62, y: 0.72, action: 'sleep' }], fx: 'glow' }),
+  decor(GOLD_SWING, '金色秋千', 'play', 0, 'l', { spots: [{ x: 0.5, y: 0.55, action: 'play' }], fx: 'glow' }),
 ]
 
 function decorById(id) {
@@ -96,4 +96,4 @@ function placeProblem(placed, decorId, x, y, ignoreUid) {
   return ''
 }
 
-module.exports = { CATEGORIES, DECOR_SCALE, SIZES, DECOR, GOLD_TENT, decorById, footRect, patchRect, placeProblem }
+module.exports = { CATEGORIES, DECOR_SCALE, SIZES, DECOR, GOLD_SWING, RETIRED, decorById, footRect, patchRect, placeProblem }

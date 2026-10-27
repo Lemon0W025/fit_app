@@ -3,13 +3,16 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const D = require('../cloudfunctions/api/lib/shared/decor')
 
-test('24 件装饰 + 金帐篷：类别、价钱、块和落脚框', () => {
-  assert.equal(D.DECOR.length, 25)
-  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 25)
+test('22 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐篷、小树下架', () => {
+  assert.equal(D.DECOR.length, 23)
+  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 23)
   assert.deepEqual(D.CATEGORIES.map((c) => c.id), ['nest', 'eat', 'play', 'plant', 'mood'])
   const shop = D.DECOR.filter((d) => d.price > 0)
-  assert.equal(shop.length, 24)
-  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 2210)
+  assert.equal(shop.length, 22)
+  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 1850)
+  assert.equal(D.decorById('tent'), null)
+  assert.equal(D.decorById('sapling'), null)
+  assert.deepEqual(D.RETIRED, { tent: { name: '小帐篷', price: 120 }, sapling: { name: '小树', price: 80 } })
   D.DECOR.forEach((d) => {
     assert.ok(D.CATEGORIES.some((c) => c.id === d.category), d.id)
     assert.ok(d.patch.w > 0 && d.patch.h > 0 && d.foot.w <= d.patch.w && d.foot.h <= d.patch.h, d.id)
@@ -17,8 +20,9 @@ test('24 件装饰 + 金帐篷：类别、价钱、块和落脚框', () => {
     assert.ok(d.max >= 1, d.id)
     d.spots.forEach((s) => assert.ok(['sleep', 'sit', 'play', 'climb', 'perch'].indexOf(s.action) !== -1, `${d.id} ${s.action}`))
   })
-  assert.equal(D.decorById('gold_tent').price, 0)
-  assert.equal(D.decorById('gold_tent').spots.filter((s) => s.action === 'sleep').length, 2)
+  assert.equal(D.decorById('gold_swing').price, 0)
+  assert.equal(D.GOLD_SWING, 'gold_swing')
+  assert.deepEqual(D.decorById('gold_swing').patch, D.decorById('swing').patch)
   assert.equal(D.decorById('flowerbed').max, 3)
   assert.equal(D.decorById('nope'), null)
   // 原来的大小 × 2.5（10/26 放大）
@@ -46,7 +50,7 @@ test('placeProblem：每种不能放的原因', () => {
   assert.equal(P('ball', 3800, 3800), '') // 右下角的空草坪
   assert.equal(P('ball', 1520, 1810), '和别的东西挤着了')
   assert.equal(P('ball', 1520, 1810, 'd1'), '')
-  assert.equal(P('tent', 2000, 3400), '这儿放不下，挪开一点') // 放大以后顶到篝火
-  assert.equal(P('tent', 2000, 3650), '')
+  assert.equal(P('swing', 2000, 3400), '这儿放不下，挪开一点') // 放大以后顶到篝火
+  assert.equal(P('swing', 2000, 3650), '')
   assert.equal(P('ball', 2000, 3500), '')
 })

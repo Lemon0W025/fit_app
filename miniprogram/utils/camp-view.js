@@ -154,11 +154,12 @@ function decorBag(unplaced) {
     .filter(Boolean)
 }
 
+// 商店：只列有高清图的（decor-art.js）：新加的家具图没回来之前不上架
 function shopGroups(owned, beans) {
   return CATEGORIES.map((c) => ({
     id: c.id,
     label: c.label,
-    items: DECOR.filter((d) => d.category === c.id && d.price > 0).map((d) => {
+    items: DECOR.filter((d) => d.category === c.id && d.price > 0 && DECOR_ART.indexOf(d.id) !== -1).map((d) => {
       const have = (owned && owned[d.id]) || 0
       return { id: d.id, name: d.name, price: d.price, image: decorImage(d.id), have, max: d.max, soldOut: have >= d.max, canAfford: beans >= d.price }
     }),

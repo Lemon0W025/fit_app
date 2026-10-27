@@ -1,9 +1,10 @@
 """装饰「原地重绘」的第二步：比对 in / out，抠出装饰本身和它的影子（split_object），裁成块，落脚点对准 anchor
 
-    python3 scripts/camp/decor_patch.py [--ids tent,ball] [--local]
+    python3 scripts/camp/decor_patch.py [--ids swing,ball] [--local]
 
 读 art/raw/decor/in-<id>.png、out-<id>.png 和 boxes.json。装饰在哪：out 和 in 不一样的地方；Codex 在装饰脚下顺手画的那圈草皮去掉，
-只留比原来暗的影子；被装饰围住、Codex 没动过的空洞（秋千、梯子中间透出来的草）留空；离装饰远的零星小块（它顺手改的花）不要；
+只留比原来暗的影子，再沿底边铺一层接地影子（CONTACT）；Codex 没动过的像素一律不算装饰（被围住的空洞、茎中间透出来的原图白花都留空，不留一圈亮草边）；
+离装饰远的零星小块（它顺手改的花）不要；
 裁的块大小 = shared/decor.js 的 patch，块里的 anchor 对准装饰的底边中点，按 anchor 往上、往两边能放多少缩放，画得太小的放大（FILL）。
 Codex 是照原来的大小画的（patch ÷ DECOR_SCALE，decor_crop.py 也按它裁），先按原来的大小算好从 out 上裁哪块，再整块放大 DECOR_SCALE 倍。
 输出 art/decor/<id>.png（高清块，和营地高清图一样的分辨率，npm run wx:art -- decor 传到 camp/decor-vN/）；
@@ -32,6 +33,7 @@ BINS = 32          # 草的颜色直方图每个通道分几格
 GRASS = 0.02       # 颜色在原来这块草地里出现得够多（相对最常见的颜色）才算草；草里零星的白花不算
 LOW = 0.45         # 装饰下面这么高的一截里才找草皮（上面的树冠、帐篷绿得像草也不动）
 LOCAL_SCALE = 0.25
+CONTACT = 0.32     # 接地影子最深多少（透明度）：家具底边往下铺一层柔和的暗，像压在草上（10/27 用户说花坛像贴纸）
 
 
 def decor_table():
@@ -102,16 +104,38 @@ def split_object(out, inp, k):
     hist /= hist.max()
     qo = o // (256 // BINS)
     grassy = hist[qo[..., 0], qo[..., 1], qo[..., 2]] > GRASS
+    # Codex 重画的草常常比原来亮一点、直方图里没有：黄绿色（蓝很少、红不少）的也算草（家具上的叶子是偏蓝的深绿，不会被当成草）
+    R, G, B = o[..., 0], o[..., 1], o[..., 2]
+    grassy |= (G > R) & (G > 90) & (B < 0.55 * G) & (R > 0.5 * G)
     ys = np.nonzero(drawn)[0]
     low = np.arange(drawn.shape[0])[:, None] >= ys.max() - LOW * (ys.max() - ys.min())
     skirt = from_outside(drawn & grassy & low, drawn)
     keep = Image.fromarray((drawn & ~skirt).astype(np.uint8) * 255).filter(ImageFilter.MinFilter(3)).filter(ImageFilter.MaxFilter(3))
     obj = fill_holes(np.asarray(keep) > 0) & drawn
+    # Codex 没动过的像素就是原来的草地（原图上的白花、茎和叶子中间透出来的草），不算装饰：留着就是一块块发白的方块、一圈亮草边；
+    # 抗锯齿的边（装饰和草混出来的颜色）是改过的，本来就在里面；只补针眼大的洞（装饰的颜色碰巧和原来一样）
+    core = Image.fromarray(changed.astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3))
+    obj &= np.asarray(core) > 0
+    # 原图上的白花 Codex 留着、边上顺手描过（改过了、上面那步去不掉）：这里本来就白、现在还白的也去掉，连外面一圈混色的边
+    white = lambda a: (a.min(axis=2) > 185) & (a.max(axis=2) - a.min(axis=2) < 60)
+    petal = Image.fromarray((white(o) & white(i) & obj).astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(3))
+    obj &= ~(np.asarray(petal) > 0)
     a_obj = np.asarray(Image.fromarray(obj.astype(np.uint8) * 255).filter(ImageFilter.GaussianBlur(0.4 * k))).astype(float) / 255
     # 影子：草皮里比原来暗下去的（糊开了比，草叶的纹理对不上没关系）
     lum = lambda a: 0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]
     blur = lambda a: np.asarray(Image.fromarray(a.astype(np.uint8)).filter(ImageFilter.GaussianBlur(2.5 * k))).astype(float)
     shade = np.clip((1 - lum(blur(o)) / np.maximum(lum(blur(i)), 1) - 0.06) / 0.94, 0, 0.7) * drawn * (1 - a_obj)
+    # 接地影子：家具最下面一截往下挪一点、糊开，铺在家具外面（每件都有，摆到哪都像压在草上）
+    yy = np.nonzero(obj)[0]
+    if len(yy):
+        top, bottom = yy.min(), yy.max()
+        base = obj & (np.arange(obj.shape[0])[:, None] >= bottom - 0.14 * (bottom - top))
+        shifted = np.zeros_like(base)
+        dy = max(1, round(0.025 * (bottom - top)))
+        shifted[dy:] = base[:-dy]
+        wide = Image.fromarray((base | shifted).astype(np.uint8) * 255).filter(ImageFilter.MaxFilter(2 * max(1, round(3 * k)) + 1))
+        contact = np.asarray(wide.filter(ImageFilter.GaussianBlur(5 * k))).astype(float) / 255 * CONTACT
+        shade = np.maximum(shade, contact * (1 - a_obj))
     alpha = a_obj + shade * (1 - a_obj)
     rgb = o * (a_obj / np.maximum(alpha, 1e-3))[..., None]
     return (Image.fromarray(np.uint8(np.clip(rgb, 0, 255) + 0.5)), Image.fromarray(np.uint8(alpha * 255 + 0.5)),
@@ -142,7 +166,9 @@ def main():
         if not os.path.exists(dst):
             print(f'  ·  {decor_id}  还没有 out-{decor_id}.png')
             continue
-        d = table[decor_id]
+        d = table.get(decor_id)
+        if not d:
+            continue                                                 # 下架了（小帐篷、小树、金色小帐篷）
         inp = Image.open(src).convert('RGB')
         k0 = meta['k']                                              # 高清图：每画像素多少像素
         k = k0 * inp.width / (meta['box'][2] - meta['box'][0])      # in 图（Codex 可能放大过）

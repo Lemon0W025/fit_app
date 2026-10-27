@@ -273,7 +273,7 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   assert.deepEqual(garden.beans.earned, {})
 })
 
-const peekingCamp = () => ({ camp: 3, welcomed: true, pets: [], pot: { date: TODAY, foods: ['zhusun'] }, visitors: [{ id: 'sunbao', foodId: 'zhusun', since: TODAY }] })
+const peekingCamp = () => ({ camp: 4, welcomed: true, pets: [], pot: { date: TODAY, foods: ['zhusun'] }, visitors: [{ id: 'sunbao', foodId: 'zhusun', since: TODAY }] })
 
 test('analyze：正餐打卡后，闻着锅里竹笋来的笋宝住下', async () => {
   const { repo, service } = setup({ results: [analysisJson()], garden: peekingCamp() })

@@ -68,14 +68,14 @@ test('changedPaths：只发变了的字段（云存储的图 setData 一次就�
 })
 
 test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', () => {
-  const views = V.decorViews([{ uid: 'd2', id: 'ball', x: 1500, y: 3000 }, { uid: 'd1', id: 'tent', x: 1000, y: 1500 }], L, '')
+  const views = V.decorViews([{ uid: 'd2', id: 'ball', x: 1500, y: 3000 }, { uid: 'd1', id: 'swing', x: 1000, y: 1500 }], L, '')
   assert.deepEqual(views.map((v) => v.uid), ['d1', 'd2'])
-  const tent = decorById('tent')
+  const tent = decorById('swing')
   const s = scaleAt(1500)
   assert.ok(Math.abs(views[0].width - tent.patch.w * s * L.k) < 0.011) // 视图值四舍五入到 0.01
   assert.ok(Math.abs(views[0].left - (1000 - tent.anchor.x * s) * L.k) < 0.011)
   assert.ok(Math.abs(views[0].top - (1500 - tent.anchor.y * s) * L.k) < 0.011)
-  assert.equal(views[0].image, '/images/camp/decor/tent.png')
+  assert.equal(views[0].image, '/images/camp/decor/swing.png')
   assert.equal(views[0].z, V.Z_DECOR + Math.round(1500 / 4))
   assert.ok(views[1].z > views[0].z)
   assert.equal(V.decorViews([{ uid: 'x', id: 'nope', x: 1, y: 1 }], L, '').length, 0)
@@ -84,8 +84,8 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
   const at = art.indexOf('hammock')
   art.splice(at, 1)
   try {
-    const drawn = V.decorViews([{ uid: 'a', id: 'tent', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
-    assert.equal(drawn.find((v) => v.id === 'tent').image, 'cloud://x/camp/decor/tent.png')
+    const drawn = V.decorViews([{ uid: 'a', id: 'swing', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
+    assert.equal(drawn.find((v) => v.id === 'swing').image, 'cloud://x/camp/decor/swing.png')
     assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')
   } finally {
     art.splice(at, 0, 'hammock')
@@ -103,10 +103,19 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.deepEqual(groups.map((g) => g.id), ['nest', 'eat', 'play', 'plant', 'mood'])
   const ball = groups[2].items.find((i) => i.id === 'ball')
   assert.deepEqual([ball.have, ball.soldOut, ball.canAfford], [1, true, true])
-  const tent = groups[0].items.find((i) => i.id === 'tent')
-  assert.deepEqual([tent.have, tent.soldOut, tent.canAfford], [0, false, false])
+  const hammock = groups[0].items.find((i) => i.id === 'hammock')
+  assert.deepEqual([hammock.have, hammock.soldOut, hammock.canAfford], [0, false, false])
   assert.equal(groups[3].items.find((i) => i.id === 'flowerbed').soldOut, true)
-  assert.ok(!groups.some((g) => g.items.some((i) => i.id === 'gold_tent')))
+  assert.ok(!groups.some((g) => g.items.some((i) => ['gold_swing', 'tent', 'sapling'].indexOf(i.id) !== -1)), '奖励、下架的不进商店')
+  // 还没有高清图的（新加的花，图没回来）不进商店
+  const art = require('../miniprogram/utils/decor-art')
+  const at = art.indexOf('ball')
+  art.splice(at, 1)
+  try {
+    assert.ok(!V.shopGroups({}, 50).some((g) => g.items.some((i) => i.id === 'ball')))
+  } finally {
+    art.splice(at, 0, 'ball')
+  }
   assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', '', '', ''])
   assert.deepEqual([6, 12, 18, 19, 23, 3, 5].map(V.isNight), [false, false, false, true, true, true, true])
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/', true)[15].image, 'cloud://x/camp/base/night-t33.jpg')

@@ -56,7 +56,7 @@ test('syncDay：旧档先迁成营地再记豆；营地文档里其他字段保�
   await addMeal(repo, TODAY, 'lunch')
   await forest.syncDay('u1', TODAY)
   const garden = await repo.getGarden('u1')
-  assert.equal(garden.camp, 3)
+  assert.equal(garden.camp, 4)
   assert.equal(garden.inventory, undefined)
   assert.deepEqual(garden.beans, { spent: 0, bonus: 0, earned: { [TODAY]: 15 } })
   assert.deepEqual(garden.days, { '2026-10-20': 'apple', [TODAY]: true })

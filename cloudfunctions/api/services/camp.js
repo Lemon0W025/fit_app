@@ -5,7 +5,7 @@ const { RARITIES, SPIN_COST, WELCOME_BEANS, PITY, beanBalance, rollRarity, curre
 const { PETS, petById } = require('../lib/shared/pets')
 const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
 const { dailyMenu } = require('../lib/menu')
-const { DECOR, GOLD_TENT, decorById, placeProblem } = require('../lib/shared/decor')
+const { DECOR, GOLD_SWING, decorById, placeProblem } = require('../lib/shared/decor')
 const { levelOf, nextLevelAt, giftDue } = require('../lib/shared/camp')
 
 const HIGH_RARITIES = ['epic', 'legendary']
@@ -341,7 +341,7 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
       camp.pets = camp.pets.concat(comers.map((v) => ({ id: v.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
       camp.arrivals = camp.arrivals.concat(comers.map((v) => v.id))
       camp.visitors = []
-      if (isFull(camp) && !camp.decor.owned[GOLD_TENT]) camp.decor = { ...camp.decor, owned: { ...camp.decor.owned, [GOLD_TENT]: 1 } }
+      if (isFull(camp) && !camp.decor.owned[GOLD_SWING]) camp.decor = { ...camp.decor, owned: { ...camp.decor.owned, [GOLD_SWING]: 1 } }
       await save(openid, camp)
       if (!comers.length) return null
       return {

@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const { createCampService } = require('../cloudfunctions/api/services/camp')
 const { createFakeRepo, NOW, TODAY } = require('./helpers/fake-repo')
 const { PITY } = require('../cloudfunctions/api/lib/shared/garden')
-const { GOLD_TENT } = require('../cloudfunctions/api/lib/shared/decor')
+const { GOLD_SWING } = require('../cloudfunctions/api/lib/shared/decor')
 
 function sequence(values) {
   const queue = [...values]
@@ -19,7 +19,7 @@ function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, ge
   return { repo, service }
 }
 
-const rich = (extra = {}) => ({ camp: 3, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
+const rich = (extra = {}) => ({ camp: 4, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 0 }, pets: [{ id: 'doudou', since: TODAY, fed: 0, fedToday: { date: '', n: 0 } }], ...extra })
 
 test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', async () => {
   const { repo, service } = setup()
@@ -39,7 +39,7 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
   const second = await service.get('u1')
   assert.equal(second.welcome, null)
   assert.equal((await repo.getGarden('u1')).beans.bonus, 60)
-  assert.equal((await repo.getGarden('u1')).camp, 3)
+  assert.equal((await repo.getGarden('u1')).camp, 4)
 })
 
 test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
@@ -121,7 +121,7 @@ test('测试无限资源（config.testUnlimited）：暖豆和每样食物每次
   assert.equal((await repo.getGarden('u1')).foods.huluobo, 9, '存下来了（首页的暖豆也是满的）')
   const spun = await service.spin('u1')
   assert.equal(spun.beans, 99999)
-  assert.equal((await service.buy('u1', { decorId: 'tent' })).beans, 99999)
+  assert.equal((await service.buy('u1', { decorId: 'hammock' })).beans, 99999)
   const cooked = await service.putFood('u1', { foodId: 'huluobo' })
   assert.equal(cooked.foods.find((f) => f.id === 'huluobo').count, 9)
   const late = setup({ camp: rich(), getTestUnlimited: () => ({ ...conf, until: '2026-10-21' }) })
@@ -201,8 +201,9 @@ test('buy / place / move / stash：买了进背包，摆到草地上，挪、收
   assert.deepEqual(v.decor.owned, { ball: 1 })
   assert.deepEqual(v.decor.unplaced, [{ id: 'ball', count: 1 }])
   await assert.rejects(service.buy('u1', { decorId: 'ball' }), { code: 'BAD_REQUEST', message: '这件已经买过了' })
-  await assert.rejects(service.buy('u1', { decorId: 'tent' }), { code: 'NO_BEANS', message: '暖豆不够啦，小帐篷要 120 暖豆，再攒攒' })
-  await assert.rejects(service.buy('u1', { decorId: GOLD_TENT }), { code: 'BAD_REQUEST', message: '这件商店里没有' })
+  await assert.rejects(service.buy('u1', { decorId: 'swing' }), { code: 'NO_BEANS', message: '暖豆不够啦，秋千要 120 暖豆，再攒攒' })
+  await assert.rejects(service.buy('u1', { decorId: GOLD_SWING }), { code: 'BAD_REQUEST', message: '这件商店里没有' })
+  await assert.rejects(service.buy('u1', { decorId: 'tent' }), { code: 'BAD_REQUEST', message: '这件商店里没有' }) // 下架了
   await assert.rejects(service.buy('u1', { decorId: 'nope' }), { code: 'BAD_REQUEST', message: '这件商店里没有' })
   v = await service.place('u1', { decorId: 'ball', x: 1500, y: 1800 })
   assert.deepEqual(v.decor.placed, [{ uid: 'd1', id: 'ball', x: 1500, y: 1800 }])
@@ -245,13 +246,13 @@ test('arrive：正餐打卡后全员 +1（一天最多 3 次）；所有客人�
   assert.deepEqual(stored.pets.map((p) => [p.id, p.fed]), [['doudou', 3], ['nuonuo', 1], ['guigui', 1]])
 })
 
-test('arrive：旧档迁来的客人（不知道闻着什么来的）也住下；第 12 只住进来送金帐篷，只送一次', async () => {
+test('arrive：旧档迁来的客人（不知道闻着什么来的）也住下；第 12 只住进来送金色秋千，只送一次', async () => {
   const ids = ['doudou', 'nuonuo', 'lianlian', 'shishi', 'huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha']
   const { repo, service } = setup({ camp: { ...rich({ pets: ids.map((id) => ({ id, since: TODAY, fed: 0, fedToday: { date: '', n: 0 } })) }), camp: 1, bowls: [null, null], peeking: ['hehe', null] } })
   const a = await service.arrive('u1')
   assert.deepEqual(a, { pets: [{ id: 'hehe', name: '鹤鹤', foodId: '', foodName: '' }] })
   const stored = await repo.getGarden('u1')
-  assert.deepEqual(stored.decor.owned, { [GOLD_TENT]: 1 })
+  assert.deepEqual(stored.decor.owned, { [GOLD_SWING]: 1 })
   assert.equal((await service.get('u1')).full, true)
 })
 
@@ -295,7 +296,7 @@ test('album：12 页宠物（没来的只给提示）、尝过的食物、买过
   assert.equal(a.foods.find((f) => f.id === 'yumili').tasted, false)
   assert.equal(a.foods.filter((f) => f.term).length, 10)
   assert.equal(a.decor.find((d) => d.id === 'ball').owned, true)
-  assert.equal(a.decor.some((d) => d.id === GOLD_TENT), false)
+  assert.equal(a.decor.some((d) => d.id === GOLD_SWING), false)
   assert.equal(a.full, false)
 })
 
@@ -306,6 +307,6 @@ test('旧档进营地：迁完存一次，暖豆退回，住户搬来', async ()
   assert.deepEqual(v.pets.map((p) => p.id), ['sunbao', 'doudou'])
   assert.equal(v.welcome, null)
   const stored = await repo.getGarden('u1')
-  assert.equal(stored.camp, 3)
+  assert.equal(stored.camp, 4)
   assert.equal(stored.inventory, undefined)
 })

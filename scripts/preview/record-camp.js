@@ -57,11 +57,11 @@ function layout(list, prefix) {
   })
   return placed
 }
-// 第 1 批 B 画好的 8 件装饰，摆在火堆周围的草地上
-const DECOR_1B = layout([['tent', 3300, 2150], ['strawbed', 2600, 3700], ['picnic', 1300, 3400], ['ball', 3000, 3400],
-  ['flowerbed', 1100, 2600], ['sapling', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
+// 第 1 批 B 画好的装饰（小帐篷、小树 10/27 下架了，换成秋千、向日葵），摆在火堆周围的草地上
+const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['picnic', 1300, 3400], ['ball', 3000, 3400],
+  ['flowerbed', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
 // 第 2 批的 17 件
-const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_tent', 3450, 3450],
+const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_swing', 3450, 3450],
   ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
   ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]], 'e')
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
