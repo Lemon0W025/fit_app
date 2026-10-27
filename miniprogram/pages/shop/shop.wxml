@@ -5,16 +5,22 @@
     <text class="beans-num">{{beans}}</text>
     <text class="beans-unit">暖豆</text>
   </view>
-  <view wx:for="{{groups}}" wx:key="id" wx:for-item="group" class="card">
-    <view class="group-title">{{group.label}}</view>
-    <view class="grid">
-      <view wx:for="{{group.items}}" wx:key="id" class="cell">
-        <image class="cell-image" src="{{item.image}}" mode="aspectFit" />
-        <view class="cell-name">{{item.name}}<text wx:if="{{item.max > 1}}" class="muted small">（{{item.have}}/{{item.max}}）</text></view>
-        <button wx:if="{{!item.soldOut}}" class="btn-primary btn-small cell-btn" disabled="{{!item.canAfford}}" data-id="{{item.id}}" bindtap="buy">{{item.price}} 暖豆</button>
-        <view wx:else class="muted small">已买</view>
+  <view class="tags">
+    <view wx:for="{{tags}}" wx:key="id" class="tag {{tag === item.id ? 'tag-on' : ''}}" hover-class="tag-press" hover-stay-time="100" data-id="{{item.id}}" bindtap="pickTag">{{item.label}}</view>
+  </view>
+  <block wx:for="{{groups}}" wx:key="id" wx:for-item="group">
+    <view wx:if="{{group.items.length}}" class="card fx-rise">
+      <view class="group-title">{{group.label}}</view>
+      <view class="grid">
+        <view wx:for="{{group.items}}" wx:key="id" class="cell">
+          <image class="cell-image" src="{{item.image}}" mode="aspectFit" />
+          <view class="cell-name">{{item.name}}<text wx:if="{{item.max > 1}}" class="muted small">（{{item.have}}/{{item.max}}）</text></view>
+          <button wx:if="{{!item.soldOut}}" class="btn-primary btn-small cell-btn" disabled="{{!item.canAfford}}" data-id="{{item.id}}" bindtap="buy">{{item.price}} 暖豆</button>
+          <view wx:else class="muted small">已买</view>
+        </view>
       </view>
     </view>
-  </view>
+  </block>
+  <view wx:if="{{emptyTag}}" class="card empty">这一类还没有上架的，看看别的吧～</view>
   <button class="btn-plain btn-big" bindtap="goCamp">回营地摆放</button>
 </view>

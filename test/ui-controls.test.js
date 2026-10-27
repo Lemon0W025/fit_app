@@ -417,6 +417,45 @@ test('我的页：性别用分段控制器，换了预算跟着变；活动量�
   assert.ok(profile.data.previewKcal > female)
 })
 
+test('商店：顶上一排标签（全部 + 装饰的几类），选了哪类就只列那一类；买东西不丢筛选', async () => {
+  const cloud = createFakeCloud({ replies: [] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: PROFILE })
+  const shop = loadPage('shop', createWx(main))
+  shop.onShow()
+  await settle()
+  assert.deepEqual(shop.data.tags.map((t) => t.label), ['全部'].concat(CATEGORIES.map((c) => c.label)))
+  assert.equal(shop.data.tag, 'all')
+  const all = shop.data.groups.map((g) => g.id)
+  assert.deepEqual(all, CATEGORIES.map((c) => c.id))
+
+  shop.pickTag(event({ id: 'play' }))
+  assert.equal(shop.data.tag, 'play')
+  assert.deepEqual(shop.data.groups.map((g) => g.id), ['play'])
+  assert.ok(shop.data.groups[0].items.length > 0)
+  shop.data.groups[0].items.forEach((item) => assert.equal(decorById(item.id).category, 'play', item.id))
+  assert.equal(shop.data.emptyTag, false)
+
+  // 买完重新算：还是只列「玩」
+  shop.render({ beans: 999, decor: { owned: {} } })
+  assert.deepEqual(shop.data.groups.map((g) => g.id), ['play'])
+  shop.pickTag(event({ id: 'nope' }))
+  assert.equal(shop.data.tag, 'play')
+  shop.pickTag(event({ id: 'all' }))
+  assert.deepEqual(shop.data.groups.map((g) => g.id), all)
+
+  // 那一类一件都没有：说一声
+  shop.all = shop.all.map((g) => (g.id === 'mood' ? { ...g, items: [] } : g))
+  shop.pickTag(event({ id: 'mood' }))
+  assert.equal(shop.data.emptyTag, true)
+
+  const wxml = readWxml('shop')
+  assert.match(wxml, /class="tag \{\{tag === item\.id \? 'tag-on' : ''\}\}" hover-class="tag-press"/)
+  const css = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/shop/shop.wxss'), 'utf8')
+  assert.match(css, /\.tag-on \{[^}]*background: var\(--primary\);[^}]*color: #fff/)
+  assert.match(css, /\.tag-press \{[^}]*transform: scale\(0\.96\)/)
+})
+
 test('营地背包：两个抽屉换成 sheet（点遮罩 / ✕ / 往下拉都由页面关），食物 / 装饰换成分段控制器', () => {
   const wxml = readWxml('camp')
   assert.match(wxml, /<sheet show="\{\{bagOpen\}\}" bindclose="closeBag">/)
