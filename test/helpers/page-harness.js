@@ -91,16 +91,23 @@ function createWx(main) {
     gardenRect: { left: 16, top: 100 },
     // 大地图 #world 在屏幕上的位置和宽度，测试里按拖动、缩放设置
     worldRect: null,
+    // 其他节点的位置：{ 选择器: rect }（selectAll 的给数组），比如分段控制器量选项宽度
+    rects: {},
     createSelectorQuery() {
-      let selector = ''
+      const selectors = []
+      const rectOf = (sel) => (sel in wx.rects ? wx.rects[sel] : sel === '#world' ? wx.worldRect : sel === '#garden' ? wx.gardenRect : null)
       const q = {
         select: (sel) => {
-          selector = sel
+          selectors.push(sel)
+          return q
+        },
+        selectAll: (sel) => {
+          selectors.push(sel)
           return q
         },
         fields: () => q,
         boundingClientRect: () => q,
-        exec: (cb) => cb([selector === '#world' ? wx.worldRect : selector === '#garden' ? wx.gardenRect : null]),
+        exec: (cb) => cb(selectors.map((sel) => clone(rectOf(sel)))),
       }
       return q
     },
@@ -134,7 +141,15 @@ function loadPage(name, wx) {
   return page
 }
 
-// 自定义组件：属性默认值 + data，props 覆盖；attach / detach 调生命周期；triggerEvent 记在 events 里
+function getPath(obj, key) {
+  return key
+    .replace(/\[(\d+)\]/g, '.$1')
+    .split('.')
+    .reduce((cur, k) => (cur == null ? undefined : cur[k]), obj)
+}
+
+// 自定义组件：属性默认值 + data，props 覆盖；attach / ready / detach 调生命周期，pageShow / pageHide 调 pageLifetimes；
+// setData 碰到 observers 监听的字段就调监听器（页面改属性也用 setData 模拟）；triggerEvent 记在 events 里
 function loadComponent(name, wx, props = {}) {
   const file = path.join(COMPONENTS_DIR, name, `${name}.js`)
   let def = null
@@ -150,12 +165,19 @@ function loadComponent(name, wx, props = {}) {
     defaults[k] = p && p.value !== undefined ? p.value : null
   })
   const life = def.lifetimes || {}
+  const pageLife = def.pageLifetimes || {}
+  const observers = Object.entries(def.observers || {}).map(([keys, fn]) => ({ keys: keys.split(',').map((k) => k.trim()), fn }))
   return {
     ...(def.methods || {}),
     data: { ...clone(defaults), ...clone(def.data || {}), ...clone(props) },
     events: [],
     setData(patch, cb) {
-      Object.entries(patch).forEach(([k, v]) => setPath(this.data, k, v))
+      const changed = Object.keys(patch)
+      changed.forEach((k) => setPath(this.data, k, patch[k]))
+      observers.forEach(({ keys, fn }) => {
+        const hit = keys.some((k) => changed.some((c) => c === k || c.startsWith(`${k}.`) || c.startsWith(`${k}[`)))
+        if (hit) fn.apply(this, keys.map((k) => getPath(this.data, k)))
+      })
       if (cb) cb()
     },
     triggerEvent(type, detail) {
@@ -165,8 +187,17 @@ function loadComponent(name, wx, props = {}) {
     attach() {
       if (life.attached) life.attached.call(this)
     },
+    ready() {
+      if (life.ready) life.ready.call(this)
+    },
     detach() {
       if (life.detached) life.detached.call(this)
+    },
+    pageShow() {
+      if (pageLife.show) pageLife.show.call(this)
+    },
+    pageHide() {
+      if (pageLife.hide) pageLife.hide.call(this)
     },
   }
 }
@@ -215,10 +246,10 @@ function boundHandlers(wxml) {
   return [...wxml.matchAll(/\b(?:bind|catch)\w+="(\w+)"/g)].map((m) => m[1])
 }
 
-// 取出 {{ }} 里作为表达式开头的变量名（不含 a.b 里的 b）；wx:for-item 声明的名字除外
+// 取出 {{ }} 里作为表达式开头的变量名（不含 a.b 里的 b）；wx:for-item 声明的名字、<wxs module> 的模块名除外
 function referencedRoots(wxml) {
   const roots = new Set()
-  const loopNames = new Set([...wxml.matchAll(/wx:for-(?:item|index)="(\w+)"/g)].map((m) => m[1]))
+  const loopNames = new Set([...wxml.matchAll(/(?:wx:for-(?:item|index)|<wxs[^>]*\bmodule)="(\w+)"/g)].map((m) => m[1]))
   const keywords = new Set(['true', 'false', 'null', 'undefined'])
   for (const m of wxml.matchAll(/\{\{([\s\S]*?)\}\}/g)) {
     const expr = m[1].replace(/'[^']*'|"[^"]*"/g, '')
