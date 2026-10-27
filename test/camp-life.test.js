@@ -678,3 +678,30 @@ test('吊床：睡在里面的跟着布轻轻晃（rock-on，轴在两个结中�
   assert.equal(back.sprites[0].sway, null)
   back.life.stop()
 })
+
+test('滑梯：走到梯子脚 → 背影爬到滑道顶（一路排在滑梯前面）→ 坐着滑到滑道口前面的草上 → 落地开心', () => {
+  const slide = { uid: 'l1', id: 'slide', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 2 }], decor: [slide], seed: 3 })
+  life.start()
+  const r = life.callTo('l1')
+  assert.equal(r.action, 'slide')
+  const d = D.decorById('slide')
+  const s = scaleAt(slide.y)
+  const pt = (q) => ({ x: slide.x + (q.x - d.anchor.x) * s, y: slide.y + (q.y - d.anchor.y) * s })
+  const [top, exit] = d.ride.map(pt)
+  const seen = []
+  assert.ok(until(clock, () => {
+    const w = life.whereIs()[0]
+    const sp = sprites[0]
+    if (Math.hypot(w.x - top.x, w.y - top.y) < 1 && seen.indexOf('top') === -1) seen.push('top')
+    if (Math.hypot(w.x - exit.x, w.y - exit.y) < 1 && sp.action === 'sit' && seen.indexOf('slide') === -1) seen.push('slide')
+    if (sp.action === 'happy' && seen.indexOf('slide') !== -1) seen.push('land')
+    // 在滑梯上（爬、在顶上、滑）一路排在滑梯前面
+    if (seen.length && seen.indexOf('land') === -1) assert.ok(sp.z > zOf(slide.y), `${seen.join(',')} 时被滑梯挡住了`)
+    return seen.indexOf('land') !== -1
+  }, 100, 400), seen.join(','))
+  assert.deepEqual(seen.slice(0, 2), ['top', 'slide'])
+  assert.ok(exit.y > slide.y, '落地点要在滑梯前面')
+  assert.equal(life.whereIs()[0].text, '在玩小滑梯')
+  life.stop()
+})

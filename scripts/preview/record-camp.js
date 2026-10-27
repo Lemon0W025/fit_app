@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -172,6 +172,13 @@ const SCENARIOS = {
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
+  },
+  // 滑梯：叫两只先后去爬、滑（拉近看爬梯子、滑下来时一直在滑梯前面）
+  slide: {
+    hour: 10, potLevel: 2, focus: [2700, 3500], scale: 1.8, seconds: 14, decor: [{ uid: 's0', id: 'slide', x: 2700, y: 3600 }],
+    pets: ['doudou', 'nuonuo', 'qiqi'],
+    plan: [[0, 0, 2300, 3800], [0, 1, 3100, 3850], [0, 2, 2200, 3300]],
+    events: [[300, (life) => life.callTo('s0')], [6500, (life) => life.callTo('s0')]],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),

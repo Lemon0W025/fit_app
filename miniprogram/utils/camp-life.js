@@ -27,13 +27,17 @@ const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
 // 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
-const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'perch']
+const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'perch']
 const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
 const SWAY_TIMES = [5, 9]
 const FLOWER_MS = 3000 // 低头闻多久
 const BLOOM_MS = 1800 // 闻完抬头开心多久
 const GATHER = 2 // 那件家具上已经有别的小家伙了：挑它的机会多几倍（两三只一起就是野餐）
-const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', play: '玩去喽', climb: '玩去喽', perch: '我飞上去看看' }
+const CLIMB_MS = 1400 // 滑梯：顺着梯子爬上去多久
+const TOP_MS = 500 // 在滑道顶上探头多久
+const SLIDE_MS = 700 // 滑下来多久
+const LAND_MS = 1300 // 落地开心多久
+const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', play: '玩去喽', climb: '玩去喽', perch: '我飞上去看看' }
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
@@ -416,7 +420,7 @@ function createLife({
     then(a)
   }
 
-  // more.sway：坐在秋千上跟着摆（pivotOf）；more.next：做完接着做什么（不然下一回合重新挑）
+  // more.sway：坐在秋千上跟着摆（pivotOf）；more.next：做完接着做什么（不然下一回合重新挑）；more.depthY：排前后用的 y（在滑梯上）
   function doFor(a, action, ms, emoji = '', more = {}) {
     a.action = action
     a.emoji = emoji
@@ -424,7 +428,8 @@ function createLife({
     a.next = more.next || null
     if (action !== 'sleep') a.until = 0
     if (DIR_ACTIONS.indexOf(action) === -1) a.dir = 'side'
-    if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
+    if (more.depthY != null) a.depthY = more.depthY
+    else if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
     emit(a)
     schedule(a, ms)
   }
@@ -668,10 +673,48 @@ function createLife({
     perch(b) {
       doFor(b, 'perch', between(DO_MS))
     },
+    // 滑梯：顺着梯子爬上去（背影走那行），在顶上探个头，坐着滑到出口，落地蹦一下
+    slide(b, spot) {
+      const [top, exit] = ridePoints(spot)
+      if (!top) return doFor(b, 'play', between(DO_MS), '🎵')
+      const front = spot.baseY + 4 // 一路都排在滑梯前面
+      glide(b, top, CLIMB_MS, 'walk', 'back', front, (c) => {
+        c.right = exit.x > c.x
+        doFor(c, 'idle', TOP_MS, '😆', { depthY: front, next: (d) => glide(d, exit, SLIDE_MS, 'sit', 'side', front, (e) => doFor(e, 'happy', LAND_MS, '🎵')) })
+      })
+    },
     sleep(b) {
       b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'
       sleepFor(b, between(DAY_NAP.ms))
     },
+  }
+
+  // 滑梯上的几个点（画的像素）：滑道顶、出口
+  function ridePoints(spot) {
+    const p = placed.find((q) => q.uid === spot.uid)
+    const d = p && decorById(p.id)
+    if (!d || !d.ride || d.ride.length < 2) return []
+    const s = scaleAt(p.y)
+    return d.ride.map((r) => ({ x: p.x + (r.x - d.anchor.x) * s, y: p.y + (r.y - d.anchor.y) * s }))
+  }
+
+  // 不走路网，直接挪到 to（爬梯子、滑下来）：用 action 那行动作、ms 毫秒，排前后固定在 depthY；到了接着 then
+  function glide(a, to, ms, action, dir, depthY, then) {
+    a.right = to.x === a.x ? a.right : to.x > a.x
+    a.dir = dir
+    a.action = action
+    a.emoji = ''
+    a.sway = null
+    a.x = to.x
+    a.y = to.y
+    a.duration = ms
+    a.depthY = depthY
+    a.next = (b) => {
+      b.duration = 0
+      then(b)
+    }
+    emit(a)
+    schedule(a, ms)
   }
 
   // 它们之间：a 走到 b 旁边，各说一句

@@ -26,6 +26,7 @@ function describe(state) {
   // 在家具上：按在那儿干什么说（荡秋千、闻花、在野餐垫上吃点心）
   if (d && state.spot === 'swing') return `在荡${d}`
   if (d && state.spot === 'sniff') return `在闻${d}`
+  if (d && state.spot === 'slide') return `在玩${d}`
   if (d && state.spot === 'sit' && state.action === 'eat') return `在${d}上吃点心`
   switch (state.action) {
     case 'sleep': return d ? `在${d}里睡觉` : '在睡觉'

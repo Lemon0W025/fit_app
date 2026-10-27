@@ -1,6 +1,7 @@
 // 装饰：商店里买的，拖到草地上任意位置。每件是在营地原图上原地画出来再连一圈草地裁下的块（patch），落脚框 foot 用来判断重叠，
 // anchor 是落脚点在块里的位置；spots 是宠物在它上面能坐 / 睡 / 玩的点（相对块左上角，画的像素）。第一步用占位块，尺寸先按这里的定
-// 点的种类：sleep 睡、sit 坐（野餐垫上的会吃点心）、swing 坐在秋千座位上跟着摆、sniff 站在花前闻、play / climb 玩、perch 站在高处（会飞的才去）
+// 点的种类：sleep 睡、sit 坐（野餐垫上的会吃点心）、swing 坐在秋千座位上跟着摆、sniff 站在花前闻、slide 从梯子脚爬上去再滑下来（ride：滑梯顶、滑道出口）、
+// play / climb 玩、perch 站在高处（会飞的才去）
 
 const { SCENE, rectInPoly, hitsNogo, expand } = require('./camp')
 
@@ -32,7 +33,8 @@ function decor(id, name, category, price, size, extra = {}) {
   const patch = SIZES[size]
   const foot = { w: Math.round(patch.w * FOOT_RATIO.w), h: Math.round(patch.h * FOOT_RATIO.h) }
   const spots = (extra.spots || []).map((s) => ({ x: Math.round(s.x * patch.w), y: Math.round(s.y * patch.h), action: s.action }))
-  return { id, name, category, price, size, max: extra.max || 1, patch, foot, anchor: { x: Math.round(patch.w / 2), y: Math.round(patch.h * 0.82) }, spots, fx: extra.fx || '' }
+  const ride = (extra.ride || []).map((s) => ({ x: Math.round(s.x * patch.w), y: Math.round(s.y * patch.h) }))
+  return { id, name, category, price, size, max: extra.max || 1, patch, foot, anchor: { x: Math.round(patch.w / 2), y: Math.round(patch.h * 0.82) }, spots, ride, fx: extra.fx || '' }
 }
 
 const DECOR = [
@@ -47,7 +49,8 @@ const DECOR = [
   decor('swing', '秋千', 'play', 120, 'l', { spots: [{ x: 0.49, y: 0.625, action: 'swing' }] }),
   decor('ball', '滚球', 'play', 40, 's', { spots: [{ x: 0.5, y: 0.7, action: 'play' }] }),
   decor('ladder', '木梯', 'play', 60, 'm', { spots: [{ x: 0.5, y: 0.35, action: 'climb' }] }),
-  decor('slide', '小滑梯', 'play', 110, 'l', { spots: [{ x: 0.3, y: 0.4, action: 'play' }] }),
+  // 滑梯：梯子脚 → 爬到滑道顶上 → 坐着滑出滑道、落在滑道口前面的草上（按 art/decor/slide.png 量的；落地点比落脚点靠前，排在滑梯前面）
+  decor('slide', '小滑梯', 'play', 110, 'l', { spots: [{ x: 0.29, y: 0.61, action: 'slide' }], ride: [{ x: 0.44, y: 0.215 }, { x: 0.73, y: 0.85 }] }),
   // 花：点在花前面（落脚框外），小动物背对着我们凑过去闻
   decor('flowerbed', '花坛', 'plant', 50, 'm', { max: 3, fx: 'butterfly', spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
   decor('pumpkins', '南瓜堆', 'plant', 60, 'm', { spots: [{ x: 0.5, y: 0.5, action: 'sit' }] }),
