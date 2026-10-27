@@ -1,7 +1,8 @@
 """第一步的占位图：宠物（旧动物图顶替，没有的画个圆团）、装饰块（草绿底 + 色块 + 名字）、食物图标（圆底 + 两个字）
 
     python3 scripts/camp/placeholders.py            # 全部（注意：宠物占位用的旧动物图已不在仓库，别再整个重跑）
-    python3 scripts/camp/placeholders.py --decor    # 只重画装饰占位
+    python3 scripts/camp/placeholders.py --decor    # 只重画装饰占位（会盖掉已经接进来的正式小图）
+    python3 scripts/camp/placeholders.py --decor --ids lavender,tulips   # 只画这几件（新加的、图还没回来的）
 
 正式图到了由各自的脚本覆盖（装饰块 decor_patch.py、宠物 pack_anim.py + 图册插画、食物 slice-art.py）。暖暖锅的占位在 pot_art.py --placeholder。
 注意：宠物占位用的旧动物图已经不在仓库里了，别再整个重跑这个脚本。需要 Pillow。
@@ -106,9 +107,11 @@ def food_icon(f):
 def main():
     D = data()
     if '--decor' in sys.argv:
-        for dc in D['decor']:
+        ids = sys.argv[sys.argv.index('--ids') + 1].split(',') if '--ids' in sys.argv else None
+        todo = [dc for dc in D['decor'] if not ids or dc['id'] in ids]
+        for dc in todo:
             save(decor_patch(dc, D['decorScale']), 'camp', 'decor', f"{dc['id']}.png")
-        print(f"装饰 {len(D['decor'])} 张占位图已重画（透明底）")
+        print(f"装饰 {len(todo)} 张占位图已重画（透明底）")
         return
     for p in D['pets']:
         img = pet_image(p)

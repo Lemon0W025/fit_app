@@ -51,6 +51,13 @@ const DECOR = [
   decor('flowerbed', '花坛', 'plant', 50, 'm', { max: 3, fx: 'butterfly', spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
   decor('pumpkins', '南瓜堆', 'plant', 60, 'm', { spots: [{ x: 0.5, y: 0.5, action: 'sit' }] }),
   decor('sunflower', '向日葵', 'plant', 50, 's', { max: 3, spots: [{ x: 0.5, y: 0.92, action: 'sniff' }] }),
+  // 10/27 加的各种花（替下架的小树）：第 5 批出图，图回来之前不进商店（商店只列 decor-art.js 里有高清块的）
+  decor('lavender', '薰衣草丛', 'plant', 60, 'm', { max: 3, spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
+  decor('hydrangea', '绣球花', 'plant', 70, 'm', { max: 3, spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
+  decor('tulips', '郁金香', 'plant', 40, 's', { max: 3, spots: [{ x: 0.5, y: 0.92, action: 'sniff' }] }),
+  decor('daisies', '雏菊野花', 'plant', 30, 's', { max: 3, spots: [{ x: 0.5, y: 0.92, action: 'sniff' }] }),
+  decor('cosmos', '格桑花', 'plant', 40, 's', { max: 3, spots: [{ x: 0.5, y: 0.92, action: 'sniff' }] }),
+  decor('roses', '月季花丛', 'plant', 80, 'm', { max: 3, spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
   decor('lights', '灯串', 'mood', 90, 'l', { fx: 'glow' }),
   decor('bunting', '彩旗', 'mood', 60, 'm'),
   decor('windmill', '风车', 'mood', 50, 's', { fx: 'spin' }),

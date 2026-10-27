@@ -159,6 +159,36 @@
       "aspect": 1.0
     },
     {
+      "file": "art/raw/decor/out-lavender.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-hydrangea.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-tulips.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-daisies.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-cosmos.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-roses.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
       "file": "art/raw/decor/out-lights.png",
       "kind": "painting",
       "aspect": 1.0

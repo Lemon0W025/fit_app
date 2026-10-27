@@ -3,13 +3,13 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const D = require('../cloudfunctions/api/lib/shared/decor')
 
-test('22 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐篷、小树下架', () => {
-  assert.equal(D.DECOR.length, 23)
-  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 23)
+test('28 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐篷、小树下架，换成各种花', () => {
+  assert.equal(D.DECOR.length, 29)
+  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 29)
   assert.deepEqual(D.CATEGORIES.map((c) => c.id), ['nest', 'eat', 'play', 'plant', 'mood'])
   const shop = D.DECOR.filter((d) => d.price > 0)
-  assert.equal(shop.length, 22)
-  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 1850)
+  assert.equal(shop.length, 28)
+  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 2810)
   assert.equal(D.decorById('tent'), null)
   assert.equal(D.decorById('sapling'), null)
   assert.deepEqual(D.RETIRED, { tent: { name: '小帐篷', price: 120 }, sapling: { name: '小树', price: 80 } })
@@ -23,7 +23,7 @@ test('22 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐�
   // 秋千坐在座位上摆；花前面闻（点在落脚框外面，不用走进花坛里）
   assert.deepEqual(D.decorById('swing').spots.map((s) => s.action), ['swing'])
   assert.deepEqual(D.decorById('gold_swing').spots, D.decorById('swing').spots)
-  ;['flowerbed', 'sunflower'].forEach((id) => {
+  ;['flowerbed', 'sunflower', 'lavender', 'hydrangea', 'tulips', 'daisies', 'cosmos', 'roses'].forEach((id) => {
     const d = D.decorById(id)
     assert.ok(d.spots.length && d.spots.every((s) => s.action === 'sniff' && s.y > d.anchor.y), id)
   })

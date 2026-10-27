@@ -4,7 +4,7 @@
 「按 `docs/art/camp-art-pack.md` 把第 N 批图生成出来，放到指定路径，跑 `python3 scripts/art/check_art.py` 自检直到这批全部通过」。
 生成完把 `art/raw/` 整个目录给回仓库（提交到分支或打 zip），剩下的切图、打包、上传由小程序这边的脚本完成。
 
-设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。四批都已经做完接进来了（10/25～10/27）。
+设计背景见 `docs/superpowers/specs/2026-10-24-camp-pets-design.md`。前四批都已经做完接进来了（10/25～10/27）；第 5 批（各种花）还没做。
 
 | 批 | 内容 |
 |---|---|
@@ -12,6 +12,7 @@
 | 2（剩下的全部，已完成，10/25 接入） | 返工：小帐篷（第 1 批画成了浅绿，和草混在一起，要天蓝）。新图 50 张：花花、龟龟、杞杞、薯薯、橘团、笋宝、茶茶、鹤鹤各 4 张；剩下 16 件装饰 + 金色小帐篷；全家福 |
 | 3（正面 / 背影，已完成，10/26 接入） | 12 只各一张 C 张拼图 `art/raw/anim/<id>-c.png`（第 3.5 节）：往远处走看背影、朝镜头走看正面，背对着站 / 吃 / 坐，正面站着 |
 | 4（重画走路，已完成，10/27 接入） | 橘团、茶茶各一张 `art/raw/anim/<id>-walk.png`（第 3.6 节）：A 张的走路画坏了（橘团一只后脚一直翘着、看着像瘸了；茶茶只有前腿在走、后腿钉着不动），单独重画侧面走路的 6 帧 |
+| 5（各种花，还没做） | 6 件花（第 2.1 节）：薰衣草丛、绣球花、郁金香、雏菊野花、格桑花、月季花丛（小帐篷、小树 10/27 下架了，草坪上换成各种花）；可选：金色秋千画成真的金色（现在是程序把秋千调的色） |
 
 ## 执行流程（照这个顺序喂 Codex）
 
@@ -140,6 +141,30 @@ art/raw/anim/<id>-a.png（同一只、同样画风、同样颜色），再加 ar
 ```
 
 **回来之后**：告诉 Claude「走路在分支 codex/art-batch-4」，Claude 按第 7 节接入、发预览二维码。（已完成，10/27 接入）
+
+**第 5 批：各种花**（整段粘给 Codex。先出两件停下来给你看，你回「可以」或写改意见，之后一口气做完）：
+
+```
+你在仓库根目录，用你内置的图像编辑能力，按 docs/art/camp-art-pack.md 第 2 节的做法（在营地草地上原地画）和第 2.1 节的表，
+画 6 件花：lavender、hydrangea、tulips、daisies、cosmos、roses。先切到最新代码：git checkout claude/mini-program-dev-nzn2n0 && git pull，
+再把这个文件的第 0、2、2.1 节读一遍。只往 art/raw/ 里加图，别改代码和脚本，已有的 in / out 一张都别动。
+空草地已经裁好了：art/raw/decor/in-<id>.png（别重新裁）。对每件用 edit 把花画在这块草地正中偏下，存成 art/raw/decor/out-<id>.png
+（1024×1024）。提示词用第 2 节的模板，<装饰> 填 2.1 表里那行的英文，再加 2.1 表上面那几条（贴地、不像贴纸、夜里不扎眼）；
+参考图给 art/guide/style-camp.jpg 和已经画好的 art/raw/decor/out-flowerbed.png、out-sunflower.png（同一套画风、同样大小）。
+只画花丛本身、贴地的影子和压在底边的几根草，周围的草地一个像素都别动。每出一张就跑
+python3 scripts/art/check_art.py art/raw/decor/out-<id>.png，没过就重出。顺序：
+1. 先出 lavender 和 tulips，发给我看，停下来等我。
+2. 我说可以之后出剩下 4 件：hydrangea、daisies、cosmos、roses。
+3. （可选，我说要才做）金色秋千：以 art/raw/decor/out-swing.png 为底 edit，只把秋千的木头架子、横梁和座位画成温暖的金色
+   （像抛光的黄铜，带柔和的高光，别发光、别加星星），绳子还是绳子，形状、位置、大小一个像素都别变，草地不动，
+   存成 art/raw/decor/out-gold_swing.png。
+4. 最后 python3 scripts/art/check_art.py 全跑一遍（应该 110 / 110 通过），把输出贴给我；
+   把 art/raw/ 整个目录提交到新分支 codex/art-batch-5 并推送（推不了就打成 art-batch-5.zip 给我）；
+   推完 git checkout claude/mini-program-dev-nzn2n0 切回来，别把仓库留在新分支上。
+中途断了：新开对话粘同一段，先跑 python3 scripts/art/check_art.py，已经通过的别重做，从「还没有」的接着做。
+```
+
+**回来之后**：告诉 Claude「花在分支 codex/art-batch-5」，Claude 按第 7 节接入、发预览二维码。
 
 ---
 
@@ -311,7 +336,10 @@ cut off at the middle line continue upward naturally. The lower half must stay p
 
 ---
 
-## 2. 装饰（24 件 + 金色小帐篷，`art/raw/decor/out-<id>.png`）
+## 2. 装饰（`art/raw/decor/out-<id>.png`）
+
+现在在用的：下面表里除了小帐篷（tent）、小树（sapling）的 22 件 + 金色秋千（gold_swing，集齐 12 只送的；10/27 起小帐篷、小树下架，
+金色小帐篷换成金色秋千，表里这三行留着是记录，不用再画）+ 第 2.1 节的 6 件花。
 
 装饰不是单独画的透明图，而是**在营地原图的一块草地上原地画出来**，这样它天然长在地上、影子和光线都对。流程：
 
@@ -365,6 +393,24 @@ texture, colors and lighting outside the object must stay pixel-identical. No te
 | gold_tent | 金色小帐篷 | the same camping tent but made of shimmering gold fabric with tiny star patterns (unlit) | 大 |
 
 块大小（按 4096 见方的营地算，`decor_crop.py` 会自动换算到高清图上）：小 240×200、中 360×300、大 520×420。作参照，同一张画上锅连三脚架约 600 宽、食盆 270、宠物 230～380。装饰要整个落在裁出来的块里，四周留出一圈草地。
+
+### 2.1 各种花（第 5 批）
+
+草坪后面是一整片树林，草坪上不再摆小树，换成各种花。小动物会凑到花前面低头闻（站在花丛前面、背对着我们），所以花丛要**矮、前面敞开**，
+别画一圈篱笆或高高的边。用户嫌之前的花坛「放上去像一张贴纸、夜里不搭」，所以每件都要：
+- 长在草里：底部有几片自己的叶子和压过来的草，贴地一圈柔和的接触阴影（不是一块椭圆的黑影），**没有描边、没有一圈亮边**
+- 颜色中等饱和、别用大片纯白或荧光色（夜里程序会按月光 / 火光给它上色，纯白会显得发亮、像贴上去的）
+- 叶子用偏蓝或偏深的绿，和黄绿的草分得开；花朵成簇、大块颜色，屏幕上只有 20～40 像素宽
+- 宽度约占 in 图宽的一半，底边落在图高的 75%～80%
+
+| id | 名字（中文） | 画什么（英文填进 `<装饰>`） | 块大小 |
+|---|---|---|---|
+| lavender | 薰衣草丛 | a low rounded clump of lavender, many soft purple flower spikes over blue-grey-green leaves | 中 |
+| hydrangea | 绣球花 | a low hydrangea bush with three big round flower heads in soft blue and pink, deep green leaves | 中 |
+| tulips | 郁金香 | a small cluster of five tulips in warm red, pink and yellow, with broad blue-green leaves | 小 |
+| daisies | 雏菊野花 | a low patch of wild daisies — cream petals with yellow centers, mixed with a few tiny lilac flowers | 小 |
+| cosmos | 格桑花 | a loose cluster of cosmos flowers in pink, magenta and pale rose on thin stems, fine feathery leaves | 小 |
+| roses | 月季花丛 | a low rose bush with several coral-pink roses and buds, glossy dark green leaves | 中 |
 
 ---
 
@@ -578,6 +624,7 @@ in this order: … Cells 34–36 empty.
 - 没点火：画换了或 Codex 画了 `out-fire-off.png` / `out-night-fire-off.png` 就 `fire_off.py`（出两块补丁，打印的框填进 `SCENE.flame.off`；Codex 的 in / out 是裁的时候的框外扩成的正方形，裁的框记在 `art/raw/cut/fire-off.json`，脚本只取回框里那块），再跑上一条的 `cutouts.py --from-base --local`、`light_map.py`（空锅、夜里的木盖、熄火时的光都从熄了火的画上来）
 - 底图：`extend_art.py` 把整个世界（含上下补的）缩成 768 宽写进包里（`images/camp/base/world.jpg`、`night-world.jpg`）当垫图
 - 装饰：`decor_crop.py --ids …` 先出 in（`boxes.json` 合并着写，别的批裁过的框留着）→ Codex 出 out（它可能把 in 放大到 1024 再画，脚本按 in 实际的宽换算）→ `decor_patch.py --local` → `scripts/wechat.js` 的 `ART_VERSION.decor`（重新生成过就加一）→ `npm run wx:art -- decor` → `config.decorArt`。`decor_patch.py` 只取 Codex 画了的地方（它别处一个像素都没动），再把它在装饰脚下顺手画的那圈草皮去掉、只留比原来暗的影子（草皮 = 颜色在原来那块草地里、在装饰下半截、从外面连进来的；花坛里被石头围住的叶子不算），所以摆到哪儿都落在那儿的草上、夜里没有一圈白天的草；画得太小的放大到占块宽 55% 或块高 70%（`FILL`）。最后重写 `utils/decor-art.js`（有高清块的装饰），页面只对这些用云端的图，还没画的用包里的占位
+- 第 5 批的花：`decor_patch.py --local --ids lavender,hydrangea,tulips,daisies,cosmos,roses`（换掉包里的占位小图，重写 `utils/decor-art.js`，有了高清块的花就自动进商店）→ `ART_VERSION.decor` 加一 → `npm run wx:art -- decor` → `config.decorArt`；录屏 `play` 看小动物闻花。Codex 画了金色秋千：`cp art/raw/decor/in-swing.png art/raw/decor/in-gold_swing.png`、`boxes.json` 里照抄 swing 那条成 gold_swing → `decor_patch.py --local --ids gold_swing` → `swing_parts.py --preview 目录`（看座位那层抠得干不干净，金色秋千形状变了就重量 `SEAT`）
 - 宠物：`pack_anim.py` 把 A、B（有 `<id>-c.png` 的连 C）各自对齐后上下拼成一只一张 `art/anim/<id>.png`（6 列 × 12 / 18 行，每格 160px；`utils/anim-sheets.js` 里有 C 的记 `c: true`），页面换动作、转身只挪行不换图→ `scripts/wechat.js` 的 `ART_VERSION.anim` 加一 → `npm run wx:art -- anim` → `config.animArt`；第 3 批回来录屏看往上 / 往下走、锅前面吃和坐转身时大小不跳；`scripts/camp/pet_art.py` 把图册插画缩成 320px 放 `images/camp/pets/<id>.png`、头像 96px 放 `<id>-face.png`（替换占位），全家福缩成 840 宽的 `images/camp/family.jpg`（12 只都到齐后图册的封面）
 - 重画的走路（第 4 批）：`pack_anim.py` 看到 `art/raw/anim/<id>-walk.png` 就拿它换掉 A 张第 1 行（个头按原来那行缩放，打印倍数），其余照上一条；录屏 `facing` / `all-pets-phone` 逐帧看腿
 - 食物、界面：`slice-art.py`（`ui/foods.png` 6×6 → `images/camp/foods/<id>.png` 128px；`ui/camp-icons.png` → `images/garden/ui/` 的 campfire / book / shop / bag / gift / paw / camera，食盆和回家暂时没用上）
