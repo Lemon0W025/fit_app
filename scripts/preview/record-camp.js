@@ -68,8 +68,8 @@ const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chach
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
 const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
-// 和家具玩：秋千、花坛、向日葵、野餐垫挨着摆，点家具叫小家伙过来（荡秋千、闻花、野餐）
-const PLAY = layout([['swing', 2300, 3350], ['flowerbed', 3200, 3500], ['picnic', 1500, 3550], ['sunflower', 3050, 2900]], 'p')
+// 和家具玩：秋千、花坛、向日葵、野餐垫、吊床挨着摆，点家具叫小家伙过来（荡秋千、闻花、野餐、睡吊床）
+const PLAY = layout([['swing', 2300, 3350], ['flowerbed', 3200, 3500], ['picnic', 1500, 3550], ['sunflower', 3050, 2900], ['hammock', 2400, 3900]], 'p')
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
@@ -171,7 +171,7 @@ const SCENARIOS = {
     hour: 10, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 18, decor: PLAY,
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
-    events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')]],
+    events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
@@ -267,10 +267,14 @@ async function record(name, sc, browser) {
       // 荡秋千：小家伙和秋千座位那层同时换上摆的动画（页面里是同一次 setData）
       const sway = pet.querySelector('.pet-sway')
       if (sway) {
-        sway.className = `wx-view pet-sway ${s.sway ? 'sway-on' : ''}`
+        sway.className = `wx-view pet-sway ${s.sway ? s.sway.cls : ''}`
         sway.style.transformOrigin = s.sway ? `${s.sway.ox}px ${s.sway.oy}px` : '50% 100%'
       }
-      document.querySelectorAll('.decor-seat').forEach((img) => img.classList.toggle('sway-on', !!s.swayOn[img.getAttribute('data-uid')]))
+      document.querySelectorAll('.decor-seat').forEach((img) => {
+        img.classList.remove('sway-on', 'rock-on')
+        const cls = s.swayOn[img.getAttribute('data-uid')]
+        if (cls) img.classList.add(cls)
+      })
       const body = pet.querySelector('.pet-body')
       body.style.height = `${s.width}px`
       body.className = `wx-view pet-body ${s.flip ? 'flip' : ''}`

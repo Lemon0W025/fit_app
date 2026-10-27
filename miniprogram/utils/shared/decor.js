@@ -36,7 +36,8 @@ function decor(id, name, category, price, size, extra = {}) {
 }
 
 const DECOR = [
-  decor('hammock', '吊床', 'nest', 100, 'l', { spots: [{ x: 0.5, y: 0.55, action: 'sleep' }] }),
+  // 吊床的点在布的最低处（睡在里面，跟着布轻轻晃）
+  decor('hammock', '吊床', 'nest', 100, 'l', { spots: [{ x: 0.5, y: 0.7, action: 'sleep' }] }),
   decor('treehouse', '树洞小屋', 'nest', 150, 'l', { spots: [{ x: 0.5, y: 0.7, action: 'sleep' }] }),
   decor('strawbed', '草窝', 'nest', 50, 's', { spots: [{ x: 0.5, y: 0.6, action: 'sleep' }] }),
   decor('picnic', '野餐垫', 'eat', 60, 'm', { spots: [{ x: 0.3, y: 0.6, action: 'sit' }, { x: 0.5, y: 0.5, action: 'sit' }, { x: 0.7, y: 0.6, action: 'sit' }] }),

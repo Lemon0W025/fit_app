@@ -89,6 +89,7 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
     const swing = drawn.find((v) => v.id === 'swing')
     assert.equal(swing.image, 'cloud://x/camp/decor/swing-frame.png')
     assert.equal(swing.seat.image, 'cloud://x/camp/decor/swing-seat.png')
+    assert.equal(swing.seat.cls, 'sway-on')
     const pivot = require('../miniprogram/utils/decor-parts').swing.pivot
     assert.ok(Math.abs(swing.seat.ox - pivot[0] * swing.width) < 0.011 && Math.abs(swing.seat.oy - pivot[1] * swing.height) < 0.011)
     assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')

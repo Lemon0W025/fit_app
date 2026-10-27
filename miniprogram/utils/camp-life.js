@@ -10,7 +10,7 @@ const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
 const { COLS, FOOT, frameFor, facingFor, dirOf, stackRow } = require('./anim')
-const { petImage, petFace, zOf, cutoutStrips, isNight } = require('./camp-view')
+const { petImage, petFace, zOf, cutoutStrips, isNight, SWAY_CLASS } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 
 const REST_MS = [3000, 7000]
@@ -88,7 +88,8 @@ function depthCuts(from, to, half, lines) {
 // visitors：[{ id, foodId }] 客人；saved：上次离开时的 snapshot()（{ id: { x, y, right, action, until, sleepStyle } }）
 function createLife({
   L, pets, decor, arrivals = [], visitors = [], saved = null, hour = realHour, lit = () => true, pot = () => [], random = Math.random, clock = realClock, onChange = () => {},
-  // 秋千的座位那层绕哪儿摆（块里的比例 [x, y]，utils/decor-parts.js）；没有座位那层（云端高清块没用上）就返回 null，小动物坐着不摆
+  // 家具会摆的那层（秋千座位、吊床的布）：{ pivot: 块里的比例 [x, y], kind: 'swing' | 'rock' }（utils/decor-parts.js）；
+  // 没拆（云端高清块没用上）就返回 null，小动物在上面不摆
   sways = () => null,
   sheets = {}, animBase = '', bad = new Set(),
   // 拼图从哪儿来（一只一张，页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
@@ -133,14 +134,14 @@ function createLife({
     return out
   }
 
-  // 秋千座位那层摆的轴（画的像素）：座位那层是从秋千图上拆出来的，和块一样大，轴是块里的比例
+  // 家具会摆的那层的轴（画的像素）：那层是从家具图上拆出来的，和块一样大，轴是块里的比例；cls 是摆的动画类（和那层一样）
   function pivotOf(spot) {
-    const ratio = sways(spot.id)
-    const p = placed.find((q) => q.uid === spot.uid)
+    const part = spot && spot.uid ? sways(spot.id) : null
+    const p = part && placed.find((q) => q.uid === spot.uid)
     const d = p && decorById(p.id)
-    if (!ratio || !d) return null
+    if (!d) return null
     const s = scaleAt(p.y)
-    return { uid: p.uid, x: p.x + (ratio[0] * d.patch.w - d.anchor.x) * s, y: p.y + (ratio[1] * d.patch.h - d.anchor.y) * s }
+    return { uid: p.uid, x: p.x + (part.pivot[0] * d.patch.w - d.anchor.x) * s, y: p.y + (part.pivot[1] * d.patch.h - d.anchor.y) * s, cls: SWAY_CLASS[part.kind] }
   }
 
   function taken(spot, self) {
@@ -206,11 +207,11 @@ function createLife({
     const y = a.y * L.k
     const bubbleWidth = Math.min(BUBBLE_W * L.k, L.width)
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
-    const shadowW = a.sway ? 0 : width * SHADOW_RATIO // 坐在秋千上：脚下是座位，影子在秋千图里
+    const shadowW = a.sway ? 0 : width * SHADOW_RATIO // 在秋千上、吊床里：脚下是座位 / 布，影子在家具图里
     // 影子的中心对着脚：拼图里脚在格底往上 FOOT，单张图脚就在底边
     const feet = L.height - y + (sh ? width * FOOT : 0)
     // 荡秋千：整只绕秋千的轴摆（和座位那层同一套 keyframes、同一次 setData 开始，一起摆）；轴相对这只的框（宽 = 高 = width，底边在脚下）
-    const sway = a.sway ? { uid: a.sway.uid, ox: Math.round((a.sway.x * L.k - (x - width / 2)) * 10) / 10, oy: Math.round((a.sway.y * L.k - (y - width)) * 10) / 10 } : null
+    const sway = a.sway ? { uid: a.sway.uid, cls: a.sway.cls, ox: Math.round((a.sway.x * L.k - (x - width / 2)) * 10) / 10, oy: Math.round((a.sway.y * L.k - (y - width)) * 10) / 10 } : null
     return {
       id: a.id, name: a.pet.name, visitor: !!a.visitor, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
@@ -458,9 +459,16 @@ function createLife({
     return animals.filter((b) => b !== a && asleep(b)).length < napCap()
   }
 
+  // 睡在吊床里：跟着布轻轻晃（站着的点是会摆的家具上的才晃）
   function sleepFor(a, ms) {
     a.until = now() + ms
-    doFor(a, 'sleep', ms)
+    const spot = a.goal && !a.goal.path ? a.goal.spot : null
+    doFor(a, 'sleep', ms, '', { sway: rockOf(spot) })
+  }
+
+  function rockOf(spot) {
+    const pv = spot && spot.action === 'sleep' ? pivotOf(spot) : null
+    return pv && pv.cls === SWAY_CLASS.rock ? pv : null
   }
 
   // 困了：走到附近空着的睡觉点（窝、吊床、树荫、帐篷门口），都太远就原地趴下
@@ -749,6 +757,7 @@ function createLife({
     if (s.action === 'sleep' && s.until > now() && !a.visitor && animals.filter((b) => b.action === 'sleep').length < napCap()) {
       a.action = 'sleep'
       a.until = s.until
+      a.sway = rockOf(spot)
     }
     return true
   }

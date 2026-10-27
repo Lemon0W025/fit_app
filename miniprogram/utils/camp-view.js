@@ -95,7 +95,9 @@ const foodImage = (id) => `/images/camp/foods/${id}.png`
 const decorImage = (id, base) => `${base && DECOR_ART.indexOf(id) !== -1 ? base : '/images/camp/decor/'}${id}.png`
 const zOf = (y) => Z_DECOR + Math.round(y / 4)
 
-// 用云端高清块、又拆成两层的（秋千，decor-parts.js）：画架子那张，座位那层单独一张，绕 pivot 摆（座位那层和块一样大）
+// 用云端高清块、又拆成两层的（秋千、吊床，decor-parts.js）：画架子那张，会摆的那层单独一张，绕 pivot 摆（和块一样大）。
+// 摆的动画类（camp.wxss）：秋千荡 sway-on，吊床轻轻晃 rock-on
+const SWAY_CLASS = { swing: 'sway-on', rock: 'rock-on' }
 const partsOf = (id, base) => (base && DECOR_ART.indexOf(id) !== -1 && DECOR_PARTS[id]) || null
 
 function patchView(d, x, y, L, base) {
@@ -110,7 +112,7 @@ function patchView(d, x, y, L, base) {
     width,
     height,
     z: zOf(y),
-    seat: parts ? { image: `${base}${d.id}-seat.png`, ox: fmt(parts.pivot[0] * width), oy: fmt(parts.pivot[1] * height) } : null,
+    seat: parts ? { image: `${base}${d.id}-seat.png`, ox: fmt(parts.pivot[0] * width), oy: fmt(parts.pivot[1] * height), cls: SWAY_CLASS[parts.kind] } : null,
   }
 }
 
@@ -309,5 +311,5 @@ function changedPaths(prefix, prev, next) {
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
-  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS,
+  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS,
 }

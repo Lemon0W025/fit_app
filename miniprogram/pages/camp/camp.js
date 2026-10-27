@@ -284,7 +284,7 @@ Page({
       sheetSrc: (id) => this.sheetSrc(id),
       bad: this.badSheets,
       // 秋千座位那层：只有用着云端高清块（拆成两层的）才摆
-      sways: (id) => (config.decorArt && !this.decorFailed && V.DECOR_PARTS[id] ? V.DECOR_PARTS[id].pivot : null),
+      sways: (id) => (config.decorArt && !this.decorFailed && V.DECOR_PARTS[id]) || null,
       // 只发变了的字段：拼图的 src 一样也重发的话，宠物每换个动作就闪一下。
       // 坐上 / 下了秋千：秋千座位那层的摆动开关和它放在同一次 setData 里，一起开始摆（不然差一两帧，看着在座位上滑）
       onChange: (i, sprite) => {
@@ -293,13 +293,19 @@ Page({
         const before = prev && prev.sway ? prev.sway.uid : ''
         const after = sprite.sway ? sprite.sway.uid : ''
         if (before !== after) {
-          if (before) patch[`swayOn.${before}`] = false
-          if (after) patch[`swayOn.${after}`] = true
+          if (before) patch[`swayOn.${before}`] = ''
+          if (after) patch[`swayOn.${after}`] = sprite.sway.cls
         }
         if (Object.keys(patch).length) this.setData(patch)
       },
     })
-    this.setData({ pets: this.life.sprites() })
+    // 回来时睡在吊床里的：布和它一起接着晃（同一次 setData）
+    const pets = this.life.sprites()
+    const swayOn = {}
+    pets.forEach((p) => {
+      if (p.sway) swayOn[p.sway.uid] = p.sway.cls
+    })
+    this.setData({ pets, swayOn })
     // 住户和客人都要（客人没拼图就退回单张图、按 CSS 一跳一跳地走，还闪）
     this.loadSheets(view.pets.concat(view.visitors || []).map((p) => p.id))
     if (this.data.mode === 'view') this.life.start()

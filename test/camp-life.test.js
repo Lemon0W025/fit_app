@@ -523,7 +523,7 @@ test('朝向：有 C 张的往上走用背影、往下走用正面、横着走�
 // ---------------------------------------------------------------- 和家具玩
 
 const PARTS = require('../miniprogram/utils/decor-parts')
-const sways = (id) => (PARTS[id] ? PARTS[id].pivot : null)
+const sways = (id) => PARTS[id] || null
 const D = require('../miniprogram/utils/shared/decor')
 
 // 家具上的点在哪（画的像素）：块按远近缩放、anchor 对准落脚点
@@ -557,6 +557,7 @@ test('秋千：叫一只来荡秋千 → 坐到座位上跟着座位绕横梁摆
   assert.equal(w.action, 'sit')
   assert.equal(w.text, '在荡秋千')
   assert.equal(sp.sway.uid, 's1')
+  assert.equal(sp.sway.cls, 'sway-on')
   assert.equal(sp.shadow.width, 0)
   // 轴：这只的框（左边 left、上边 = 底边往上 width）+ ox / oy = 秋千横梁上的那一点
   const d = D.decorById('swing')
@@ -650,4 +651,30 @@ test('自己去玩：白天会去荡秋千、闻花；火没着的夜里不去�
     assert.ok(night.life.whereIs().every((w) => !/在荡|在闻|野餐/.test(w.text)))
   }
   night.life.stop()
+})
+
+test('吊床：睡在里面的跟着布轻轻晃（rock-on，轴在两个结中间）；醒了不晃；回来时还在睡的接着晃', () => {
+  const hammock = { uid: 'h1', id: 'hammock', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ pets: [{ id: 'nuonuo', level: 3 }], decor: [hammock], sways, seed: 5 })
+  life.start()
+  const r = life.callTo('h1')
+  assert.equal(r.action, 'sleep')
+  assert.ok(until(clock, () => sprites[0] && sprites[0].action === 'sleep'), '没去吊床里睡')
+  const w = life.whereIs()[0]
+  const spot = spotOf(hammock)
+  assert.ok(Math.hypot(w.x - spot.x, w.y - spot.y) < 1)
+  assert.equal(sprites[0].sway.uid, 'h1')
+  assert.equal(sprites[0].sway.cls, 'rock-on')
+  assert.equal(sprites[0].shadow.width, 0)
+  // 回来时还在睡：接着晃
+  const saved = life.snapshot()
+  life.stop()
+  const back = make({ pets: [{ id: 'nuonuo', level: 3 }], decor: [hammock], sways, saved, clock })
+  assert.equal(back.life.sprites()[0].action, 'sleep')
+  assert.equal(back.life.sprites()[0].sway.cls, 'rock-on')
+  // 点醒：不晃了
+  back.life.start()
+  back.life.tap(0)
+  assert.equal(back.sprites[0].sway, null)
+  back.life.stop()
 })
