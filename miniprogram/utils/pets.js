@@ -27,6 +27,7 @@ function describe(state) {
   if (d && state.spot === 'swing') return `在荡${d}`
   if (d && state.spot === 'sniff') return `在闻${d}`
   if (d && state.spot === 'slide') return `在玩${d}`
+  if (d && state.spot === 'climb') return `在${d}上张望`
   if (d && state.spot === 'sit' && state.action === 'eat') return `在${d}上吃点心`
   switch (state.action) {
     case 'sleep': return d ? `在${d}里睡觉` : '在睡觉'

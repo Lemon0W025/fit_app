@@ -117,7 +117,7 @@ function patchView(d, x, y, L, base) {
 }
 
 // 点家具时菜单第一项「叫一只来……」：按它上面的点是干什么的；没什么好玩的（灯、彩旗）返回 ''
-const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', slide: '叫一只来滑滑梯', play: '叫一只来玩', climb: '叫一只来玩', perch: '叫一只飞上去' }
+const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', slide: '叫一只来滑滑梯', play: '叫一只来玩', climb: '叫一只爬上去看看', perch: '叫一只飞上去' }
 function callLabel(decorId) {
   const d = decorById(decorId)
   return (d && d.spots.length && CALL_LABELS[d.spots[0].action]) || ''

@@ -705,3 +705,31 @@ test('滑梯：走到梯子脚 → 背影爬到滑道顶（一路排在滑梯前
   assert.equal(life.whereIs()[0].text, '在玩小滑梯')
   life.stop()
 })
+
+test('木梯：走到梯子脚 → 背影爬到顶上的平台 → 左右张望 → 爬下来回到梯子脚；在上面一直排在梯子前面', () => {
+  const ladder = { uid: 'k1', id: 'ladder', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ pets: [{ id: 'nuonuo', level: 2 }], decor: [ladder], seed: 8 })
+  life.start()
+  const r = life.callTo('k1')
+  assert.equal(r.action, 'climb')
+  const [top] = D.decorById('ladder').ride.map((q) => {
+    const d = D.decorById('ladder')
+    const s = scaleAt(ladder.y)
+    return { x: ladder.x + (q.x - d.anchor.x) * s, y: ladder.y + (q.y - d.anchor.y) * s }
+  })
+  const foot = spotOf(ladder)
+  let up = false
+  let looked = new Set()
+  assert.ok(until(clock, () => {
+    const w = life.whereIs()[0]
+    const sp = sprites[0]
+    if (Math.hypot(w.x - top.x, w.y - top.y) < 1) {
+      up = true
+      assert.ok(sp.z > zOf(ladder.y), '在梯子顶上被梯子挡住了')
+      if (sp.emoji === '👀') looked.add(sp.flip)
+    }
+    return up && Math.hypot(w.x - foot.x, w.y - foot.y) < 1 && sp.action !== 'walk'
+  }, 100, 600))
+  assert.equal(looked.size, 2, '没左右张望')
+  life.stop()
+})

@@ -37,7 +37,8 @@ const CLIMB_MS = 1400 // 滑梯：顺着梯子爬上去多久
 const TOP_MS = 500 // 在滑道顶上探头多久
 const SLIDE_MS = 700 // 滑下来多久
 const LAND_MS = 1300 // 落地开心多久
-const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', play: '玩去喽', climb: '玩去喽', perch: '我飞上去看看' }
+const LOOK_MS = 2200 // 木梯顶上往一边张望多久（左右各一次）
+const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', play: '玩去喽', climb: '我爬上去看看', perch: '我飞上去看看' }
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
@@ -667,8 +668,22 @@ function createLife({
     play(b, spot) {
       doFor(b, spot.action, between(DO_MS), '🎵')
     },
+    // 木梯：背影爬到顶上的平台，左右张望，再面朝我们爬下来
     climb(b, spot) {
-      doFor(b, spot.action, between(DO_MS), '🎵')
+      const [top] = ridePoints(spot)
+      if (!top) return doFor(b, 'climb', between(DO_MS), '🎵')
+      const front = spot.baseY + 4
+      const foot = { x: b.x, y: b.y }
+      glide(b, top, CLIMB_MS, 'walk', 'back', front, (c) => {
+        c.dir = 'side'
+        doFor(c, 'idle', LOOK_MS, '👀', {
+          depthY: front,
+          next: (d) => {
+            d.right = !d.right
+            doFor(d, 'idle', LOOK_MS, '👀', { depthY: front, next: (e) => glide(e, foot, CLIMB_MS, 'walk', 'front', front, (f) => rest(f)) })
+          },
+        })
+      })
     },
     perch(b) {
       doFor(b, 'perch', between(DO_MS))
@@ -676,7 +691,7 @@ function createLife({
     // 滑梯：顺着梯子爬上去（背影走那行），在顶上探个头，坐着滑到出口，落地蹦一下
     slide(b, spot) {
       const [top, exit] = ridePoints(spot)
-      if (!top) return doFor(b, 'play', between(DO_MS), '🎵')
+      if (!exit) return doFor(b, 'play', between(DO_MS), '🎵')
       const front = spot.baseY + 4 // 一路都排在滑梯前面
       glide(b, top, CLIMB_MS, 'walk', 'back', front, (c) => {
         c.right = exit.x > c.x
@@ -689,11 +704,11 @@ function createLife({
     },
   }
 
-  // 滑梯上的几个点（画的像素）：滑道顶、出口
+  // 家具上的几个点（画的像素）：滑梯是滑道顶、出口，木梯是顶上的平台
   function ridePoints(spot) {
     const p = placed.find((q) => q.uid === spot.uid)
     const d = p && decorById(p.id)
-    if (!d || !d.ride || d.ride.length < 2) return []
+    if (!d || !d.ride || !d.ride.length) return []
     const s = scaleAt(p.y)
     return d.ride.map((r) => ({ x: p.x + (r.x - d.anchor.x) * s, y: p.y + (r.y - d.anchor.y) * s }))
   }

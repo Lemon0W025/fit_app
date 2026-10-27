@@ -173,12 +173,12 @@ const SCENARIOS = {
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
   },
-  // 滑梯：叫两只先后去爬、滑（拉近看爬梯子、滑下来时一直在滑梯前面）
+  // 滑梯、木梯：叫两只先后去爬滑梯、一只爬木梯张望（拉近看爬上去、滑下来时一直在前面）
   slide: {
-    hour: 10, potLevel: 2, focus: [2700, 3500], scale: 1.8, seconds: 14, decor: [{ uid: 's0', id: 'slide', x: 2700, y: 3600 }],
+    hour: 10, potLevel: 2, focus: [2500, 3500], scale: 1.5, seconds: 16, decor: [{ uid: 's0', id: 'slide', x: 2800, y: 3600 }, { uid: 's1', id: 'ladder', x: 1900, y: 3650 }],
     pets: ['doudou', 'nuonuo', 'qiqi'],
     plan: [[0, 0, 2300, 3800], [0, 1, 3100, 3850], [0, 2, 2200, 3300]],
-    events: [[300, (life) => life.callTo('s0')], [6500, (life) => life.callTo('s0')]],
+    events: [[300, (life) => life.callTo('s0')], [600, (life) => life.callTo('s1')], [6500, (life) => life.callTo('s0')]],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
