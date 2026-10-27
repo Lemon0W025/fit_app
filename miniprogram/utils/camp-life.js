@@ -27,7 +27,7 @@ const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
 // 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
-const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'perch']
+const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'tea', 'perch']
 const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
 const SWAY_TIMES = [5, 9]
 const FLOWER_MS = 3000 // 低头闻多久
@@ -38,7 +38,8 @@ const TOP_MS = 500 // 在滑道顶上探头多久
 const SLIDE_MS = 700 // 滑下来多久
 const LAND_MS = 1300 // 落地开心多久
 const LOOK_MS = 2200 // 木梯顶上往一边张望多久（左右各一次）
-const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', play: '玩去喽', climb: '我爬上去看看', perch: '我飞上去看看' }
+const SIP_MS = 1800 // 水壶炉边：低头喝一口多久
+const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', tea: '喝口热茶去', play: '玩去喽', climb: '我爬上去看看', perch: '我飞上去看看' }
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
@@ -667,6 +668,14 @@ function createLife({
     },
     play(b, spot) {
       doFor(b, spot.action, between(DO_MS), '🎵')
+    },
+    // 水壶炉边：面朝水壶坐着，喝一口、歇一会儿、再喝一口（两只就是对坐喝茶）
+    tea(b, spot) {
+      const p = placed.find((q) => q.uid === spot.uid)
+      b.right = !!p && p.x > b.x
+      b.dir = 'side'
+      const sip = (c, then) => doFor(c, 'eat', SIP_MS, '🍵', { next: then })
+      doFor(b, 'sit', between(REST_MS), '', { next: (c) => sip(c, (d) => doFor(d, 'sit', between(DO_MS), '', { next: (e) => sip(e, (f) => rest(f)) })) })
     },
     // 木梯：背影爬到顶上的平台，左右张望，再面朝我们爬下来
     climb(b, spot) {

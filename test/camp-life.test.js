@@ -733,3 +733,28 @@ test('木梯：走到梯子脚 → 背影爬到顶上的平台 → 左右张望 
   assert.equal(looked.size, 2, '没左右张望')
   life.stop()
 })
+
+test('水壶炉：叫两只来，各坐一边、面朝水壶，喝茶（低头喝一口冒 🍵）', () => {
+  const kettle = { uid: 't1', id: 'kettle', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ decor: [kettle], seed: 9 })
+  life.start()
+  const a = life.callTo('t1')
+  const b = life.callTo('t1')
+  assert.ok(a.ok && b.ok && a.action === 'tea')
+  const sipped = new Set()
+  assert.ok(until(clock, () => {
+    Object.entries(sprites).forEach(([i, sp]) => {
+      if (sp.emoji === '🍵' && sp.action === 'eat') sipped.add(i)
+    })
+    return sipped.size === 2
+  }, 200, 300), '两只没都喝上')
+  const w = life.whereIs()
+  assert.ok(w.every((x) => x.text === '在喝热茶'))
+  // 一左一右，都面朝水壶
+  const left = w.find((x) => x.x < kettle.x)
+  const right = w.find((x) => x.x > kettle.x)
+  assert.ok(left && right)
+  assert.equal(sprites[left.index].flip, false)
+  assert.equal(sprites[right.index].flip, true)
+  life.stop()
+})

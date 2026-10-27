@@ -1,7 +1,7 @@
 // 装饰：商店里买的，拖到草地上任意位置。每件是在营地原图上原地画出来再连一圈草地裁下的块（patch），落脚框 foot 用来判断重叠，
 // anchor 是落脚点在块里的位置；spots 是宠物在它上面能坐 / 睡 / 玩的点（相对块左上角，画的像素）。第一步用占位块，尺寸先按这里的定
 // 点的种类：sleep 睡、sit 坐（野餐垫上的会吃点心）、swing 坐在秋千座位上跟着摆、sniff 站在花前闻、slide 从梯子脚爬上去再滑下来（ride：滑梯顶、滑道出口）、
-// climb 爬上去张望再下来（ride：顶上）、play 玩、perch 站在高处（会飞的才去）
+// climb 爬上去张望再下来（ride：顶上）、tea 坐在水壶炉边喝茶、play 玩、perch 站在高处（会飞的才去）
 
 const { SCENE, rectInPoly, hitsNogo, expand } = require('./camp')
 
@@ -44,7 +44,8 @@ const DECOR = [
   decor('strawbed', '草窝', 'nest', 50, 's', { spots: [{ x: 0.5, y: 0.6, action: 'sleep' }] }),
   decor('picnic', '野餐垫', 'eat', 60, 'm', { spots: [{ x: 0.3, y: 0.6, action: 'sit' }, { x: 0.5, y: 0.5, action: 'sit' }, { x: 0.7, y: 0.6, action: 'sit' }] }),
   decor('table', '小桌椅', 'eat', 90, 'm', { spots: [{ x: 0.25, y: 0.65, action: 'sit' }, { x: 0.75, y: 0.65, action: 'sit' }] }),
-  decor('kettle', '水壶炉', 'eat', 70, 's', { fx: 'steam' }),
+  // 水壶炉：两边各一个位置（落脚框外），两只对坐喝茶
+  decor('kettle', '水壶炉', 'eat', 70, 's', { fx: 'steam', spots: [{ x: 0.1, y: 0.8, action: 'tea' }, { x: 0.9, y: 0.8, action: 'tea' }] }),
   // 秋千的点在座位面上（按 art/decor/swing.png 量的）
   decor('swing', '秋千', 'play', 120, 'l', { spots: [{ x: 0.49, y: 0.625, action: 'swing' }] }),
   decor('ball', '滚球', 'play', 40, 's', { spots: [{ x: 0.5, y: 0.7, action: 'play' }] }),
