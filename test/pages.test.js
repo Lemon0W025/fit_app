@@ -741,9 +741,11 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   await settle()
   assert.equal(camp.data.decor.length, 1)
   assert.equal(camp.data.mode, 'view')
-  wx.actionSheetChoice = 1
+  // 点家具：能玩的第一项是叫一只过来（滚球：叫一只来玩），后面挪地方、收回背包
+  wx.actionSheetChoice = 2
   camp.tapDecor(event({ uid: camp.data.decor[0].uid }))
   await settle()
+  assert.deepEqual(wx.log.actionSheets.pop(), ['叫一只来玩', '挪个地方', '收回背包'])
   assert.equal(camp.data.decor.length, 0)
   assert.equal(camp.data.decorBag[0].id, 'ball')
 

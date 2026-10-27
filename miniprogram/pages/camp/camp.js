@@ -14,6 +14,8 @@ const HOUR_CHECK_MS = 60000
 const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
 const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
+// 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
+const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
 
 function windowInfo() {
   return wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -53,6 +55,7 @@ Page({
     selectedName: '',
     selectedSmell: [],
     drag: null,
+    swayOn: {},
     bagOpen: false,
     bagTab: 'food',
     foodBag: [],
@@ -242,6 +245,7 @@ Page({
 
   onDecorError() {
     if (!config.decorArt || !this.camp) return
+    this.decorFailed = true
     this.setData({ decor: V.decorViews(this.camp.decor.placed, this.L, '', this.baseNight, (this.potLevel || 0) > 0) })
   },
 
@@ -279,9 +283,19 @@ Page({
       sheets: SHEETS,
       sheetSrc: (id) => this.sheetSrc(id),
       bad: this.badSheets,
-      // 只发变了的字段：拼图的 src 一样也重发的话，宠物每换个动作就闪一下
+      // 秋千座位那层：只有用着云端高清块（拆成两层的）才摆
+      sways: (id) => (config.decorArt && !this.decorFailed && V.DECOR_PARTS[id] ? V.DECOR_PARTS[id].pivot : null),
+      // 只发变了的字段：拼图的 src 一样也重发的话，宠物每换个动作就闪一下。
+      // 坐上 / 下了秋千：秋千座位那层的摆动开关和它放在同一次 setData 里，一起开始摆（不然差一两帧，看着在座位上滑）
       onChange: (i, sprite) => {
-        const patch = V.changedPaths(`pets[${i}]`, this.data.pets[i], sprite)
+        const prev = this.data.pets[i]
+        const patch = V.changedPaths(`pets[${i}]`, prev, sprite)
+        const before = prev && prev.sway ? prev.sway.uid : ''
+        const after = sprite.sway ? sprite.sway.uid : ''
+        if (before !== after) {
+          if (before) patch[`swayOn.${before}`] = false
+          if (after) patch[`swayOn.${after}`] = true
+        }
         if (Object.keys(patch).length) this.setData(patch)
       },
     })
@@ -500,13 +514,24 @@ Page({
     const uid = e.currentTarget.dataset.uid
     const d = this.data.decor.find((x) => x.uid === uid)
     if (!d) return
+    // 能玩的家具：第一项叫一只最近的、醒着的小家伙过来用
+    const call = this.life ? V.callLabel(d.id) : ''
+    const items = (call ? [call] : []).concat(['挪个地方', '收回背包'])
     wx.showActionSheet({
-      itemList: ['挪个地方', '收回背包'],
+      itemList: items,
       success: (res) => {
-        if (res.tapIndex === 0) this.startMove(d)
-        else if (res.tapIndex === 1) this.save('camp.stash', { uid }, `${d.name}收进背包了`)
+        const pick = items[res.tapIndex]
+        if (pick === call) this.callPet(uid)
+        else if (pick === '挪个地方') this.startMove(d)
+        else if (pick === '收回背包') this.save('camp.stash', { uid }, `${d.name}收进背包了`)
       },
     })
+  },
+
+  callPet(uid) {
+    const r = this.life.callTo(uid)
+    const text = r.ok ? `${r.name}跑过来了` : CALL_FAILS[r.reason] || '这会儿叫不来'
+    wx.showToast({ title: text, icon: 'none' })
   },
 
   startMove(d) {

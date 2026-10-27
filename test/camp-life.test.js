@@ -23,6 +23,7 @@ function make(opts = {}) {
     visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || [],
     hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock: opts.clock || clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
+    sways: opts.sways,
   })
   return { life, clock, sprites }
 }
@@ -517,4 +518,136 @@ test('朝向：有 C 张的往上走用背影、往下走用正面、横着走�
   assert.equal(plain.sprites[0].sheet, 'cloud://x/anim/doudou.png')
   assert.deepEqual([plain.sprites[0].anim.sheet, plain.sprites[0].anim.row, plain.sprites[0].anim.rows], ['a', 0, 12])
   plain.life.stop()
+})
+
+// ---------------------------------------------------------------- 和家具玩
+
+const PARTS = require('../miniprogram/utils/decor-parts')
+const sways = (id) => (PARTS[id] ? PARTS[id].pivot : null)
+const D = require('../miniprogram/utils/shared/decor')
+
+// 家具上的点在哪（画的像素）：块按远近缩放、anchor 对准落脚点
+function spotOf(p, i = 0) {
+  const d = D.decorById(p.id)
+  const s = scaleAt(p.y)
+  return { x: p.x + (d.spots[i].x - d.anchor.x) * s, y: p.y + (d.spots[i].y - d.anchor.y) * s }
+}
+
+function until(clock, fn, ms = 500, max = 400) {
+  for (let i = 0; i < max; i++) {
+    if (fn()) return true
+    clock.advance(ms)
+  }
+  return fn()
+}
+
+test('秋千：叫一只来荡秋千 → 坐到座位上跟着座位绕横梁摆（轴对得上）、没有影子，荡整数个来回下来就不摆了；没有座位那层坐着不摆', () => {
+  const swing = { uid: 's1', id: 'swing', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ decor: [swing], sways, seed: 4 })
+  life.start()
+  const r = life.callTo('s1')
+  assert.equal(r.ok, true)
+  assert.equal(r.action, 'swing')
+  const i = r.index
+  assert.ok(until(clock, () => sprites[i] && sprites[i].sway), '没坐上秋千')
+  const sp = sprites[i]
+  const w = life.whereIs()[i]
+  const seat = spotOf(swing)
+  assert.ok(Math.hypot(w.x - seat.x, w.y - seat.y) < 1, '没坐在座位上')
+  assert.equal(w.action, 'sit')
+  assert.equal(w.text, '在荡秋千')
+  assert.equal(sp.sway.uid, 's1')
+  assert.equal(sp.shadow.width, 0)
+  // 轴：这只的框（左边 left、上边 = 底边往上 width）+ ox / oy = 秋千横梁上的那一点
+  const d = D.decorById('swing')
+  const s = scaleAt(swing.y)
+  const px = (swing.x + (PARTS.swing.pivot[0] * d.patch.w - d.anchor.x) * s) * L.k
+  const py = (swing.y + (PARTS.swing.pivot[1] * d.patch.h - d.anchor.y) * s) * L.k
+  assert.ok(Math.abs(sp.left + sp.sway.ox - px) < 0.2)
+  assert.ok(Math.abs(L.height - sp.bottom - sp.width + sp.sway.oy - py) < 0.2)
+  // 坐在秋千上排在秋千（和座位那层）上面
+  assert.ok(sp.z > zOf(swing.y) + 1)
+  // 荡整数个来回（1.6 秒一个），下来就不摆了
+  const start = clock.now()
+  assert.ok(until(clock, () => !sprites[i].sway, 100, 400))
+  const ms = clock.now() - start
+  assert.ok(ms >= 5 * 1600 - 100 && ms <= 9 * 1600 + 100, `荡了 ${ms}ms`)
+  assert.ok(sprites[i].shadow.width > 0)
+  // 再叫一次，坐上去以后秋千挪走了：下来，不摆了
+  const again = life.callTo('s1')
+  assert.ok(again.ok, JSON.stringify(again))
+  assert.ok(until(clock, () => Object.values(sprites).some((x) => x.sway)), JSON.stringify(life.whereIs()))
+  life.updateDecor([{ ...swing, x: 1500 }])
+  assert.ok(Object.values(sprites).every((x) => !x.sway))
+  life.stop()
+  // 没有座位那层（云端高清块没用上）：坐上去，不摆
+  const plain = make({ decor: [swing], seed: 4 })
+  plain.life.start()
+  const r2 = plain.life.callTo('s1')
+  assert.ok(until(plain.clock, () => plain.life.whereIs()[r2.index].text === '在荡秋千'))
+  assert.equal(plain.sprites[r2.index].sway, null)
+  plain.life.stop()
+})
+
+test('花：叫一只来闻闻花 → 站在花前（落脚框外）低头闻，抬头开心、冒 🌸 或 🦋', () => {
+  const bed = { uid: 'f1', id: 'flowerbed', x: 2600, y: 3500 }
+  const { life, clock, sprites } = make({ decor: [bed], seed: 2 })
+  life.start()
+  const r = life.callTo('f1')
+  assert.equal(r.action, 'sniff')
+  assert.ok(until(clock, () => life.whereIs()[r.index].text === '在闻花坛'), '没去闻花')
+  const w = life.whereIs()[r.index]
+  assert.equal(w.action, 'eat')
+  assert.ok(w.y > bed.y, '应该站在花坛前面')
+  assert.ok(until(clock, () => sprites[r.index].action === 'happy', 100, 60))
+  assert.ok(['🌸', '🦋'].indexOf(sprites[r.index].emoji) !== -1)
+  life.stop()
+})
+
+test('野餐垫：叫两只过来各坐一个位置（坐着或吃点心）；位置满了、都睡着了、没什么好玩的叫不来', () => {
+  const mat = { uid: 'm1', id: 'picnic', x: 2600, y: 3500 }
+  const { life, clock } = make({ decor: [mat, { uid: 'l1', id: 'lights', x: 1300, y: 3500 }], seed: 6 })
+  life.start()
+  const a = life.callTo('m1')
+  const b = life.callTo('m1')
+  assert.ok(a.ok && b.ok && a.index !== b.index)
+  assert.ok(until(clock, () => life.whereIs().every((w) => /野餐垫/.test(w.text))), '两只没都坐到野餐垫上')
+  const spots = life.whereIs().map((w) => `${Math.round(w.x)},${Math.round(w.y)}`)
+  assert.equal(new Set(spots).size, 2, '两只坐在同一个位置上了')
+  assert.ok(life.whereIs().every((w) => w.action === 'sit' || w.action === 'eat'))
+  assert.deepEqual(life.callTo('l1'), { ok: false, reason: 'none' })
+  life.stop()
+  // 秋千只有一个座位：坐着一只，再叫叫不来
+  const swing = make({ decor: [{ uid: 's1', id: 'swing', x: 2600, y: 3500 }], seed: 3 })
+  swing.life.start()
+  assert.equal(swing.life.callTo('s1').ok, true)
+  assert.deepEqual(swing.life.callTo('s1'), { ok: false, reason: 'busy' })
+  swing.life.stop()
+  // 睡着的不叫
+  const sleepy = make({ pets: [{ id: 'doudou', level: 1 }], decor: [mat], hour: 22, lit: false, saved: { doudou: { x: 2000, y: 3400, right: true, action: 'sleep', until: 10 ** 12 } } })
+  assert.deepEqual(sleepy.life.callTo('m1'), { ok: false, reason: 'asleep' })
+})
+
+test('自己去玩：白天会去荡秋千、闻花；火没着的夜里不去家具上玩', () => {
+  const decor = [{ uid: 's1', id: 'swing', x: 2600, y: 3500 }, { uid: 'f1', id: 'flowerbed', x: 1300, y: 3500 }]
+  const seen = new Set()
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const { life, clock } = make({ decor, sways, seed })
+    life.start()
+    for (let i = 0; i < 300; i++) {
+      clock.advance(1000)
+      life.whereIs().forEach((w) => {
+        if (/在荡|在闻/.test(w.text)) seen.add(w.text)
+      })
+    }
+    life.stop()
+  }
+  assert.ok(seen.has('在荡秋千') && seen.has('在闻花坛'), [...seen].join('、'))
+  const night = make({ decor, sways, hour: 22, lit: false, seed: 2 })
+  night.life.start()
+  for (let i = 0; i < 300; i++) {
+    night.clock.advance(1000)
+    assert.ok(night.life.whereIs().every((w) => !/在荡|在闻|野餐/.test(w.text)))
+  }
+  night.life.stop()
 })

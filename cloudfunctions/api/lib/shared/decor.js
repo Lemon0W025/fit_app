@@ -1,5 +1,6 @@
 // 装饰：商店里买的，拖到草地上任意位置。每件是在营地原图上原地画出来再连一圈草地裁下的块（patch），落脚框 foot 用来判断重叠，
 // anchor 是落脚点在块里的位置；spots 是宠物在它上面能坐 / 睡 / 玩的点（相对块左上角，画的像素）。第一步用占位块，尺寸先按这里的定
+// 点的种类：sleep 睡、sit 坐（野餐垫上的会吃点心）、swing 坐在秋千座位上跟着摆、sniff 站在花前闻、play / climb 玩、perch 站在高处（会飞的才去）
 
 const { SCENE, rectInPoly, hitsNogo, expand } = require('./camp')
 
@@ -41,13 +42,15 @@ const DECOR = [
   decor('picnic', '野餐垫', 'eat', 60, 'm', { spots: [{ x: 0.3, y: 0.6, action: 'sit' }, { x: 0.5, y: 0.5, action: 'sit' }, { x: 0.7, y: 0.6, action: 'sit' }] }),
   decor('table', '小桌椅', 'eat', 90, 'm', { spots: [{ x: 0.25, y: 0.65, action: 'sit' }, { x: 0.75, y: 0.65, action: 'sit' }] }),
   decor('kettle', '水壶炉', 'eat', 70, 's', { fx: 'steam' }),
-  decor('swing', '秋千', 'play', 120, 'l', { spots: [{ x: 0.5, y: 0.55, action: 'play' }] }),
+  // 秋千的点在座位面上（按 art/decor/swing.png 量的）
+  decor('swing', '秋千', 'play', 120, 'l', { spots: [{ x: 0.49, y: 0.625, action: 'swing' }] }),
   decor('ball', '滚球', 'play', 40, 's', { spots: [{ x: 0.5, y: 0.7, action: 'play' }] }),
   decor('ladder', '木梯', 'play', 60, 'm', { spots: [{ x: 0.5, y: 0.35, action: 'climb' }] }),
   decor('slide', '小滑梯', 'play', 110, 'l', { spots: [{ x: 0.3, y: 0.4, action: 'play' }] }),
-  decor('flowerbed', '花坛', 'plant', 50, 'm', { max: 3, fx: 'butterfly' }),
+  // 花：点在花前面（落脚框外），小动物背对着我们凑过去闻
+  decor('flowerbed', '花坛', 'plant', 50, 'm', { max: 3, fx: 'butterfly', spots: [{ x: 0.4, y: 0.9, action: 'sniff' }, { x: 0.6, y: 0.9, action: 'sniff' }] }),
   decor('pumpkins', '南瓜堆', 'plant', 60, 'm', { spots: [{ x: 0.5, y: 0.5, action: 'sit' }] }),
-  decor('sunflower', '向日葵', 'plant', 50, 's', { max: 3 }),
+  decor('sunflower', '向日葵', 'plant', 50, 's', { max: 3, spots: [{ x: 0.5, y: 0.92, action: 'sniff' }] }),
   decor('lights', '灯串', 'mood', 90, 'l', { fx: 'glow' }),
   decor('bunting', '彩旗', 'mood', 60, 'm'),
   decor('windmill', '风车', 'mood', 50, 's', { fx: 'spin' }),
@@ -58,7 +61,7 @@ const DECOR = [
   decor('clothesline', '晾衣绳', 'mood', 50, 'm'),
   decor('scarecrow', '稻草人', 'mood', 70, 'm', { spots: [{ x: 0.5, y: 0.15, action: 'perch' }] }),
   // 全收集奖励，商店买不到
-  decor(GOLD_SWING, '金色秋千', 'play', 0, 'l', { spots: [{ x: 0.5, y: 0.55, action: 'play' }], fx: 'glow' }),
+  decor(GOLD_SWING, '金色秋千', 'play', 0, 'l', { spots: [{ x: 0.49, y: 0.625, action: 'swing' }], fx: 'glow' }),
 ]
 
 function decorById(id) {

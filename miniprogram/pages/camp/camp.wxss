@@ -717,6 +717,16 @@ button.btn-small {
    transform 交给显卡单独一层挪，初始的 transform 和 transition 都先写在这儿，开头不闪 */
 .pet { position: absolute; left: 0; bottom: 0; transform: translate3d(0, 0, 0); transition-property: transform; transition-timing-function: linear; will-change: transform; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .pet-body { position: relative; width: 100%; }
+/* 荡秋千：小家伙和秋千座位那层用同一套 keyframes、同一次 setData 开始，一起绕横梁摆；从中间起摆、一个来回 1.6 秒（camp-life 的 SWAY_MS），
+   荡整数个来回，停的时候正好回到中间 */
+.pet-sway { position: relative; width: 100%; }
+.sway-on { animation: sway 1.6s infinite; will-change: transform; }
+@keyframes sway {
+  0% { transform: rotate(0deg); animation-timing-function: ease-out; }
+  25% { transform: rotate(7deg); animation-timing-function: ease-in-out; }
+  75% { transform: rotate(-7deg); animation-timing-function: ease-in; }
+  100% { transform: rotate(0deg); }
+}
 .pet-body.flip { transform: scaleX(-1); }
 .pet-img { display: block; width: 100%; transform-origin: 50% 100%; }
 /* 夜里盖在本体上的月光版（同一张图去色染成夜色的蓝白，不透明度跟着站的地方变）：和本体同一套动画，叠得严丝合缝 */

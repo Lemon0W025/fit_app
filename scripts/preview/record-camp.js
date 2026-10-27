@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -68,6 +68,8 @@ const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chach
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
 const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
+// 和家具玩：秋千、花坛、向日葵、野餐垫挨着摆，点家具叫小家伙过来（荡秋千、闻花、野餐）
+const PLAY = layout([['swing', 2300, 3350], ['flowerbed', 3200, 3500], ['picnic', 1500, 3550], ['sunflower', 3050, 2900]], 'p')
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
@@ -164,6 +166,19 @@ const SCENARIOS = {
       [8500, 0, 2500, 3700], [8700, 1, 2900, 3750], [8900, 2, 3300, 3700], [9100, 3, 3650, 3450]],
     events: [[300, (life) => life.cook(['doudou'])]],
   },
+  // 和家具玩（10/27）：叫一只荡秋千（座位和它一起摆）、两只闻花、两只去野餐垫；夜里火着时金色秋千也能荡
+  play: {
+    hour: 10, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 18, decor: PLAY,
+    pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
+    plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
+    events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')]],
+  },
+  'play-night': {
+    hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
+    pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
+    plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800]],
+    events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')]],
+  },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
 }
@@ -249,6 +264,13 @@ async function record(name, sc, browser) {
       shadow.style.transform = `translate3d(${s.shadow.left}px, ${-s.shadow.bottom}px, 0)`
       shadow.style.width = `${s.shadow.width}px`
       shadow.style.height = `${s.shadow.height}px`
+      // 荡秋千：小家伙和秋千座位那层同时换上摆的动画（页面里是同一次 setData）
+      const sway = pet.querySelector('.pet-sway')
+      if (sway) {
+        sway.className = `wx-view pet-sway ${s.sway ? 'sway-on' : ''}`
+        sway.style.transformOrigin = s.sway ? `${s.sway.ox}px ${s.sway.oy}px` : '50% 100%'
+      }
+      document.querySelectorAll('.decor-seat').forEach((img) => img.classList.toggle('sway-on', !!s.swayOn[img.getAttribute('data-uid')]))
       const body = pet.querySelector('.pet-body')
       body.style.height = `${s.width}px`
       body.className = `wx-view pet-body ${s.flip ? 'flip' : ''}`
@@ -296,7 +318,7 @@ async function record(name, sc, browser) {
       const j = JSON.stringify(now[i])
       if (j !== last[i]) {
         last[i] = j
-        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '' }
+        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', swayOn: camp.data.swayOn || {} }
         await apply(i, jump ? { ...s, duration: 0 } : s)
       }
     }

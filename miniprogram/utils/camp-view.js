@@ -8,6 +8,7 @@ const { DECOR, CATEGORIES, decorById, footRect } = require('./shared/decor')
 const { SCENE } = require('./shared/camp')
 const { nightLook, lampsOf } = require('./camp-light')
 const DECOR_ART = require('./decor-art')
+const DECOR_PARTS = require('./decor-parts')
 
 const Z_DECOR = 100
 const HOME_ZOOM = 0.72 // 默认视角：画的高度铺满屏幕的 0.72 倍（锅占屏幕宽度四成多，看得到营地边上的树林和草地）
@@ -94,16 +95,30 @@ const foodImage = (id) => `/images/camp/foods/${id}.png`
 const decorImage = (id, base) => `${base && DECOR_ART.indexOf(id) !== -1 ? base : '/images/camp/decor/'}${id}.png`
 const zOf = (y) => Z_DECOR + Math.round(y / 4)
 
+// 用云端高清块、又拆成两层的（秋千，decor-parts.js）：画架子那张，座位那层单独一张，绕 pivot 摆（座位那层和块一样大）
+const partsOf = (id, base) => (base && DECOR_ART.indexOf(id) !== -1 && DECOR_PARTS[id]) || null
+
 function patchView(d, x, y, L, base) {
   const s = scaleAt(y)
+  const width = fmt(d.patch.w * s * L.k)
+  const height = fmt(d.patch.h * s * L.k)
+  const parts = partsOf(d.id, base)
   return {
-    image: decorImage(d.id, base),
+    image: parts ? `${base}${d.id}-frame.png` : decorImage(d.id, base),
     left: fmt((x - d.anchor.x * s) * L.k),
     top: fmt((y - d.anchor.y * s) * L.k),
-    width: fmt(d.patch.w * s * L.k),
-    height: fmt(d.patch.h * s * L.k),
+    width,
+    height,
     z: zOf(y),
+    seat: parts ? { image: `${base}${d.id}-seat.png`, ox: fmt(parts.pivot[0] * width), oy: fmt(parts.pivot[1] * height) } : null,
   }
+}
+
+// 点家具时菜单第一项「叫一只来……」：按它上面的点是干什么的；没什么好玩的（灯、彩旗）返回 ''
+const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', play: '叫一只来玩', climb: '叫一只来玩', perch: '叫一只飞上去' }
+function callLabel(decorId) {
+  const d = decorById(decorId)
+  return (d && d.spots.length && CALL_LABELS[d.spots[0].action]) || ''
 }
 
 // night：夜里按站的位置上色（camp-light.js）：火着全营地本来的颜色，火没着是月光色、灯边暖亮
@@ -120,8 +135,9 @@ function decorViews(placed, L, base, night, lit = true) {
 function ghostView(decorId, x, y, L, ok) {
   const d = decorById(decorId)
   const foot = footRect(decorId, x, y)
+  const { seat, ...patch } = patchView(d, x, y, L, '')
   return {
-    ...patchView(d, x, y, L, ''),
+    ...patch,
     ok: !!ok,
     foot: { left: fmt(foot.left * L.k), top: fmt(foot.top * L.k), width: fmt((foot.right - foot.left) * L.k), height: fmt((foot.bottom - foot.top) * L.k) },
   }
@@ -293,5 +309,5 @@ function changedPaths(prefix, prev, next) {
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
-  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths,
+  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS,
 }

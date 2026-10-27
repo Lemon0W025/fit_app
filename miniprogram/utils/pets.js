@@ -23,6 +23,10 @@ function lineFor(petId, { period, action }, rand) {
 // 「找它」清单里在干什么
 function describe(state) {
   const d = state.decorName
+  // 在家具上：按在那儿干什么说（荡秋千、闻花、在野餐垫上吃点心）
+  if (d && state.spot === 'swing') return `在荡${d}`
+  if (d && state.spot === 'sniff') return `在闻${d}`
+  if (d && state.spot === 'sit' && state.action === 'eat') return `在${d}上吃点心`
   switch (state.action) {
     case 'sleep': return d ? `在${d}里睡觉` : '在睡觉'
     case 'walk': case 'fly': return '在溜达'

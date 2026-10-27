@@ -85,11 +85,25 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
   art.splice(at, 1)
   try {
     const drawn = V.decorViews([{ uid: 'a', id: 'swing', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
-    assert.equal(drawn.find((v) => v.id === 'swing').image, 'cloud://x/camp/decor/swing.png')
+    // 秋千拆成两层（decor-parts.js）：画架子那张，座位那层绕横梁摆，轴按块的大小换算成像素
+    const swing = drawn.find((v) => v.id === 'swing')
+    assert.equal(swing.image, 'cloud://x/camp/decor/swing-frame.png')
+    assert.equal(swing.seat.image, 'cloud://x/camp/decor/swing-seat.png')
+    const pivot = require('../miniprogram/utils/decor-parts').swing.pivot
+    assert.ok(Math.abs(swing.seat.ox - pivot[0] * swing.width) < 0.011 && Math.abs(swing.seat.oy - pivot[1] * swing.height) < 0.011)
     assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')
+    assert.equal(drawn.find((v) => v.id === 'hammock').seat, null)
   } finally {
     art.splice(at, 0, 'hammock')
   }
+  // 包里的小图不拆（没有座位那层）
+  assert.equal(views[0].seat, null)
+  // 点家具菜单第一项：按它上面的点
+  assert.equal(V.callLabel('swing'), '叫一只来荡秋千')
+  assert.equal(V.callLabel('flowerbed'), '叫一只来闻闻花')
+  assert.equal(V.callLabel('picnic'), '叫一只来坐坐')
+  assert.equal(V.callLabel('hammock'), '叫一只来歇会儿')
+  assert.equal(V.callLabel('lights'), '')
   const ghost = V.ghostView('ball', 1500, 3000, L, false)
   assert.equal(ghost.ok, false)
   assert.ok(ghost.foot.width > 0 && ghost.width > ghost.foot.width)

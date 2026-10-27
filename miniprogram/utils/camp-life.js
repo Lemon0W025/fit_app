@@ -2,6 +2,7 @@
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
 // 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：从营地边上进来、在锅边转悠，不睡、不在「找它」里
 // 困了随机小睡（白天少、夜里多，同时睡的有上限），点睡着的会醒；离开营地时 snapshot() 记下各自在哪，回来从原地接着来
+// 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
 
 const { SCENE, scaleAt, inGrass, hiddenAt, segmentHitsPoly, nogoPolys, pointInPoly } = require('./shared/camp')
 const { petById } = require('./shared/pets')
@@ -25,6 +26,14 @@ const POT_CHANCE = 0.15 // 白天锅里有它爱吃的：走到锅边吃一会�
 const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
+// 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
+const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'perch']
+const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
+const SWAY_TIMES = [5, 9]
+const FLOWER_MS = 3000 // 低头闻多久
+const BLOOM_MS = 1800 // 闻完抬头开心多久
+const GATHER = 2 // 那件家具上已经有别的小家伙了：挑它的机会多几倍（两三只一起就是野餐）
+const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', play: '玩去喽', climb: '玩去喽', perch: '我飞上去看看' }
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
@@ -79,6 +88,8 @@ function depthCuts(from, to, half, lines) {
 // visitors：[{ id, foodId }] 客人；saved：上次离开时的 snapshot()（{ id: { x, y, right, action, until, sleepStyle } }）
 function createLife({
   L, pets, decor, arrivals = [], visitors = [], saved = null, hour = realHour, lit = () => true, pot = () => [], random = Math.random, clock = realClock, onChange = () => {},
+  // 秋千的座位那层绕哪儿摆（块里的比例 [x, y]，utils/decor-parts.js）；没有座位那层（云端高清块没用上）就返回 null，小动物坐着不摆
+  sways = () => null,
   sheets = {}, animBase = '', bad = new Set(),
   // 拼图从哪儿来（一只一张，页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
   sheetSrc = (id) => (animBase ? `${animBase}${id}.png` : ''),
@@ -91,7 +102,7 @@ function createLife({
   const pick = (list) => list[Math.min(list.length - 1, Math.floor(random() * list.length))]
   const makeAnimal = (pet, level, index, visitor) => ({
     pet, level, index, visitor, id: pet.id, x: SCENE.fire[0], y: SCENE.fire[1] + 700, right: true, action: 'idle', goal: null, duration: 0, hidden: false,
-    bubble: '', emoji: '', tapping: false, sleepStyle: 'A', dir: 'side', until: 0, timer: null, bubbleTimer: null, tapTimer: null, holdGift: false,
+    bubble: '', emoji: '', tapping: false, sleepStyle: 'A', dir: 'side', until: 0, timer: null, bubbleTimer: null, tapTimer: null, holdGift: false, sway: null, next: null,
   })
   const animals = []
   pets.forEach((p) => {
@@ -106,20 +117,30 @@ function createLife({
 
   // ---------------------------------------------------------------- 地方
 
-  // 装饰上的点：{ x, y, action, uid, name }
-  function decorSpots(action) {
+  // 装饰上的点：{ x, y, action, uid, id, name }（actions 一个或几个）。块按远近缩放、anchor 对准落脚点，点也跟着缩
+  function decorSpots(actions) {
+    const want = [].concat(actions)
     const out = []
     placed.forEach((p) => {
       const d = decorById(p.id)
       if (!d) return
-      const rect = patchRect(p.id, p.x, p.y)
       const s = scaleAt(p.y)
       d.spots.forEach((sp) => {
-        if (sp.action !== action) return
-        out.push({ x: rect.left + sp.x * s, y: rect.top + sp.y * s, action, uid: p.uid, name: d.name, baseY: p.y })
+        if (want.indexOf(sp.action) === -1) return
+        out.push({ x: p.x + (sp.x - d.anchor.x) * s, y: p.y + (sp.y - d.anchor.y) * s, action: sp.action, uid: p.uid, id: p.id, name: d.name, baseX: p.x, baseY: p.y })
       })
     })
     return out
+  }
+
+  // 秋千座位那层摆的轴（画的像素）：座位那层是从秋千图上拆出来的，和块一样大，轴是块里的比例
+  function pivotOf(spot) {
+    const ratio = sways(spot.id)
+    const p = placed.find((q) => q.uid === spot.uid)
+    const d = p && decorById(p.id)
+    if (!ratio || !d) return null
+    const s = scaleAt(p.y)
+    return { uid: p.uid, x: p.x + (ratio[0] * d.patch.w - d.anchor.x) * s, y: p.y + (ratio[1] * d.patch.h - d.anchor.y) * s }
   }
 
   function taken(spot, self) {
@@ -185,15 +206,17 @@ function createLife({
     const y = a.y * L.k
     const bubbleWidth = Math.min(BUBBLE_W * L.k, L.width)
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
-    const shadowW = width * SHADOW_RATIO
+    const shadowW = a.sway ? 0 : width * SHADOW_RATIO // 坐在秋千上：脚下是座位，影子在秋千图里
     // 影子的中心对着脚：拼图里脚在格底往上 FOOT，单张图脚就在底边
     const feet = L.height - y + (sh ? width * FOOT : 0)
+    // 荡秋千：整只绕秋千的轴摆（和座位那层同一套 keyframes、同一次 setData 开始，一起摆）；轴相对这只的框（宽 = 高 = width，底边在脚下）
+    const sway = a.sway ? { uid: a.sway.uid, ox: Math.round((a.sway.x * L.k - (x - width / 2)) * 10) / 10, oy: Math.round((a.sway.y * L.k - (y - width)) * 10) / 10 } : null
     return {
       id: a.id, name: a.pet.name, visitor: !!a.visitor, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
       bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (x - width / 2), bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
-      emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping,
+      emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping, sway,
       // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
       ...nightLayers(a.x, a.y),
       shadow: { left: x - shadowW / 2, bottom: feet - shadowW / 6, width: shadowW, height: shadowW / 3 },
@@ -374,6 +397,8 @@ function createLife({
   }
 
   function stepAlong(a) {
+    a.sway = null
+    a.next = null
     nextStep(a, a.goal.path)
     a.action = a.pet.gait === 'fly' ? 'fly' : 'walk'
     emit(a)
@@ -390,9 +415,12 @@ function createLife({
     then(a)
   }
 
-  function doFor(a, action, ms, emoji = '') {
+  // more.sway：坐在秋千上跟着摆（pivotOf）；more.next：做完接着做什么（不然下一回合重新挑）
+  function doFor(a, action, ms, emoji = '', more = {}) {
     a.action = action
     a.emoji = emoji
+    a.sway = more.sway || null
+    a.next = more.next || null
     if (action !== 'sleep') a.until = 0
     if (DIR_ACTIONS.indexOf(action) === -1) a.dir = 'side'
     if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
@@ -530,6 +558,11 @@ function createLife({
       if (a.until > now() + 50) return schedule(a, a.until - now())
       return wake(a, false)
     }
+    if (a.next) {
+      const next = a.next
+      a.next = null
+      return next(a)
+    }
     if (a.visitor) return visitorTurn(a)
     const period = periodOf(hour())
     const fire = lit()
@@ -555,10 +588,10 @@ function createLife({
     // 白天、夜里、火没着的傍晚：各玩各的
     if (period === 'day' && likesPot(a) && random() < POT_CHANCE) return eatAtPot(a, POT_EAT_MS)
     if (random() < PAIR_CHANCE && pair(a)) return
-    const plays = free(decorSpots('play').concat(decorSpots('climb')), a)
-    if (plays.length && random() < PLAY_CHANCE) {
-      const spot = pick(plays)
-      if (walkTo(a, spot, (b) => doFor(b, spot.action, between(DO_MS), '🎵'))) return
+    // 和家具玩：火没着的夜里不去（大家在睡觉）
+    if (!(period === 'night' && !fire) && random() < PLAY_CHANCE) {
+      const spot = pickSpot(playSpots(a))
+      if (spot && useSpot(a, spot)) return
     }
     if (period === 'day' && SUN_LOVERS.indexOf(a.id) !== -1 && random() < 0.5) {
       const sun = free(SCENE.sun.map(([x, y]) => ({ x, y, action: 'sun' })), a)
@@ -572,6 +605,65 @@ function createLife({
     const spot = randomGrass(a)
     if (spot && walkTo(a, spot, (b) => rest(b))) return
     rest(a)
+  }
+
+  // ---------------------------------------------------------------- 和家具玩
+
+  // 能去的点：空着的；稻草人头上只有会飞的去
+  function playSpots(a, uid) {
+    return free(decorSpots(PLAY_ACTIONS), a).filter((sp) => (!uid || sp.uid === uid) && (sp.action !== 'perch' || a.pet.gait === 'fly'))
+  }
+
+  // 挑一个：那件家具上已经有别的小家伙了，机会多几倍
+  function pickSpot(spots) {
+    if (!spots.length) return null
+    const busy = (sp) => animals.some((o) => o.goal && o.goal.spot && o.goal.spot.uid === sp.uid)
+    const weights = spots.map((sp) => (busy(sp) ? 1 + GATHER : 1))
+    let r = random() * weights.reduce((t, w) => t + w, 0)
+    for (let i = 0; i < spots.length; i++) {
+      r -= weights[i]
+      if (r < 0) return spots[i]
+    }
+    return spots[spots.length - 1]
+  }
+
+  // 走过去用：到了按点的种类做
+  function useSpot(a, spot) {
+    return walkTo(a, spot, (b) => USE[spot.action](b, spot))
+  }
+
+  const USE = {
+    // 坐上秋千跟着座位摆，荡几个整来回（停的时候正好在中间）
+    swing(b, spot) {
+      b.right = random() < 0.5
+      b.dir = 'side'
+      doFor(b, 'sit', between(SWAY_TIMES) * SWAY_MS, '🎵', { sway: pivotOf(spot) })
+    },
+    // 站在花前，背对着我们低头闻（吃的那行）；抬头开心一下，冒朵花，偶尔飞出只蝴蝶
+    sniff(b) {
+      b.dir = 'back'
+      doFor(b, 'eat', FLOWER_MS, '', { next: (c) => doFor(c, 'happy', BLOOM_MS, random() < 0.3 ? '🦋' : '🌸') })
+    },
+    // 坐着歇会儿；野餐垫上的多半在吃篮子里的点心
+    sit(b, spot) {
+      b.right = random() < 0.5
+      b.dir = 'side'
+      const munch = spot.id === 'picnic' && random() < 0.6
+      doFor(b, munch ? 'eat' : 'sit', between(DO_MS), munch ? '😋' : '')
+    },
+    play(b, spot) {
+      doFor(b, spot.action, between(DO_MS), '🎵')
+    },
+    climb(b, spot) {
+      doFor(b, spot.action, between(DO_MS), '🎵')
+    },
+    perch(b) {
+      doFor(b, 'perch', between(DO_MS))
+    },
+    sleep(b) {
+      b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'
+      sleepFor(b, between(DAY_NAP.ms))
+    },
   }
 
   // 它们之间：a 走到 b 旁边，各说一句
@@ -632,7 +724,7 @@ function createLife({
 
   // 站在装饰上的点（吊床、窝、梯子）的那件装饰：回来时接着在上面，排前后按那件装饰
   function decorSpotAt(x, y) {
-    return decorSpots('sleep').concat(decorSpots('play'), decorSpots('climb')).find((sp) => dist(sp.x, sp.y, x, y) < 2) || null
+    return decorSpots(['sleep'].concat(PLAY_ACTIONS)).find((sp) => dist(sp.x, sp.y, x, y) < 2) || null
   }
 
   function inDecorFoot(x, y) {
@@ -675,7 +767,7 @@ function createLife({
 
   function stateOf(a) {
     const spot = a.goal && a.goal.spot
-    return { action: a.action, decorName: spot && spot.name ? spot.name : '' }
+    return { action: a.action, decorName: spot && spot.name ? spot.name : '', spot: spot && spot.name && !a.goal.path ? spot.action : '' }
   }
 
   return {
@@ -721,9 +813,12 @@ function createLife({
       placed = next
       lamps = lampsOf(placed)
       graph = null
+      // 正在玩的东西收走了、挪走了：不玩了（坐在秋千上的也不摆了）
       animals.forEach((a) => {
-        const uid = a.goal && a.goal.spot && a.goal.spot.uid
-        if (uid && !placed.some((p) => p.uid === uid)) {
+        const spot = a.goal && a.goal.spot
+        if (!spot || !spot.uid) return
+        const p = placed.find((q) => q.uid === spot.uid)
+        if (!p || p.x !== spot.baseX || p.y !== spot.baseY) {
           a.goal = null
           rest(a)
         }
@@ -773,6 +868,36 @@ function createLife({
       if (!a || a.hidden || a.holdGift || !inGrass(x, y)) return false
       a.goal = null
       return walkTo(a, { x, y, action: 'idle' }, (b) => rest(b, stay || between(DO_MS)))
+    },
+
+    // 点家具「叫一只来玩」：最近的、醒着的住户跑过去用。返回 { ok, name, action }，不行的话 reason：
+    // none 这件没什么好玩的、busy 上面的位置都有人了、asleep 都睡着了（或都不在）、far 走不过去
+    callTo(uid) {
+      const all = decorSpots(['sleep'].concat(PLAY_ACTIONS)).filter((sp) => sp.uid === uid)
+      if (!all.length) return { ok: false, reason: 'none' }
+      const awake = animals.filter((a) => !a.visitor && !a.hidden && !a.holdGift && !asleep(a))
+      if (!awake.length) return { ok: false, reason: 'asleep' }
+      const ref = all[0]
+      const using = (a) => a.goal && a.goal.spot && a.goal.spot.uid === uid
+      // 先叫闲着的（没在往别的家具那儿去、没在玩别的家具），再按远近
+      const busyElse = (a) => (a.goal && a.goal.spot && a.goal.spot.uid ? 1 : 0)
+      const near = awake.filter((a) => !using(a)).sort((p, q) => busyElse(p) - busyElse(q) || dist(p.x, p.y, ref.x, ref.y) - dist(q.x, q.y, ref.x, ref.y))
+      let busy = true
+      for (const a of near) {
+        const spots = free(all, a).filter((sp) => sp.action !== 'perch' || a.pet.gait === 'fly')
+        if (!spots.length) continue
+        busy = false
+        const spot = spots[0]
+        a.until = 0
+        a.goal = null
+        a.next = null
+        if (!useSpot(a, spot)) continue
+        say(a, CALL_LINES[spot.action] || '来啦')
+        heart(a)
+        emit(a)
+        return { ok: true, name: a.pet.name, index: a.index, action: spot.action }
+      }
+      return { ok: false, reason: busy ? 'busy' : 'far' }
     },
 
     // 打卡成功：全员跑到篝火边蹦一蹦

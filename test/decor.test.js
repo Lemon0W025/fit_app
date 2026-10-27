@@ -18,7 +18,14 @@ test('22 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐�
     assert.ok(d.patch.w > 0 && d.patch.h > 0 && d.foot.w <= d.patch.w && d.foot.h <= d.patch.h, d.id)
     assert.ok(d.anchor.x >= 0 && d.anchor.x <= d.patch.w && d.anchor.y >= 0 && d.anchor.y <= d.patch.h, d.id)
     assert.ok(d.max >= 1, d.id)
-    d.spots.forEach((s) => assert.ok(['sleep', 'sit', 'play', 'climb', 'perch'].indexOf(s.action) !== -1, `${d.id} ${s.action}`))
+    d.spots.forEach((s) => assert.ok(['sleep', 'sit', 'swing', 'sniff', 'play', 'climb', 'perch'].indexOf(s.action) !== -1, `${d.id} ${s.action}`))
+  })
+  // 秋千坐在座位上摆；花前面闻（点在落脚框外面，不用走进花坛里）
+  assert.deepEqual(D.decorById('swing').spots.map((s) => s.action), ['swing'])
+  assert.deepEqual(D.decorById('gold_swing').spots, D.decorById('swing').spots)
+  ;['flowerbed', 'sunflower'].forEach((id) => {
+    const d = D.decorById(id)
+    assert.ok(d.spots.length && d.spots.every((s) => s.action === 'sniff' && s.y > d.anchor.y), id)
   })
   assert.equal(D.decorById('gold_swing').price, 0)
   assert.equal(D.GOLD_SWING, 'gold_swing')
