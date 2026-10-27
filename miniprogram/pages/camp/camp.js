@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const config = require('../../config')
 const V = require('../../utils/camp-view')
 const { createLife } = require('../../utils/camp-life')
+const { todayOf } = require('../../utils/pet-talk')
 const { fxViews } = require('../../utils/scene-fx')
 const { beansCard } = require('../../utils/view')
 const { petById } = require('../../utils/shared/pets')
@@ -14,6 +15,7 @@ const HOUR_CHECK_MS = 60000
 const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
 const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
+const SIDE_PAD = 64 // 屏幕两边按钮那一溜多宽（px），说话的气泡让开
 // 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
 const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
 
@@ -159,6 +161,8 @@ Page({
       welcome: view.welcome || this.data.welcome,
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
+    // 小动物聊今天打卡用的（拍了几顿、吃了多少、该吃哪顿了）
+    if (view.daily !== undefined) this.talkToday = todayOf(view.daily, view.intake, this.now ? this.now() : new Date())
     // 夜里火着：夜景上面盖一层点火版（整片草坪被火照亮）；正看着时下锅点火，这一层慢慢显出来；块不重发（云存储的图重设会闪）
     const lit = night && potLevel > 0
     if (!lit) {
@@ -192,11 +196,26 @@ Page({
   // 捏着缩放：记下现在几倍（挪镜头前要知道）
   onZoom(e) {
     this.zoom = e.detail.scale
+    if (e.detail.x !== undefined) this.viewX = e.detail.x
+  },
+
+  // 拖着看：只记下镜头在哪（不 setData），小动物说话的气泡别跑到屏幕外、别躲在两边的按钮底下
+  onPan(e) {
+    if (e.detail && e.detail.x !== undefined) this.viewX = e.detail.x
+  },
+
+  // 现在屏幕上看得到的那段（画的坐标 × k，就是世界里的像素），两边让开按钮那一溜
+  visibleRange() {
+    const s = this.zoom || 1
+    const vx = this.viewX !== undefined ? this.viewX : (this.data.view && this.data.view.x) || 0
+    const pad = SIDE_PAD / s
+    return { left: -vx / s + pad, right: (this.win().width - vx) / s - pad }
   },
 
   // 挪镜头到 offset（1 倍时的 x / y）。movable-view 同一次 setData 里又改 scale-value 又改 x / y 会吞掉一个，
   // 所以放大过就先缩回 1 倍、等它缩完再平移；值和上次一样组件不动，每次加减一点点小数让它一定变
   moveView(offset) {
+    this.viewX = offset.x
     this.nudge = !this.nudge
     const d = this.nudge ? 0.01 : 0
     const pan = () => this.setData({ 'view.x': offset.x + d, 'view.y': offset.y + d })
@@ -289,6 +308,8 @@ Page({
       bad: this.badSheets,
       // 秋千座位那层：只有用着云端高清块（拆成两层的）才摆
       sways: (id) => (config.decorArt && !this.decorFailed && V.DECOR_PARTS[id]) || null,
+      today: () => this.talkToday || null,
+      visible: () => this.visibleRange(),
       // 只发变了的字段：拼图的 src 一样也重发的话，宠物每换个动作就闪一下。
       // 坐上 / 下了秋千：秋千座位那层的摆动开关和它放在同一次 setData 里，一起开始摆（不然差一两帧，看着在座位上滑）
       onChange: (i, sprite) => {

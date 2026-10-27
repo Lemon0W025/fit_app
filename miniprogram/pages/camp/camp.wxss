@@ -668,6 +668,7 @@ button.btn-small {
 /* 宠物：单张图时按动作挂动画；走路 gait-on 时上下颠。
    走路用 transform 挪（贴在左下角 0,0 再平移）：left / bottom 过渡每一帧都要重新排版、重画底下放大了的整张画，手机上走起来一直闪；
    transform 交给显卡单独一层挪，初始的 transform 和 transition 都先写在这儿，开头不闪 */
+.bubble-anchor { position: absolute; left: 0; bottom: 0; height: 0; z-index: 9000; pointer-events: none; transform: translate3d(0, 0, 0); transition-property: transform; transition-timing-function: linear; will-change: transform; }
 .pet { position: absolute; left: 0; bottom: 0; transform: translate3d(0, 0, 0); transition-property: transform; transition-timing-function: linear; will-change: transform; -webkit-backface-visibility: hidden; backface-visibility: hidden; }
 .pet-body { position: relative; width: 100%; }
 /* 荡秋千：小家伙和秋千座位那层用同一套 keyframes、同一次 setData 开始，一起绕横梁摆；从中间起摆、一个来回 1.6 秒（camp-life 的 SWAY_MS），

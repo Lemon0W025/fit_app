@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
@@ -186,6 +186,12 @@ const SCENARIOS = {
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')]],
+  },
+  // 说话（10/27）：手机上带界面，点几只听它们说（聊今天打卡、爱吃的食物小知识、碎碎念），中间有一只自己开口
+  'talk-phone': {
+    phone: true, hour: 12, potLevel: 2, focus: null, scale: null, seconds: 30, pets: ['doudou', 'huahua', 'jutuan', 'nuonuo'],
+    plan: [],
+    events: [[500, (life) => life.tap(0)], [5500, (life) => life.tap(1)], [10500, (life) => life.tap(2)], [15500, (life) => life.tap(3)], [20500, (life) => life.tap(0)]],
   },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
@@ -444,7 +450,9 @@ async function record(name, sc, browser) {
     await page.evaluate(({ i, s }) => {
       const pet = document.querySelector(`.pet[data-index="${i}"]`)
       if (!pet) return
-      const shadow = pet.previousElementSibling
+      // 影子是宠物前面最近的那个 .shadow（中间可能隔着说话的气泡）
+      let shadow = pet.previousElementSibling
+      while (shadow && !shadow.classList.contains('shadow')) shadow = shadow.previousElementSibling
       pet.style.transitionDuration = `${s.duration}ms`
       pet.style.zIndex = s.z
       pet.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
@@ -455,6 +463,25 @@ async function record(name, sc, browser) {
       shadow.style.transform = `translate3d(${s.shadow.left}px, ${-s.shadow.bottom}px, 0)`
       shadow.style.width = `${s.shadow.width}px`
       shadow.style.height = `${s.shadow.height}px`
+      // 说话的气泡（单独一层，跟着宠物挪）：有就建一个 / 换字，没了就去掉（录 talk-phone 看气泡多大、几行）
+      let anchor = document.querySelector(`.bubble-anchor[data-index="${i}"]`)
+      if (s.bubble) {
+        if (!anchor) {
+          anchor = document.createElement('div')
+          anchor.className = 'wx-view bubble-anchor'
+          anchor.setAttribute('data-index', i)
+          anchor.appendChild(Object.assign(document.createElement('div'), { className: 'wx-view bubble' }))
+          pet.parentNode.insertBefore(anchor, pet.nextSibling)
+        }
+        anchor.style.transitionDuration = `${s.duration}ms`
+        anchor.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
+        anchor.style.width = `${s.width}px`
+        const bubble = anchor.querySelector('.bubble')
+        bubble.textContent = s.bubble
+        bubble.style.width = `${s.bubbleWidth}px`
+        bubble.style.left = `${s.bubbleLeft}px`
+        bubble.style.bottom = `${s.bubbleBottom}px`
+      } else if (anchor) anchor.remove()
       // 荡秋千：小家伙和秋千座位那层同时换上摆的动画（页面里是同一次 setData）
       const sway = pet.querySelector('.pet-sway')
       if (sway) {
@@ -514,6 +541,7 @@ async function record(name, sc, browser) {
       if (j !== last[i]) {
         last[i] = j
         const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', swayOn: camp.data.swayOn || {} }
+        if (process.env.DEBUG_BUBBLE && s.bubble) console.log('bubble', i, s.bubble, Math.round(s.left), Math.round(s.bubbleLeft), Math.round(s.bubbleWidth), JSON.stringify(camp.visibleRange()))
         await apply(i, jump ? { ...s, duration: 0 } : s)
       }
     }

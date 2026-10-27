@@ -2,7 +2,7 @@
   <view wx:if="{{!loaded}}" class="loading">正在走进营地…</view>
 
   <movable-area wx:if="{{loaded}}" class="map-area {{world.night ? 'night' : ''}}">
-    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="{{world.minScale}}" scale-max="{{world.maxScale}}" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" bindscale="onZoom" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px">
+    <movable-view class="map" direction="all" inertia out-of-bounds="{{false}}" scale scale-min="{{world.minScale}}" scale-max="{{world.maxScale}}" scale-value="{{view.scale}}" x="{{view.x}}" y="{{view.y}}" bindscale="onZoom" bindchange="onPan" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px">
       <image class="backdrop" src="{{backdrop}}" mode="scaleToFill" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px" />
       <view id="world" class="world" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.height}}px">
         <image wx:for="{{base}}" wx:key="key" class="base" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
@@ -29,8 +29,11 @@
         <view wx:if="{{potHit}}" class="pot-hit" catchtap="tapPot" style="left: {{potHit.left}}px; top: {{potHit.top}}px; width: {{potHit.width}}px; height: {{potHit.height}}px; z-index: {{potHit.z}}"></view>
         <block wx:for="{{pets}}" wx:key="id">
           <view wx:if="{{!item.hidden}}" class="shadow" style="transform: translate3d({{item.shadow.left}}px, {{0 - item.shadow.bottom}}px, 0); width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
+          <!-- 说话的气泡单独一层、在所有东西上面（在宠物里面的话走到锅、帐篷后面会被挡住），跟着宠物一起挪 -->
+          <view wx:if="{{!item.hidden && item.bubble}}" class="bubble-anchor" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; transition-duration: {{item.duration}}ms" data-index="{{index}}">
+            <view class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
+          </view>
           <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
-            <view wx:if="{{item.bubble}}" class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
             <view class="pet-sway {{item.sway ? item.sway.cls : ''}}" style="transform-origin: {{item.sway ? item.sway.ox + 'px ' + item.sway.oy + 'px' : '50% 100%'}}">

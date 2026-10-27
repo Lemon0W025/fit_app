@@ -23,7 +23,7 @@ function make(opts = {}) {
     visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || [],
     hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock: opts.clock || clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
-    sways: opts.sways,
+    sways: opts.sways, today: opts.today,
   })
   return { life, clock, sprites }
 }
@@ -176,7 +176,8 @@ test('客人：从营地边上进来、在锅边转悠，不睡、不在「找�
   for (let i = 0; i < 1800; i++) {
     clock.advance(1000)
     assert.notEqual(sprites[2] && sprites[2].action, 'sleep')
-    if (sprites[2] && sprites[2].bubble === '好香啊……') sniffed = true
+    // 客人闻着香味说的，带着它闻着的那样（笋宝是活泼的口气，pet-talk.js 的 SNIFF）
+    if (sprites[2] && /竹笋/.test(sprites[2].bubble) && sprites[2].action === 'fidget') sniffed = true
   }
   assert.ok(sniffed, '客人没在锅边闻')
   life.tap(2)
@@ -757,4 +758,25 @@ test('水壶炉：叫两只来，各坐一边、面朝水壶，喝茶（低头�
   assert.equal(sprites[left.index].flip, false)
   assert.equal(sprites[right.index].flip, true)
   life.stop()
+})
+
+test('自己开口：隔十几二十秒有一只醒着的住户说一句（会聊今天打卡）；同时只有一个气泡；停了就不说', () => {
+  const today = { logged: 2, onTime: 2, allDone: false, allOnTime: false, open: '', streak: 5, kcal: 800, budget: 1240 }
+  const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 1 }, { id: 'huahua', level: 1 }, { id: 'jutuan', level: 1 }], today: () => today, seed: 11 })
+  life.start()
+  const said = []
+  let both = 0
+  for (let i = 0; i < 600; i++) {
+    clock.advance(1000)
+    const bubbles = Object.values(sprites).filter((sp) => sp.bubble)
+    if (bubbles.length > 1) both += 1
+    bubbles.forEach((sp) => {
+      if (said[said.length - 1] !== sp.bubble) said.push(sp.bubble)
+    })
+  }
+  assert.ok(said.length >= 12, `10 分钟只说了 ${said.length} 句`)
+  assert.ok(said.some((l) => /拍了 2 顿|800 千卡|5 天/.test(l)), said.join(' / '))
+  assert.ok(both < 20, '气泡叠在一起太多')
+  life.stop()
+  assert.equal(clock.count(), 0)
 })

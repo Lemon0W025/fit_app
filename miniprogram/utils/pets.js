@@ -1,6 +1,4 @@
-// 宠物的台词和「找它」文案（纯函数，有单测）；数据在 shared/pets.js
-
-const { petById } = require('./shared/pets')
+// 时段和「找它」文案（纯函数，有单测）；数据在 shared/pets.js，小动物说什么在 pet-talk.js
 
 // 一天的时段：5～8 早上（围着锅）、8～17 白天、17～19 傍晚（火着着就围着锅坐）、其余夜里（困了的多）
 function periodOf(hour) {
@@ -8,16 +6,6 @@ function periodOf(hour) {
   if (hour >= 8 && hour < 17) return 'day'
   if (hour >= 17 && hour < 19) return 'dusk'
   return 'night'
-}
-
-function lineFor(petId, { period, action }, rand) {
-  const p = petById(petId)
-  if (!p) return ''
-  if (action === 'eat') return p.lines.fed
-  if (action === 'sleep' || period === 'night') return p.lines.night
-  if (period === 'morning') return p.lines.morning
-  const tap = p.lines.tap
-  return tap[Math.min(tap.length - 1, Math.floor(rand * tap.length))]
 }
 
 // 「找它」清单里在干什么
@@ -51,4 +39,4 @@ const CSS_ACTIONS = {
   sun: 'act-sleep', play: 'act-happy', climb: 'act-idle', perch: 'act-idle', dislike: 'act-dislike', away: '', look: 'act-idle',
 }
 
-module.exports = { periodOf, lineFor, describe, CSS_ACTIONS }
+module.exports = { periodOf, describe, CSS_ACTIONS }

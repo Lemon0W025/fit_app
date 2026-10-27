@@ -2,13 +2,15 @@
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
 // 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：从营地边上进来、在锅边转悠，不睡、不在「找它」里
 // 困了随机小睡（白天少、夜里多，同时睡的有上限），点睡着的会醒；离开营地时 snapshot() 记下各自在哪，回来从原地接着来
+// 说话（pet-talk.js）：点它说一句；隔一会儿有一只自己开口（碎碎念、聊你今天打卡、爱吃的食物小知识……）；客人闻着香味说它闻着什么
 // 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
 
 const { SCENE, scaleAt, inGrass, hiddenAt, segmentHitsPoly, nogoPolys, pointInPoly } = require('./shared/camp')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
-const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
+const { periodOf, describe, CSS_ACTIONS } = require('./pets')
+const { talkLine, sniffLine } = require('./pet-talk')
 const { COLS, FOOT, frameFor, facingFor, dirOf, stackRow } = require('./anim')
 const { petImage, petFace, zOf, cutoutStrips, isNight, SWAY_CLASS } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
@@ -26,6 +28,8 @@ const POT_CHANCE = 0.15 // 白天锅里有它爱吃的：走到锅边吃一会�
 const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
+const CHAT_MS = [15000, 28000] // 隔多久有一只自己开口
+const CHAT_BUBBLE_MS = 4500 // 自己开口的那句留多久（字多，比点它的久一点）
 // 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
 const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'tea', 'perch']
 const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
@@ -58,7 +62,11 @@ const SUN_LOVERS = ['jutuan', 'guigui']
 const PAIR_CHANCE = 0.08
 const PLAY_CHANCE = 0.35
 const SHADOW_RATIO = 0.6
-const BUBBLE_W = 1100 // 气泡宽（画的像素）
+// 气泡宽按字数定（字号 32rpx，手机上一个字约 16px），最宽 BUBBLE_MAX、最多两三行；太窄的话一句话要折成四五行
+const BUBBLE_CHAR = 16
+const BUBBLE_PAD = 28
+const BUBBLE_MIN = 64
+const BUBBLE_MAX = 230
 
 // 它们之间的小事：a 走到 b 旁边
 const PAIRS = [
@@ -97,10 +105,15 @@ function createLife({
   // 家具会摆的那层（秋千座位、吊床的布）：{ pivot: 块里的比例 [x, y], kind: 'swing' | 'rock' }（utils/decor-parts.js）；
   // 没拆（云端高清块没用上）就返回 null，小动物在上面不摆
   sways = () => null,
+  // 今天打卡的情况（拍了几顿、吃了多少……，pet-talk.js 的 todayLines），小动物会聊起来；没有就不聊
+  today = () => null,
+  // 屏幕上看得到的那段（世界里的像素 { left, right }，让开两边的按钮）：说话的气泡夹在这里面；不给就只夹在画里
+  visible = () => null,
   sheets = {}, animBase = '', bad = new Set(),
   // 拼图从哪儿来（一只一张，页面给的是下到本地的文件，还没下好给 ''，就先用单张图）；不给就按 animBase 拼云存储的路径
   sheetSrc = (id) => (animBase ? `${animBase}${id}.png` : ''),
 }) {
+  let chatTimer = null
   let placed = decor
   let lamps = lampsOf(placed)
   let running = false
@@ -211,8 +224,16 @@ function createLife({
     const sh = sheetOf(a)
     const x = a.x * L.k
     const y = a.y * L.k
-    const bubbleWidth = Math.min(BUBBLE_W * L.k, L.width)
-    const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
+    const bubbleWidth = Math.min(L.width, Math.max(BUBBLE_MIN, Math.min(BUBBLE_MAX, BUBBLE_PAD + BUBBLE_CHAR * a.bubble.length)))
+    // 气泡相对这只的位置在开口那一下定好（夹在屏幕看得到的那段里），之后跟着它走：边走边说时不能每一小段重新夹，
+    // 不然气泡的偏移一下就变了、这只还在慢慢挪过去，气泡会先往旁边甩一下
+    if (a.bubble && a.bubbleDx == null) {
+      const view = visible()
+      const lo = Math.max(0, view ? view.left : 0)
+      const hi = Math.min(L.width, view ? view.right : L.width) - bubbleWidth
+      const bubbleX = hi >= lo ? Math.min(Math.max(x - bubbleWidth / 2, lo), hi) : Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
+      a.bubbleDx = bubbleX - (x - width / 2)
+    }
     const shadowW = a.sway ? 0 : width * SHADOW_RATIO // 在秋千上、吊床里：脚下是座位 / 布，影子在家具图里
     // 影子的中心对着脚：拼图里脚在格底往上 FOOT，单张图脚就在底边
     const feet = L.height - y + (sh ? width * FOOT : 0)
@@ -222,7 +243,7 @@ function createLife({
       id: a.id, name: a.pet.name, visitor: !!a.visitor, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
-      bubble: a.bubble, bubbleWidth, bubbleLeft: bubbleX - (x - width / 2), bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
+      bubble: a.bubble, bubbleWidth, bubbleLeft: a.bubble ? a.bubbleDx : 0, bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
       emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping, sway,
       // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
       ...nightLayers(a.x, a.y),
@@ -254,6 +275,7 @@ function createLife({
 
   function say(a, text, ms = BUBBLE_MS) {
     a.bubble = text
+    a.bubbleDx = null
     clock.clear(a.bubbleTimer)
     a.bubbleTimer = clock.set(() => {
       a.bubble = ''
@@ -544,7 +566,7 @@ function createLife({
     const spot = nearFire(a)
     const sniff = (b) => {
       b.right = SCENE.fire[0] > b.x
-      say(b, '好香啊……', SNIFF_MS)
+      say(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
       doFor(b, 'fidget', SNIFF_MS)
     }
     if (spot && walkTo(a, spot, sniff)) return
@@ -741,6 +763,33 @@ function createLife({
     schedule(a, ms)
   }
 
+  // ---------------------------------------------------------------- 说话
+
+  // 这只现在说一句（pet-talk.js）：在家具上的、吃着东西的、早上的各有说法；尽量不和它上一句一样
+  function lineOf(a) {
+    const spot = a.goal && !a.goal.path && a.goal.spot ? a.goal.spot.action : ''
+    const line = talkLine(a.id, { period: periodOf(hour()), action: a.action, level: a.level, today: today(), pot: pot(), spot }, random, a.lastLine)
+    a.lastLine = line
+    return line
+  }
+
+  // 隔一会儿挑一只醒着、闲着、头上没气泡的住户自己开口
+  function scheduleChat() {
+    clock.clear(chatTimer)
+    chatTimer = running ? clock.set(chat, between(CHAT_MS)) : null
+  }
+
+  function chat() {
+    chatTimer = null
+    const quiet = animals.filter((a) => !a.visitor && !a.hidden && !a.holdGift && !a.bubble && !asleep(a))
+    if (quiet.length && !animals.some((a) => a.bubble)) {
+      const a = pick(quiet)
+      say(a, lineOf(a), CHAT_BUBBLE_MS)
+      emit(a)
+    }
+    scheduleChat()
+  }
+
   // 它们之间：a 走到 b 旁边，各说一句
   function pair(a) {
     const rule = PAIRS.find((r) => r.a === a.id)
@@ -787,7 +836,7 @@ function createLife({
     const then = a.visitor
       ? (b) => {
           b.right = SCENE.fire[0] > b.x
-          say(b, '好香啊……', SNIFF_MS)
+          say(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
           doFor(b, 'fidget', SNIFF_MS)
         }
       : (b) => {
@@ -862,10 +911,13 @@ function createLife({
         if (a.goal && a.goal.path && a.goal.path.length) return stepAlong(a)
         schedule(a, between(START_MS))
       })
+      scheduleChat()
     },
 
     pause() {
       running = false
+      clock.clear(chatTimer)
+      chatTimer = null
       animals.forEach((a) => {
         clock.clear(a.timer)
         a.timer = null
@@ -879,6 +931,8 @@ function createLife({
 
     stop() {
       running = false
+      clock.clear(chatTimer)
+      chatTimer = null
       animals.forEach((a) => {
         ;[a.timer, a.bubbleTimer, a.tapTimer].forEach((h) => clock.clear(h))
         a.timer = a.bubbleTimer = a.tapTimer = null
@@ -911,7 +965,7 @@ function createLife({
         const food = foodById(a.visitor.foodId)
         say(a, `它闻着${food ? food.name : ''}的香味来的。妈妈下次拍正餐，它就住下来`, HELLO_MS)
       } else {
-        say(a, lineFor(a.id, { period: periodOf(hour()), action: a.action }, random()))
+        say(a, lineOf(a))
       }
       emit(a)
     },

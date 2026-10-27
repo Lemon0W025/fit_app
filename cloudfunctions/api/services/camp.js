@@ -7,6 +7,7 @@ const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/f
 const { dailyMenu } = require('../lib/menu')
 const { DECOR, GOLD_SWING, decorById, placeProblem } = require('../lib/shared/decor')
 const { levelOf, nextLevelAt, giftDue } = require('../lib/shared/camp')
+const { sumMeals } = require('../lib/shared/nutrition')
 
 const HIGH_RARITIES = ['epic', 'legendary']
 const STARTER_PET = 'doudou'
@@ -193,9 +194,13 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         dirty = true
       }
       if (dirty) await save(openid, camp)
-      result.hasProfile = !!(await repo.getProfile(openid))
+      const profile = await repo.getProfile(openid)
+      const meals = await repo.listMeals(openid, today())
+      result.hasProfile = !!profile
       result.daily = null
-      if (forest) result.daily = await forest.today(openid, today(), await repo.listMeals(openid, today()))
+      if (forest) result.daily = await forest.today(openid, today(), meals)
+      // 今天吃了多少、一天的预算：小动物会聊起来（「你今天吃了 900 千卡，还能吃 340」）
+      result.intake = { kcal: sumMeals(meals).kcal, budget: profile && profile.dailyKcal ? profile.dailyKcal : null }
       return result
     },
 
