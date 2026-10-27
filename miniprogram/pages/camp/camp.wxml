@@ -42,6 +42,10 @@
         </block>
       </view>
       <image wx:for="{{frame}}" wx:key="key" class="base frame-tile" src="{{item.image}}" binderror="onBaseError" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+      <view wx:if="{{lit}}" class="lit-layer {{litFade ? 'lit-fade' : ''}}" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px">
+        <image class="backdrop" src="{{lit.backdrop}}" mode="scaleToFill" style="width: {{world.worldWidth}}px; height: {{world.worldHeight}}px" />
+        <image wx:for="{{lit.tiles}}" wx:key="key" class="base" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
+      </view>
       <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
       <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
         <view wx:if="{{drag && drag.foot}}" class="drag-foot {{drag.ok ? 'ok' : 'bad'}}" style="left: {{drag.foot.left}}px; top: {{drag.foot.top}}px; width: {{drag.foot.width}}px; height: {{drag.foot.height}}px"></view>

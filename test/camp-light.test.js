@@ -5,12 +5,18 @@ const { lightAt, lampsOf, lampAt, nightLook } = require('../miniprogram/utils/ca
 
 const bright = (f) => Number(/brightness\(([\d.]+)\)/.exec(f)[1])
 
-test('篝火点着（锅里煮着东西）：全营地一个颜色、略暗略暖，不盖月光', () => {
-  const a = nightLook(2130, 3200, true, lampsOf([]))
-  const b = nightLook(3900, 1000, true, lampsOf([]))
-  assert.deepEqual(a, b)
-  assert.equal(a.moon, 0)
-  assert.equal(a.light, 'brightness(0.92) saturate(1) sepia(0.12)')
+test('篝火点着（锅里煮着东西）：照点火版夜景的光，火边亮而暖、不盖月光；越往外越暗、带一点月光；比火没点时亮', () => {
+  const lamps = lampsOf([])
+  const fire = nightLook(2130, 3150, true, lamps)
+  const mid = nightLook(3300, 3500, true, lamps)
+  const far = nightLook(3950, 3950, true, lamps)
+  assert.ok(fire.moon < 0.1, `火边不盖月光 ${fire.moon}`)
+  assert.ok(bright(fire.light) > bright(mid.light) && bright(mid.light) >= bright(far.light), `${fire.light} ${mid.light} ${far.light}`)
+  assert.ok(far.moon > fire.moon, '远处带一点月光')
+  assert.ok(/sepia\(([\d.]+)\)/.exec(fire.light)[1] > 0.1, '火边偏暖')
+  // 同一个地方，火点着比火没点亮、月光淡
+  const off = nightLook(3300, 3500, false, lamps)
+  assert.ok(bright(mid.light) > bright(off.light) && mid.moon < off.moon, `${mid.light}/${mid.moon} vs ${off.light}/${off.moon}`)
 })
 
 test('篝火没点：远处月光色，灯边暖亮，越近越亮、月光越淡；摆的小灯笼、石灯笼、灯串也算灯', () => {

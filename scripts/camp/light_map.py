@@ -1,5 +1,6 @@
 """夜里营地每个地方有多亮、多暖：照着夜景和日景算（夜景 ÷ 日景的亮度比 + 夜景偏红还是偏蓝），写成 32×32 的格子给页面用。
 宠物、装饰、食盆里的食物都按自己站的那格调亮度和暖色（CSS filter），篝火边亮而暖、远处暗而冷，和画上的光一致。
+篝火点着时照「点火版夜景」（lit_night.py 出的 art/lit/painting.png，整片草坪被火照亮）算；没有它就用夜景原图。
 另算一套篝火没点（锅是空的）时的：夜景换成 fire_off.py 熄了火的那张，火边和远处一样只有月光，提灯边上还亮一点。
 
     python3 scripts/camp/light_map.py            # → miniprogram/utils/camp-light-map.js（光照图数据；怎么用在 camp-light.js）
@@ -24,6 +25,9 @@ def maps(lit=True):
     raw = lambda name: Image.open(os.path.join(REPO, 'art', 'raw', 'camp', name)).convert('RGB')
     small = lambda img: np.asarray(img.resize((256, 256), Image.BOX)).astype(float)
     day, night_img = raw('camp.png'), raw('night.png')
+    lit_path = os.path.join(REPO, 'art', 'lit', 'painting.png')
+    if lit and os.path.exists(lit_path):
+        night_img = Image.open(lit_path).convert('RGB')
     if not lit:
         from fire_off import unlit_day, unlit_night
         night_img = unlit_night(night_img, unlit_day(raw('camp-hd.png')))
@@ -46,7 +50,7 @@ def write():
     bright, warmth = maps()
     bright_off, warmth_off = maps(lit=False)
     js = f"""// 夜里营地每个地方有多亮、多暖的光照图（scripts/camp/light_map.py 照夜景 ÷ 日景的亮度比、夜景偏红偏蓝算的，画换了重跑，别手改）
-// N×N 格，一格 CELL 画像素；每格一个字符（B64 里的位置 0～63）。BRIGHT / WARM 是篝火点着时画上的光，_OFF 是没点（熄了火的画）时的
+// N×N 格，一格 CELL 画像素；每格一个字符（B64 里的位置 0～63）。BRIGHT / WARM 是篝火点着时（点火版夜景）的光，_OFF 是没点（熄了火的画）时的
 module.exports = {{
   N: {N},
   CELL: {4096 // N},

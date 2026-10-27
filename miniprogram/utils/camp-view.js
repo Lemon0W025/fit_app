@@ -44,6 +44,8 @@ const isNight = (hour) => hour >= 19 || hour < 6
 
 // 包里垫的整个世界（768 宽的低清版，含上下补的天空和草地）：一打开就有画，高清块（云存储）下完盖在上面；块之间缩放时露的细缝透出来的也是同一张画
 const backdropImage = (night) => `/images/camp/base/${night ? 'night-' : ''}world.jpg`
+// 夜里火着时盖在夜景上的「点火版」（scripts/camp/lit_night.py：整片草坪被火照亮）：包里垫的整个世界 + 云端的画 16 块、下面草地 8 块（天空不照，用夜景的）
+const LIT_BACKDROP = '/images/camp/base/lit-world.jpg'
 
 // 高清切块（云存储 4×4）；没有云端前缀（没配或加载失败过）就不铺，只剩垫图
 function baseTiles(L, base, night) {
@@ -74,6 +76,15 @@ function frameTiles(L, base, night) {
     }
   })
   return tiles
+}
+
+// 点火版的高清块，坐标是整个世界的（这一层盖在 movable-view 上，不在 #world 里）
+function litTiles(L, base) {
+  if (!base) return []
+  const lit = `${base}lit-`
+  return baseTiles(L, lit, false)
+    .map((t) => ({ ...t, key: `lit-${t.key}`, top: fmt(t.top + L.top) }))
+    .concat(frameTiles(L, lit, false).filter((t) => t.key[0] === 'd').map((t) => ({ ...t, key: `lit-${t.key}` })))
 }
 
 const petImage = (id) => `/images/camp/pets/${id}.png`
@@ -251,11 +262,12 @@ function cutoutStrips() {
 
 // 帐篷、暖暖锅、木盖、提灯是从底图里抠出来的独立一层：宠物、装饰走到后面被挡住、走到前面盖在上面。锅按今天锅里煮了几样换图
 // 云端的是 WebP（真彩、小），包里兜底的是 PNG；一条只露出整张图的一段（外面一层 view 裁，里面整张图往左挪）
-// 锅按今天的层数换图（0 层是空锅：从熄了火的画上抠的，锅底不再被火照亮）；夜里火没点时木盖换熄了火的那张（原来被篝火照成暖黄）
+// 锅按今天的层数换图（0 层是空锅：从熄了火的画上抠的，锅底不再被火照亮）；夜里火没点时木盖换熄了火的那张（原来被篝火照成暖黄）；
+// 夜里火着时用点火版（lit-，和点火版夜景一样被火照亮；包里没有，加载失败退回夜景那套）
 function cutoutViews(L, potLevel, base, night) {
-  const prefix = (base || '/images/camp/cut/') + (night ? 'night-' : '')
   const ext = base ? 'webp' : 'png'
   const level = Math.min(3, Math.max(0, potLevel || 0))
+  const prefix = base ? base + (night ? (level ? 'lit-' : 'night-') : '') : `/images/camp/cut/${night ? 'night-' : ''}`
   return cutoutStrips().map((s) => {
     const c = SCENE.cutouts[s.cut]
     const file = s.cut === 'pot' ? `pot-${level}` : s.cut === 'lid' && night && !level ? 'lid-off' : s.cut
@@ -280,5 +292,5 @@ function changedPaths(prefix, prev, next) {
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
-  frontAt, cutoutStrips, backdropImage, changedPaths,
+  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths,
 }

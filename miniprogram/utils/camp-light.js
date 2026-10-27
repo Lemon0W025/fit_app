@@ -1,8 +1,7 @@
-// 夜里宠物、装饰按站的位置怎么上色：
-//   篝火点着（锅里煮着东西）：全营地本来的颜色，只略暗略暖，不盖月光
-//   篝火没点：按光照图（camp-light-map.js，scripts/camp/light_map.py 照熄了火的夜景算的）是月光色，
-//   再按灯（画上的提灯、帐篷门口、摆的小灯笼 / 石灯笼 / 灯串）的远近往暖亮拉，走过去连续变化
-// 火点着时画上的那套光（BRIGHT / WARM）现在只给 lightAt 用（测试、录屏对照）
+// 夜里宠物、装饰按站的位置怎么上色（光照图 camp-light-map.js，scripts/camp/light_map.py 照画算的）：
+//   篝火点着（锅里煮着东西）：照「点火版夜景」（整片草坪被火照亮）的光：火边亮而暖，越往外越暗、带一点月光的蓝
+//   篝火没点：照熄了火的夜景，是月光色
+//   两种都再按灯（画上的提灯、帐篷门口、摆的小灯笼 / 石灯笼 / 灯串）的远近往暖亮拉，走过去连续变化
 
 const { decorById } = require('./shared/decor')
 
@@ -51,16 +50,13 @@ function lampAt(x, y, lamps) {
   }, 0)
 }
 
-const LIT = { light: 'brightness(0.92) saturate(1) sepia(0.12)', moon: 0, moonLight: 'none' }
-
 // 夜里站在 (x, y) 的东西怎么上色（两层）：
 //   light：本体的 CSS filter（亮度、颜色多足、偏暖多少）
 //   moon：盖在本体上的「月光版」（同一张图去色、染成画上夜色那种蓝白）的不透明度：越冷越不透明
 //   moonLight：月光版的 filter
 // lit：篝火点着没有；lamps：lampsOf(摆着的装饰)。两层都随位置连续变化，走路时跟着位置一起过渡（不会走到灯边一下子变色）
 function nightLook(x, y, lit = true, lamps = PAINTED_LAMPS) {
-  if (lit) return { ...LIT }
-  const { bright, warm } = lightAt(x, y, false)
+  const { bright, warm } = lightAt(x, y, lit)
   const hot = Math.max(0, warm)
   const cool = Math.max(0, -warm)
   const f = lampAt(x, y, lamps)
@@ -68,10 +64,13 @@ function nightLook(x, y, lit = true, lamps = PAINTED_LAMPS) {
   const bb = b + (0.9 - b) * f
   const sat = 0.75 + 0.35 * hot
   const sep = 0.3 * hot
+  // 火着时草地是被火照亮的（远处也只是带一点蓝），月光层薄一些、暗一些，不然远处的东西发白、比草地亮
+  const moonMax = lit ? 0.45 : 0.85
+  const moonBright = lit ? bb * 0.92 : Math.min(0.9, bb * 1.12)
   return {
     light: `brightness(${r2(bb)}) saturate(${r2(sat + (0.95 - sat) * f)}) sepia(${r2(sep + (0.25 - sep) * f)})`,
-    moon: r2(Math.min(0.85, cool) * (1 - f)),
-    moonLight: `grayscale(1) sepia(1) hue-rotate(178deg) saturate(1.7) brightness(${r2(Math.min(0.9, bb * 1.12))})`,
+    moon: r2(Math.min(moonMax, cool) * (1 - f)),
+    moonLight: `grayscale(1) sepia(1) hue-rotate(178deg) saturate(1.7) brightness(${r2(moonBright)})`,
   }
 }
 

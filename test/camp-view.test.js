@@ -174,10 +174,11 @@ test('抠图层：锅按层数换图；云端 WebP、包里 PNG；帐篷竖着�
   assert.equal(by(V.cutoutViews(L, 0, ''), 'pot').image, '/images/camp/cut/pot-0.png')
   assert.equal(by(V.cutoutViews(L, 9, 'cloud://x/camp/cut/'), 'pot').image, 'cloud://x/camp/cut/pot-3.webp')
   assert.deepEqual(['tent-0', 'pot'].map((k) => by(V.cutoutViews(L, 1, '', true), k).image), ['/images/camp/cut/night-tent.png', '/images/camp/cut/night-pot-1.png'])
-  assert.equal(by(V.cutoutViews(L, 1, 'cloud://x/', true), 'lantern').image, 'cloud://x/night-lantern.webp')
+  // 夜里火着：点火版（lit-，云端才有）；火没点：夜景那套
+  assert.deepEqual(['tent-0', 'pot', 'lantern', 'lid'].map((k) => by(V.cutoutViews(L, 1, 'cloud://x/', true), k).image), ['cloud://x/lit-tent.webp', 'cloud://x/lit-pot-1.webp', 'cloud://x/lit-lantern.webp', 'cloud://x/lit-lid.webp'])
+  assert.equal(by(V.cutoutViews(L, 0, 'cloud://x/', true), 'tent-0').image, 'cloud://x/night-tent.webp')
   // 锅是空的火不烧：夜里木盖换熄了火的那张（原来被篝火照成暖黄）；白天、打过卡的照旧
   assert.equal(by(V.cutoutViews(L, 0, 'cloud://x/', true), 'lid').image, 'cloud://x/night-lid-off.webp')
-  assert.equal(by(V.cutoutViews(L, 1, 'cloud://x/', true), 'lid').image, 'cloud://x/night-lid.webp')
   assert.equal(by(V.cutoutViews(L, 0, 'cloud://x/'), 'lid').image, 'cloud://x/lid.webp')
   assert.equal(by(V.cutoutViews(L, 0, '', true), 'lantern').image, '/images/camp/cut/night-lantern.png')
   // 锅、木盖、提灯各一整块：图不挪、宽度就是框宽
@@ -215,4 +216,18 @@ test('抠图层：锅按层数换图；云端 WebP、包里 PNG；帐篷竖着�
   assert.equal(V.frontAt([[0, 10], [100, 30]], -5), 10)
   assert.equal(V.frontAt([[0, 10], [100, 30]], 50), 20)
   assert.equal(V.frontAt([[0, 10], [100, 30]], 500), 30)
+})
+
+test('夜里火着的点火版：画 16 块 + 下面草地 8 块，坐标是整个世界的（画往下挪 L.top）；天空不另出', () => {
+  assert.deepEqual(V.litTiles(L, ''), [])
+  const tiles = V.litTiles(L, 'cloud://x/base-v4/')
+  assert.equal(tiles.length, 24)
+  assert.ok(tiles.every((t) => t.image.indexOf('cloud://x/base-v4/lit-') === 0 && !/lit-u/.test(t.image)))
+  const t00 = tiles.find((t) => t.key === 'lit-t00')
+  const night = V.baseTiles(L, 'cloud://x/base-v4/', true).find((t) => t.key === 't00')
+  assert.equal(t00.image, 'cloud://x/base-v4/lit-t00.jpg')
+  assert.equal(t00.top, Math.round((night.top + L.top) * 100) / 100)
+  const d00 = tiles.find((t) => t.key === 'lit-d00')
+  assert.deepEqual([d00.left, d00.top, d00.height], ['left', 'top', 'height'].map((k) => V.frameTiles(L, 'cloud://x/base-v4/', true).find((t) => t.key === 'd00')[k]))
+  assert.equal(V.LIT_BACKDROP, '/images/camp/base/lit-world.jpg')
 })

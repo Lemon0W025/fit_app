@@ -45,6 +45,8 @@ Page({
     fx: [],
     cuts: [],
     tint: '',
+    lit: null,
+    litFade: false,
     peekText: '',
     termText: '',
     mode: 'view',
@@ -150,6 +152,14 @@ Page({
       welcome: view.welcome || this.data.welcome,
     }
     if (view.daily !== undefined) patch.daily = beansCard(view.daily)
+    // 夜里火着：夜景上面盖一层点火版（整片草坪被火照亮）；正看着时下锅点火，这一层慢慢显出来；块不重发（云存储的图重设会闪）
+    const lit = night && potLevel > 0
+    if (!lit) {
+      if (this.data.lit) Object.assign(patch, { lit: null, litFade: false })
+    } else if (!this.data.lit) {
+      patch.lit = { backdrop: V.LIT_BACKDROP, tiles: V.litTiles(L, this.baseFailed ? '' : config.campArt || '') }
+      patch.litFade = !!this.data.loaded && !wasLit
+    }
     // 带云存储图的几层没变就不重发：云存储的图 setData 一次就重新取一次，切回营地、喂完、买完都会闪一下
     ;['cuts', 'fx', 'decor', 'potHit'].forEach((k) => {
       if (JSON.stringify(this.data[k]) === JSON.stringify(patch[k])) delete patch[k]

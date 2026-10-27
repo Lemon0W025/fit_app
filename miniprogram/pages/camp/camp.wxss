@@ -696,6 +696,10 @@ button.btn-small {
 .base { position: absolute; display: block; }
 /* 上下补的天空、草地：草地第一行盖住营地画最下面发虚的那段，要压得住画上的「熄火」补丁（z 2），又在所有站在地上的东西（z ≥ 99）下面 */
 .frame-tile { z-index: 3; }
+/* 夜里火着：点火版（整片草坪被火照亮）盖在夜景底图、上下补的块上面，在所有站在地上的东西下面；下锅点火时 1.5 秒慢慢显出来 */
+.lit-layer { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; }
+.lit-fade { animation: lit-in 1.5s ease-out backwards; }
+@keyframes lit-in { from { opacity: 0; } to { opacity: 1; } }
 .cut { position: absolute; overflow: hidden; pointer-events: none; }
 .cut-img { position: absolute; top: 0; display: block; max-width: none; }
 .decor { position: absolute; display: block; }

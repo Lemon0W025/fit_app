@@ -130,6 +130,10 @@ def from_base(local, check=None):
         '': day_hd.resize((round(W * DAY_RES),) * 2, Image.LANCZOS),
         'night-': Image.open(NIGHT_HD).convert('RGB').resize((round(W * NIGHT_RES),) * 2, Image.LANCZOS),
     }
+    # 点火版夜景（lit_night.py 出的，夜景分辨率）：帐篷、木盖、提灯也出一套 lit-（锅里 1～3 层就用夜景那套，build() 顺手复制）
+    lit_path = os.path.join(REPO, 'art', 'lit', 'painting.png')
+    if os.path.exists(lit_path):
+        full['lit-'] = Image.open(lit_path).convert('RGB').resize(full['night-'].size, Image.LANCZOS)
     tone = night_tone()
     from fire_off import unlit_day, unlit_night   # fire_off 也用这里的 objectness，放在这儿 import 免得互相引用
     day_off = unlit_day(day_hd).resize(full[''].size, Image.LANCZOS)
@@ -144,6 +148,10 @@ def from_base(local, check=None):
             box = [round(v * res) for v in c['box']]
             crop = img.crop(box)
             alpha = alpha_hd.resize(crop.size, Image.LANCZOS)
+            if pfx == 'lit-':
+                if key != 'pot':
+                    emit_full(crop, alpha, f'{pfx}{key}.png', False, res)   # 包里不放（加载失败退回夜景那套）
+                continue
             if key == 'lid' and pfx:
                 emit_full(unlit[pfx].crop(box), alpha, f'{pfx}lid-off.png', local, res)
             for n in ([0, 1, 2, 3] if key == 'pot' else [None]):
@@ -249,6 +257,9 @@ def build(local, pfx):
             continue
         rgb, alpha = with_steam(pot_in, out, base_alpha, rim_y)
         emit_full(rgb.resize(size, Image.LANCZOS), alpha.resize(size, Image.LANCZOS), f'{pfx}pot-{n}.png', local, res)
+        if pfx == 'night-':
+            # 点火版夜景里的锅就是夜景这口（锅在火光正中，本来就亮）
+            emit_full(rgb.resize(size, Image.LANCZOS), alpha.resize(size, Image.LANCZOS), f'lit-pot-{n}.png', False, res)
         done += 1
     print(f'→ {OUT}（锅里 {done} 层换成 Codex 画的）；scripts/wechat.js 的 ART_VERSION.cut 加一，npm run wx:art -- cut，把前缀填进 config.cutArt')
 

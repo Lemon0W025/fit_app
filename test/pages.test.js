@@ -747,15 +747,18 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(camp.data.decor.length, 0)
   assert.equal(camp.data.decorBag[0].id, 'ball')
 
-  // 页面开着跨过 19 点：一分钟内换成夜景整套（底图、抠图、垫图都带 night-）
+  // 页面开着跨过 19 点：一分钟内换成夜景整套（底图、垫图带 night-）；锅里煮着东西（火着），再盖上点火版，抠图也用点火版（lit-）
   assert.ok(camp.data.base[0].image.indexOf('night-') === -1 && camp.data.backdrop.indexOf('night-') === -1)
+  assert.equal(camp.data.lit, null)
   camp.hour = () => 19
   camp.clock.advance(60000)
   assert.ok(camp.data.backdrop.indexOf('night-world') !== -1)
-  assert.ok(camp.data.cuts.every((c) => c.image.indexOf('night-') !== -1))
+  assert.ok(camp.data.lit && camp.data.lit.tiles.length === 24)
+  assert.ok(camp.data.cuts.every((c) => c.image.indexOf('lit-') !== -1))
   camp.hour = () => 10
   camp.clock.advance(60000)
   assert.ok(camp.data.backdrop.indexOf('night-') === -1)
+  assert.equal(camp.data.lit, null)
 
   // 找它
   camp.openResidents()

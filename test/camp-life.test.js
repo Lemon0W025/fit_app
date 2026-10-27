@@ -442,7 +442,7 @@ test('拼图的来源由页面给（下到本地的文件）：还没下好用�
   assert.equal(old.life.sprites()[0].sheet, 'cloud://x/camp/anim-v1/doudou.png')
 })
 
-test('夜里宠物按站的位置上色，白天不调；火没点时远处的盖上月光层、灯边的不盖，点着了全都是本来的颜色', () => {
+test('夜里宠物按站的位置上色，白天不调；火没点时远处的盖上月光层、灯边的不盖；点着了照点火版的光，远处比火没点时亮、月光淡', () => {
   const day = make({ hour: 12 })
   day.life.sprites().forEach((s) => assert.equal(s.light, ''))
   // 豆豆站在远处草地上，糯糯站在画上的提灯边
@@ -452,7 +452,9 @@ test('夜里宠物按站的位置上色，白天不调；火没点时远处的�
   assert.ok(off[0].moon > 0.5, `远处盖月光层 ${off[0].moon}`)
   assert.ok(off[1].moon < 0.15, `提灯边不盖 ${off[1].moon}`)
   const on = make({ hour: 22, saved }).life.sprites()
-  on.forEach((s) => assert.deepEqual([s.light, s.moon], ['brightness(0.92) saturate(1) sepia(0.12)', 0], s.id))
+  const b = (s) => Number(/brightness\(([\d.]+)\)/.exec(s.light)[1])
+  assert.ok(b(on[0]) > b(off[0]) && on[0].moon < off[0].moon, `${on[0].light}/${on[0].moon} vs ${off[0].light}/${off[0].moon}`)
+  assert.ok(on[1].moon < 0.15, '提灯边火着也不盖月光')
   // 在豆豆脚边摆一盏小灯笼：月光淡下去
   const lamp = make({ hour: 22, lit: false, saved, decor: [{ uid: 'd1', id: 'lantern', x: 3560, y: 3520 }] }).life.sprites()
   assert.ok(lamp[0].moon < off[0].moon - 0.3, `${lamp[0].moon}`)
