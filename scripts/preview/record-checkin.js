@@ -2,7 +2,8 @@
 // 页面数据用真实页面逻辑（手动时钟快进到数字滚完）算出来渲染成 HTML，CSS 动画在浏览器里真跑；
 // 庆祝（彩带 + 卡）按页面里的时间点插进去，彩带用 utils/confetti.js 同一套计算画。数字滚动不在录屏里（直接是最后的数）。
 //
-//   node scripts/preview/record-checkin.js [场景 ...]   场景：meal meal-allontime meal-milestone today-open today-warn checkin-wait calendar（不写全录）
+//   node scripts/preview/record-checkin.js [场景 ...]   场景：meal meal-allontime meal-milestone today-open today-warn checkin-wait checkin-pick calendar（不写全录）
+//   checkin-pick：点「这是哪一餐」的分段控制器（taps：[毫秒, 第几项]），组件的 JS 在 Node 里真的跑，胶囊的样子写进浏览器的 DOM
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -11,7 +12,7 @@ const { execSync } = require('child_process')
 const { chromium } = require('playwright')
 const REPO = path.join(__dirname, '..', '..')
 const { createFakeCloud, loadCloudFunction } = require(`${REPO}/test/helpers/fake-cloud`)
-const { createWx, loadPage, settle } = require(`${REPO}/test/helpers/page-harness`)
+const { createWx, loadPage, loadComponent, settle } = require(`${REPO}/test/helpers/page-harness`)
 const { manualClock } = require(`${REPO}/test/helpers/manual-clock`)
 const { fixDate } = require(`${REPO}/test/helpers/fixed-date`)
 const { analysisJson } = require(`${REPO}/test/helpers/fake-repo`)
@@ -106,7 +107,60 @@ const SCENARIOS = {
       return { data: { ...snap(page), photo: '/images/camp/family.jpg', submitting: true, stage: '小暖正在仔细看你的饭菜…', steps: analysisSteps(true, 1) } }
     },
   },
+  // 换餐次：午餐 → 晚餐 → 加餐，再连着快点 早餐 → 午餐 → 晚餐（胶囊总是转向最新的那个）
+  'checkin-pick': {
+    page: 'checkin',
+    seconds: 4,
+    taps: [[600, 2], [1600, 3], [2600, 0], [2680, 1], [2760, 2]],
+    build: async () => {
+      fixDate(T, '2026-10-22T12:10:00+08:00')
+      const page = loadPage('checkin', createWx(async () => ({ ok: true, data: null })))
+      page.onLoad({})
+      return { data: snap(page) }
+    },
+  },
   calendar: { page: 'forest', seconds: 3, build: calendarData },
+}
+
+// 分段控制器：量页面上的选项，组件的 JS 在 Node 里跑（手动时钟跟着真实时间走），胶囊的 class / 样式写进 DOM，CSS 过渡在浏览器里播
+async function driveSeg(page, data, taps, ms) {
+  const wx = createWx(async () => ({ ok: true, data: null }))
+  wx.rects = await page.evaluate(() => {
+    const r = (e) => JSON.parse(JSON.stringify(e.getBoundingClientRect()))
+    return { '.seg': r(document.querySelector('.seg')), '.seg-opt': [...document.querySelectorAll('.seg-opt')].map(r) }
+  })
+  const seg = loadComponent('segmented', wx, { options: data.mealTypes, value: data.mealType })
+  const clock = manualClock()
+  seg.clock = clock
+  seg.attach()
+  seg.ready()
+  const queue = taps.slice()
+  // 用 performance.now：场景里 fixDate 把 Date 定住了
+  const t0 = performance.now()
+  let last = 0
+  let lastKey = ''
+  while (performance.now() - t0 < ms) {
+    const now = Math.round(performance.now() - t0)
+    while (queue.length && queue[0][0] <= now) seg.onTap({ currentTarget: { dataset: { index: queue.shift()[1] } }, detail: {} })
+    clock.advance(now - last)
+    last = now
+    const st = { ready: seg.data.ready, phase: seg.data.phase, pill: seg.data.pill, active: seg.data.active }
+    const key = JSON.stringify(st)
+    if (key !== lastKey) {
+      lastKey = key
+      await page.evaluate((st) => {
+        const box = document.querySelector('.seg')
+        box.className = `wx-view seg seg-p${st.phase}${st.ready ? ' seg-ready' : ''}`
+        const [c1, mid, c2] = box.querySelectorAll('.seg-piece')
+        const p = st.pill
+        c1.style.cssText = `top: ${p.top}px; width: ${p.h}px; height: ${p.h}px; transform: translate3d(${p.l}px, 0, 0)`
+        mid.style.cssText = `top: ${p.top}px; height: ${p.h}px; transform: translate3d(${p.m}px, 0, 0) scaleX(${p.s})`
+        c2.style.cssText = `top: ${p.top}px; width: ${p.h}px; height: ${p.h}px; transform: translate3d(${p.r}px, 0, 0)`
+        box.querySelectorAll('.seg-opt').forEach((o, i) => o.classList.toggle('seg-on', i === st.active))
+      }, st)
+    }
+    await page.waitForTimeout(15)
+  }
 }
 
 // 到点把庆祝插进页面，彩带用 confetti.js 同一套计算画
@@ -148,7 +202,8 @@ async function record(name, sc, browser) {
   const start = Date.now()
   await page.goto(`file://${file}`)
   const lead = (Date.now() - start) / 1000
-  await page.waitForTimeout(sc.seconds * 1000)
+  if (sc.taps) await driveSeg(page, data, sc.taps, sc.seconds * 1000)
+  else await page.waitForTimeout(sc.seconds * 1000)
   await page.close()
   await context.close()
   const webm = fs.readdirSync(vdir).find((f) => f.endsWith('.webm'))

@@ -1,8 +1,9 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
+//   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
 //
@@ -11,7 +12,7 @@ const fs = require('fs')
 const path = require('path')
 const REPO = path.join(__dirname, '..', '..')
 const { createFakeCloud, loadCloudFunction } = require(`${REPO}/test/helpers/fake-cloud`)
-const { createWx, loadPage, settle } = require(`${REPO}/test/helpers/page-harness`)
+const { createWx, loadPage, loadComponent, settle } = require(`${REPO}/test/helpers/page-harness`)
 const { manualClock } = require(`${REPO}/test/helpers/manual-clock`)
 const { renderPage } = require('./wxml-render')
 const { SCENE } = require(`${REPO}/miniprogram/utils/shared/camp`)
@@ -166,6 +167,18 @@ const SCENARIOS = {
   },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
+  // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
+  'bag-phone': {
+    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 13, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [],
+    bag: { foods: { xiaomi: 2, yumili: 1, huluobo: 3, niangao: 1, lianzi: 1, xiaoyu: 2, shizi: 1 }, decor: { ball: 1, picnic: 1, flowerbed: 1, lantern: 2 } },
+    ui: [[400, 'open'], [1900, 'tab', 1], [3000, 'tab', 0], [3800, 'tab', 1], [3900, 'tab', 0], [4000, 'tab', 1], [5200, 'drag', 50, 600], [7400, 'flick'], [8800, 'open'], [10200, 'mask']],
+  },
+  // 住户抽屉（带标题）：12 只多了在抽屉里滚；内容滚着的时候往下拉不拖抽屉，滚回顶上再拉才拖
+  'residents-phone': {
+    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 9, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [],
+    sheet: 'residents',
+    ui: [[400, 'open'], [1800, 'scroll', 260], [2600, 'drag-body', 120, 500], [4000, 'scroll', 0], [4800, 'drag-body', 70, 500], [6800, 'flick']],
+  },
 }
 
 async function build(sc) {
@@ -190,11 +203,11 @@ async function build(sc) {
   // 锅里煮着几样：火点没点、锅里的样子、夜里宠物 / 装饰身上的光都跟着它
   gardens.set('u1', {
     ...doc,
-    foods: { xiaomi: 2 },
+    foods: (sc.bag && sc.bag.foods) || { xiaomi: 2 },
     pot: { date: dateKey(new Date()), foods: POT_FOODS.slice(0, sc.potLevel) },
     visitors: (sc.visitors || []).map((v) => ({ ...v, since: '' })),
     pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
-    decor: { owned: {}, placed: sc.decor || [] },
+    decor: { owned: (sc.bag && sc.bag.decor) || {}, placed: sc.decor || [] },
     gift: '',
   })
   camp.data.giftShown = true
@@ -204,6 +217,170 @@ async function build(sc) {
   camp.onShow()
   await settle()
   return camp
+}
+
+// ---------------------------------------------------------------- 抽屉（components/sheet）和分段控制器（components/segmented）
+// 页面按「开着」渲染出抽屉的 DOM（渲染器按组件自己的 JS 算出开着的样子），一加载先藏起来；录的时候组件的 JS 和 sheet.wxs 在 Node 里真的跑
+// （时钟就是 camp.clock，跟着录屏走），算出来的 class / 样式写进浏览器的 DOM，CSS 过渡在浏览器里真的播。sc.ui：[毫秒, 动作, …]：
+//   open 打开；mask 点遮罩；tab i 点「食物 / 装饰」第 i 项；drag dy ms 按住把手 ms 内慢慢往下拉 dy 像素、停一下再松手；
+//   drag-body dy ms 同样但按在内容上；scroll y 内容滚到 y；flick 按住把手往下一甩。手指画成一个半透明圆点
+const HIDE_SHEET = '<script>(() => { const s = document.querySelector(".sheet"); s.classList.remove("sheet-open"); s.style.display = "none" })()</script>'
+
+function expandUi(list) {
+  const out = []
+  list.forEach(([at, kind, a, b]) => {
+    if (kind === 'drag' || kind === 'drag-body') {
+      const steps = Math.max(1, Math.round(b / 40))
+      out.push([at, 'down', kind === 'drag' ? 'head' : 'body'])
+      for (let i = 1; i <= steps; i++) out.push([at + i * 40, 'move', Math.round((a * i) / steps)])
+      out.push([at + steps * 40 + 300, 'up'])
+    } else if (kind === 'flick') {
+      out.push([at, 'down', 'head'], [at + 40, 'move', 40], [at + 80, 'move', 100], [at + 120, 'move', 170], [at + 140, 'up'])
+    } else out.push([at, kind, a])
+  })
+  return out.sort((x, y) => x[0] - y[0])
+}
+
+function sheetUi(page, camp, sc) {
+  const which = sc.sheet || 'bag'
+  const openKey = which === 'bag' ? 'bagOpen' : 'residentsOpen'
+  const wx = createWx(async () => ({ ok: true, data: null }))
+  const sheet = loadComponent('sheet', wx, { show: false })
+  sheet.clock = camp.clock
+  sheet.attach()
+  // 背包里的分段控制器：一开始在没打开的抽屉里，量不到（静态的选中底色），手指碰到时再量
+  const seg = which === 'bag' ? loadComponent('segmented', wx, { options: camp.data.bagTabs, value: camp.data.bagTab }) : null
+  if (seg) {
+    seg.clock = camp.clock
+    seg.attach()
+    seg.ready()
+  }
+  const drag = require(`${MP}/components/sheet/sheet.wxs`)
+  const owner = {
+    st: {},
+    out: [],
+    h: 300,
+    getState: () => owner.st,
+    selectComponent: (s) => ({ setStyle: (css) => owner.out.push([s, css]), getBoundingClientRect: () => ({ height: owner.h }) }),
+    callMethod: (m) => sheet[m](),
+  }
+  const touch = (x, y, t) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }], timeStamp: t })
+  const events = expandUi(sc.ui)
+  let finger = null
+  let lastOpen = false
+  let lastKey = ''
+
+  // 组件发的事件交给页面，页面的数再喂回组件（和真机一样：页面 setData → 组件属性）
+  const settle = () => {
+    for (let n = 0; n < 5; n++) {
+      if (sheet.data.open !== lastOpen) {
+        drag.onOpen(sheet.data.open, lastOpen, owner)
+        lastOpen = sheet.data.open
+      }
+      const ev = sheet.events.shift()
+      if (!ev) break
+      if (ev[0] === 'close') camp[which === 'bag' ? 'closeBag' : 'closeResidents']()
+      sheet.setData({ show: camp.data[openKey] })
+    }
+    if (seg) {
+      seg.events.splice(0).forEach(([, detail]) => camp.switchBag({ currentTarget: { dataset: {} }, detail }))
+      seg.setData({ value: camp.data.bagTab })
+    }
+  }
+
+  const push = async () => {
+    settle()
+    const st = {
+      rendered: sheet.data.rendered,
+      open: sheet.data.open,
+      seg: seg && { ready: seg.data.ready, phase: seg.data.phase, pill: seg.data.pill, active: seg.data.active },
+      tab: camp.data.bagTab,
+      finger,
+    }
+    const styles = owner.out.splice(0)
+    const key = JSON.stringify(st)
+    if (key === lastKey && !styles.length) return
+    lastKey = key
+    await page.evaluate(({ st, styles }) => {
+      const s = document.querySelector('.sheet')
+      s.style.display = st.rendered ? '' : 'none'
+      s.classList.toggle('sheet-open', st.open)
+      styles.forEach(([sel, css]) => {
+        const el = s.querySelector(sel)
+        if (el) el.style.cssText = css
+      })
+      s.querySelectorAll('.bag-pane').forEach((p, i) => p.classList.toggle('bag-pane-on', ['food', 'decor'][i] === st.tab))
+      if (st.seg) {
+        const box = s.querySelector('.seg')
+        box.className = `wx-view seg seg-p${st.seg.phase}${st.seg.ready ? ' seg-ready' : ''}`
+        const [c1, mid, c2] = box.querySelectorAll('.seg-piece')
+        const p = st.seg.pill
+        c1.style.cssText = `top: ${p.top}px; width: ${p.h}px; height: ${p.h}px; transform: translate3d(${p.l}px, 0, 0)`
+        mid.style.cssText = `top: ${p.top}px; height: ${p.h}px; transform: translate3d(${p.m}px, 0, 0) scaleX(${p.s})`
+        c2.style.cssText = `top: ${p.top}px; width: ${p.h}px; height: ${p.h}px; transform: translate3d(${p.r}px, 0, 0)`
+        box.querySelectorAll('.seg-opt').forEach((o, i) => o.classList.toggle('seg-on', i === st.seg.active))
+      }
+      let f = document.getElementById('finger')
+      if (!f) {
+        f = document.createElement('div')
+        f.id = 'finger'
+        f.style.cssText = 'position:fixed;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(80,80,80,.28);border:2px solid rgba(255,255,255,.8);z-index:9999;pointer-events:none;display:none'
+        document.body.appendChild(f)
+      }
+      f.style.display = st.finger ? 'block' : 'none'
+      if (st.finger) {
+        f.style.left = `${st.finger.x}px`
+        f.style.top = `${st.finger.y}px`
+      }
+    }, { st, styles })
+  }
+
+  let x0 = 0
+  let y0 = 0
+  let dy = 0
+  const tick = async (now) => {
+    while (events.length && events[0][0] <= now) {
+      const [, kind, a] = events.shift()
+      if (kind === 'open') {
+        camp[which === 'bag' ? 'openBag' : 'openResidents']()
+        sheet.setData({ show: true })
+      } else if (kind === 'mask') {
+        sheet.onClose()
+      } else if (kind === 'tab') {
+        if (!seg.data.ready) {
+          wx.rects = await page.evaluate(() => {
+            const r = (e) => JSON.parse(JSON.stringify(e.getBoundingClientRect()))
+            return { '.seg': r(document.querySelector('.seg')), '.seg-opt': [...document.querySelectorAll('.seg-opt')].map(r) }
+          })
+          seg.onTouch()
+        }
+        seg.onTap({ currentTarget: { dataset: { index: a } }, detail: {} })
+      } else if (kind === 'scroll') {
+        await page.evaluate((y) => document.querySelector('.sheet-body').scrollTo({ top: y, behavior: 'smooth' }), a)
+        drag.scroll({ detail: { scrollTop: a } }, owner)
+      } else if (kind === 'down') {
+        const r = await page.evaluate((zone) => {
+          const z = document.querySelector(zone === 'head' ? '.sheet-head' : '.sheet-body').getBoundingClientRect()
+          return { x: z.left + z.width / 2, y: z.top + Math.min(z.height / 2, 40), h: document.querySelector('.sheet-move').getBoundingClientRect().height }
+        }, a)
+        x0 = r.x
+        y0 = r.y
+        dy = 0
+        owner.h = r.h
+        finger = { x: x0, y: y0 }
+        drag[a === 'head' ? 'startHead' : 'startBody'](touch(x0, y0, now), owner)
+      } else if (kind === 'move') {
+        dy = a
+        finger = { x: x0, y: y0 + dy }
+        drag.move(touch(x0, y0 + dy, now), owner)
+      } else if (kind === 'up') {
+        finger = null
+        drag.end(touch(x0, y0 + dy, now), owner)
+      }
+    }
+    await push()
+  }
+  return { tick }
 }
 
 async function record(name, sc, browser) {
@@ -222,9 +399,16 @@ async function record(name, sc, browser) {
   d.peekText = ''
   d.giftReady = false
   d.pets = life.sprites()
+  // 抽屉：按开着渲染出 DOM（一加载先藏起来，由 sheetUi 开关）
+  if (sc.ui && sc.sheet === 'residents') {
+    d.residentsOpen = true
+    d.residents = life.whereIs()
+  } else if (sc.ui) {
+    d.bagOpen = true
+  }
   const hideUi = '<style>.hud-res,.hud-today,.hud-notes,.side,.recenter,.checkin-btn,.tabbar,.bubble,.act-emoji,.status-float,.capsule-float{display:none!important}.frame{width:750px!important;min-height:1472px!important}.content{height:1472px!important}.screen{width:750px!important;height:1472px!important}</style>'
   const file = path.join(OUT, `${name}.html`)
-  fs.writeFileSync(file, renderPage({ name: 'camp', data: d, mapSrc, tab: 'camp' }).replace('</head>', `${sc.phone ? '' : hideUi}</head>`))
+  fs.writeFileSync(file, renderPage({ name: 'camp', data: d, mapSrc, tab: 'camp' }).replace('</head>', `${sc.phone ? '' : hideUi}</head>`).replace('</body>', `${sc.ui ? HIDE_SHEET : ''}</body>`))
   const vdir = path.join(OUT, `${name}-video`)
   fs.rmSync(vdir, { recursive: true, force: true })
   const size = sc.phone ? { width: 375, height: 812 } : { width: 750, height: 1472 }
@@ -337,6 +521,7 @@ async function record(name, sc, browser) {
   const total = sc.seconds * 1000
   const pending = plan.filter((p) => p[0] > 0).sort((a, b) => a[0] - b[0])
   const events = (sc.events || []).slice().sort((a, b) => a[0] - b[0])
+  const ui = sc.ui ? sheetUi(page, camp, sc) : null
   while (clockMs < total) {
     const now = Date.now() - t0
     const dt = now - clockMs
@@ -351,6 +536,7 @@ async function record(name, sc, browser) {
       camp.clock.advance(dt)
       clockMs = now
       await sync()
+      if (ui) await ui.tick(now)
     }
     await page.waitForTimeout(30)
   }
