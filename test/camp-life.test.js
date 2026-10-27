@@ -5,6 +5,7 @@ const { createLife, depthCuts, PET_ZOOM } = require('../miniprogram/utils/camp-l
 const { campLayout, cutoutStrips, zOf } = require('../miniprogram/utils/camp-view')
 const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
+const { FOOT } = require('../miniprogram/utils/anim')
 const { manualClock } = require('./helpers/manual-clock')
 
 const L = campLayout({ width: 375, height: 736 })
@@ -294,8 +295,13 @@ test('有拼图时用拼图、按动作选行；拼图坏了退回单张图', ()
   const s = life.sprites()[0]
   assert.equal(s.sheet, 'cloud://x/anim/doudou.png') // 一只一张（A、B 上下拼着）
   assert.deepEqual([s.anim.cols, s.anim.rows, s.anim.row], [6, 12, 1])
+  // 拼图里脚踩在格底往上 FOOT（pack_anim.py 对齐的）：影子的中心对着脚，不在格底（不然看着脚离地飘着）
+  const center = (sp) => sp.shadow.bottom + sp.shadow.height / 2
+  assert.ok(Math.abs(center(s) - (s.bottom + s.width * FOOT)) < 0.01)
   life.noSheet('doudou')
-  assert.equal(life.sprites()[0].sheet, '')
+  const plain = life.sprites()[0]
+  assert.equal(plain.sheet, '')
+  assert.ok(Math.abs(center(plain) - plain.bottom) < 0.01) // 单张图脚就在底边
 })
 
 test('depthCuts：跨过挨着的那条线就切开，旁边经过、不跨的不切', () => {

@@ -8,7 +8,7 @@ const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, lineFor, describe, CSS_ACTIONS } = require('./pets')
-const { COLS, frameFor, facingFor, dirOf, stackRow } = require('./anim')
+const { COLS, FOOT, frameFor, facingFor, dirOf, stackRow } = require('./anim')
 const { petImage, petFace, zOf, cutoutStrips, isNight } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 
@@ -186,6 +186,8 @@ function createLife({
     const bubbleWidth = Math.min(BUBBLE_W * L.k, L.width)
     const bubbleX = Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
     const shadowW = width * SHADOW_RATIO
+    // 影子的中心对着脚：拼图里脚在格底往上 FOOT，单张图脚就在底边
+    const feet = L.height - y + (sh ? width * FOOT : 0)
     return {
       id: a.id, name: a.pet.name, visitor: !!a.visitor, image: petImage(a.id), face: petFace(a.id), width, left: x - width / 2, bottom: L.height - y, z: zOf(sortY(a)) + 1,
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
@@ -194,7 +196,7 @@ function createLife({
       emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping,
       // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
       ...nightLayers(a.x, a.y),
-      shadow: { left: x - shadowW / 2, bottom: L.height - y - shadowW / 6, width: shadowW, height: shadowW / 3 },
+      shadow: { left: x - shadowW / 2, bottom: feet - shadowW / 6, width: shadowW, height: shadowW / 3 },
     }
   }
 

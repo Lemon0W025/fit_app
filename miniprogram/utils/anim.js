@@ -21,6 +21,7 @@ const DIR_ROWS = {
   front: { walk: 'walkFront', fly: 'walkFront', idle: 'idleFront' },
 }
 const STEEP = 1.2 // 竖着的位移比横着的大这么多倍才算正面 / 背影
+const FOOT = 0.1 // 拼图里脚踩在格底往上这么高（格高的比例，和 scripts/pack_anim.py 的 FOOT 一样）
 // camp-life 的动作 → 拼图里的行名
 const ALIAS = { fly: 'walk', sleep: 'sleepA', sit: 'idle', soak: 'idle', sun: 'idle', play: 'idle', climb: 'idle', perch: 'idle', dislike: 'idle', away: 'idle', look: 'idle' }
 
@@ -57,4 +58,4 @@ function dirOf(dx, dy, current = 'side') {
   return 'side'
 }
 
-module.exports = { COLS, ROWS, SHEET_ROWS, frameFor, facingFor, dirOf, stackRow }
+module.exports = { COLS, ROWS, FOOT, SHEET_ROWS, frameFor, facingFor, dirOf, stackRow }

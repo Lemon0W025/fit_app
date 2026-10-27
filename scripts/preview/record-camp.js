@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -133,6 +133,11 @@ const SCENARIOS = {
   // 第 2 批的 17 件装饰和 8 只宠物：拉远看一大片（白天录早上 8 点，鹤鹤只在 5～9 点在）
   'decor2-day': { hour: 8, potLevel: 2, focus: [2250, 3150], scale: 0.85, seconds: 10, decor: DECOR_2, pets: PETS_2, plan: PLAN_2 },
   'decor2-night': { hour: 22, potLevel: 2, focus: [2250, 3150], scale: 0.85, seconds: 8, decor: DECOR_2, pets: PETS_2, plan: PLAN_2 },
+  // 橘团、茶茶侧面走路（第 4 批重画的走路）：拉近，在空草地上左右来回走
+  walks: {
+    hour: 10, potLevel: 2, focus: [2600, 3550], scale: 2.4, seconds: 10, pets: ['jutuan', 'chacha'],
+    plan: [[0, 0, 2250, 3450], [0, 1, 2250, 3700], [3500, 0, 3150, 3450], [3500, 1, 3150, 3700], [7000, 0, 2300, 3460], [7000, 1, 2300, 3710]],
+  },
   // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
   'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
@@ -238,6 +243,12 @@ async function record(name, sc, browser) {
       pet.style.zIndex = s.z
       pet.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
       pet.style.width = `${s.width}px`
+      // 影子先挪（有逐帧拼图的下面会提前 return，以前影子留在原地）
+      shadow.style.transitionDuration = `${s.duration}ms`
+      shadow.style.zIndex = s.z - 1
+      shadow.style.transform = `translate3d(${s.shadow.left}px, ${-s.shadow.bottom}px, 0)`
+      shadow.style.width = `${s.shadow.width}px`
+      shadow.style.height = `${s.shadow.height}px`
       const body = pet.querySelector('.pet-body')
       body.style.height = `${s.width}px`
       body.className = `wx-view pet-body ${s.flip ? 'flip' : ''}`
@@ -271,11 +282,6 @@ async function record(name, sc, browser) {
         imgs[1].style.opacity = s.moon
         imgs[1].style.transition = `filter ${s.duration}ms linear, opacity ${s.duration}ms linear`
       }
-      shadow.style.transitionDuration = `${s.duration}ms`
-      shadow.style.zIndex = s.z - 1
-      shadow.style.transform = `translate3d(${s.shadow.left}px, ${-s.shadow.bottom}px, 0)`
-      shadow.style.width = `${s.shadow.width}px`
-      shadow.style.height = `${s.shadow.height}px`
     }, { i, s })
   }
   // 初始：每只先瞬移到第一个计划点附近（不录这段）
