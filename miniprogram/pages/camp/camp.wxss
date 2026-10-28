@@ -364,17 +364,23 @@ button.btn-small {
 
 .bubble {
   position: absolute;
-  padding: 10rpx 20rpx;
+  display: flex;
+  align-items: center;
+  padding: 8rpx 18rpx 8rpx 8rpx;
   box-sizing: border-box;
   background: #fff;
   border-radius: 24rpx;
   font-size: 32rpx;
-  line-height: 1.4;
+  line-height: 1.35;
   color: #4a3f35;
-  text-align: center;
+  text-align: left;
   box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.18);
   z-index: 2;
 }
+/* 说话的是谁：左边它的头像，下面一个小尖角指着它（camp-life 的 tailLeft） */
+.bubble-face { flex-shrink: 0; width: 48rpx; height: 48rpx; margin-right: 8rpx; border-radius: 50%; background: #f6eedc; }
+.bubble-text { flex: 1; }
+.bubble-tail { position: absolute; bottom: -14rpx; width: 0; height: 0; margin-left: -12rpx; border-left: 12rpx solid transparent; border-right: 12rpx solid transparent; border-top: 16rpx solid #fff; }
 
 @keyframes float {
   0%,
@@ -675,6 +681,13 @@ button.btn-small {
    荡整数个来回，停的时候正好回到中间 */
 .pet-sway { position: relative; width: 100%; }
 .sway-on { animation: sway 1.6s infinite; will-change: transform; }
+/* 开口说话时蹦一下（看得出是谁在说） */
+.talk-on { animation: talk-hop 0.5s ease-out 1; }
+@keyframes talk-hop {
+  0% { transform: translateY(0); }
+  40% { transform: translateY(-14rpx); }
+  100% { transform: translateY(0); }
+}
 @keyframes sway {
   0% { transform: rotate(0deg); animation-timing-function: ease-out; }
   25% { transform: rotate(7deg); animation-timing-function: ease-in-out; }

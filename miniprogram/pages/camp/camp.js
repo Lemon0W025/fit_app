@@ -52,6 +52,7 @@ Page({
     lit: null,
     litFade: false,
     peekText: '',
+    hungryText: '',
     termText: '',
     mode: 'view',
     selectedName: '',
@@ -184,6 +185,7 @@ Page({
     // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
     if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
+    this.updateHungry()
     // 夜里火刚点着：小动物马上换成火光下的颜色（不等它下一步）
     if (this.life && !fresh && wasLit !== potLevel > 0) view.pets.concat(view.visitors || []).forEach((p) => this.life.refresh(p.id))
     if (!this.hourTimer) this.watchHour()
@@ -264,6 +266,12 @@ Page({
       cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
       fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
     })
+  },
+
+  // 锅空着出去找吃的那几只：提示条
+  updateHungry() {
+    const text = this.life ? V.hungryNote(this.life.hungryAway()) : ''
+    if (text !== this.data.hungryText) this.setData({ hungryText: text })
   },
 
   onDecorError() {
@@ -672,6 +680,7 @@ Page({
             this.loadSheets([cooked.visitor])
           }
           this.life.cook(cooked.eaters)
+          this.updateHungry()
         }
         const food = foodById(foodId)
         const names = cooked.eaters.map((id) => petById(id)).filter(Boolean).map((p) => p.name)

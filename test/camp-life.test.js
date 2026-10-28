@@ -20,7 +20,7 @@ function make(opts = {}) {
   const sprites = {}
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
-    visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || [],
+    visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || ['xiaomi'], // 默认锅里煮着东西（锅空着时不够亲的会走开，单独测）
     hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock: opts.clock || clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
     sways: opts.sways, today: opts.today,
@@ -760,23 +760,84 @@ test('水壶炉：叫两只来，各坐一边、面朝水壶，喝茶（低头�
   life.stop()
 })
 
-test('自己开口：隔十几二十秒有一只醒着的住户说一句（会聊今天打卡）；同时只有一个气泡；停了就不说', () => {
+test('自己开口：隔 45～90 秒有一只站着的住户说一句（会聊今天打卡），说的时候不走开、气泡带头像和指着它的尖角；停了就不说', () => {
   const today = { logged: 2, onTime: 2, allDone: false, allOnTime: false, open: '', streak: 5, kcal: 800, budget: 1240 }
   const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 1 }, { id: 'huahua', level: 1 }, { id: 'jutuan', level: 1 }], today: () => today, seed: 11 })
   life.start()
   const said = []
   let both = 0
-  for (let i = 0; i < 600; i++) {
+  for (let i = 0; i < 1200; i++) {
+    const before = Object.values(sprites).map((sp) => sp.bubble)
     clock.advance(1000)
     const bubbles = Object.values(sprites).filter((sp) => sp.bubble)
     if (bubbles.length > 1) both += 1
-    bubbles.forEach((sp) => {
-      if (said[said.length - 1] !== sp.bubble) said.push(sp.bubble)
+    Object.values(sprites).forEach((sp, k) => {
+      if (!sp.bubble || before[k] === sp.bubble) return
+      said.push(sp.bubble)
+      // 气泡：头像是它的，尖角在气泡里、指着它的中间
+      assert.ok(sp.face.endsWith(`${sp.id}-face.png`))
+      assert.ok(sp.tailLeft >= 16 && sp.tailLeft <= sp.bubbleWidth - 16)
+      assert.ok(Math.abs(sp.bubbleLeft + sp.tailLeft - sp.width / 2) < 1 || sp.tailLeft === 16 || sp.tailLeft === sp.bubbleWidth - 16)
     })
   }
-  assert.ok(said.length >= 12, `10 分钟只说了 ${said.length} 句`)
-  assert.ok(said.some((l) => /拍了 2 顿|800 千卡|5 天/.test(l)), said.join(' / '))
+  // 20 分钟：自己开口十几次（以前 15～28 秒一次太勤）
+  assert.ok(said.length >= 10 && said.length <= 40, `20 分钟说了 ${said.length} 句`)
+  assert.ok(said.some((l) => /2 顿|800|5 天|还能吃/.test(l)), said.join(' / '))
+  assert.ok(said.every((l) => l.length <= 16), said.filter((l) => l.length > 16).join(' / '))
   assert.ok(both < 20, '气泡叠在一起太多')
   life.stop()
   assert.equal(clock.count(), 0)
+})
+
+test('锅里空着：不到 3 级的出去找吃的（一开始就不在），3 级以上和最亲的那只留下来喊饿；一下锅，走掉的闻着香味回来先去锅边吃', () => {
+  const pot = []
+  const pets = [{ id: 'doudou', level: 1 }, { id: 'nuonuo', level: 3 }, { id: 'qiqi', level: 2 }, { id: 'shushu', level: 1 }]
+  const { life, clock, sprites } = make({ pets, pot, seed: 4 })
+  const where = () => life.whereIs()
+  // 进来时：糯糯（3 级）在，杞杞、豆豆、薯薯找吃的去了
+  assert.deepEqual(where().filter((w) => w.action !== 'away').map((w) => w.id), ['nuonuo'])
+  assert.ok(where().filter((w) => w.id !== 'nuonuo').every((w) => w.text === '锅里空空的，找吃的去了'))
+  life.start()
+  const hungry = []
+  for (let i = 0; i < 600; i++) {
+    clock.advance(1000)
+    if (sprites[1] && sprites[1].bubble && hungry[hungry.length - 1] !== sprites[1].bubble) hungry.push(sprites[1].bubble)
+  }
+  assert.ok(hungry.some((l) => /饿|咕咕|没吃的/.test(l)), `糯糯没喊饿：${hungry.join(' / ')}`)
+  assert.ok(where().filter((w) => w.id !== 'nuonuo').every((w) => w.action === 'away'))
+  // 下锅：陆续回来，说一句、去锅边吃
+  pot.push('xiaomi')
+  life.cook([])
+  const back = new Set()
+  for (let i = 0; i < 60; i++) {
+    clock.advance(500)
+    Object.values(sprites).forEach((sp) => {
+      if (!sp.hidden && sp.id !== 'nuonuo') back.add(sp.id)
+    })
+  }
+  assert.deepEqual([...back].sort(), ['doudou', 'qiqi', 'shushu'])
+  life.stop()
+  // 全是 1 级：最亲的（最先来的）那只留下来，营地不会空
+  const lonely = make({ pets: [{ id: 'doudou', level: 1 }, { id: 'qiqi', level: 1 }], pot: [], seed: 2 })
+  assert.deepEqual(lonely.life.whereIs().filter((w) => w.action !== 'away').map((w) => w.id), ['doudou'])
+})
+
+test('锅里空着的时候在场的会走开：说一句「找吃的」，走到营地边上藏起来', () => {
+  const pot = ['xiaomi']
+  const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 4 }, { id: 'qiqi', level: 1 }], pot, seed: 6 })
+  life.start()
+  clock.advance(3000)
+  assert.equal(sprites[1] ? sprites[1].hidden : false, false)
+  pot.length = 0 // 新的一天，锅空了
+  let left = false
+  let line = ''
+  for (let i = 0; i < 300 && !left; i++) {
+    clock.advance(500)
+    if (sprites[1] && sprites[1].bubble) line = sprites[1].bubble
+    left = !!(sprites[1] && sprites[1].hidden)
+  }
+  assert.ok(left, '杞杞没走开')
+  assert.ok(/找吃的/.test(line), line)
+  assert.equal(life.whereIs()[1].text, '锅里空空的，找吃的去了')
+  life.stop()
 })

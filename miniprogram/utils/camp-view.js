@@ -240,6 +240,13 @@ function potNote(pot) {
 }
 
 // 顶上的提示条：闻着香味来的客人，下次拍正餐住下
+// 锅空着，不够亲的出去找吃的了：提示放点吃的它们就回来
+function hungryNote(names) {
+  if (!names || !names.length) return ''
+  const who = names.length > 3 ? `${names.slice(0, 3).join('、')}它们` : names.join('、')
+  return `🍲 锅里空空的，${who}找吃的去了，放点吃的就回来`
+}
+
 function visitorNote(visitors) {
   const names = (visitors || []).map((v) => petById(v.id)).filter(Boolean).map((p) => p.name)
   return names.length ? `👀 ${names.join('、')}闻着香味来了…下次拍正餐就住下` : ''
@@ -311,5 +318,5 @@ function changedPaths(prefix, prev, next) {
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
-  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS,
+  frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
 }

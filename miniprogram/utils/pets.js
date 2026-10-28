@@ -26,6 +26,7 @@ function describe(state) {
     case 'sun': return '在晒太阳'
     case 'eat': return '在吃东西'
     case 'away': return '要清晨才来'
+    case 'hungry': return '锅里空空的，找吃的去了'
     case 'gift': return '叼着礼物找你'
     case 'perch': return d ? `站在${d}上` : '站在高处'
     default: return '在发呆'

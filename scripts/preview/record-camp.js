@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
@@ -193,6 +193,8 @@ const SCENARIOS = {
     plan: [],
     events: [[500, (life) => life.tap(0)], [5500, (life) => life.tap(1)], [10500, (life) => life.tap(2)], [15500, (life) => life.tap(3)], [20500, (life) => life.tap(0)]],
   },
+  // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
+  'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
@@ -470,14 +472,24 @@ async function record(name, sc, browser) {
           anchor = document.createElement('div')
           anchor.className = 'wx-view bubble-anchor'
           anchor.setAttribute('data-index', i)
-          anchor.appendChild(Object.assign(document.createElement('div'), { className: 'wx-view bubble' }))
+          const b = Object.assign(document.createElement('div'), { className: 'wx-view bubble' })
+          b.appendChild(Object.assign(document.createElement('img'), { className: 'wx-image bubble-face' }))
+          b.appendChild(Object.assign(document.createElement('span'), { className: 'wx-text bubble-text' }))
+          b.appendChild(Object.assign(document.createElement('div'), { className: 'wx-view bubble-tail' }))
+          anchor.appendChild(b)
           pet.parentNode.insertBefore(anchor, pet.nextSibling)
         }
         anchor.style.transitionDuration = `${s.duration}ms`
         anchor.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
         anchor.style.width = `${s.width}px`
         const bubble = anchor.querySelector('.bubble')
-        bubble.textContent = s.bubble
+        const face = bubble.querySelector('.bubble-face')
+        if (face) face.setAttribute('src', s.faceSrc)
+        const text = bubble.querySelector('.bubble-text')
+        if (text) text.textContent = s.bubble
+        else bubble.textContent = s.bubble
+        const tail = bubble.querySelector('.bubble-tail')
+        if (tail) tail.style.left = `${s.tailLeft}px`
         bubble.style.width = `${s.bubbleWidth}px`
         bubble.style.left = `${s.bubbleLeft}px`
         bubble.style.bottom = `${s.bubbleBottom}px`
@@ -485,7 +497,7 @@ async function record(name, sc, browser) {
       // 荡秋千：小家伙和秋千座位那层同时换上摆的动画（页面里是同一次 setData）
       const sway = pet.querySelector('.pet-sway')
       if (sway) {
-        sway.className = `wx-view pet-sway ${s.sway ? s.sway.cls : ''}`
+        sway.className = `wx-view pet-sway ${s.sway ? s.sway.cls : s.bubble ? 'talk-on' : ''}`
         sway.style.transformOrigin = s.sway ? `${s.sway.ox}px ${s.sway.oy}px` : '50% 100%'
       }
       document.querySelectorAll('.decor-seat').forEach((img) => {
@@ -540,7 +552,7 @@ async function record(name, sc, browser) {
       const j = JSON.stringify(now[i])
       if (j !== last[i]) {
         last[i] = j
-        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', swayOn: camp.data.swayOn || {} }
+        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', faceSrc: mapSrc(now[i].face), swayOn: camp.data.swayOn || {} }
         if (process.env.DEBUG_BUBBLE && s.bubble) console.log('bubble', i, s.bubble, Math.round(s.left), Math.round(s.bubbleLeft), Math.round(s.bubbleWidth), JSON.stringify(camp.visibleRange()))
         await apply(i, jump ? { ...s, duration: 0 } : s)
       }

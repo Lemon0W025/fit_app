@@ -31,12 +31,16 @@
           <view wx:if="{{!item.hidden}}" class="shadow" style="transform: translate3d({{item.shadow.left}}px, {{0 - item.shadow.bottom}}px, 0); width: {{item.shadow.width}}px; height: {{item.shadow.height}}px; z-index: {{item.z - 1}}; transition-duration: {{item.duration}}ms"></view>
           <!-- 说话的气泡单独一层、在所有东西上面（在宠物里面的话走到锅、帐篷后面会被挡住），跟着宠物一起挪 -->
           <view wx:if="{{!item.hidden && item.bubble}}" class="bubble-anchor" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; transition-duration: {{item.duration}}ms" data-index="{{index}}">
-            <view class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">{{item.bubble}}</view>
+            <view class="bubble" style="width: {{item.bubbleWidth}}px; left: {{item.bubbleLeft}}px; bottom: {{item.bubbleBottom}}px">
+              <image class="bubble-face" src="{{item.face}}" mode="aspectFill" />
+              <text class="bubble-text">{{item.bubble}}</text>
+              <view class="bubble-tail" style="left: {{item.tailLeft}}px"></view>
+            </view>
           </view>
           <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
-            <view class="pet-sway {{item.sway ? item.sway.cls : ''}}" style="transform-origin: {{item.sway ? item.sway.ox + 'px ' + item.sway.oy + 'px' : '50% 100%'}}">
+            <view class="pet-sway {{item.sway ? item.sway.cls : (item.bubble ? 'talk-on' : '')}}" style="transform-origin: {{item.sway ? item.sway.ox + 'px ' + item.sway.oy + 'px' : '50% 100%'}}">
             <view class="pet-body {{item.flip ? 'flip' : ''}}" style="height: {{item.width}}px">
               <view wx:if="{{item.sheet}}" class="anim-frame" style="width: {{item.width}}px; height: {{item.width}}px">
                 <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms; filter: {{item.light || 'none'}}; transition: filter {{item.duration}}ms linear" />
@@ -78,6 +82,7 @@
     <view class="hud-notes" style="top: {{hud.below + 50}}px">
       <view wx:if="{{termText}}" class="hud-note">🍂 {{termText}}</view>
       <view wx:if="{{peekText}}" class="hud-note hud-note-green">{{peekText}}</view>
+      <view wx:if="{{hungryText}}" class="hud-note">{{hungryText}}</view>
       <view wx:if="{{giftReady}}" class="hud-note hud-note-gold">🎁 有小动物叼着礼物来了，点它收下</view>
     </view>
 
