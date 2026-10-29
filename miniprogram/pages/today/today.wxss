@@ -156,3 +156,72 @@
   font-size: 30rpx;
   color: var(--primary);
 }
+
+/* 新手三步 */
+.guide {
+  border: 3rpx solid var(--primary);
+}
+
+.guide-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.guide-title {
+  flex: 1;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.guide-hide {
+  padding: 8rpx 12rpx;
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+.guide-step {
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  border-radius: 16rpx;
+  transition: transform 150ms;
+}
+
+.guide-mark {
+  flex-shrink: 0;
+  width: 52rpx;
+  height: 52rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--primary);
+  color: var(--primary);
+  font-size: 28rpx;
+  font-weight: 700;
+  line-height: 52rpx;
+  text-align: center;
+  box-sizing: content-box;
+}
+
+.guide-label {
+  flex: 1;
+  font-size: 34rpx;
+}
+
+.guide-go {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.guide-done .guide-mark {
+  background: var(--primary);
+  color: #fff;
+}
+
+.guide-done .guide-label {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+

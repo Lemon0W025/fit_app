@@ -6,6 +6,7 @@
 //   checkin-pick：点「这是哪一餐」的分段控制器（taps：[毫秒, 第几项]），组件的 JS 在 Node 里真的跑，胶囊的样子写进浏览器的 DOM
 //   meal-adjust：点米饭弹出改份量的抽屉，鼠标按住滑杆拖来拖去、再点快捷按钮；slider.wxs 在浏览器里真的跑（假的 owner 直接改 DOM 的样式）
 //   meal-adjusted：改过份量以后的结果页（「改过」「小暖原来估」）
+//   welcome / remind-first / today-guide / checkin-people / meal-people：新手指引、饭点提醒页、几个人一起吃（10/29）
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -47,9 +48,9 @@ const MEAL = {
 }
 // 按克数估的一顿（改份量的两个场景）
 const DISHES = [
-  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5 },
-  { name: '青椒肉丝', portion: '半盘', grams: 150, kcal: 210, protein: 14, carbs: 8, fat: 13.5 },
-  { name: '番茄蛋汤', portion: '一碗', grams: 250, kcal: 78, protein: 4.5, carbs: 5, fat: 4.2 },
+  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5, shared: false },
+  { name: '青椒肉丝', portion: '一盘', grams: 300, kcal: 420, protein: 28, carbs: 16, fat: 27, shared: true },
+  { name: '番茄蛋汤', portion: '一碗', grams: 250, kcal: 78, protein: 4.5, carbs: 5, fat: 4.2, shared: false },
 ]
 const GAIN = { beans: 20, beansToday: 35, hint: '下一顿晚饭 17:00～19:00 拍算准时', stamps: STAMPS(false), mealType: 'lunch', timing: 'on', allOnTime: false, milestone: null }
 const profileInput = { nickname: '妈妈', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' }
@@ -70,7 +71,7 @@ async function mealData(gain) {
 }
 
 // 真的打一顿卡（云函数假的），打开结果页；adjust：先按这些改份量；open：再点开第几道菜
-async function adjustData({ adjust = [], open = null } = {}) {
+async function adjustData({ adjust = [], open = null, share = 0 } = {}) {
   fixDate(T, '2026-10-22T12:10:00+08:00')
   const cloud = createFakeCloud({ replies: [analysisJson({ foods: DISHES, comment: '荤素搭配得好，米饭的量也合适。', suggestion: '晚饭多来点绿叶菜。' })] })
   const { main } = loadCloudFunction(cloud)
@@ -78,6 +79,7 @@ async function adjustData({ adjust = [], open = null } = {}) {
   const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', fileID: 'cloud://env/meals/a.jpg' } })
   const mealId = meal.data._id
   for (const req of adjust) await main({ action: 'meal.adjust', data: { mealId, ...req } })
+  if (share) await main({ action: 'meal.share', data: { mealId, people: share } })
   const wx = createWx(async (req) => {
     const res = await main(req)
     // 照片用包里的图（假的云函数里没有真的照片）
@@ -163,6 +165,25 @@ async function driveAdjust(page) {
   await page.waitForTimeout(900)
 }
 
+// 欢迎页：swiper 在渲染器里是普通 div，只显示第 n 张
+async function welcomeData(n) {
+  const page = loadPage('welcome', createWx(async () => ({ ok: true, data: null })))
+  page.onLoad()
+  page.setData({ current: n })
+  return { data: snap(page) }
+}
+const onlySlide = (n) => () => `<style>.wx-swiper-item{display:none}.wx-swiper-item:nth-child(${n + 1}){display:block;height:100%}.cards{display:flex}</style>`
+
+// 饭点提醒页（第一次进来）：有微信模板时的样子
+async function remindData() {
+  const res = { mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }, calendar: null, templateId: 'tmpl', notify: true, credits: 3 }
+  const page = loadPage('remind', createWx(async (req) => ({ ok: true, data: req.action === 'remind.get' ? res : null })))
+  page.onLoad({ first: '1' })
+  page.onShow()
+  await settle()
+  return { data: snap(page) }
+}
+
 async function todayData(when, meals) {
   const clock = fixDate(T, '2026-10-22T08:00:00+08:00')
   const cloud = createFakeCloud({ replies: meals.map(() => analysisJson({ totalKcal: 420 })) })
@@ -226,6 +247,34 @@ const SCENARIOS = {
     },
   },
   calendar: { page: 'forest', seconds: 3, build: calendarData },
+  welcome: { page: 'welcome', seconds: 1.5, build: () => welcomeData(0), script: onlySlide(0) },
+  'welcome-last': { page: 'welcome', seconds: 1.5, build: () => welcomeData(3), script: onlySlide(3) },
+  'remind-first': { page: 'remind', seconds: 1.5, build: remindData },
+  'today-guide': { page: 'today', tab: 'today', seconds: 2, build: () => todayData('10:00', []) },
+  'checkin-people': {
+    page: 'checkin',
+    seconds: 1.5,
+    build: async () => {
+      fixDate(T, '2026-10-22T18:10:00+08:00')
+      const page = loadPage('checkin', createWx(async () => ({ ok: true, data: null })))
+      page.onLoad({})
+      page.setPeople(5)
+      return { data: snap(page) }
+    },
+    drive: async (page) => {
+      await page.evaluate(() => document.querySelector('.people-chips').scrollIntoView({ block: 'center' }))
+      await page.waitForTimeout(1500)
+    },
+  },
+  'meal-people': {
+    page: 'meal',
+    seconds: 1.5,
+    build: () => adjustData({ share: 4 }),
+    drive: async (page) => {
+      await page.evaluate(() => document.querySelector('.big-kcal').scrollIntoView({ block: 'start' }))
+      await page.waitForTimeout(1500)
+    },
+  },
   'meal-adjust': { page: 'meal', seconds: 8, build: () => adjustData({ open: 0 }), script: sliderScript, drive: driveAdjust },
   'meal-adjusted': {
     page: 'meal',

@@ -104,13 +104,29 @@ Page({
     this.setData({ people, peopleChips: peopleChips(people) })
   },
 
+  // 开了微信提醒的：交给小暖之前顺手申请一次「允许」（要在点击里调；勾了「总是保持」就不弹），允许了攒一次提醒
   submit() {
-    const { photo, note, mealType, submitting, people } = this.data
+    const { photo, note, submitting } = this.data
     if (submitting) return
     if (!photo && !note.trim()) {
       wx.showToast({ title: '拍张照片或写几句吧', icon: 'none' })
       return
     }
+    const g = getApp().globalData
+    const id = g.remind && g.remind.notify ? g.remind.templateId : ''
+    if (!id || !wx.requestSubscribeMessage) return this.send()
+    wx.requestSubscribeMessage({
+      tmplIds: [id],
+      success: (res) => {
+        if (res[id] === 'accept') api.call('remind.subscribed', { accepted: true }).catch(() => {})
+      },
+      complete: () => this.send(),
+    })
+  },
+
+  send() {
+    const { photo, note, mealType, submitting, people } = this.data
+    if (submitting) return
 
     const hasPhoto = !!photo
     this.setData({ submitting: true, stage: photo ? '正在上传照片…' : '小暖正在看…', steps: analysisSteps(hasPhoto, 0) })

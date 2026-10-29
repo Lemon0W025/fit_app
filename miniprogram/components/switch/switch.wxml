@@ -1,0 +1,4 @@
+<view class="sw {{checked ? 'sw-on' : ''}} {{disabled ? 'sw-disabled' : ''}} {{pressed ? 'sw-press' : ''}}" bindtouchstart="onPress" bindtouchend="onRelease" bindtouchcancel="onRelease" bindtap="onTap">
+  <view class="sw-track"></view>
+  <view class="sw-knob"></view>
+</view>

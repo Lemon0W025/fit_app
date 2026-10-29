@@ -1,0 +1,21 @@
+<view class="welcome-page">
+  <view class="skip" wx:if="{{current < cards.length - 1}}" bindtap="skip">跳过</view>
+  <swiper class="cards" current="{{current}}" bindchange="onSwipe">
+    <swiper-item wx:for="{{cards}}" wx:key="title">
+      <view class="slide">
+        <image class="slide-image {{item.wide ? 'slide-image-wide' : ''}}" src="{{item.image}}" mode="aspectFit" />
+        <view class="slide-title">{{item.title}}</view>
+        <view class="slide-text">{{item.text}}</view>
+        <view wx:if="{{item.steps}}" class="steps">
+          <view wx:for="{{item.steps}}" wx:for-item="step" wx:for-index="i" wx:key="*this" class="step">
+            <text class="step-no">{{i + 1}}</text>{{step}}
+          </view>
+        </view>
+      </view>
+    </swiper-item>
+  </swiper>
+  <view class="dots">
+    <view wx:for="{{cards}}" wx:key="title" class="dot {{index === current ? 'dot-on' : ''}}"></view>
+  </view>
+  <button class="btn-primary btn-big go" bindtap="next">{{current === cards.length - 1 ? '开始' : '下一步'}}</button>
+</view>

@@ -115,6 +115,9 @@ function createWx(main) {
     getMenuButtonBoundingClientRect: () => ({ top: 24, bottom: 56, height: 32, left: 281, right: 368, width: 87 }),
     // 弹出的操作菜单默认选第 actionSheetChoice 项
     actionSheetChoice: 0,
+    openSetting() {
+      log.settings = (log.settings || 0) + 1
+    },
     showActionSheet(o) {
       log.actionSheets = (log.actionSheets || []).concat([o.itemList])
       if (o.success) o.success({ tapIndex: wx.actionSheetChoice })

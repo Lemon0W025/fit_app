@@ -1,0 +1,106 @@
+.welcome-page {
+  position: relative;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 40rpx calc(40rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+.skip {
+  position: absolute;
+  right: 32rpx;
+  top: 24rpx;
+  z-index: 2;
+  padding: 12rpx 20rpx;
+  font-size: 30rpx;
+  color: var(--muted);
+}
+
+.cards {
+  flex: 1;
+}
+
+.slide {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.slide-image {
+  width: 280rpx;
+  height: 280rpx;
+  margin-bottom: 48rpx;
+}
+
+.slide-image-wide {
+  width: 620rpx;
+  height: 410rpx;
+  border-radius: 24rpx;
+}
+
+.slide-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 24rpx;
+}
+
+.slide-text {
+  font-size: 34rpx;
+  line-height: 1.7;
+  color: var(--muted);
+  padding: 0 12rpx;
+}
+
+.steps {
+  margin-top: 32rpx;
+  text-align: left;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  margin: 16rpx 0;
+  font-size: 34rpx;
+}
+
+.step-no {
+  flex-shrink: 0;
+  width: 52rpx;
+  height: 52rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 30rpx;
+  line-height: 52rpx;
+  text-align: center;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  margin: 24rpx 0;
+}
+
+.dot {
+  width: 16rpx;
+  height: 16rpx;
+  margin: 0 10rpx;
+  border-radius: 8rpx;
+  background: #ddd5c8;
+  transition: transform 200ms, background-color 200ms;
+}
+
+.dot-on {
+  background: var(--primary);
+  transform: scaleX(1.8);
+}
+
+.go {
+  margin: 0;
+}

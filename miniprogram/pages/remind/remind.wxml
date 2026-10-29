@@ -1,0 +1,43 @@
+<view wx:if="{{loading}}" class="empty">加载中…</view>
+
+<view wx:if="{{view}}" class="page">
+  <view wx:if="{{first}}" class="intro fx-rise">最后一步：到了饭点提醒你拍照。家里人陪着一起设一下最好～</view>
+
+  <view class="card fx-rise fx-d1">
+    <view class="card-title">你的饭点</view>
+    <view class="times">
+      <view wx:for="{{view.times}}" wx:key="mealType" class="time">
+        <view class="time-word">{{item.word}}</view>
+        <view class="time-at">{{item.time}}</view>
+        <view class="time-window">{{item.window}}</view>
+      </view>
+    </view>
+    <view class="muted small times-tip">饭点前后 1 小时内拍，都算准时</view>
+    <view class="link" bindtap="editTimes">改饭点 ›</view>
+  </view>
+
+  <view class="card fx-rise fx-d2">
+    <view class="card-title">📅 手机闹钟</view>
+    <view class="muted text">在手机日历里加三个每天重复的提醒，到饭点手机会响，像闹钟一样。</view>
+    <view wx:if="{{view.calendarText}}" class="done">✓ {{view.calendarText}}</view>
+    <view wx:if="{{view.calendarStale}}" class="warn">饭点改过了：手机日历里还有旧的闹钟，要到日历里手动删掉，再点下面加新的。</view>
+    <button class="btn-primary" bindtap="addCalendar" disabled="{{working}}">{{view.calendarButton}}</button>
+  </view>
+
+  <view wx:if="{{view.wechat}}" class="card fx-rise fx-d3">
+    <view class="row">
+      <view class="row-text">
+        <view class="card-title row-title">💬 微信提醒</view>
+        <view class="text">快过饭点还没拍，用微信提醒我</view>
+      </view>
+      <switch-bar checked="{{view.notify}}" disabled="{{working}}" bindchange="toggleNotify" />
+    </view>
+    <view wx:if="{{view.notify}}" class="credits">{{view.creditsText}}</view>
+    <view class="muted small help">微信规定：每点一次「允许」只能提醒一次。每次拍照打卡会顺手攒一次；第一次弹出来时勾上「总是保持以上选择，不再询问」再点「允许」，以后就不用管了。</view>
+  </view>
+
+  <block wx:if="{{first}}">
+    <button class="btn-primary btn-big" bindtap="done">设好了，去拍第一顿 ›</button>
+    <view class="link link-muted later" bindtap="done">以后再说</view>
+  </block>
+</view>

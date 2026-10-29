@@ -59,3 +59,25 @@
   font-weight: 700;
   color: var(--primary);
 }
+
+/* 饭点提醒入口 */
+.remind-entry {
+  display: flex;
+  align-items: center;
+}
+
+.remind-entry-body {
+  flex: 1;
+}
+
+.remind-entry-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 6rpx;
+}
+
+.remind-entry-arrow {
+  font-size: 40rpx;
+  color: var(--gray);
+}
+

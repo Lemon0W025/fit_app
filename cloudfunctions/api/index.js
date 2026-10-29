@@ -15,6 +15,7 @@ const { createDayService } = require('./services/day')
 const { createWeightService } = require('./services/weight')
 const { createForestService } = require('./services/forest')
 const { createCampService } = require('./services/camp')
+const { createRemindService } = require('./services/remind')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -24,20 +25,25 @@ const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, lo
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
 const camp = createCampService({ repo, now, forest, getGrant: () => config.testGrant, getTestPets: () => config.testPets, getTestVisitors: () => config.testVisitors, getTestUnlimited: () => config.testUnlimited })
+// 微信服务通知（一次性订阅消息）：config.remindTemplate 填了模板 ID 才会发
+const remind = createRemindService({ repo, now, config, send: (msg) => cloud.openapi.subscribeMessage.send(msg), log })
 
 const route = createRouter(
   {
     profile: createProfileService({ repo, now }),
     meal: createMealService({ repo, chat, config, getImageUrl, deleteFile, now, forest, camp, log }),
-    day: createDayService({ repo, chat, config, now, forest, log }),
+    day: createDayService({ repo, chat, config, now, forest, remind, log }),
     weight: createWeightService({ repo, now }),
     forest,
     camp,
+    remind,
   },
   { log },
 )
 
 exports.main = async (event) => {
+  // 定时触发器（config.json 的 remind，每 10 分钟）：没有 OPENID，不走路由
+  if (event && event.Type === 'Timer') return remind.tick()
   const { OPENID } = cloud.getWXContext()
   return route(event, OPENID)
 }

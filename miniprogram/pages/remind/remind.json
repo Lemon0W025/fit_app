@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "饭点提醒",
+  "usingComponents": {
+    "switch-bar": "/components/switch/switch"
+  }
+}

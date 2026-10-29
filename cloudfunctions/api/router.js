@@ -25,6 +25,10 @@ const ROUTES = {
   'camp.stash': ['camp', 'stash'],
   'camp.gift': ['camp', 'gift'],
   'camp.album': ['camp', 'album'],
+  'remind.get': ['remind', 'get'],
+  'remind.subscribed': ['remind', 'subscribed'],
+  'remind.setNotify': ['remind', 'setNotify'],
+  'remind.calendarDone': ['remind', 'calendarDone'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

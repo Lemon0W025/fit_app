@@ -4,6 +4,19 @@
   <block wx:if="{{view}}">
     <view class="greeting fx-rise">{{greeting}}</view>
 
+    <!-- 新手三步：做完了就不显示 -->
+    <view wx:if="{{guide}}" class="card guide fx-rise">
+      <view class="guide-head">
+        <text class="guide-title">{{guide.title}}</text>
+        <text class="guide-hide" bindtap="hideGuide">不用了</text>
+      </view>
+      <view wx:for="{{guide.steps}}" wx:key="key" class="guide-step {{item.done ? 'guide-done' : ''}}" hover-class="{{item.done ? '' : 'fx-press'}}" data-action="{{item.action}}" bindtap="guideStep">
+        <view class="guide-mark">{{item.done ? '✓' : index + 1}}</view>
+        <text class="guide-label">{{item.label}}</text>
+        <text wx:if="{{!item.done}}" class="guide-go">去做 ›</text>
+      </view>
+    </view>
+
     <view wx:if="{{card}}" class="fx-rise fx-d1">
       <view class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
         <view class="next-title">{{card.title}}</view>

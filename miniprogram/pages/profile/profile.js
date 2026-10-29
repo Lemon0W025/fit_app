@@ -92,6 +92,10 @@ Page({
     this.update('mealTimes', { ...this.data.form.mealTimes, [mealType]: value })
   },
 
+  goRemind() {
+    wx.navigateTo({ url: '/pages/remind/remind' })
+  },
+
   save() {
     if (this.data.saving) return
     this.setData({ saving: true })
@@ -103,7 +107,8 @@ Page({
         getApp().globalData.mealTimes = mealTimesOf(profile)
         this.setData({ saving: false, isNew: false, form, previewKcal: profile.dailyKcal, mealRows: mealRows(form) })
         wx.showToast({ title: '保存好了', icon: 'success' })
-        if (wasNew) setTimeout(() => wx.switchTab({ url: '/pages/today/today' }), 800)
+        // 第一次建档：接着设饭点提醒（新手三步的第二步），那页底下「设好了，去拍第一顿」
+        if (wasNew) setTimeout(() => wx.navigateTo({ url: '/pages/remind/remind?first=1' }), 800)
       })
       .catch((err) => {
         this.setData({ saving: false })

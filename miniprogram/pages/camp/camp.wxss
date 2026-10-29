@@ -793,3 +793,31 @@ button.btn-small {
   60% { opacity: 0.38; transform: translateY(-22%) scale(1, 1) skewX(-4deg); }
   100% { opacity: 0; transform: translateY(-55%) scale(1.25, 1.2) skewX(4deg); }
 }
+
+/* 第一次进营地：三步大字 */
+.welcome-steps {
+  margin: 16rpx 0 8rpx;
+  text-align: left;
+}
+
+.welcome-step {
+  display: flex;
+  align-items: center;
+  margin: 14rpx 0;
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.welcome-no {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 16rpx;
+  border-radius: 50%;
+  background: var(--primary, #4e7d5b);
+  color: #fff;
+  font-size: 26rpx;
+  line-height: 44rpx;
+  text-align: center;
+}
+

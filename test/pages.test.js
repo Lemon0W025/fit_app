@@ -10,7 +10,7 @@ const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
 const { fixDate } = require('./helpers/fixed-date')
 
-const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile']
+const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile', 'remind', 'welcome']
 
 test('app.json 里的页面文件和 tabBar 图标都存在', () => {
   const fs = require('node:fs')
@@ -117,9 +117,18 @@ test('完整使用流程：建档 → 打卡 → 详情 → 重新分析 → 删
   const { main } = loadCloudFunction(cloud)
   const wx = createWx(main)
 
-  // 1. 第一次打开：今日页发现没有档案，跳去建档
+  // 1. 第一次打开：今日页发现没有档案，先看欢迎页，点「开始」去建档
   const today = loadPage('today', wx)
   today.clock = manualClock()
+  today.onShow()
+  await settle()
+  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/welcome/welcome'])
+  const welcome = loadPage('welcome', wx)
+  welcome.onLoad()
+  welcome.skip()
+  welcome.next()
+  assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/profile/profile'])
+  // 这次打开已经看过欢迎页：没建档直接去建档
   today.onShow()
   await settle()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/profile/profile'])

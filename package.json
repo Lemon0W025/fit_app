@@ -8,7 +8,8 @@
     "wx:function": "node scripts/wechat.js function",
     "wx:preview": "node scripts/wechat.js preview",
     "wx:upload": "node scripts/wechat.js upload",
-    "wx:art": "node scripts/wechat.js art"
+    "wx:art": "node scripts/wechat.js art",
+    "wx:trigger": "node scripts/wechat.js trigger"
   },
   "engines": {
     "node": ">=18"

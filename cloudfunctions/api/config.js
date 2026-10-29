@@ -18,6 +18,14 @@ module.exports = {
   //   'base64'：把图片内容直接塞进请求（模型拿不到链接时改用这个）
   imageMode: 'url',
 
+  // 饭点提醒的微信服务通知（一次性订阅消息）：小程序后台「功能 → 订阅消息」选一个「用餐提醒 / 打卡提醒」类公共模板后填：
+  //   id：模板 ID；state：'trial'（体验版，给妈妈用的就是体验版）/ 'developer' / 'formal'；
+  //   fields：我们的几样说法填到模板的哪个字段（模板详情里的 thing1、time2……）：
+  //     meal「午饭还没拍哦」、mealTime「2026-10-29 12:00」（time / date 类字段用这个）、tip「13:00 前拍还算准时」、name「小暖养生」
+  //   例：{ id: 'xxxx', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
+  // 填好后 npm run wx:function、npm run wx:trigger（建每 10 分钟的定时触发器）。null 时小程序里不显示微信提醒，只有手机日历闹钟
+  remindTemplate: null,
+
   // 测试福利：until 这天（含）之前打开庭院的账号，各送一次 beans 暖豆（id 换了可以再送一次）。
   // 只给开发测试用，上传体验版给家人之前改成 null
   testGrant: { id: 'preview-1', beans: 5000, until: '2026-10-26' },

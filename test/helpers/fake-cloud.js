@@ -22,7 +22,7 @@ function deepMerge(target, source) {
   return out
 }
 
-// 查询指令：只实现用到的 gte / lte / and
+// 查询指令：只实现用到的 gt / gte / lte / and
 const OP = Symbol('command.op')
 
 function makeOp(test) {
@@ -72,6 +72,7 @@ function createFakeDb() {
     collections,
     command: {
       set: (value) => ({ [SET]: true, value }),
+      gt: (x) => makeOp((v) => v > x),
       gte: (x) => makeOp((v) => v >= x),
       lte: (x) => makeOp((v) => v <= x),
     },
@@ -122,6 +123,9 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
   const queue = [...replies]
   const aiCalls = []
   const deletedFiles = []
+  // 发出去的订阅消息；sendError 设了就按它抛（{ errCode: 43101 } 之类）
+  const messages = []
+  let sendError = null
   return {
     DYNAMIC_CURRENT_ENV: Symbol('DYNAMIC_CURRENT_ENV'),
     init() {},
@@ -148,9 +152,22 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
       deletedFiles.push(...fileList)
       return { fileList: [] }
     },
+    openapi: {
+      subscribeMessage: {
+        async send(msg) {
+          if (sendError) throw sendError
+          messages.push(clone(msg))
+          return { errCode: 0 }
+        },
+      },
+    },
     db,
     aiCalls,
     deletedFiles,
+    messages,
+    failSend(err) {
+      sendError = err
+    },
     setOpenid(id) {
       openid = id
     },
@@ -163,6 +180,7 @@ require('../../cloudfunctions/api/config').testGrant = null
 require('../../cloudfunctions/api/config').testPets = null
 require('../../cloudfunctions/api/config').testVisitors = null
 require('../../cloudfunctions/api/config').testUnlimited = null
+require('../../cloudfunctions/api/config').remindTemplate = null
 
 function loadCloudFunction(fakeCloud) {
   const indexPath = path.join(__dirname, '../../cloudfunctions/api/index.js')

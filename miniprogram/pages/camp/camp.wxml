@@ -191,7 +191,12 @@
     <view class="welcome" catchtap="noop">
       <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
       <view class="welcome-title">欢迎来到暖暖营地！</view>
-      <view class="welcome-text">豆豆已经在篝火边等你了。送你 {{welcome.beans}} 暖豆：每天好好吃饭打卡攒暖豆，扭蛋抽食物放进锅里煮，爱吃的小动物闻着香味就来，下次拍正餐就住下；每次打卡都算喂它们一顿，越喂越亲～</view>
+      <view class="welcome-text">豆豆已经在篝火边等你了，送你 {{welcome.beans}} 暖豆。营地这样玩：</view>
+      <view class="welcome-steps">
+        <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，在背包里拖进锅里煮上</view>
+        <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，下次拍正餐就住下</view>
+        <view class="welcome-step"><text class="welcome-no">3</text>点小动物，它会跟你说话；暖豆还能买家具</view>
+      </view>
       <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
       <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
     </view>

@@ -177,11 +177,18 @@
 }
 
 .people-chips {
-  gap: 12rpx;
+  flex-wrap: nowrap;
+  gap: 10rpx;
 }
 
+/* 六个排一行，一样宽 */
 .people-chips .chip {
-  padding: 14rpx 26rpx;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 16rpx 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 30rpx;
 }
 
 /* 改份量的抽屉 */

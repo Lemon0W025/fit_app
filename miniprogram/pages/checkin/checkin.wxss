@@ -186,12 +186,18 @@
 
 /* 几个人一起吃 */
 .people-chips {
-  gap: 12rpx;
+  flex-wrap: nowrap;
+  gap: 10rpx;
 }
 
+/* 六个排一行，一样宽 */
 .people-chips .chip {
-  padding: 16rpx 28rpx;
-  font-size: 32rpx;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 16rpx 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 30rpx;
 }
 
 .people-tip {

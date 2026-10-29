@@ -82,7 +82,15 @@
     <view class="muted small">已经留出健康减重的空间，不会让你饿着。以后记体重时会自动调整。</view>
   </view>
 
-  <button class="btn-primary btn-big" bindtap="save" loading="{{saving}}" disabled="{{saving}}">{{isNew ? '开始打卡' : '保存'}}</button>
+  <button class="btn-primary btn-big" bindtap="save" loading="{{saving}}" disabled="{{saving}}">{{isNew ? '下一步：设饭点提醒' : '保存'}}</button>
+
+  <view wx:if="{{!isNew}}" class="card remind-entry" hover-class="fx-press" bindtap="goRemind">
+    <view class="remind-entry-body">
+      <view class="remind-entry-title">⏰ 饭点提醒</view>
+      <view class="muted small">手机闹钟、微信提醒，到点提醒你拍照</view>
+    </view>
+    <text class="remind-entry-arrow">›</text>
+  </view>
 
   <view class="disclaimer">小暖的建议仅供日常参考，不能替代医生。如有糖尿病、高血压等慢性病，或正在孕期、哺乳期，请先咨询医生再控制饮食。</view>
 </view>

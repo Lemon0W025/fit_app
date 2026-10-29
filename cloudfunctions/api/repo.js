@@ -4,6 +4,8 @@
 const MEALS_PER_DAY_LIMIT = 100
 // 一个月最多 31 天，每天几顿，1000 条足够（也是服务端单次查询上限）
 const MEALS_PER_RANGE_LIMIT = 1000
+// 定时触发器一次看多少人（家人自用，几个人而已）
+const REMINDERS_LIMIT = 100
 
 function isMissingCollection(e) {
   const msg = String((e && (e.errMsg || e.message)) || '')
@@ -98,6 +100,24 @@ function createRepo(db) {
     },
     async savePortions(openid, items) {
       await setDoc('portions', openid, { _openid: openid, items, updatedAt: Date.now() })
+    },
+
+    // 饭点提醒：{ notify, credits, sent, calendar }
+    getReminders(openid) {
+      return findOne('reminders', { _id: openid })
+    },
+    async saveReminders(openid, doc) {
+      await setDoc('reminders', openid, { ...doc, _openid: openid })
+    },
+    // 开了微信提醒、还有次数的（定时触发器挨个看）
+    async listReminders() {
+      const res = await withCollection('reminders', (c) => c.where({ notify: true, credits: _.gt(0) }).limit(REMINDERS_LIMIT).get())
+      return res.data
+    },
+    // 拍过没有（新手三步）
+    async hasAnyMeal(openid) {
+      const res = await withCollection('meals', (c) => c.where({ _openid: openid }).limit(1).get())
+      return res.data.length > 0
     },
 
     async saveWeight(openid, date, weightKg) {

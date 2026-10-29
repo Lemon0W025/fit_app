@@ -4,7 +4,16 @@ const { buildSummaryMessages } = require('../lib/prompts')
 const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey, isDateKey } = require('../lib/shared/date')
 
-function createDayService({ repo, chat, config, now, forest, log = () => {} }) {
+function createDayService({ repo, chat, config, now, forest, remind = null, log = () => {} }) {
+  // 新手三步（设过提醒没有、拍过没有，今天拍过就不用再查）和提醒的状态
+  async function remindOf(openid, meals) {
+    const [status, meal] = await Promise.all([
+      remind ? remind.status(openid) : { set: false, notify: false, templateId: '' },
+      meals.length ? true : repo.hasAnyMeal(openid),
+    ])
+    return { guide: { remind: status.set, meal }, remind: { templateId: status.templateId, notify: status.notify } }
+  }
+
   function resolveDate(input) {
     const date = (input || {}).date
     if (date === undefined || date === null || date === '') return dateKey(now())
@@ -31,6 +40,8 @@ function createDayService({ repo, chat, config, now, forest, log = () => {} }) {
         remainingKcal: dailyKcal == null ? null : dailyKcal - totals.kcal,
         summary,
         daily: await forest.today(openid, date, meals, profile),
+        // guide：新手三步；remind：微信提醒的模板和开没开（开了的话打卡页提交时顺手申请一次「允许」）
+        ...(profile ? await remindOf(openid, meals) : { guide: null, remind: null }),
       }
     },
 

@@ -9,6 +9,7 @@
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
+//   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器（饭点提醒每 10 分钟看一次；填了 remindTemplate 再建）
 //   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base-vN/、decor-vN/、anim-vN/、cut-vN/
 
 const fs = require('fs')
@@ -66,8 +67,8 @@ function loadCi() {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2)
-  if (!['function', 'preview', 'upload', 'art'].includes(command)) {
-    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述] | art')
+  if (!['function', 'preview', 'upload', 'art', 'trigger'].includes(command)) {
+    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述] | art | trigger')
   }
 
   const ci = loadCi()
@@ -143,6 +144,16 @@ async function main() {
       throw e
     }
     console.log(`✓ 云函数已部署：${res.filesCount} 个文件，${res.packSize} 字节`)
+    return
+  }
+
+  if (command === 'trigger') {
+    const env = envId()
+    const { triggers } = JSON.parse(fs.readFileSync(path.join(ROOT, 'cloudfunctions/api/config.json'), 'utf8'))
+    if (!triggers || !triggers.length) fail('cloudfunctions/api/config.json 里没有 triggers')
+    console.log(`给云函数 api 建定时触发器（${triggers.map((t) => `${t.name} ${t.config}`).join('、')}）→ 环境 ${env}…`)
+    const res = await ci.cloud.createTimeTrigger({ project, envId: env, functionName: 'api', triggersConfig: triggers })
+    console.log(`✓ ${res}`)
     return
   }
 

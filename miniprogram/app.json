@@ -9,7 +9,9 @@
     "pages/gacha/gacha",
     "pages/shop/shop",
     "pages/album/album",
-    "pages/forest/forest"
+    "pages/forest/forest",
+    "pages/remind/remind",
+    "pages/welcome/welcome"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F6F1E7",
