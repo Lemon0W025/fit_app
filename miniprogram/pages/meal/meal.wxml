@@ -32,6 +32,7 @@
     <block wx:if="{{meal.status === 'done'}}">
       <view class="big-kcal">{{meal.kcalText}}</view>
       <view wx:if="{{meal.mode === 'text'}}" class="muted small">（根据文字描述估算）</view>
+      <view wx:if="{{peopleText}}" class="adjusted-note">{{peopleText}}</view>
       <view wx:if="{{meal.adjustedText}}" class="adjusted-note">{{meal.adjustedText}}</view>
       <view wx:if="{{meal.analysis.isFood}}" class="macros">
         <view class="macro">
@@ -57,6 +58,13 @@
   <view wx:if="{{meal.dishes.length}}" class="card fx-rise fx-d3">
     <view class="card-title">吃了哪些</view>
     <view class="dish-hint">估得不对？点一道菜，拖一拖改份量</view>
+    <!-- 和家里人一起吃的：点人数，大家夹的菜按人数分 -->
+    <view class="people">
+      <view class="people-title">几个人一起吃？</view>
+      <view class="chips people-chips">
+        <view wx:for="{{peopleChips}}" wx:key="label" class="chip {{item.on ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPeople">{{item.label}}</view>
+      </view>
+    </view>
     <view wx:for="{{meal.dishes}}" wx:key="index" class="dish" hover-class="dish-press" hover-stay-time="100" data-index="{{item.index}}" bindtap="openDish">
       <view class="dish-main">
         <view class="dish-name">{{item.name}}<text wx:if="{{item.adjusted}}" class="dish-tag">改过</text></view>
@@ -95,6 +103,10 @@
       <slider-bar min="{{adjust.min}}" max="{{adjust.max}}" step="{{adjust.step}}" value="{{adjust.value}}" unit="{{adjust.unit}}" prefix="{{adjust.prefix}}" bindchanging="onPortionSliding" bindchange="onPortionSlide" />
       <view class="chips adj-chips">
         <view wx:for="{{adjust.chips}}" wx:key="label" class="chip {{item.value === adjust.value ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPortion">{{item.label}}</view>
+      </view>
+      <view class="adj-parts-title">一整份（一盘、一锅）里我吃了：</view>
+      <view class="chips adj-chips">
+        <view wx:for="{{adjust.parts}}" wx:key="label" class="chip {{item.value === adjust.value ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPortion">{{item.label}}</view>
       </view>
       <view class="adj-actions">
         <button class="btn-plain adj-remove" bindtap="removeDish" disabled="{{working}}">这道没吃</button>

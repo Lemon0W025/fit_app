@@ -60,6 +60,8 @@ function parseMealAnalysis(text) {
       grams: Math.round(num(f.grams, MAX_DISH_GRAMS)),
       kcal: Math.round(num(f.kcal, MAX_FOOD_KCAL)),
       ...dishMacros(f),
+      // 大家一起夹的（一盘、一锅）true，单独盛给她的（一碗饭）false；没说就不记（当成大家夹的）
+      ...(typeof f.shared === 'boolean' ? { shared: f.shared } : {}),
     }))
   // 总数由程序按菜加总（AI 自己加常常对不上）；菜的热量全是 0（只给了总数）或没有菜时才用 AI 的总数
   const foodsKcal = foods.reduce((sum, f) => sum + f.kcal, 0)

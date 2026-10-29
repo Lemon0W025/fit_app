@@ -136,3 +136,61 @@ test('打卡页：拍照框里四条小贴士', () => {
   assert.deepEqual(page.data.photoTips.map((x) => x.text), ['从斜上方拍，像坐着看饭桌', '所有菜都拍进去', '旁边放双筷子或勺子', '吃之前拍'])
   assert.match(readWxml('checkin'), /wx:for="\{\{photoTips\}\}"/)
 })
+
+// ---------------------------------------------------------------- 几个人一起吃
+
+const HOTPOT = [
+  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, shared: false },
+  { name: '火锅', portion: '一锅', grams: 1500, kcal: 1500, shared: true },
+]
+
+test('打卡页「几个人一起吃？」：默认就我；点 5 人、更多选 8 人；交给小暖时带着人数', async (t) => {
+  fixDate(t, '2026-10-22T18:10:00+08:00')
+  const cloud = createFakeCloud({ replies: [analysisJson({ foods: HOTPOT })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: PROFILE })
+  const wx = createWx(main)
+  const page = loadPage('checkin', wx)
+  page.onLoad({})
+  assert.equal(page.data.people, 1)
+  assert.equal(page.data.peopleChips.find((c) => c.on).label, '就我')
+  page.pickPeople(event({ value: 5 }))
+  assert.equal(page.data.people, 5)
+  wx.actionSheetChoice = 2
+  page.pickPeople(event({ value: 'more' }))
+  assert.equal(page.data.people, 8)
+  assert.equal(page.data.peopleChips.slice(-1)[0].label, '8 人')
+  page.pickPeople(event({ value: 5 }))
+  page.onNote(event({}, { value: '火锅' }))
+  page.submit()
+  await settle()
+  const mealId = wx.log.nav.pop()[1].split('id=')[1]
+  const meal = await main({ action: 'meal.get', data: { mealId } })
+  assert.equal(meal.data.people, 5)
+  assert.match(JSON.stringify(cloud.aiCalls[0].messages), /5 个人一起吃/)
+  assert.match(readWxml('checkin'), /bindtap="pickPeople"/)
+})
+
+test('结果页改人数：火锅按 5 个人分、米饭不动，热量滚到新数，写「5 个人一起吃，算的是你那一份」；点火锅的抽屉里「全部」是整锅', async (t) => {
+  const { page, wx } = await openMeal(t, [analysisJson({ foods: HOTPOT })])
+  assert.equal(page.data.peopleChips.find((c) => c.on).value, 1)
+  page.pickPeople(event({ value: 5 }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.people, 5)
+  assert.equal(page.data.meal.kcalText, '约 474 千卡')
+  assert.equal(page.data.peopleText, '5 个人一起吃，算的是你那一份')
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.sub), ['一碗 · 约 150 克', '一锅 · 你那份约 300 克'])
+  assert.equal(wx.log.toasts.pop(), '按 5 个人算好了')
+  page.openDish(event({ index: 1 }))
+  assert.equal(page.data.adjust.parts[0].value, 1500)
+  page.pickPortion(event({ value: page.data.adjust.parts[4].value }))
+  assert.equal(page.data.adjust.preview, '约 300 克 · 300 千卡')
+  // 改回就我：回到原来的
+  page.closeAdjust()
+  page.pickPeople(event({ value: 1 }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.kcalText, '约 1674 千卡')
+  assert.equal(page.data.peopleText, '')
+})

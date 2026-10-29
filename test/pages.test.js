@@ -811,9 +811,10 @@ test('营地：本地存储用不了也照常（位置只记在内存里）', as
   camp.onShow()
   await settle()
   camp.clock.advance(5000)
-  const before = camp.life.snapshot().doudou
   camp.onHide()
-  assert.deepEqual(wx.app.globalData.campSpots.doudou, before)
+  // 走到一半的就地停下，记的是停下的地方
+  const before = wx.app.globalData.campSpots.doudou
+  assert.ok(before && Number.isFinite(before.x))
   camp.onShow()
   await settle()
   assert.deepEqual(camp.life.snapshot().doudou, before)

@@ -108,7 +108,7 @@ test('打卡消息：带上拍照时间和准不准时', () => {
 test('打卡消息：要每道菜的克数和营养素，按碗盘筷子估克数，她家常用份量优先', () => {
   const [system] = buildMealMessages({ profile, mealType: 'lunch', note: '', imageUrl: 'https://x/y.jpg', consumedKcal: 0 })
   assert.match(system.content, /"grams"/)
-  assert.match(system.content, /"foods": \[\{"name": "米饭", "portion": "一碗", "grams": 150, "kcal": 174, "protein": 3\.9, "carbs": 38\.9, "fat": 0\.5\}/)
+  assert.match(system.content, /"foods": \[\{"name": "米饭", "portion": "一碗", "grams": 150, "kcal": 174, "protein": 3\.9, "carbs": 38\.9, "fat": 0\.5, "shared": false\}/)
   assert.match(system.content, /按碗、盘、筷子的大小估克数/)
   assert.match(system.content, /她家常用份量/)
 })
@@ -128,4 +128,14 @@ test('打卡消息：她改过的份量写进去（最近 8 样，按改的先�
   assert.doesNotMatch(none, /她家常用份量/)
   const empty = text(buildMealMessages({ profile, mealType: 'dinner', note: '一碗饭', imageUrl: null, consumedKcal: 0, portions: {} }))
   assert.doesNotMatch(empty, /她家常用份量/)
+})
+
+test('打卡消息：几个人一起吃时告诉小暖按人数算她那一份；每道菜标 shared；一个人不写', () => {
+  const [system] = buildMealMessages({ profile, mealType: 'dinner', note: '', imageUrl: 'https://x/y.jpg', consumedKcal: 0 })
+  assert.match(system.content, /shared/)
+  assert.match(system.content, /大家夹的菜先估整盘整锅，再按人数平分/)
+  const text = (msgs) => msgs[msgs.length - 1].content
+  const five = text(buildMealMessages({ profile, mealType: 'dinner', note: '火锅', imageUrl: null, consumedKcal: 0, people: 5 }))
+  assert.match(five, /【几个人一起吃】5 个人一起吃这一顿，大家夹的菜按 5 份算她那一份/)
+  assert.doesNotMatch(text(buildMealMessages({ profile, mealType: 'dinner', note: '火锅', imageUrl: null, consumedKcal: 0, people: 1 })), /几个人一起吃/)
 })

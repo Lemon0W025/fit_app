@@ -183,3 +183,20 @@
   color: var(--primary);
   font-weight: 700;
 }
+
+/* 几个人一起吃 */
+.people-chips {
+  gap: 12rpx;
+}
+
+.people-chips .chip {
+  padding: 16rpx 28rpx;
+  font-size: 32rpx;
+}
+
+.people-tip {
+  margin: 12rpx 8rpx 0;
+  font-size: 28rpx;
+  color: var(--primary);
+}
+

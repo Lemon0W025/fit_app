@@ -16,6 +16,7 @@ const FACTOR_MAX = 5
 const DISH_KCAL_MAX = 5000
 const DISH_MACRO_MAX = 500
 const PORTIONS_KEEP = 12
+const PEOPLE_MAX = 20 // 几个人一起吃：最多几个人
 const MACROS = ['protein', 'carbs', 'fat']
 
 function text(v, max) {
@@ -71,6 +72,7 @@ function dishScale(dish, src) {
 // 这道菜按比例缩放：热量、营养素（有的话）都乘 ratio
 function scaleDish(dish, { grams, ratio }) {
   const next = { ...dish, kcal: Math.round(Math.min(DISH_KCAL_MAX, dish.kcal * ratio)), adjusted: true }
+  delete next.base // 她自己改的为准，之后按人数分从这儿算
   if (grams > 0) next.grams = grams
   MACROS.forEach((k) => {
     if (typeof dish[k] === 'number') next[k] = round1(Math.min(DISH_MACRO_MAX, dish[k] * ratio))
@@ -90,6 +92,53 @@ function totalsAfter(a, dish, next) {
     else out[k] = a.totalKcal > 0 ? round1((old * totalKcal) / a.totalKcal) : old
   })
   return out
+}
+
+// 大家夹的一道菜按人数分：每次都从第一次分之前的样子（base：那时的克数、热量、营养素和人数）算，
+// 改来改去、改回原来的人数不会越算越偏；她单独改过这道菜（adjust）就以她改的为准（base 去掉）
+function shareDish(dish, before, people) {
+  const base = dish.base || { grams: dish.grams || 0, kcal: dish.kcal, people: before, ...pickMacros(dish) }
+  const next = { ...dish }
+  delete next.base
+  if (people === base.people) {
+    next.kcal = base.kcal
+    if (base.grams > 0) next.grams = base.grams
+    MACROS.forEach((k) => {
+      if (typeof base[k] === 'number') next[k] = base[k]
+    })
+    return next
+  }
+  const ratio = base.people / people
+  next.kcal = Math.round(Math.min(DISH_KCAL_MAX, base.kcal * ratio))
+  if (base.grams > 0) next.grams = Math.min(GRAMS_MAX, Math.max(GRAMS_MIN, Math.round(base.grams * ratio)))
+  MACROS.forEach((k) => {
+    if (typeof base[k] === 'number') next[k] = round1(Math.min(DISH_MACRO_MAX, base[k] * ratio))
+  })
+  next.base = base
+  return next
+}
+
+function pickMacros(dish) {
+  const out = {}
+  MACROS.forEach((k) => {
+    if (typeof dish[k] === 'number') out[k] = dish[k]
+  })
+  return out
+}
+
+// 几个人一起吃：1～20 的整数，不对就当一个人
+function peopleOf(v) {
+  const n = Number(v)
+  return Number.isInteger(n) && n >= 1 && n <= PEOPLE_MAX ? n : 1
+}
+
+// 第一次改份量 / 人数：把 AI 原来的菜单和总热量存下（结果页「小暖原来估 N 千卡」）
+function withAiOriginal(a) {
+  return {
+    adjusted: true,
+    aiFoods: a.aiFoods || a.foods || [],
+    aiTotalKcal: typeof a.aiTotalKcal === 'number' ? a.aiTotalKcal : a.totalKcal,
+  }
 }
 
 // 菜名当字段名存：去掉数据库字段路径里有特殊含义的 . 和 $
@@ -145,8 +194,8 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
   }
 
   // 先看图；看图不可用或失败时，有文字描述就按描述估算；都不行就记为失败，留给用户补描述后重试
-  async function runAnalysis({ profile, mealType, note, fileID, consumed, timing, at, times, portions }) {
-    const base = { profile, mealType, note, consumedKcal: consumed, timing, at, times, portions }
+  async function runAnalysis({ profile, mealType, note, fileID, consumed, timing, at, times, portions, people }) {
+    const base = { profile, mealType, note, consumedKcal: consumed, timing, at, times, portions, people }
 
     if (fileID && config.visionModel) {
       try {
@@ -192,7 +241,8 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const timing = timingFor(src.mealType, at, times)
       const meals = await repo.listMeals(openid, date)
       const portions = await portionsOf(openid)
-      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals), timing, at, times, portions })
+      const people = peopleOf(src.people)
+      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals), timing, at, times, portions, people })
 
       const meal = {
         _openid: openid,
@@ -201,6 +251,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         timing,
         fileID,
         note,
+        people,
         ...result,
         createdAt: at.getTime(),
         updatedAt: at.getTime(),
@@ -237,6 +288,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         at: new Date(meal.createdAt),
         times,
         portions: await portionsOf(openid),
+        people: peopleOf(meal.people),
       })
       // 已经有结果的打卡，重试失败时不要把好结果覆盖掉
       if (result.status === 'failed' && meal.status === 'done') {
@@ -281,13 +333,37 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         ...a,
         foods: nextFoods,
         ...totalsAfter(a, dish, next),
-        adjusted: true,
-        aiFoods: a.aiFoods || foods,
-        aiTotalKcal: typeof a.aiTotalKcal === 'number' ? a.aiTotalKcal : a.totalKcal,
+        ...withAiOriginal(a),
       }
       const patch = { analysis, updatedAt: now().getTime() }
       await repo.updateMeal(meal._id, patch)
       if (next) await rememberPortion(openid, next)
+      return { ...meal, ...patch }
+    },
+
+    // 几个人一起吃（结果页改人数）：{ mealId, people }。大家夹的菜（shared 不是 false）按 原来人数 / 新人数 缩放
+    // （她单独改过的份量也按比例留着），单独盛给她的不动；总数按每道菜的变化量加减。评级、点评、暖豆不变
+    async share(openid, input) {
+      const src = input || {}
+      const meal = await requireMeal(openid, src.mealId)
+      const a = meal.analysis
+      if (meal.status !== 'done' || !a || a.isFood === false) throw new AppError(CODES.BAD_REQUEST, '这顿还没算好，先不能改人数')
+      const people = src.people
+      if (typeof people !== 'number' || !Number.isInteger(people) || people < 1 || people > PEOPLE_MAX) {
+        throw new AppError(CODES.BAD_REQUEST, `人数要在 1～${PEOPLE_MAX} 之间`)
+      }
+      const before = peopleOf(meal.people)
+      if (people === before) return meal
+      let totals = { totalKcal: a.totalKcal, protein: a.protein, carbs: a.carbs, fat: a.fat }
+      const foods = (a.foods || []).map((dish) => {
+        if (dish.shared === false) return dish
+        const next = shareDish(dish, before, people)
+        totals = totalsAfter({ ...a, ...totals }, dish, next)
+        return next
+      })
+      const analysis = { ...a, foods, ...totals, ...withAiOriginal(a) }
+      const patch = { people, analysis, updatedAt: now().getTime() }
+      await repo.updateMeal(meal._id, patch)
       return { ...meal, ...patch }
     },
 

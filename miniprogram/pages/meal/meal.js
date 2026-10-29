@@ -2,7 +2,7 @@ const api = require('../../utils/api')
 const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
-const { adjustView, adjustRequest, previewText } = require('../../utils/portion')
+const { adjustView, adjustRequest, previewText, peopleChips, peopleText, PEOPLE_MORE } = require('../../utils/portion')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
 const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
@@ -24,6 +24,9 @@ Page({
     // 改份量的抽屉（utils/portion.js 的 adjustView）
     adjust: null,
     adjustShow: false,
+    // 几个人一起吃
+    peopleChips: peopleChips(1),
+    peopleText: '',
   },
 
   onLoad(options) {
@@ -45,7 +48,7 @@ Page({
   },
 
   showMeal(meal) {
-    this.setData({ loading: false, meal: decorateMeal(meal), note: meal.note || '' })
+    this.setData({ loading: false, meal: decorateMeal(meal), note: meal.note || '', ...this.peopleView(meal) })
     if (this.freshGain) {
       const raw = this.freshGain
       this.freshGain = null
@@ -124,7 +127,7 @@ Page({
     const dish = (a.foods || [])[index]
     if (!dish) return
     this.dish = dish
-    const adjust = adjustView(dish, index)
+    const adjust = adjustView(dish, index, this.data.meal.people || 1)
     this.portionValue = adjust.value
     this.setData({ adjust, adjustShow: true })
   },
@@ -171,14 +174,19 @@ Page({
   },
 
   sendAdjust(req, toast) {
+    this.update('meal.adjust', { index: this.data.adjust.index, ...req }, toast)
+  },
+
+  // 改份量、改人数：存好后热量从原来的滚到新的
+  update(action, data, toast) {
     if (this.data.working) return
     const from = this.data.meal.analysis.totalKcal
     this.setData({ working: true })
-    api.call('meal.adjust', { mealId: this.mealId, index: this.data.adjust.index, ...req })
+    api.call(action, { mealId: this.mealId, ...data })
       .then((meal) => {
         const view = decorateMeal(meal)
         const to = meal.analysis.totalKcal
-        this.setData({ working: false, adjustShow: false, meal: { ...view, kcalText: `约 ${from} 千卡` } })
+        this.setData({ working: false, adjustShow: false, meal: { ...view, kcalText: `约 ${from} 千卡` }, ...this.peopleView(meal) })
         const c = countUp(from, to, ADJUST_KCAL_MS, (n) => this.setData({ 'meal.kcalText': `约 ${n} 千卡` }), clockOf(this))
         this.counters = (this.counters || []).concat(c)
         wx.showToast({ title: toast, icon: 'success' })
@@ -187,6 +195,31 @@ Page({
         this.setData({ working: false })
         api.showError(err)
       })
+  },
+
+  // ---------------------------------------------------------------- 几个人一起吃
+
+  peopleView(meal) {
+    const people = meal.people || 1
+    return { peopleChips: peopleChips(people), peopleText: peopleText(people) }
+  },
+
+  // 点「就我 / 2 人 / … / 更多」：大家夹的菜按人数分（meal.share）
+  pickPeople(e) {
+    const value = e.currentTarget.dataset.value
+    if (value === 'more') {
+      wx.showActionSheet({
+        itemList: PEOPLE_MORE.map((n) => `${n} 个人`),
+        success: (res) => this.setPeople(PEOPLE_MORE[res.tapIndex]),
+      })
+      return
+    }
+    this.setPeople(Number(value))
+  },
+
+  setPeople(people) {
+    if (!people || people === (this.data.meal.people || 1)) return
+    this.update('meal.share', { people }, people > 1 ? `按 ${people} 个人算好了` : '按一个人算好了')
   },
 
   previewPhoto() {

@@ -10,15 +10,20 @@ const { milestoneLine } = require('./milestone-lines')
 // 还没建档时进度条用的兜底预算
 const FALLBACK_DAILY_KCAL = 1500
 
-// 结果页每道菜一行：「米饭」+「一碗 · 约 150 克」+「174 千卡」；改过的带「改过」
-function dishRows(foods) {
-  return (foods || []).map((f, index) => ({
-    index,
-    name: f.name,
-    sub: [f.portion, f.grams > 0 ? `约 ${f.grams} 克` : ''].filter(Boolean).join(' · '),
-    kcalText: `${f.kcal} 千卡`,
-    adjusted: !!f.adjusted,
-  }))
+// 结果页每道菜一行：「米饭」+「一碗 · 约 150 克」+「174 千卡」；改过的带「改过」。
+// 几个人一起吃时大家夹的菜写「一锅 · 你那份约 300 克」
+function dishRows(foods, people = 1) {
+  return (foods || []).map((f, index) => {
+    const mine = people > 1 && f.shared !== false
+    const grams = f.grams > 0 ? `${mine ? '你那份' : ''}约 ${f.grams} 克` : mine ? '你那份' : ''
+    return {
+      index,
+      name: f.name,
+      sub: [f.portion, grams].filter(Boolean).join(' · '),
+      kcalText: `${f.kcal} 千卡`,
+      adjusted: !!f.adjusted,
+    }
+  })
 }
 
 function decorateMeal(meal) {
@@ -40,7 +45,7 @@ function decorateMeal(meal) {
       kcalText: `约 ${a.totalKcal} 千卡`,
       commentText: a.comment || '',
       // 结果页能点一道菜改份量
-      dishes: dishRows(a.foods),
+      dishes: dishRows(a.foods, meal.people || 1),
       adjustedText: a.adjusted && typeof a.aiTotalKcal === 'number' ? `份量按你说的改过（小暖原来估 ${a.aiTotalKcal} 千卡）` : '',
     })
   }

@@ -163,6 +163,27 @@
   color: var(--gray);
 }
 
+/* 几个人一起吃 */
+.people {
+  margin: 4rpx 0 12rpx;
+  padding: 16rpx 0 20rpx;
+  border-bottom: 2rpx solid var(--line);
+}
+
+.people-title {
+  margin-bottom: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.people-chips {
+  gap: 12rpx;
+}
+
+.people-chips .chip {
+  padding: 14rpx 26rpx;
+}
+
 /* 改份量的抽屉 */
 .adj-preview {
   margin-top: 8rpx;
@@ -185,6 +206,12 @@
   padding: 16rpx 0;
   text-align: center;
   white-space: nowrap;
+}
+
+.adj-parts-title {
+  margin: 24rpx 0 12rpx;
+  font-size: 28rpx;
+  color: var(--muted);
 }
 
 .adj-actions {

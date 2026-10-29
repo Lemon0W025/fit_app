@@ -20,6 +20,12 @@
     </view>
   </view>
 
+  <view class="section-title">几个人一起吃？</view>
+  <view class="chips people-chips">
+    <view wx:for="{{peopleChips}}" wx:key="label" class="chip {{item.on ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPeople">{{item.label}}</view>
+  </view>
+  <view wx:if="{{people > 1}}" class="people-tip">一盘一锅大家夹的菜，小暖按 {{people}} 份算你那一份</view>
+
   <view class="section-title">想跟小暖说点什么（选填）</view>
   <!-- textarea 是原生组件，提交时换成普通文字，避免盖住加载层 -->
   <textarea wx:if="{{!submitting}}" class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：米饭只吃了半碗。没拍照的话，直接写吃了什么也行" />

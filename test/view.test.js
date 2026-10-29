@@ -51,6 +51,9 @@ test('decorateMeal：每道菜一行（份量 · 克数、热量、改过没有�
   assert.deepEqual(a.dishes[0], { index: 0, name: '米饭', sub: '一碗 · 约 110 克', kcalText: '128 千卡', adjusted: true })
   assert.equal(a.dishes[1].sub, '半盘 · 约 120 克')
   assert.equal(a.adjustedText, '份量按你说的改过（小暖原来估 244 千卡）')
+  // 几个人一起吃：大家夹的写「你那份」，自己那碗不写
+  const shared = decorateMeal(done({ people: 5, analysis: { isFood: true, foods: [{ name: '火锅', portion: '一锅', grams: 300, kcal: 300, shared: true }, { name: '米饭', portion: '一碗', grams: 150, kcal: 174, shared: false }], totalKcal: 474, rating: 'green' } }))
+  assert.deepEqual(shared.dishes.map((d) => d.sub), ['一锅 · 你那份约 300 克', '一碗 · 约 150 克'])
 })
 
 test('decorateMeal：失败的打卡', () => {
