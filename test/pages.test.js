@@ -674,11 +674,11 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), null)
   camp.cancel()
 
-  // 切走再回来：小动物都在原地（记在本地存储里）
+  // 切走再回来：小动物都在原地（走到一半的就地停下，记在本地存储里）
   camp.clock.advance(3000)
-  const where = camp.life.snapshot()
   camp.onHide()
-  assert.deepEqual(Object.keys(wx.storage.campSpots).sort(), ['doudou', guest].sort())
+  const where = wx.storage.campSpots
+  assert.deepEqual(Object.keys(where).sort(), ['doudou', guest].sort())
   wx.app.globalData.campSpots = null // 重开小程序：内存里的没了，读本地存储
   camp.onShow()
   await settle()

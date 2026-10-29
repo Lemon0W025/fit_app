@@ -488,9 +488,26 @@ function createLife({
     const ms = Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000)
     a.duration = next.piece ? Math.max(16, ms) : Math.max(300, ms)
     a.depthY = (a.y + next.y) / 2
-    a.x = next.x
-    a.y = next.y
+    moveTo(a, next)
     return next
+  }
+
+  // 这一小段从哪儿、什么时候出发、走多久（a.duration 要先设好）：离开营地时按它算出走到哪儿了（freeze），
+  // 不然记下的是终点、回来接着滑过去
+  function moveTo(a, to) {
+    a.seg = { x: a.x, y: a.y, t0: now(), ms: a.duration }
+    a.x = to.x
+    a.y = to.y
+  }
+
+  // 正在走这一小段（还没走完）
+  const moving = (a) => !!a.seg && a.seg.ms > 0 && now() - a.seg.t0 < a.seg.ms
+
+  // 这会儿在屏幕上实际走到哪儿了（这一小段按时间线性插值，和 CSS 的 linear 过渡一样）
+  function whereNow(a) {
+    if (!moving(a)) return { x: a.x, y: a.y }
+    const t = Math.max(0, (now() - a.seg.t0) / a.seg.ms)
+    return { x: a.seg.x + (a.x - a.seg.x) * t, y: a.seg.y + (a.y - a.seg.y) * t }
   }
 
   function stepAlong(a) {
@@ -837,9 +854,8 @@ function createLife({
     a.action = action
     a.emoji = ''
     a.sway = null
-    a.x = to.x
-    a.y = to.y
     a.duration = ms
+    moveTo(a, to)
     a.depthY = depthY
     a.next = (b) => {
       b.duration = 0
@@ -1251,7 +1267,26 @@ function createLife({
       return a.index
     },
 
-    // 离开营地时记下各自在哪（走到一半的记这一小段的终点）、朝哪边、睡没睡（睡到几点）
+    // 离开营地（切 tab）前：走到一半的就地停下（按出发时间算出这会儿走到哪儿、不带过渡挪过去、站着），
+    // 不然屏幕上那段走路的过渡还没走完、记下的又是终点，回来时它们会不迈腿地一路滑过去（10/29 用户：切回营地全都在漂移）
+    freeze() {
+      animals.forEach((a) => {
+        if (a.hidden || !moving(a)) return
+        const at = whereNow(a)
+        a.x = at.x
+        a.y = at.y
+        a.seg = null
+        a.duration = 0
+        a.depthY = null
+        a.next = null
+        if (a.goal && a.goal.path) a.goal = null
+        if (['walk', 'fly', 'gift', 'slide', 'climb'].indexOf(a.action) !== -1) a.action = 'idle'
+        if (a.holdGift && a.action === 'idle') a.action = 'gift'
+        emit(a)
+      })
+    },
+
+    // 离开营地时记下各自在哪（先 freeze，走到一半的就是停下的地方）、朝哪边、睡没睡（睡到几点）
     snapshot() {
       const out = {}
       animals.forEach((a) => {

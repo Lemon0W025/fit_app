@@ -879,3 +879,39 @@ test('锅里空着的时候在场的会走开：说一句「找吃的」，走�
   assert.equal(life.whereIs()[1].text, '锅里空空的，找吃的去了')
   life.stop()
 })
+
+test('离开营地前 freeze：走到一半的就地停下（按出发时间算出这会儿在哪、不带过渡、站着），记下的就是那儿；回来不滑（10/29 切回营地全在漂移）', () => {
+  const { life, clock, sprites } = make({ seed: 3 })
+  life.start()
+  // 等到有一只正在走、刚走了一部分
+  let i = -1
+  for (let n = 0; n < 600 && i === -1; n++) {
+    clock.advance(100)
+    const hit = Object.entries(sprites).find(([, sp]) => sp && sp.action === 'walk' && sp.duration > 1500)
+    i = hit ? Number(hit[0]) : -1
+  }
+  assert.ok(i !== -1, '没等到走路的')
+  const before = life.whereIs()[i]
+  const to = { left: sprites[i].left, bottom: sprites[i].bottom }
+  clock.advance(500)
+  life.freeze()
+  const sp = sprites[i]
+  assert.equal(sp.duration, 0, '停下不带过渡')
+  assert.notEqual(sp.action, 'walk')
+  const at = life.whereIs()[i]
+  // 停在出发点和终点之间（不是终点）
+  assert.ok(Math.abs(sp.left - to.left) > 0.5 || Math.abs(sp.bottom - to.bottom) > 0.5, '停在了终点')
+  const saved = life.snapshot()
+  assert.ok(Math.abs(saved[at.id].x - at.x) < 1e-6 && Math.abs(saved[at.id].y - at.y) < 1e-6)
+  assert.ok(before)
+  life.stop()
+  // 回来：站在停下的地方
+  const back = make({ saved, seed: 3 })
+  const w = back.life.whereIs().find((x) => x.id === at.id)
+  assert.ok(Math.hypot(w.x - at.x, w.y - at.y) < 1, `回来不在停下的地方：${JSON.stringify(w)} vs ${JSON.stringify(at)}`)
+  // 站着的、睡着的不动
+  const still = make({ seed: 5 })
+  const pos = still.life.sprites().map((p) => [p.left, p.bottom])
+  still.life.freeze()
+  assert.deepEqual(still.life.sprites().map((p) => [p.left, p.bottom]), pos)
+})

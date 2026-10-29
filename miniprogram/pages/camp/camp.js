@@ -378,6 +378,7 @@ Page({
   // 离开营地（切 tab、关页面、重新进来前）记下小动物各自在哪，回来从原地接着来；本地存储失败就只记在内存里
   stopLife() {
     if (this.life) {
+      this.life.freeze()
       this.saveSpots(this.life.snapshot())
       this.life.stop()
     }
