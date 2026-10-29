@@ -8,6 +8,7 @@ const ROUTES = {
   'meal.reanalyze': ['meal', 'reanalyze'],
   'meal.get': ['meal', 'get'],
   'meal.delete': ['meal', 'remove'],
+  'meal.adjust': ['meal', 'adjust'],
   'day.get': ['day', 'get'],
   'summary.generate': ['day', 'summarize'],
   'weight.save': ['weight', 'save'],

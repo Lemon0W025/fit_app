@@ -104,3 +104,28 @@ test('打卡消息：带上拍照时间和准不准时', () => {
   const none = buildMealMessages({ profile, mealType: 'lunch', note: 'x', imageUrl: null, consumedKcal: 0 })
   assert.doesNotMatch(none[1].content, /拍照时间/)
 })
+
+test('打卡消息：要每道菜的克数和营养素，按碗盘筷子估克数，她家常用份量优先', () => {
+  const [system] = buildMealMessages({ profile, mealType: 'lunch', note: '', imageUrl: 'https://x/y.jpg', consumedKcal: 0 })
+  assert.match(system.content, /"grams"/)
+  assert.match(system.content, /"foods": \[\{"name": "米饭", "portion": "一碗", "grams": 150, "kcal": 174, "protein": 3\.9, "carbs": 38\.9, "fat": 0\.5\}/)
+  assert.match(system.content, /按碗、盘、筷子的大小估克数/)
+  assert.match(system.content, /她家常用份量/)
+})
+
+test('打卡消息：她改过的份量写进去（最近 8 样，按改的先后），没有就不写', () => {
+  const items = {}
+  for (let i = 0; i < 10; i++) items[`菜${i}`] = { grams: 100 + i, at: 1000 + i }
+  items['米饭'] = { grams: 110, at: 5000 }
+  const text = (msgs) => msgs[msgs.length - 1].content
+  const withPortions = text(buildMealMessages({ profile, mealType: 'dinner', note: '一碗饭', imageUrl: null, consumedKcal: 0, portions: items }))
+  const line = withPortions.split('\n').find((l) => l.startsWith('【她家常用份量】'))
+  assert.ok(line, '有【她家常用份量】这一行')
+  assert.match(line, /^【她家常用份量】她自己改过的：米饭一般吃约 110 克；菜9一般吃约 109 克；/)
+  assert.equal((line.match(/一般吃约/g) || []).length, 8)
+  assert.doesNotMatch(line, /菜2一般/)
+  const none = text(buildMealMessages({ profile, mealType: 'dinner', note: '一碗饭', imageUrl: null, consumedKcal: 0 }))
+  assert.doesNotMatch(none, /她家常用份量/)
+  const empty = text(buildMealMessages({ profile, mealType: 'dinner', note: '一碗饭', imageUrl: null, consumedKcal: 0, portions: {} }))
+  assert.doesNotMatch(empty, /她家常用份量/)
+})

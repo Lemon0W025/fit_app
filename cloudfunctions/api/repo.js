@@ -91,6 +91,15 @@ function createRepo(db) {
       await setDoc('gardens', openid, { ...garden, _openid: openid })
     },
 
+    // 她家常用份量（结果页改过克数的菜）：{ 菜名: { grams, at } }
+    async getPortions(openid) {
+      const doc = await findOne('portions', { _id: openid })
+      return (doc && doc.items) || {}
+    },
+    async savePortions(openid, items) {
+      await setDoc('portions', openid, { _openid: openid, items, updatedAt: Date.now() })
+    },
+
     async saveWeight(openid, date, weightKg) {
       await setDoc('weights', `${openid}_${date}`, { _openid: openid, date, weightKg, updatedAt: Date.now() })
     },

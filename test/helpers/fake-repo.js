@@ -11,6 +11,7 @@ function createFakeRepo() {
     summaries: new Map(),
     weights: new Map(),
     gardens: new Map(),
+    portions: new Map(),
     seq: 0,
   }
 
@@ -68,6 +69,13 @@ function createFakeRepo() {
       state.gardens.set(openid, clone(garden))
     },
 
+    async getPortions(openid) {
+      return clone(state.portions.get(openid)) || {}
+    },
+    async savePortions(openid, items) {
+      state.portions.set(openid, clone(items))
+    },
+
     async saveWeight(openid, date, weightKg) {
       state.weights.set(`${openid}_${date}`, { _openid: openid, date, weightKg })
     },
@@ -122,7 +130,11 @@ const CONFIG = {
   imageMode: 'url',
 }
 
+// 只给 totalKcal 时就是一道这么多千卡的菜（总热量现在按菜加总）
 function analysisJson(overrides = {}) {
+  if (overrides.totalKcal !== undefined && overrides.foods === undefined) {
+    overrides = { ...overrides, foods: [{ name: '米饭', portion: '一碗', kcal: overrides.totalKcal }] }
+  }
   return JSON.stringify({
     isFood: true,
     foods: [{ name: '米饭', portion: '一碗', kcal: 230 }],

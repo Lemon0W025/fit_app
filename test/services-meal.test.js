@@ -61,7 +61,7 @@ test('analyze：有照片时调用视觉模型并保存', async () => {
 })
 
 test('analyze：视觉失败但有备注时退回文字分析', async () => {
-  const { chat, service, logs } = setup({ results: [new Error('vision down'), analysisJson({ totalKcal: 400 })] })
+  const { chat, service, logs } = setup({ results: [new Error('vision down'), analysisJson({ foods: [{ name: '面条', portion: '一碗', kcal: 400 }] })] })
   const meal = await service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'dinner', note: '一碗面' })
   assert.equal(meal.status, 'done')
   assert.equal(meal.mode, 'text')
@@ -313,4 +313,138 @@ test('analyze 正餐：这顿让连续打卡到 3 天，gain 带 milestone；重
   assert.deepEqual(meal.gain.milestone, { days: 3, times: 1, tier: 'bronze', glow: false, petId: '' })
   const again = await service.reanalyze('u1', { mealId: meal._id, note: '米饭半碗' })
   assert.equal(again.gain.milestone, null)
+})
+
+// ---------------------------------------------------------------- 改份量（meal.adjust）
+
+// 米饭 150 克 174 千卡 + 红烧肉 100 克 400 千卡，每道菜都有营养素
+const GRAMS_MEAL = {
+  foods: [
+    { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5 },
+    { name: '红烧肉', portion: '六块', grams: 100, kcal: 400, protein: 12, carbs: 6, fat: 36 },
+  ],
+}
+
+async function gramsMeal(results = [analysisJson(GRAMS_MEAL)], mealType = 'lunch') {
+  const ctx = setup({ results })
+  const meal = await ctx.service.analyze('u1', { fileID: 'cloud://a.jpg', mealType, note: '' })
+  return { ...ctx, meal }
+}
+
+test('analyze：按菜加总的热量和营养素存下来', async () => {
+  const { meal } = await gramsMeal()
+  assert.equal(meal.analysis.totalKcal, 574)
+  assert.deepEqual([meal.analysis.protein, meal.analysis.carbs, meal.analysis.fat], [15.9, 44.9, 36.5])
+  assert.equal(meal.analysis.foods[0].grams, 150)
+})
+
+test('adjust：按克数改一道菜，热量和营养素按比例缩放、总数重算，存下 AI 原来的，评级点评不变', async () => {
+  const { repo, service, meal } = await gramsMeal()
+  const out = await service.adjust('u1', { mealId: meal._id, index: 0, grams: 75 })
+  const a = out.analysis
+  assert.deepEqual(a.foods[0], { name: '米饭', portion: '一碗', grams: 75, kcal: 87, protein: 2, carbs: 19.5, fat: 0.3, adjusted: true })
+  assert.deepEqual(a.foods[1], GRAMS_MEAL.foods[1])
+  assert.equal(a.totalKcal, 487)
+  assert.deepEqual([a.protein, a.carbs, a.fat], [14, 25.5, 36.3])
+  assert.equal(a.adjusted, true)
+  assert.equal(a.aiTotalKcal, 574)
+  assert.deepEqual(a.aiFoods, meal.analysis.foods)
+  assert.equal(a.rating, meal.analysis.rating)
+  assert.equal(a.comment, meal.analysis.comment)
+  assert.deepEqual((await repo.getMeal('u1', meal._id)).analysis, a)
+
+  // 再改一次：AI 原来的还是第一次的
+  const again = await service.adjust('u1', { mealId: meal._id, index: 1, factor: 0.5 })
+  assert.equal(again.analysis.foods[1].grams, 50)
+  assert.equal(again.analysis.foods[1].kcal, 200)
+  assert.equal(again.analysis.totalKcal, 287)
+  assert.equal(again.analysis.aiTotalKcal, 574)
+  assert.deepEqual(again.analysis.aiFoods, meal.analysis.foods)
+})
+
+test('adjust：删掉一道菜，总数减掉它；只剩一道时不能删', async () => {
+  const { service, meal } = await gramsMeal()
+  const out = await service.adjust('u1', { mealId: meal._id, index: 1, remove: true })
+  assert.deepEqual(out.analysis.foods.map((f) => f.name), ['米饭'])
+  assert.equal(out.analysis.totalKcal, 174)
+  assert.deepEqual([out.analysis.protein, out.analysis.carbs, out.analysis.fat], [3.9, 38.9, 0.5])
+  await assert.rejects(service.adjust('u1', { mealId: meal._id, index: 0, remove: true }), { code: 'BAD_REQUEST', message: /删掉整条打卡/ })
+})
+
+test('adjust：不改暖豆、不调 AI', async () => {
+  const { repo, chat, service, meal } = await gramsMeal()
+  const before = await repo.getGarden('u1')
+  await service.adjust('u1', { mealId: meal._id, index: 0, grams: 300 })
+  assert.equal(chat.calls.length, 1)
+  assert.deepEqual(await repo.getGarden('u1'), before)
+})
+
+test('adjust：老打卡没有克数和每道菜的营养素，只能按比例改或删，总营养素按总热量的比例缩放', async () => {
+  const { repo, service, meal } = await gramsMeal([analysisJson({
+    foods: [{ name: '米饭', portion: '一碗', kcal: 200 }, { name: '炒菜', portion: '一盘', kcal: 300 }],
+    totalKcal: 520, protein: 20, carbs: 60, fat: 20,
+  })])
+  // parse 现在按菜加总；模拟以前存下的老打卡（总数是 AI 给的，不等于菜之和）
+  const old = { ...meal.analysis, totalKcal: 520, protein: 20, carbs: 60, fat: 20, foods: meal.analysis.foods.map(({ grams, ...f }) => f) }
+  await repo.updateMeal(meal._id, { analysis: old })
+  await assert.rejects(service.adjust('u1', { mealId: meal._id, index: 0, grams: 100 }), { code: 'BAD_REQUEST', message: /按比例/ })
+  const out = await service.adjust('u1', { mealId: meal._id, index: 0, factor: 0.5 })
+  assert.deepEqual(out.analysis.foods[0], { name: '米饭', portion: '一碗', kcal: 100, adjusted: true })
+  // 总数按这道菜的变化量减：520 - 100（别的菜的那部分不动）
+  assert.equal(out.analysis.totalKcal, 420)
+  assert.deepEqual([out.analysis.protein, out.analysis.carbs, out.analysis.fat], [16.2, 48.5, 16.2])
+})
+
+test('adjust：参数不对 BAD_REQUEST；没分析好、不是食物、别人的打卡都不能改', async () => {
+  const { service, meal } = await gramsMeal()
+  const bad = [
+    { mealId: meal._id, index: 2, grams: 100 },
+    { mealId: meal._id, index: -1, grams: 100 },
+    { mealId: meal._id, index: '0', grams: 100 },
+    { mealId: meal._id, index: 0, grams: 0 },
+    { mealId: meal._id, index: 0, grams: 3001 },
+    { mealId: meal._id, index: 0, grams: 'abc' },
+    { mealId: meal._id, index: 0, factor: 0 },
+    { mealId: meal._id, index: 0, factor: 6 },
+    { mealId: meal._id, index: 0 },
+  ]
+  for (const input of bad) await assert.rejects(service.adjust('u1', input), { code: 'BAD_REQUEST' }, JSON.stringify(input))
+  await assert.rejects(service.adjust('u2', { mealId: meal._id, index: 0, grams: 100 }), { code: 'NOT_FOUND' })
+
+  const failed = await gramsMeal([new Error('down')])
+  await assert.rejects(failed.service.adjust('u1', { mealId: failed.meal._id, index: 0, grams: 100 }), { code: 'BAD_REQUEST', message: /还没算好/ })
+  const cat = await gramsMeal([JSON.stringify({ isFood: false, comment: '一只猫' })])
+  await assert.rejects(cat.service.adjust('u1', { mealId: cat.meal._id, index: 0, grams: 100 }), { code: 'BAD_REQUEST' })
+})
+
+test('adjust：改了克数就记进她家常用份量（同名覆盖、留最近 12 样），删掉不记；下次分析写进提示词', async () => {
+  const { repo, chat, service, meal } = await gramsMeal([analysisJson(GRAMS_MEAL), analysisJson(GRAMS_MEAL)])
+  await service.adjust('u1', { mealId: meal._id, index: 0, grams: 110 })
+  await service.adjust('u1', { mealId: meal._id, index: 1, remove: true })
+  assert.deepEqual(Object.keys(await repo.getPortions('u1')), ['米饭'])
+  assert.equal((await repo.getPortions('u1'))['米饭'].grams, 110)
+
+  await service.analyze('u1', { fileID: 'cloud://b.jpg', mealType: 'dinner', note: '' })
+  assert.match(lastUserText(chat.calls[1].messages), /【她家常用份量】她自己改过的：米饭一般吃约 110 克/)
+
+  const items = {}
+  for (let i = 0; i < 14; i++) items[`菜${i}`] = { grams: 100, at: i }
+  await repo.savePortions('u1', items)
+  await service.adjust('u1', { mealId: meal._id, index: 0, grams: 120 })
+  const kept = await repo.getPortions('u1')
+  assert.equal(Object.keys(kept).length, 12)
+  assert.equal(kept['米饭'].grams, 120)
+  assert.equal(kept['菜0'], undefined)
+  assert.equal(kept['菜1'], undefined)
+  assert.equal(kept['菜2'], undefined)
+  assert.ok(kept['菜13'])
+})
+
+test('analyze：读常用份量失败不影响打卡', async () => {
+  const ctx = setup({ results: [analysisJson(GRAMS_MEAL)] })
+  ctx.repo.getPortions = async () => {
+    throw new Error('db down')
+  }
+  const meal = await ctx.service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'lunch', note: '' })
+  assert.equal(meal.status, 'done')
 })

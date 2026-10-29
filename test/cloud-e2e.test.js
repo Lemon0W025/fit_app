@@ -51,7 +51,7 @@ test('完整流程：建档 → 打卡 → 重新分析 → 记体重 → 总结
   // 视觉失败时 ai.js 会先试备用分组，再退回文字模型
   assert.equal(cloud.aiCalls[cloud.aiCalls.length - 1].model, config.textModel)
   const stored = cloud.db.collections.get('meals').get(mealId)
-  assert.deepEqual(stored.analysis.foods, [{ name: '面条', portion: '', kcal: 450 }])
+  assert.deepEqual(stored.analysis.foods, [{ name: '面条', portion: '', grams: 0, kcal: 450 }])
   assert.equal(stored.note, '其实是一碗面条')
 
   const day = await main({ action: 'day.get' })
@@ -236,4 +236,32 @@ test('连续打卡：第 3、7 天的第一顿正餐带里程碑，同一天第�
   const forest = await main({ action: 'forest.get' })
   assert.deepEqual(forest.data.today.nextMilestone, { days: 14, left: 7 })
   assert.deepEqual(forest.data.badges.map((b) => [b.days, b.got]), [[3, true], [7, true], [14, false]])
+})
+
+test('改份量：点一道菜按克数改，当天热量跟着变，改过的份量记进 portions、下次分析写进提示词', async () => {
+  const dishes = [
+    { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5 },
+    { name: '青菜', portion: '半盘', grams: 120, kcal: 70, protein: 2.5, carbs: 4, fat: 5 },
+  ]
+  const cloud = createFakeCloud({ replies: [analysisJson({ foods: dishes }), analysisJson({ foods: dishes })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭青菜' } })
+  assert.equal(meal.data.analysis.totalKcal, 244)
+
+  const res = await main({ action: 'meal.adjust', data: { mealId: meal.data._id, index: 0, grams: 110 } })
+  assert.equal(res.ok, true, res.message)
+  assert.equal(res.data.analysis.foods[0].kcal, 128)
+  assert.equal(res.data.analysis.totalKcal, 198)
+  assert.equal(res.data.analysis.aiTotalKcal, 244)
+  assert.equal((await main({ action: 'day.get' })).data.totals.kcal, 198)
+  assert.equal(cloud.db.collections.get('portions').get('u1').items['米饭'].grams, 110)
+
+  const bad = await main({ action: 'meal.adjust', data: { mealId: meal.data._id, index: 5, grams: 110 } })
+  assert.equal(bad.ok, false)
+  assert.equal(bad.code, 'BAD_REQUEST')
+
+  await main({ action: 'meal.analyze', data: { mealType: 'dinner', note: '米饭青菜' } })
+  const asked = cloud.aiCalls[cloud.aiCalls.length - 1].messages[1].content
+  assert.match(typeof asked === 'string' ? asked : asked[0].text, /米饭一般吃约 110 克/)
 })

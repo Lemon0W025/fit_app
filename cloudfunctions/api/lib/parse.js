@@ -7,6 +7,9 @@ const MAX_FOODS = 12
 const MAX_FOOD_KCAL = 5000
 const MAX_TOTAL_KCAL = 10000
 const MAX_MACRO_GRAMS = 1000
+const MAX_DISH_GRAMS = 3000
+const MAX_DISH_MACRO = 500
+const MACROS = ['protein', 'carbs', 'fat']
 
 function extractJson(text) {
   if (typeof text !== 'string') throw new Error('AI 没有返回内容')
@@ -28,6 +31,16 @@ function str(v, max) {
   return typeof v === 'string' ? v.trim().slice(0, max) : ''
 }
 
+// 一道菜的三大营养素：三样都给了才算（缺一样就整道菜不记，总数退回用 AI 给的）
+function dishMacros(f) {
+  if (MACROS.some((k) => f[k] == null || f[k] === '' || !isFinite(Number(f[k])))) return null
+  const out = {}
+  MACROS.forEach((k) => {
+    out[k] = round1(num(f[k], MAX_DISH_MACRO))
+  })
+  return out
+}
+
 function parseMealAnalysis(text) {
   const raw = extractJson(text)
   const comment = str(raw.comment, 200)
@@ -43,17 +56,24 @@ function parseMealAnalysis(text) {
     .map((f) => ({
       name: str(f.name, 20) || '未知食物',
       portion: str(f.portion, 20),
+      // 估计吃下去的克数，0 = 没给（老格式）
+      grams: Math.round(num(f.grams, MAX_DISH_GRAMS)),
       kcal: Math.round(num(f.kcal, MAX_FOOD_KCAL)),
+      ...dishMacros(f),
     }))
+  // 总数由程序按菜加总（AI 自己加常常对不上）；菜的热量全是 0（只给了总数）或没有菜时才用 AI 的总数
   const foodsKcal = foods.reduce((sum, f) => sum + f.kcal, 0)
+  const totalKcal = foodsKcal > 0 ? Math.min(foodsKcal, MAX_TOTAL_KCAL) : Math.round(num(raw.totalKcal, MAX_TOTAL_KCAL))
+  const byDish = foods.length > 0 && foodsKcal > 0 && foods.every((f) => 'protein' in f)
+  const macro = (k) => round1(num(byDish ? foods.reduce((sum, f) => sum + f[k], 0) : raw[k], MAX_MACRO_GRAMS))
 
   return {
     isFood: true,
     foods,
-    totalKcal: Math.round(num(raw.totalKcal, MAX_TOTAL_KCAL)) || Math.min(foodsKcal, MAX_TOTAL_KCAL),
-    protein: round1(num(raw.protein, MAX_MACRO_GRAMS)),
-    carbs: round1(num(raw.carbs, MAX_MACRO_GRAMS)),
-    fat: round1(num(raw.fat, MAX_MACRO_GRAMS)),
+    totalKcal,
+    protein: macro('protein'),
+    carbs: macro('carbs'),
+    fat: macro('fat'),
     rating: RATINGS.indexOf(raw.rating) !== -1 ? raw.rating : 'yellow',
     comment,
     suggestion,
