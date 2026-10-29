@@ -167,3 +167,15 @@ test('组件 wxml：手势都交给 slider.wxs，位置变化走 change:pos；�
     m[1].split(/,(?![^(]*\))/).forEach((part) => assert.ok(/^(transform|opacity)\b/.test(part.trim()), part))
   }
 })
+
+test('所有 .wxs 只用 WXS 认的写法（ES5、不用 Number(x)：真机编译会报 Expected variable|string）', () => {
+  const comps = path.join(__dirname, '../miniprogram/components')
+  const files = fs.readdirSync(comps).flatMap((d) => fs.readdirSync(path.join(comps, d)).filter((f) => f.endsWith('.wxs')).map((f) => path.join(comps, d, f)))
+  assert.ok(files.length >= 2)
+  for (const file of files) {
+    const code = fs.readFileSync(file, 'utf8').replace(/\/\/.*$/gm, '')
+    for (const [bad, re] of [['Number(x)', /\bNumber\s*\(/], ['const', /\bconst\s/], ['let', /\blet\s/], ['箭头函数', /=>/], ['模板字符串', /`/]]) {
+      assert.doesNotMatch(code, re, `${path.basename(file)} 用了 ${bad}`)
+    }
+  }
+})

@@ -49,9 +49,15 @@ function place(owner, r, ms) {
   if (bubble) bubble.setStyle('transform: translate3d(' + -r * 100 + '%, 0, 0); transition: ' + (move ? move + ', ' : '') + FADE)
 }
 
+// WXS 不认 Number(x) 这种写法，用 parseFloat
+function num(v) {
+  var n = parseFloat(v)
+  return isNaN(n) ? 0 : n
+}
+
 function rangeOf(e) {
   var d = (e.currentTarget && e.currentTarget.dataset) || {}
-  return { min: Number(d.min) || 0, max: Number(d.max) || 0, step: Number(d.step) || 0 }
+  return { min: num(d.min), max: num(d.max), step: num(d.step) }
 }
 
 function track(owner) {
