@@ -1,0 +1,99 @@
+/* 联动滑杆（docs/superpowers/plans/2026-10-29-portions.md）。类名都带 sl- 前缀：预览渲染器没有样式隔离。
+   圆钮那一层（sl-at）和轨道一样宽、整层平移，挪出去的部分由 .sl 的 overflow 裁掉；左右留出半个圆钮（放大后）、上面留出气泡的地方。
+   按住（sl-on）：圆钮放大、气泡冒出来；跟手和落格的过渡在 slider.wxs 里，只动 transform */
+.sl {
+  position: relative;
+  padding: 110rpx 44rpx 28rpx;
+  overflow: hidden;
+}
+
+.sl-track {
+  position: relative;
+  height: 18rpx;
+  border-radius: 9rpx;
+  background: #e8e1d5;
+  overflow: hidden;
+}
+
+.sl-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--primary, #4e7d5b);
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+
+/* 和轨道一样宽，盖在轨道上：圆钮、气泡贴在它的左边沿 */
+.sl-rail {
+  position: absolute;
+  left: 44rpx;
+  right: 44rpx;
+  top: 119rpx;
+  height: 0;
+}
+
+.sl-at {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 0;
+  will-change: transform;
+}
+
+.sl-knob {
+  position: absolute;
+  left: -30rpx;
+  top: -30rpx;
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 4rpx var(--primary, #4e7d5b), 0 4rpx 12rpx rgba(60, 50, 30, 0.22);
+  transition: transform 160ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.sl-on .sl-knob {
+  transform: scale(1.25);
+}
+
+/* 气泡：平时藏着，按住时从圆钮上面冒出来 */
+.sl-bubble {
+  position: absolute;
+  left: 0;
+  bottom: 50rpx;
+  padding: 6rpx 18rpx;
+  border-radius: 12rpx;
+  background: var(--primary, #4e7d5b);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 44rpx;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+
+.sl-tail {
+  position: absolute;
+  left: -10rpx;
+  bottom: 40rpx;
+  width: 20rpx;
+  height: 20rpx;
+  background: var(--primary, #4e7d5b);
+  transform: rotate(45deg) scale(0.4);
+  opacity: 0;
+  transition: opacity 120ms ease-out, transform 160ms cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+
+.sl-on .sl-bubble {
+  opacity: 1;
+}
+
+.sl-on .sl-tail {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}

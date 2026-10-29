@@ -7,6 +7,13 @@ const { analysisSteps } = require('../../utils/view')
 
 // 认菜和算热量是同一次调用：认菜这步走 6 秒后把「算热量」点亮，让等的人知道还在往前走
 const COUNT_AFTER_MS = 6000
+// 拍照框里的小贴士：拍得好，小暖估份量才准
+const PHOTO_TIPS = [
+  { icon: '📐', text: '从斜上方拍，像坐着看饭桌' },
+  { icon: '🍽', text: '所有菜都拍进去' },
+  { icon: '🥢', text: '旁边放双筷子或勺子' },
+  { icon: '⏰', text: '吃之前拍' },
+]
 
 Page({
   data: {
@@ -19,6 +26,7 @@ Page({
     steps: [],
     timingText: '',
     timingOn: false,
+    photoTips: PHOTO_TIPS,
   },
 
   // 首页大卡带着餐次进来就用它；不然按饭点窗口猜，都不在窗口里按钟点猜

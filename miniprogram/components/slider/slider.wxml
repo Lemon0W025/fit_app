@@ -1,0 +1,14 @@
+<wxs module="sl" src="./slider.wxs"></wxs>
+<!-- 轨道、填充、圆钮跟手都在 slider.wxs 里（渲染层直接改 transform）；下面的 style 只管第一次画出来的样子 -->
+<view class="sl" data-min="{{min}}" data-max="{{max}}" data-step="{{step}}" change:pos="{{sl.sync}}" pos="{{ratio}}" bindtouchstart="{{sl.start}}" bindtouchmove="{{sl.move}}" bindtouchend="{{sl.end}}" bindtouchcancel="{{sl.end}}">
+  <view class="sl-track">
+    <view class="sl-fill" style="transform: scaleX({{ratio}})"></view>
+  </view>
+  <view class="sl-rail">
+    <view class="sl-at" style="transform: translate3d({{ratio * 100}}%, 0, 0)">
+      <view class="sl-bubble" style="transform: translate3d({{-ratio * 100}}%, 0, 0)">{{prefix}}{{shown}}{{unit}}</view>
+      <view class="sl-tail"></view>
+      <view class="sl-knob"></view>
+    </view>
+  </view>
+</view>

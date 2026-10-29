@@ -30,6 +30,29 @@ test('decorateMeal：成功的打卡', () => {
   assert.equal(m._id, 'm1')
 })
 
+test('decorateMeal：每道菜一行（份量 · 克数、热量、改过没有），改过份量的写小暖原来估多少', () => {
+  const m = decorateMeal(done())
+  assert.deepEqual(m.dishes, [
+    { index: 0, name: '米饭', sub: '', kcalText: '230 千卡', adjusted: false },
+    { index: 1, name: '青菜', sub: '', kcalText: '80 千卡', adjusted: false },
+  ])
+  assert.equal(m.adjustedText, '')
+  const a = decorateMeal(done({
+    analysis: {
+      isFood: true,
+      foods: [{ name: '米饭', portion: '一碗', grams: 110, kcal: 128, adjusted: true }, { name: '青菜', portion: '半盘', grams: 120, kcal: 70 }],
+      totalKcal: 198,
+      aiTotalKcal: 244,
+      adjusted: true,
+      rating: 'green',
+      comment: '',
+    },
+  }))
+  assert.deepEqual(a.dishes[0], { index: 0, name: '米饭', sub: '一碗 · 约 110 克', kcalText: '128 千卡', adjusted: true })
+  assert.equal(a.dishes[1].sub, '半盘 · 约 120 克')
+  assert.equal(a.adjustedText, '份量按你说的改过（小暖原来估 244 千卡）')
+})
+
 test('decorateMeal：失败的打卡', () => {
   const m = decorateMeal(done({ status: 'failed', analysis: null, error: '照片没认出来' }))
   assert.equal(m.ratingClass, 'failed')

@@ -20,6 +20,24 @@
   margin: 12rpx 0;
 }
 
+/* 拍照小贴士：左对齐四行大字 */
+.tips {
+  display: inline-block;
+  margin-top: 16rpx;
+  text-align: left;
+}
+
+.tip {
+  font-size: 30rpx;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.tip-icon {
+  display: inline-block;
+  width: 52rpx;
+}
+
 .photo-box {
   padding: 16rpx;
 }

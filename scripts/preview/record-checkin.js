@@ -2,8 +2,10 @@
 // 页面数据用真实页面逻辑（手动时钟快进到数字滚完）算出来渲染成 HTML，CSS 动画在浏览器里真跑；
 // 庆祝（彩带 + 卡）按页面里的时间点插进去，彩带用 utils/confetti.js 同一套计算画。数字滚动不在录屏里（直接是最后的数）。
 //
-//   node scripts/preview/record-checkin.js [场景 ...]   场景：meal meal-allontime meal-milestone today-open today-warn checkin-wait checkin-pick calendar（不写全录）
+//   node scripts/preview/record-checkin.js [场景 ...]   场景：meal meal-allontime meal-milestone meal-adjust meal-adjusted today-open today-warn checkin-wait checkin-pick calendar（不写全录）
 //   checkin-pick：点「这是哪一餐」的分段控制器（taps：[毫秒, 第几项]），组件的 JS 在 Node 里真的跑，胶囊的样子写进浏览器的 DOM
+//   meal-adjust：点米饭弹出改份量的抽屉，鼠标按住滑杆拖来拖去、再点快捷按钮；slider.wxs 在浏览器里真的跑（假的 owner 直接改 DOM 的样式）
+//   meal-adjusted：改过份量以后的结果页（「改过」「小暖原来估」）
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -36,9 +38,19 @@ const MEAL = {
   analysis: {
     isFood: true, rating: 'green', totalKcal: 520, protein: 22, carbs: 64, fat: 16,
     comment: '荤素搭配得好，米饭的量也合适。', suggestion: '晚饭多来点绿叶菜。',
-    foods: [{ name: '米饭', portion: '一碗', kcal: 230 }, { name: '青椒肉丝', portion: '半盘', kcal: 210 }, { name: '番茄蛋汤', portion: '一碗', kcal: 80 }],
+    foods: [
+      { name: '米饭', portion: '一碗', grams: 200, kcal: 232 },
+      { name: '青椒肉丝', portion: '半盘', grams: 150, kcal: 210 },
+      { name: '番茄蛋汤', portion: '一碗', grams: 250, kcal: 78 },
+    ],
   },
 }
+// 按克数估的一顿（改份量的两个场景）
+const DISHES = [
+  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5 },
+  { name: '青椒肉丝', portion: '半盘', grams: 150, kcal: 210, protein: 14, carbs: 8, fat: 13.5 },
+  { name: '番茄蛋汤', portion: '一碗', grams: 250, kcal: 78, protein: 4.5, carbs: 5, fat: 4.2 },
+]
 const GAIN = { beans: 20, beansToday: 35, hint: '下一顿晚饭 17:00～19:00 拍算准时', stamps: STAMPS(false), mealType: 'lunch', timing: 'on', allOnTime: false, milestone: null }
 const profileInput = { nickname: '妈妈', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' }
 
@@ -55,6 +67,100 @@ async function mealData(gain) {
   // 先渲染不带庆祝的页面，庆祝按页面里的时间点再插
   const later = end.celebrate ? { at: end.celebrate === 'milestone' ? 1400 : 700, mode: end.celebrate, milestone: end.milestone } : null
   return { data: { ...end, celebrate: '', milestone: null }, later }
+}
+
+// 真的打一顿卡（云函数假的），打开结果页；adjust：先按这些改份量；open：再点开第几道菜
+async function adjustData({ adjust = [], open = null } = {}) {
+  fixDate(T, '2026-10-22T12:10:00+08:00')
+  const cloud = createFakeCloud({ replies: [analysisJson({ foods: DISHES, comment: '荤素搭配得好，米饭的量也合适。', suggestion: '晚饭多来点绿叶菜。' })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', fileID: 'cloud://env/meals/a.jpg' } })
+  const mealId = meal.data._id
+  for (const req of adjust) await main({ action: 'meal.adjust', data: { mealId, ...req } })
+  const wx = createWx(async (req) => {
+    const res = await main(req)
+    // 照片用包里的图（假的云函数里没有真的照片）
+    if (req.action === 'meal.get' && res.ok) res.data.fileID = '/images/camp/family.jpg'
+    return res
+  })
+  const page = loadPage('meal', wx)
+  page.clock = manualClock()
+  page.onLoad({ id: mealId })
+  await settle()
+  page.clock.advance(5000)
+  if (open !== null) page.openDish({ currentTarget: { dataset: { index: open } }, detail: {} })
+  return { data: snap(page) }
+}
+
+// 浏览器里跑 slider.wxs：假的 owner 直接改 DOM 的样式，鼠标当手指；拖的时候气泡和大字跟着变（和页面的 onPortionSliding 一样算），点快捷按钮滑过去
+function sliderScript(data) {
+  const wxs = fs.readFileSync(`${MP}/components/slider/slider.wxs`, 'utf8')
+  const portion = fs.readFileSync(`${MP}/utils/portion.js`, 'utf8')
+  const dish = data.meal.analysis.foods[data.adjust.index]
+  return `<script>
+document.querySelector('.sheet').classList.remove('sheet-open');
+const SL = (() => { const module = { exports: {} }; ${wxs}; return module.exports })();
+const PT = (() => { const module = { exports: {} }; ${portion}; return module.exports })();
+const dish = ${JSON.stringify(dish)}, adj = ${JSON.stringify(data.adjust)};
+const root = document.querySelector('.sl'), bubble = root.querySelector('.sl-bubble'), preview = document.querySelector('.adj-preview');
+const state = {};
+const owner = {
+  selectComponent: (sel) => { const el = root.querySelector(sel); return el && { setStyle: (css) => { el.style.cssText = css }, getBoundingClientRect: () => el.getBoundingClientRect() } },
+  getState: () => state,
+  callMethod: (name, arg) => show(arg.value, name === 'onSlideEnd'),
+};
+function show(v, settled) {
+  bubble.textContent = adj.prefix + v + adj.unit;
+  preview.textContent = PT.previewText(dish, adj.mode, v);
+  if (settled) document.querySelectorAll('.adj-chips .chip').forEach((c) => c.classList.toggle('chip-on', Number(c.dataset.value) === v));
+}
+const inst = { addClass: (c) => root.classList.add(c), removeClass: (c) => root.classList.remove(c) };
+const ev = (e) => ({ touches: [{ clientX: e.clientX, clientY: e.clientY }], changedTouches: [{ clientX: e.clientX, clientY: e.clientY }], currentTarget: { dataset: { min: adj.min, max: adj.max, step: adj.step } }, instance: inst });
+let down = false;
+root.addEventListener('mousedown', (e) => { down = true; SL.start(ev(e), owner) });
+window.addEventListener('mousemove', (e) => { if (down) SL.move(ev(e), owner) });
+window.addEventListener('mouseup', (e) => { if (down) { down = false; SL.end(ev(e), owner) } });
+document.querySelectorAll('.adj-chips .chip').forEach((c) => c.addEventListener('click', () => {
+  const v = Number(c.dataset.value);
+  show(v, true);
+  SL.sync(Math.min(1, Math.max(0, (v - adj.min) / (adj.max - adj.min))), 0, owner);
+}));
+</script>`
+}
+
+// 改份量：抽屉弹上来，按住圆钮往左拖、再往右、再回来，松手；点「一半」「原样」
+async function driveAdjust(page) {
+  await page.waitForTimeout(400)
+  await page.evaluate(() => document.querySelector('.sheet').classList.add('sheet-open'))
+  await page.waitForTimeout(900)
+  const r = await page.evaluate(() => {
+    const t = document.querySelector('.sl-track').getBoundingClientRect()
+    const k = document.querySelector('.sl-knob').getBoundingClientRect()
+    return { left: t.left, width: t.width, x: k.left + k.width / 2, y: k.top + k.height / 2 }
+  })
+  const at = (ratio) => r.left + r.width * ratio
+  await page.mouse.move(r.x, r.y)
+  await page.mouse.down()
+  await page.waitForTimeout(300)
+  let x = r.x
+  for (const [to, ms] of [[0.25, 600], [0.62, 700], [0.26, 600]]) {
+    const x0 = x
+    const steps = Math.round(ms / 30)
+    for (let i = 1; i <= steps; i++) {
+      x = x0 + (at(to) - x0) * (i / steps)
+      await page.mouse.move(x, r.y)
+      await page.waitForTimeout(20)
+    }
+    await page.waitForTimeout(250)
+  }
+  await page.mouse.up()
+  await page.waitForTimeout(800)
+  const chips = await page.evaluate(() => [...document.querySelectorAll('.adj-chips .chip')].map((c) => { const b = c.getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 } }))
+  await page.mouse.click(chips[0].x, chips[0].y)
+  await page.waitForTimeout(800)
+  await page.mouse.click(chips[2].x, chips[2].y)
+  await page.waitForTimeout(900)
 }
 
 async function todayData(when, meals) {
@@ -120,6 +226,16 @@ const SCENARIOS = {
     },
   },
   calendar: { page: 'forest', seconds: 3, build: calendarData },
+  'meal-adjust': { page: 'meal', seconds: 8, build: () => adjustData({ open: 0 }), script: sliderScript, drive: driveAdjust },
+  'meal-adjusted': {
+    page: 'meal',
+    seconds: 1.5,
+    build: () => adjustData({ adjust: [{ index: 0, grams: 110 }, { index: 2, remove: true }] }),
+    drive: async (page) => {
+      await page.evaluate(() => document.querySelector('.big-kcal').scrollIntoView({ block: 'start' }))
+      await page.waitForTimeout(1500)
+    },
+  },
 }
 
 // 分段控制器：量页面上的选项，组件的 JS 在 Node 里跑（手动时钟跟着真实时间走），胶囊的 class / 样式写进 DOM，CSS 过渡在浏览器里播
@@ -193,7 +309,7 @@ setTimeout(() => {
 async function record(name, sc, browser) {
   const { data, later } = await sc.build()
   const file = path.join(OUT, `${name}.html`)
-  fs.writeFileSync(file, renderPage({ name: sc.page, data, mapSrc, tab: sc.tab || null, back: !sc.tab, extraScript: laterScript(later) }))
+  fs.writeFileSync(file, renderPage({ name: sc.page, data, mapSrc, tab: sc.tab || null, back: !sc.tab, extraScript: laterScript(later) + (sc.script ? sc.script(data) : '') }))
   const vdir = path.join(OUT, `${name}-video`)
   fs.rmSync(vdir, { recursive: true, force: true })
   const size = { width: 375, height: 812 }
@@ -203,6 +319,7 @@ async function record(name, sc, browser) {
   await page.goto(`file://${file}`)
   const lead = (Date.now() - start) / 1000
   if (sc.taps) await driveSeg(page, data, sc.taps, sc.seconds * 1000)
+  else if (sc.drive) await sc.drive(page, data)
   else await page.waitForTimeout(sc.seconds * 1000)
   await page.close()
   await context.close()

@@ -2,9 +2,12 @@ const api = require('../../utils/api')
 const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
+const { adjustView, adjustRequest, previewText } = require('../../utils/portion')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
 const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
+// 改完份量，大字的热量从原来的滚到新的
+const ADJUST_KCAL_MS = 600
 
 Page({
   data: {
@@ -18,6 +21,9 @@ Page({
     fxSkip: false,
     celebrate: '',
     milestone: null,
+    // 改份量的抽屉（utils/portion.js 的 adjustView）
+    adjust: null,
+    adjustShow: false,
   },
 
   onLoad(options) {
@@ -105,6 +111,82 @@ Page({
 
   onUnload() {
     this.stopFx()
+  },
+
+  // ---------------------------------------------------------------- 改份量
+
+  // 点一道菜：抽屉里一根滑杆，按克数（老打卡按倍数）拖，大字跟着算热量
+  openDish(e) {
+    const meal = this.data.meal
+    const a = meal && meal.status === 'done' ? meal.analysis : null
+    if (!a || a.isFood === false) return
+    const index = Number(e.currentTarget.dataset.index)
+    const dish = (a.foods || [])[index]
+    if (!dish) return
+    this.dish = dish
+    const adjust = adjustView(dish, index)
+    this.portionValue = adjust.value
+    this.setData({ adjust, adjustShow: true })
+  },
+
+  // 拖着的时候：只改大字（滑杆自己跟手，这里不回写 value）
+  onPortionSliding(e) {
+    this.portionValue = e.detail.value
+    this.setData({ 'adjust.preview': previewText(this.dish, this.data.adjust.mode, e.detail.value) })
+  },
+
+  // 松手、点快捷按钮：值定下来（快捷按钮改了 value，滑杆带过渡滑过去）
+  onPortionSlide(e) {
+    this.setPortion(e.detail.value)
+  },
+
+  pickPortion(e) {
+    this.setPortion(Number(e.currentTarget.dataset.value))
+  },
+
+  setPortion(value) {
+    this.portionValue = value
+    this.setData({ 'adjust.value': value, 'adjust.preview': previewText(this.dish, this.data.adjust.mode, value) })
+  },
+
+  closeAdjust() {
+    this.setData({ adjustShow: false })
+  },
+
+  saveAdjust() {
+    const req = adjustRequest(this.data.adjust, this.portionValue)
+    if (!req) return this.closeAdjust()
+    this.sendAdjust(req, '改好了')
+  },
+
+  removeDish() {
+    wx.showModal({
+      title: `${this.data.adjust.name}没吃？`,
+      content: '这道菜从这顿里去掉，热量也减掉',
+      confirmText: '去掉',
+      success: (res) => {
+        if (res.confirm) this.sendAdjust({ remove: true }, '去掉了')
+      },
+    })
+  },
+
+  sendAdjust(req, toast) {
+    if (this.data.working) return
+    const from = this.data.meal.analysis.totalKcal
+    this.setData({ working: true })
+    api.call('meal.adjust', { mealId: this.mealId, index: this.data.adjust.index, ...req })
+      .then((meal) => {
+        const view = decorateMeal(meal)
+        const to = meal.analysis.totalKcal
+        this.setData({ working: false, adjustShow: false, meal: { ...view, kcalText: `约 ${from} 千卡` } })
+        const c = countUp(from, to, ADJUST_KCAL_MS, (n) => this.setData({ 'meal.kcalText': `约 ${n} 千卡` }), clockOf(this))
+        this.counters = (this.counters || []).concat(c)
+        wx.showToast({ title: toast, icon: 'success' })
+      })
+      .catch((err) => {
+        this.setData({ working: false })
+        api.showError(err)
+      })
   },
 
   previewPhoto() {

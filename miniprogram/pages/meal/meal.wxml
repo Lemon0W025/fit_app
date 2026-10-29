@@ -32,6 +32,7 @@
     <block wx:if="{{meal.status === 'done'}}">
       <view class="big-kcal">{{meal.kcalText}}</view>
       <view wx:if="{{meal.mode === 'text'}}" class="muted small">（根据文字描述估算）</view>
+      <view wx:if="{{meal.adjustedText}}" class="adjusted-note">{{meal.adjustedText}}</view>
       <view wx:if="{{meal.analysis.isFood}}" class="macros">
         <view class="macro">
           <view class="macro-num">{{meal.analysis.protein}}g</view>
@@ -52,14 +53,17 @@
     <view wx:if="{{meal.note}}" class="note-line">我的备注：{{meal.note}}</view>
   </view>
 
-  <view wx:if="{{meal.analysis && meal.analysis.foods.length}}" class="card fx-rise fx-d3">
-    <view class="card-title">认出来的食物</view>
-    <view wx:for="{{meal.analysis.foods}}" wx:key="name" class="list-row">
-      <view>
-        <text>{{item.name}}</text>
-        <text wx:if="{{item.portion}}" class="muted small portion">{{item.portion}}</text>
+  <!-- 每道菜一行，点了弹抽屉拖滑杆改份量 -->
+  <view wx:if="{{meal.dishes.length}}" class="card fx-rise fx-d3">
+    <view class="card-title">吃了哪些</view>
+    <view class="dish-hint">估得不对？点一道菜，拖一拖改份量</view>
+    <view wx:for="{{meal.dishes}}" wx:key="index" class="dish" hover-class="dish-press" hover-stay-time="100" data-index="{{item.index}}" bindtap="openDish">
+      <view class="dish-main">
+        <view class="dish-name">{{item.name}}<text wx:if="{{item.adjusted}}" class="dish-tag">改过</text></view>
+        <view wx:if="{{item.sub}}" class="dish-sub">{{item.sub}}</view>
       </view>
-      <text class="muted">{{item.kcal}} 千卡</text>
+      <text class="dish-kcal">{{item.kcalText}}</text>
+      <text class="dish-go">›</text>
     </view>
   </view>
 
@@ -84,6 +88,20 @@
   </view>
 
   <button class="btn-plain" bindtap="goCamp">回到营地</button>
+
+  <sheet show="{{adjustShow}}" title="{{adjust.title}}" bindclose="closeAdjust">
+    <view wx:if="{{adjust}}" class="adj">
+      <view class="adj-preview">{{adjust.preview}}</view>
+      <slider-bar min="{{adjust.min}}" max="{{adjust.max}}" step="{{adjust.step}}" value="{{adjust.value}}" unit="{{adjust.unit}}" prefix="{{adjust.prefix}}" bindchanging="onPortionSliding" bindchange="onPortionSlide" />
+      <view class="chips adj-chips">
+        <view wx:for="{{adjust.chips}}" wx:key="label" class="chip {{item.value === adjust.value ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPortion">{{item.label}}</view>
+      </view>
+      <view class="adj-actions">
+        <button class="btn-plain adj-remove" bindtap="removeDish" disabled="{{working}}">这道没吃</button>
+        <button class="btn-primary adj-save" bindtap="saveAdjust" disabled="{{working}}">就这么多</button>
+      </view>
+    </view>
+  </sheet>
 
   <celebrate wx:if="{{celebrate}}" mode="{{celebrate}}" milestone="{{milestone}}" bindclose="onCelebrateClose" />
 </view>

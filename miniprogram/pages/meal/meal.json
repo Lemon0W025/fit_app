@@ -1,6 +1,8 @@
 {
   "navigationBarTitleText": "这一餐",
   "usingComponents": {
-    "celebrate": "/components/celebrate/celebrate"
+    "celebrate": "/components/celebrate/celebrate",
+    "sheet": "/components/sheet/sheet",
+    "slider-bar": "/components/slider/slider"
   }
 }

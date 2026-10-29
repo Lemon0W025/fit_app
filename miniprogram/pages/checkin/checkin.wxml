@@ -7,7 +7,10 @@
   <view wx:if="{{!photo}}" class="card photo-picker" bindtap="choosePhoto">
     <view class="photo-icon">📷</view>
     <view class="photo-tip">点这里拍照，或从相册选</view>
-    <view class="muted small">把所有菜都拍进去，旁边有碗筷更容易估份量</view>
+    <!-- 拍得好，小暖估份量才准 -->
+    <view class="tips">
+      <view wx:for="{{photoTips}}" wx:key="text" class="tip"><text class="tip-icon">{{item.icon}}</text>{{item.text}}</view>
+    </view>
   </view>
   <view wx:else class="card photo-box">
     <image class="photo" src="{{photo}}" mode="aspectFill" bindtap="previewPhoto" />

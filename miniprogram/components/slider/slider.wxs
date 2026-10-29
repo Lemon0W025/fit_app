@@ -1,0 +1,122 @@
+// 联动滑杆（components/slider）：按住轨道任何地方圆钮就跳过去，拖着走时填充、圆钮、气泡跟着手指（渲染层直接改 transform，不每帧 setData）；
+// 数值按 step 跳了才叫组件的 onSlide 一次（气泡里的字、页面上跟着变的热量），松手叫 onSlideEnd，圆钮带一点过渡落到整格上。
+// 页面改了值（快捷按钮）时组件改 pos（0～1），这里带过渡滑过去。只用 ES5 + Math（WXS 的写法），单元测试直接 require 这个文件
+
+var JUMP_MS = 120 // 点轨道跳过去、松手落到整格上的过渡
+var SLIDE_MS = 260 // 页面改值时滑过去
+
+function clamp(v, lo, hi) {
+  return v < lo ? lo : v > hi ? hi : v
+}
+
+// 落到最近的一格（min + k × step），去掉小数的误差
+function snap(raw, min, max, step) {
+  if (!(max > min)) return min
+  var v = step > 0 ? min + Math.round((raw - min) / step) * step : raw
+  return parseFloat(clamp(v, min, max).toFixed(6))
+}
+
+function ratioOf(value, min, max) {
+  if (!(max > min)) return 0
+  return clamp((value - min) / (max - min), 0, 1)
+}
+
+// 手指在轨道上的位置（0～1）
+function ratioAt(x, left, width) {
+  if (!(width > 0)) return 0
+  return clamp((x - left) / width, 0, 1)
+}
+
+function valueAt(x, left, width, min, max, step) {
+  return snap(min + ratioAt(x, left, width) * (max - min), min, max, step)
+}
+
+function pointX(e) {
+  var t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0])
+  return t ? t.clientX : null
+}
+
+var FADE = 'opacity 120ms ease-out' // 气泡冒出来（slider.wxss 里也是这个；这里写的 transition 会盖掉样式表的，所以带上）
+
+// 填充按比例拉长、圆钮那一层挪到位置上；气泡往回挪自己宽度的 ratio 倍（两头时不出轨道），小尖角留在圆钮正上方
+function place(owner, r, ms) {
+  var move = ms > 0 ? 'transform ' + ms + 'ms cubic-bezier(0.3, 0.7, 0.4, 1)' : ''
+  var fill = owner.selectComponent('.sl-fill')
+  var at = owner.selectComponent('.sl-at')
+  var bubble = owner.selectComponent('.sl-bubble')
+  if (fill) fill.setStyle('transform: scaleX(' + r + '); transition: ' + (move || 'none'))
+  if (at) at.setStyle('transform: translate3d(' + r * 100 + '%, 0, 0); transition: ' + (move || 'none'))
+  if (bubble) bubble.setStyle('transform: translate3d(' + -r * 100 + '%, 0, 0); transition: ' + (move ? move + ', ' : '') + FADE)
+}
+
+function rangeOf(e) {
+  var d = (e.currentTarget && e.currentTarget.dataset) || {}
+  return { min: Number(d.min) || 0, max: Number(d.max) || 0, step: Number(d.step) || 0 }
+}
+
+function track(owner) {
+  var el = owner.selectComponent('.sl-track')
+  var r = el && el.getBoundingClientRect ? el.getBoundingClientRect() : null
+  return r && r.width > 0 ? { left: r.left, width: r.width } : null
+}
+
+// 跟着手指：圆钮在手指底下（不落格），数值落格，变了才告诉组件
+function follow(e, owner, st, ms) {
+  var x = pointX(e)
+  if (x === null) return
+  var g = st.range
+  var v = valueAt(x, st.rect.left, st.rect.width, g.min, g.max, g.step)
+  place(owner, ratioAt(x, st.rect.left, st.rect.width), ms)
+  if (v !== st.value) {
+    st.value = v
+    owner.callMethod('onSlide', { value: v })
+  }
+}
+
+function start(e, owner) {
+  var st = owner.getState()
+  st.rect = track(owner)
+  if (!st.rect) return
+  st.range = rangeOf(e)
+  st.dragging = true
+  st.value = null
+  if (e.instance) e.instance.addClass('sl-on')
+  follow(e, owner, st, JUMP_MS)
+  return false
+}
+
+function move(e, owner) {
+  var st = owner.getState()
+  if (!st.dragging) return
+  follow(e, owner, st, 0)
+  return false
+}
+
+function end(e, owner) {
+  var st = owner.getState()
+  if (!st.dragging) return
+  st.dragging = false
+  if (e.instance) e.instance.removeClass('sl-on')
+  var g = st.range
+  place(owner, ratioOf(st.value, g.min, g.max), JUMP_MS)
+  owner.callMethod('onSlideEnd', { value: st.value })
+  return false
+}
+
+// 组件改了 pos（页面改值、松手后对齐）：拖着的时候不管，不然带过渡滑过去
+function sync(r, old, owner) {
+  if (!owner) return
+  if (owner.getState().dragging) return
+  place(owner, r, SLIDE_MS)
+}
+
+module.exports = {
+  snap: snap,
+  ratioOf: ratioOf,
+  ratioAt: ratioAt,
+  valueAt: valueAt,
+  start: start,
+  move: move,
+  end: end,
+  sync: sync,
+}
