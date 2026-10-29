@@ -180,8 +180,11 @@ test('客人：从营地边上进来、在锅边转悠，不睡、不在「找�
     if (sprites[2] && /竹笋/.test(sprites[2].bubble) && sprites[2].action === 'fidget') sniffed = true
   }
   assert.ok(sniffed, '客人没在锅边闻')
+  // 点客人：先说闻着什么来的，再说你拍正餐它就住下（一句一句换）
   life.tap(2)
-  assert.equal(sprites[2].bubble, '它闻着竹笋的香味来的。妈妈下次拍正餐，它就住下来')
+  assert.match(sprites[2].bubble, /竹笋/)
+  clock.advance(5000)
+  assert.equal(sprites[2].bubble, '你拍正餐，我就住下！')
   assert.equal(life.addVisitor({ id: 'nuonuo', foodId: 'huluobo' }), 1, '已经在的不加')
   assert.equal(life.addVisitor({ id: 'qiqi', foodId: 'kaohongshu' }), 3)
   assert.equal(sprites[3].visitor, true)
@@ -760,17 +763,16 @@ test('水壶炉：叫两只来，各坐一边、面朝水壶，喝茶（低头�
   life.stop()
 })
 
-test('自己开口：隔 45～90 秒有一只站着的住户说一句（会聊今天打卡），说的时候不走开、气泡带头像和指着它的尖角；停了就不说', () => {
+test('自己开口：很少（4～8 分钟一次），说的时候不走开、气泡带头像和指着它的尖角；屏幕上从不同时有两个气泡；停了就不说', () => {
   const today = { logged: 2, onTime: 2, allDone: false, allOnTime: false, open: '', streak: 5, kcal: 800, budget: 1240 }
   const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 1 }, { id: 'huahua', level: 1 }, { id: 'jutuan', level: 1 }], today: () => today, seed: 11 })
   life.start()
   const said = []
-  let both = 0
-  for (let i = 0; i < 1200; i++) {
+  for (let i = 0; i < 3600; i++) {
     const before = Object.values(sprites).map((sp) => sp.bubble)
     clock.advance(1000)
-    const bubbles = Object.values(sprites).filter((sp) => sp.bubble)
-    if (bubbles.length > 1) both += 1
+    const bubbles = Object.values(sprites).filter((sp) => sp.bubble && !sp.hidden)
+    assert.ok(bubbles.length <= 1, `同时有 ${bubbles.length} 个气泡：${bubbles.map((b) => b.bubble).join(' / ')}`)
     Object.values(sprites).forEach((sp, k) => {
       if (!sp.bubble || before[k] === sp.bubble) return
       said.push(sp.bubble)
@@ -780,13 +782,49 @@ test('自己开口：隔 45～90 秒有一只站着的住户说一句（会聊�
       assert.ok(Math.abs(sp.bubbleLeft + sp.tailLeft - sp.width / 2) < 1 || sp.tailLeft === 16 || sp.tailLeft === sp.bubbleWidth - 16)
     })
   }
-  // 20 分钟：自己开口十几次（以前 15～28 秒一次太勤）
-  assert.ok(said.length >= 10 && said.length <= 40, `20 分钟说了 ${said.length} 句`)
-  assert.ok(said.some((l) => /2 顿|800|5 天|还能吃/.test(l)), said.join(' / '))
+  // 一个小时：自己开口七八句到十几句（10/29 用户嫌勤，以前 45～90 秒一句）
+  assert.ok(said.length >= 5 && said.length <= 20, `一小时说了 ${said.length} 句：${said.join(' / ')}`)
   assert.ok(said.every((l) => l.length <= 16), said.filter((l) => l.length > 16).join(' / '))
-  assert.ok(both < 20, '气泡叠在一起太多')
   life.stop()
   assert.equal(clock.count(), 0)
+})
+
+test('点它说一段：两三句一句一句换，再点跳到下一句；别的气泡收起来；说过的十来句不重复；你点过之后两分钟内谁也不自己开口', () => {
+  const today = { logged: 2, onTime: 2, allDone: false, allOnTime: false, open: '', streak: 5, kcal: 800, budget: 1240 }
+  const { life, clock, sprites } = make({ pets: [{ id: 'chacha', level: 3 }, { id: 'huahua', level: 1 }], today: () => today, seed: 5 })
+  life.start()
+  clock.advance(3000)
+  life.tap(1)
+  const other = sprites[1].bubble
+  assert.ok(other)
+  life.tap(0)
+  assert.equal(sprites[1].bubble, '', '点了茶茶，花花的气泡收起来')
+  const first = sprites[0].bubble
+  assert.ok(first && first.length <= 16)
+  // 一段至少两句：等一会儿换下一句（或者再点直接跳）
+  life.tap(0)
+  assert.notEqual(sprites[0].bubble, first, '再点没跳到下一句')
+  // 说完：气泡收起
+  clock.advance(20000)
+  assert.equal(sprites[0].bubble, '')
+  // 点 8 次（每次说完一整段）：说过的句子不重复（每只记得最近 12 句）
+  const lines = []
+  for (let n = 0; n < 8; n++) {
+    life.tap(0)
+    let guard = 0
+    while (sprites[0].bubble && guard++ < 40) {
+      if (lines[lines.length - 1] !== sprites[0].bubble) lines.push(sprites[0].bubble)
+      clock.advance(500)
+    }
+  }
+  const firsts = new Set(lines)
+  assert.ok(firsts.size >= lines.length - 3, `重复太多：${lines.join(' / ')}`)
+  // 刚说完：两分钟内谁也不自己开口
+  for (let i = 0; i < 110; i++) {
+    clock.advance(1000)
+    assert.ok(Object.values(sprites).every((sp) => !sp.bubble), '刚说完就有自己开口的')
+  }
+  life.stop()
 })
 
 test('锅里空着：不到 3 级的出去找吃的（一开始就不在），3 级以上和最亲的那只留下来喊饿；一下锅，走掉的闻着香味回来先去锅边吃', () => {

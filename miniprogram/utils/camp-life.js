@@ -2,7 +2,8 @@
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
 // 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：从营地边上进来、在锅边转悠，不睡、不在「找它」里
 // 困了随机小睡（白天少、夜里多，同时睡的有上限），点睡着的会醒；离开营地时 snapshot() 记下各自在哪，回来从原地接着来
-// 说话（pet-talk.js）：点它说一句；隔一会儿有一只自己开口（碎碎念、聊你今天打卡、爱吃的食物小知识……）；客人闻着香味说它闻着什么
+// 说话（pet-talk.js）：点它说一段（两三句，一句一句换着显示，再点一下跳到下一句）；自己开口很少（几分钟一句），
+// 同一时间屏幕上最多一个气泡（自己开口的、客人闻香的、喊饿的、两只之间的都要等没人说话、上一句说完两分钟以后）
 // 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
 
 const { SCENE, scaleAt, inGrass, hiddenAt, segmentHitsPoly, nogoPolys, pointInPoly } = require('./shared/camp')
@@ -10,7 +11,7 @@ const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, patchRect, footRect } = require('./shared/decor')
 const { periodOf, describe, CSS_ACTIONS } = require('./pets')
-const { talkLine, sniffLine, leaveLine, backLine } = require('./pet-talk')
+const { talkLine, speech, visitorSpeech, sniffLine, leaveLine, backLine } = require('./pet-talk')
 const { COLS, FOOT, frameFor, facingFor, dirOf, stackRow } = require('./anim')
 const { petImage, petFace, zOf, cutoutStrips, isNight, SWAY_CLASS } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
@@ -28,8 +29,12 @@ const POT_CHANCE = 0.15 // 白天锅里有它爱吃的：走到锅边吃一会�
 const POT_EAT_MS = 4000
 const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
-const CHAT_MS = [45000, 90000] // 隔多久有一只自己开口（10/28 用户嫌说得太勤，从 15～28 秒放慢）
+const CHAT_MS = [240000, 480000] // 隔多久有一只自己开口（10/28 15～28 秒 → 45～90 秒，10/29 用户还嫌勤、一说大家一起说 → 4～8 分钟）
 const CHAT_BUBBLE_MS = 4500 // 自己开口的那句留多久；说话时站着不动，看得出是谁说的
+const AUTO_GAP_MS = 120000 // 不是你点出来的话（自己开口、客人闻香、喊饿、两只之间）：上一个气泡收起两分钟后才能再有
+const RECENT_LINES = 12 // 每只记住最近说过的几句，不重复
+// 一段话里每句留多久：按字数，2.4～4.2 秒
+const lineMs = (text) => Math.min(4200, Math.max(2400, 1400 + 140 * text.length))
 // 锅里空着（今天还没下锅）：这一级以下的出去找吃的（从营地边上走掉、藏起来），这一级以上的留下来在锅边喊饿；
 // 至少留一只最亲的，营地不会一只都没有；一下锅，走掉的闻着香味回来
 const STAY_LEVEL = 3
@@ -121,6 +126,7 @@ function createLife({
   sheetSrc = (id) => (animBase ? `${animBase}${id}.png` : ''),
 }) {
   let chatTimer = null
+  let quietUntil = 0 // 这之前不自己开口（上一个气泡收起后两分钟）
   let placed = decor
   let lamps = lampsOf(placed)
   let running = false
@@ -280,14 +286,69 @@ function createLife({
     a.timer = running ? clock.set(() => turn(a), ms) : null
   }
 
+  // 说一句（ms 毫秒后收起）；收起后两分钟内不自己开口（autoSay）
   function say(a, text, ms = BUBBLE_MS) {
+    a.speech = null
+    show(a, text, ms)
+  }
+
+  function show(a, text, ms) {
     a.bubble = text
     a.bubbleDx = null
+    a.recent = (a.recent || []).concat(text).slice(-RECENT_LINES)
     clock.clear(a.bubbleTimer)
     a.bubbleTimer = clock.set(() => {
+      a.bubbleTimer = null
+      if (a.speech && a.speech.length) return nextLine(a)
       a.bubble = ''
+      a.speech = null
+      quietUntil = now() + AUTO_GAP_MS
       emit(a)
     }, ms)
+  }
+
+  // 说一段：一句一句换着显示
+  function speak(a, lines) {
+    const list = (lines || []).filter(Boolean)
+    if (!list.length) return 0
+    a.speech = list.slice(1)
+    show(a, list[0], lineMs(list[0]))
+    return list.reduce((sum, l) => sum + lineMs(l), 0)
+  }
+
+  function nextLine(a) {
+    const text = a.speech.shift()
+    show(a, text, lineMs(text))
+    emit(a)
+  }
+
+  // 有别的气泡在屏幕上
+  const talking = (except) => animals.some((b) => b !== except && b.bubble && !b.hidden)
+
+  // 不是你点出来的话：没别的气泡、上一句收起两分钟后才说；说不了就不说（返回 false）
+  function autoSay(a, text, ms) {
+    if (!text || talking(a) || a.bubble || now() < quietUntil) return false
+    say(a, text, ms)
+    return true
+  }
+
+  // 跟着事情来的一句（新住户打招呼、走开找吃的、闻着香味回来、下锅后先吃的那只）：只要没别的气泡就说
+  function eventSay(a, text, ms) {
+    if (!text || talking(a)) return false
+    say(a, text, ms)
+    return true
+  }
+
+  // 你点了谁、喂了谁、叫了谁：别的气泡先收起来，屏幕上只有它在说
+  function hush(except) {
+    animals.forEach((b) => {
+      if (b === except || !b.bubble) return
+      clock.clear(b.bubbleTimer)
+      b.bubbleTimer = null
+      b.bubble = ''
+      b.speech = null
+      emit(b)
+    })
   }
 
   function heart(a) {
@@ -529,6 +590,7 @@ function createLife({
     a.until = 0
     a.goal = a.goal && !a.goal.path ? a.goal : null
     if (!byTap) return rest(a)
+    hush(a)
     say(a, '嗯…？醒啦')
     a.goal = null
     doFor(a, 'happy', WAKE_MS)
@@ -559,7 +621,7 @@ function createLife({
   function eatAtPot(a, ms, line) {
     const eat = (b) => {
       facePot(b)
-      if (line) say(b, line)
+      if (line) eventSay(b, line)
       doFor(b, 'eat', ms, '😋')
     }
     const spot = nearFire(a)
@@ -573,7 +635,7 @@ function createLife({
     const spot = nearFire(a)
     const sniff = (b) => {
       b.right = SCENE.fire[0] > b.x
-      say(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
+      autoSay(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
       doFor(b, 'fidget', SNIFF_MS)
     }
     if (spot && walkTo(a, spot, sniff)) return
@@ -601,7 +663,7 @@ function createLife({
       // 出去找吃的回来了：闻着锅里的香味，先去锅边吃一口
       if (a.why === 'hungry') {
         a.why = ''
-        say(a, backLine(a.id))
+        eventSay(a, backLine(a.id))
         return eatAtPot(a, POT_EAT_MS)
       }
     }
@@ -643,7 +705,7 @@ function createLife({
       const spot = nearFire(a)
       const wait = (b) => {
         facePot(b)
-        say(b, lineOf(b), CHAT_BUBBLE_MS)
+        autoSay(b, lineOf(b), CHAT_BUBBLE_MS)
         doFor(b, 'sit', between(DO_MS), '💭')
       }
       if (spot && walkTo(a, spot, wait)) return
@@ -816,19 +878,19 @@ function createLife({
       emit(b)
       schedule(b, between(NIGHT_MS))
     }
-    say(a, leaveLine(a.id))
+    eventSay(a, leaveLine(a.id))
     if (!walkTo(a, { x: ex, y: ey, action: 'idle' }, gone)) gone(a)
   }
 
   // ---------------------------------------------------------------- 说话
 
-  // 这只现在说一句（pet-talk.js）：在家具上的、吃着东西的、早上的各有说法；尽量不和它上一句一样
-  function lineOf(a) {
+  // 这只现在说什么（pet-talk.js）：在家具上的、吃着东西的、早上的各有说法；最近说过的不重复
+  function talkCtx(a) {
     const spot = a.goal && !a.goal.path && a.goal.spot ? a.goal.spot.action : ''
-    const line = talkLine(a.id, { period: periodOf(hour()), action: a.action, level: a.level, today: today(), pot: pot(), spot, hungry: hungry() && !a.visitor }, random, a.lastLine)
-    a.lastLine = line
-    return line
+    return { period: periodOf(hour()), action: a.action, level: a.level, today: today(), pot: pot(), spot, hungry: hungry() && !a.visitor }
   }
+  const lineOf = (a) => talkLine(a.id, talkCtx(a), random, a.recent || [])
+  const speechOf = (a) => speech(a.id, talkCtx(a), random, a.recent || [])
 
   // 隔一会儿挑一只醒着、闲着、头上没气泡的住户自己开口
   function scheduleChat() {
@@ -841,11 +903,12 @@ function createLife({
   function chat() {
     chatTimer = null
     const quiet = animals.filter(still)
-    if (quiet.length && !animals.some((a) => a.bubble)) {
+    if (quiet.length) {
       const a = pick(quiet)
-      say(a, lineOf(a), CHAT_BUBBLE_MS)
-      emit(a)
-      if (a.action === 'idle') schedule(a, CHAT_BUBBLE_MS + 400)
+      if (autoSay(a, lineOf(a), CHAT_BUBBLE_MS)) {
+        emit(a)
+        if (a.action === 'idle') schedule(a, CHAT_BUBBLE_MS + 400)
+      }
     }
     scheduleChat()
   }
@@ -858,10 +921,10 @@ function createLife({
     if (!b) return false
     const spot = { x: b.x + (sizeOf(a) + sizeOf(b)) * 0.4 * (a.x < b.x ? -1 : 1), y: b.y + 20, action: 'idle' }
     if (!inGrass(spot.x, spot.y) || hiddenAt(spot.x, spot.y)) return false
+    // 只有先开口的那只冒气泡（能说的时候），另一只回个表情：不会两个气泡叠在一起
     return walkTo(a, spot, (me) => {
       me.right = b.x > me.x
-      say(me, rule.aLine, PAIR_MS)
-      say(b, rule.bLine, PAIR_MS)
+      autoSay(me, rule.aLine, PAIR_MS)
       b.emoji = rule.bEmoji
       b.right = me.x > b.x
       emit(b)
@@ -891,12 +954,12 @@ function createLife({
     const [ex, ey] = pick(SCENE.entries)
     a.x = ex
     a.y = ey
-    if (!a.visitor) say(a, a.pet.lines.hello, HELLO_MS)
+    if (!a.visitor) eventSay(a, a.pet.lines.hello, HELLO_MS)
     const spot = nearFire(a) || { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'idle' }
     const then = a.visitor
       ? (b) => {
           b.right = SCENE.fire[0] > b.x
-          say(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
+          autoSay(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
           doFor(b, 'fidget', SNIFF_MS)
         }
       : (b) => {
@@ -950,7 +1013,7 @@ function createLife({
       return
     }
     if (restore(a, memory[a.id])) {
-      if (arriving.has(a.id)) say(a, a.pet.lines.hello, HELLO_MS)
+      if (arriving.has(a.id)) eventSay(a, a.pet.lines.hello, HELLO_MS)
       return
     }
     if (arriving.has(a.id) || a.visitor) return walkIn(a)
@@ -1003,6 +1066,7 @@ function createLife({
       animals.forEach((a) => {
         ;[a.timer, a.bubbleTimer, a.tapTimer].forEach((h) => clock.clear(h))
         a.timer = a.bubbleTimer = a.tapTimer = null
+        a.speech = null
       })
     },
 
@@ -1022,20 +1086,21 @@ function createLife({
       })
     },
 
-    // 点一下：睡着的醒过来；客人说它闻着什么来的；住户说句话。都冒个爱心
+    // 点一下：睡着的醒过来；客人说它闻着什么来的、你拍正餐它就住下；住户说一段（两三句，一句一句换）。
+    // 正说着再点：直接跳到下一句；说完了再点：换一段。别的气泡收起来。都冒个爱心
     tap(i) {
       const a = animals[i]
       if (!a || a.hidden) return
       heart(a)
       if (a.action === 'sleep' && !a.holdGift) return wake(a, true)
-      if (a.visitor) {
-        const food = foodById(a.visitor.foodId)
-        say(a, `它闻着${food ? food.name : ''}的香味来的。妈妈下次拍正餐，它就住下来`, HELLO_MS)
-      } else {
-        say(a, lineOf(a))
-        // 站着的听你说话：先别走开（说完再说）
-        if (a.action === 'idle' && !(a.goal && a.goal.path) && !a.next && running) schedule(a, BUBBLE_MS + 400)
+      hush(a)
+      if (a.bubble && a.speech && a.speech.length) {
+        nextLine(a)
+        return
       }
+      const ms = speak(a, a.visitor ? visitorSpeech(a.id, a.visitor.foodId, random) : speechOf(a))
+      // 站着的听你说话：说完前先别走开
+      if (!a.visitor && a.action === 'idle' && !(a.goal && a.goal.path) && !a.next && running) schedule(a, ms + 400)
       emit(a)
     },
 
@@ -1057,6 +1122,7 @@ function createLife({
       const a = animals[i]
       if (!a || a.hidden) return
       a.goal = a.goal && !a.goal.path ? a.goal : null
+      hush(a)
       say(a, liked ? a.pet.lines.fed : a.pet.lines.dislike)
       doFor(a, liked ? 'eat' : 'dislike', EAT_MS, liked ? '😋' : '💦')
     },
@@ -1091,6 +1157,7 @@ function createLife({
         a.goal = null
         a.next = null
         if (!useSpot(a, spot)) continue
+        hush(a)
         say(a, CALL_LINES[spot.action] || '来啦')
         heart(a)
         emit(a)
@@ -1125,6 +1192,7 @@ function createLife({
       animals.forEach((a) => {
         if (!a.holdGift) return
         a.holdGift = false
+        hush(a)
         say(a, '给你的！')
         rest(a)
       })
@@ -1156,11 +1224,14 @@ function createLife({
       animals.forEach((a) => {
         if (a.hidden && a.why === 'hungry' && running) schedule(a, between(START_MS) + a.index * 400)
       })
+      // 爱吃的都去锅边吃；只有第一只说「好吃」（不会一下子冒一排气泡）
+      let first = true
       animals.forEach((a) => {
         if (a.visitor || a.hidden || a.holdGift || (ids || []).indexOf(a.id) === -1) return
         a.until = 0
         a.goal = null
-        eatAtPot(a, POT_EAT_MS, a.pet.lines.fed)
+        eatAtPot(a, POT_EAT_MS, first ? a.pet.lines.fed : '')
+        first = false
       })
     },
 

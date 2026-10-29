@@ -188,10 +188,12 @@ const SCENARIOS = {
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')]],
   },
   // 说话（10/27）：手机上带界面，点几只听它们说（聊今天打卡、爱吃的食物小知识、碎碎念），中间有一只自己开口
+  // 点它说一段（10/29）：点茶茶说两三句（一句一句换）；点豆豆、马上再点跳到下一句；豆豆说着时点花花，豆豆的气泡收起来；
+  // 自己开口 4～8 分钟才一句，录的这 30 秒里只有点出来的
   'talk-phone': {
-    phone: true, hour: 12, potLevel: 2, focus: null, scale: null, seconds: 30, pets: ['doudou', 'huahua', 'jutuan', 'nuonuo'],
+    phone: true, hour: 12, potLevel: 2, focus: null, scale: null, seconds: 30, pets: ['chacha', 'doudou', 'huahua', 'jutuan'],
     plan: [],
-    events: [[500, (life) => life.tap(0)], [5500, (life) => life.tap(1)], [10500, (life) => life.tap(2)], [15500, (life) => life.tap(3)], [20500, (life) => life.tap(0)]],
+    events: [[500, (life) => life.tap(0)], [10000, (life) => life.tap(1)], [12000, (life) => life.tap(1)], [14000, (life) => life.tap(2)], [22000, (life) => life.tap(0)]],
   },
   // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
   'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
