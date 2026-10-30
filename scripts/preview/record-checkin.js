@@ -251,6 +251,17 @@ const SCENARIOS = {
   'welcome-last': { page: 'welcome', seconds: 1.5, build: () => welcomeData(3), script: onlySlide(3) },
   'remind-first': { page: 'remind', seconds: 1.5, build: remindData },
   'today-guide': { page: 'today', tab: 'today', seconds: 2, build: () => todayData('10:00', []) },
+  // 点微信提醒进来：拍照页、晚饭选好、顶上一句
+  'checkin-remind': {
+    page: 'checkin',
+    seconds: 1.5,
+    build: async () => {
+      fixDate(T, '2026-10-22T18:40:00+08:00')
+      const page = loadPage('checkin', createWx(async () => ({ ok: true, data: null })))
+      page.onLoad({ mealType: 'dinner', from: 'remind' })
+      return { data: snap(page) }
+    },
+  },
   'checkin-people': {
     page: 'checkin',
     seconds: 1.5,

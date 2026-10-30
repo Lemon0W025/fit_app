@@ -79,7 +79,7 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
   assert.equal((await service.setNotify('u1', { on: false })).notify, false)
 })
 
-test('tick：开了提醒、有次数、过了饭点 30 分钟还没拍的发一条（进首页），次数减一、这顿记下不再发；拍了的不发；没开的不发', async () => {
+test('tick：开了提醒、有次数、过了饭点 30 分钟还没拍的发一条（点了直接进拍照页、这顿选好），次数减一、这顿记下不再发；拍了的不发；没开的不发', async () => {
   const { repo, service, messages, clock } = setup()
   await service.subscribed('u1', { accepted: true })
   await service.subscribed('u1', { accepted: true })
@@ -88,7 +88,7 @@ test('tick：开了提醒、有次数、过了饭点 30 分钟还没拍的发一
   await service.setNotify('u1', { on: true })
   assert.deepEqual(await service.tick(), { sent: 1 })
   assert.deepEqual(messages[0], {
-    touser: 'u1', templateId: 'tmpl-1', page: 'pages/today/today', miniprogramState: 'trial',
+    touser: 'u1', templateId: 'tmpl-1', page: 'pages/checkin/checkin?mealType=lunch&from=remind', miniprogramState: 'trial',
     data: { thing1: { value: '午饭还没拍哦' }, time2: { value: '2026-10-29 12:00' }, thing3: { value: '13:00 前拍还算准时' } },
   })
   assert.equal((await service.get('u1')).credits, 1)

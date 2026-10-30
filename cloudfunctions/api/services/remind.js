@@ -46,7 +46,9 @@ function createRemindService({ repo, now, config, send = null, log = () => {} })
     const next = { ...EMPTY, ...doc }
     let ok = false
     try {
-      await send({ touser: openid, templateId: t.id, page: 'pages/today/today', data: messageFor(t, mealType, times, at), miniprogramState: t.state || 'trial' })
+      // 点通知直接进拍照页，这顿已经选好
+      const page = `pages/checkin/checkin?mealType=${mealType}&from=remind`
+      await send({ touser: openid, templateId: t.id, page, data: messageFor(t, mealType, times, at), miniprogramState: t.state || 'trial' })
       ok = true
       next.credits = Math.max(0, (doc.credits || 0) - 1)
     } catch (e) {

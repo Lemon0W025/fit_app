@@ -35,7 +35,7 @@ function calendarEvents(times, now) {
   return MAIN_MEALS.map((t) => ({
     title: `小暖提醒：拍${MEAL_WORDS[t]}（${windowText(t, times)} 准时）`,
     startTime: nextAt(times[t], now),
-    description: `打开微信 → ${APP_NAME} → 拍${MEAL_WORDS[t]}。准时拍能得 15 暖豆`,
+    description: `打开微信，聊天列表往下一拉就能看到「${APP_NAME}」，点进去拍${MEAL_WORDS[t]}。准时拍能得 15 暖豆`,
     alarm: true,
     alarmOffset: 0,
     repeatInterval: 'day',

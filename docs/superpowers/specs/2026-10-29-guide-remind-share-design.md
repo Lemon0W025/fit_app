@@ -28,6 +28,8 @@
 - 微信服务通知要模板 ID：**云函数 `config.remindTemplate` 是空的时候，微信提醒那一块不显示**，只有日历闹钟。用户给了模板 ID 后填进去、`npm run wx:trigger` 建定时触发器。
 - 数据、接口、发送规则、定时触发器照原设计（`reminders` 集合、`remind.*`、`lib/remind.js` 的 `planReminders`、每 10 分钟 `remind.tick`）。
 - 打卡页点「交给小暖看看」时先 `wx.requestSubscribeMessage`（有模板时），允许了就攒一次。
+- （10/30 补）点微信通知直接进拍照页、这顿选好（`pages/checkin/checkin?mealType=…&from=remind`），顶上一句「到午饭时间啦」；
+  从通知直接打开时打卡页自己读一次 `day.get`（饭点、提醒开没开），交给小暖时照样攒「允许」。手机日历的闹钟跳不进小程序（接口没有链接），只能响。
 
 ## 三、几个人一起吃
 

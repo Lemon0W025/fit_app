@@ -1,4 +1,5 @@
 <view class="page">
+  <view wx:if="{{remindText}}" class="remind-hi">⏰ {{remindText}}</view>
   <view class="section-title section-first">这是哪一餐？</view>
   <segmented options="{{mealTypes}}" value="{{mealType}}" bindchange="pickMealType" />
   <view wx:if="{{timingText}}" class="timing {{timingOn ? 'timing-on' : ''}}">{{timingText}}</view>

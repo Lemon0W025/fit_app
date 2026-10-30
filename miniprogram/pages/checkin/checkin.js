@@ -29,15 +29,35 @@ Page({
     photoTips: PHOTO_TIPS,
     // 几个人一起吃：默认就我
     people: 1,
+    // 点微信提醒进来的：顶上一句「到午饭时间啦」
+    remindText: '',
   },
 
-  // 首页大卡带着餐次进来就用它；不然按饭点窗口猜，都不在窗口里按钟点猜
+  // 首页大卡、微信提醒带着餐次进来就用它；不然按饭点窗口猜，都不在窗口里按钟点猜
   onLoad(options) {
-    this.times = getApp().globalData.mealTimes || mealTimesOf(null)
+    const g = getApp().globalData
+    this.times = g.mealTimes || mealTimesOf(null)
     const want = options && options.mealType
     const mealType = isMealType(want) ? want : mealAt(this.times, new Date()) || guessMealType(localHour())
-    this.setData({ mealType })
+    const fromRemind = !!options && options.from === 'remind' && isMealType(want)
+    this.setData({ mealType, remindText: fromRemind ? `到${MEAL_WORDS[want] || '吃饭'}时间啦，拍一张给小暖看看` : '' })
     this.updateTiming()
+    // 点通知直接打开到这一页（首页还没加载过）：读一次她的饭点和微信提醒开没开，
+    // 不然准不准时按默认饭点算，交给小暖时也不会顺手攒「允许」（提醒次数越用越少）
+    if (!g.mealTimes) this.loadDay()
+  },
+
+  loadDay() {
+    api.call('day.get')
+      .then((day) => {
+        if (!day.profile) return
+        const g = getApp().globalData
+        this.times = mealTimesOf(day.profile)
+        g.mealTimes = this.times
+        g.remind = day.remind || null
+        this.updateTiming()
+      })
+      .catch(() => {})
   },
 
   // 分段控制器（components/segmented）选了哪一餐

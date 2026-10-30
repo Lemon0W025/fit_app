@@ -190,6 +190,42 @@ test('提醒页：有模板时能开微信提醒（先申请「允许」、允�
   assert.equal((await main({ action: 'remind.get' })).data.credits, 3)
 })
 
+// 微信提醒的通知点开就是这一页（pages/checkin/checkin?mealType=dinner&from=remind），首页还没加载过
+test('点微信提醒进来：直接是拍照页、这顿选好、顶上说「到晚饭时间啦」；读一次她的饭点和提醒，交给小暖时照样攒「允许」', async (t) => {
+  fixDate(t, '2026-10-29T18:40:00+08:00')
+  const { main, wx } = await app({ template: TEMPLATE })
+  await main({ action: 'profile.save', data: { ...PROFILE, mealTimes: { ...TIMES, dinner: '19:00' } } })
+  await main({ action: 'remind.subscribed', data: { accepted: true } })
+  await main({ action: 'remind.setNotify', data: { on: true } })
+  let asked = 0
+  wx.requestSubscribeMessage = (o) => {
+    asked += 1
+    setImmediate(() => {
+      if (o.success) o.success({ [o.tmplIds[0]]: 'accept' })
+      if (o.complete) o.complete()
+    })
+  }
+  const page = loadPage('checkin', wx)
+  page.onLoad({ mealType: 'dinner', from: 'remind' })
+  assert.equal(page.data.mealType, 'dinner')
+  assert.equal(page.data.remindText, '到晚饭时间啦，拍一张给小暖看看')
+  await settle()
+  // 读到了她自己的饭点（晚饭 19:00，不是默认的 18:00），准不准时按它算
+  assert.deepEqual(wx.app.globalData.mealTimes, { ...TIMES, dinner: '19:00' })
+  assert.equal(page.data.timingText, '现在拍晚饭：准时 ✓')
+  assert.deepEqual(wx.app.globalData.remind, { templateId: 'tmpl-1', notify: true })
+  page.onNote(event({}, { value: '米饭青菜' }))
+  page.submit()
+  await settle()
+  assert.equal(asked, 1)
+  assert.equal((await main({ action: 'remind.get' })).data.credits, 2)
+  // 从首页大卡进来的不说这句、不再读一次
+  const card = loadPage('checkin', wx)
+  card.onLoad({ mealType: 'lunch' })
+  assert.equal(card.data.remindText, '')
+  assert.match(readWxml('checkin'), /\{\{remindText\}\}/)
+})
+
 test('开关组件：点了发 change（新的值），页面决定改不改；禁用时不发；按住时有按下的样子', () => {
   const sw = loadComponent('switch', createWx(async () => ({ ok: true, data: null })), { checked: false })
   sw.onPress()
