@@ -2,19 +2,22 @@
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
 // 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：从营地边上进来、在锅边转悠，不睡、不在「找它」里
 // 困了随机小睡（白天少、夜里多，同时睡的有上限），点睡着的会醒；离开营地时 snapshot() 记下各自在哪，回来从原地接着来
-// 说话（pet-talk.js）：点它说一段（两三句，一句一句换着显示，再点一下跳到下一句）；自己开口很少（几分钟一句），
-// 同一时间屏幕上最多一个气泡（自己开口的、客人闻香的、喊饿的、两只之间的都要等没人说话、上一句说完两分钟以后）
+// 说话：说什么在 pet-talk.js，什么时候能说在 camp-bubbles.js（屏幕上同一时间最多一个气泡）；点它说一段（两三句，一句一句换着显示，
+// 再点一下跳到下一句）；自己开口很少（几分钟一句）
+// 怎么走（绕路、一小段一小段走、走到一半停下）在 camp-walk.js；这里只管去哪、干什么
 // 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
 
-const { SCENE, scaleAt, inGrass, hiddenAt, segmentHitsPoly, nogoPolys, pointInPoly } = require('./shared/camp')
+const { SCENE, scaleAt, inGrass, hiddenAt } = require('./shared/camp')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
-const { decorById, patchRect, footRect } = require('./shared/decor')
+const { decorById, footRect } = require('./shared/decor')
 const { periodOf, describe, CSS_ACTIONS } = require('./pets')
 const { talkLine, speech, visitorSpeech, sniffLine, leaveLine, backLine } = require('./pet-talk')
-const { COLS, FOOT, frameFor, facingFor, dirOf, stackRow } = require('./anim')
-const { petImage, petFace, zOf, cutoutStrips, isNight, SWAY_CLASS } = require('./camp-view')
+const { COLS, FOOT, frameFor, stackRow } = require('./anim')
+const { petImage, petFace, zOf, isNight, SWAY_CLASS } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
+const { createWalk } = require('./camp-walk')
+const { createBubbles } = require('./camp-bubbles')
 
 const REST_MS = [3000, 7000]
 const DO_MS = [6000, 12000]
@@ -31,10 +34,6 @@ const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
 const CHAT_MS = [240000, 480000] // 隔多久有一只自己开口（10/28 15～28 秒 → 45～90 秒，10/29 用户还嫌勤、一说大家一起说 → 4～8 分钟）
 const CHAT_BUBBLE_MS = 4500 // 自己开口的那句留多久；说话时站着不动，看得出是谁说的
-const AUTO_GAP_MS = 120000 // 不是你点出来的话（自己开口、客人闻香、喊饿、两只之间）：上一个气泡收起两分钟后才能再有
-const RECENT_LINES = 12 // 每只记住最近说过的几句，不重复
-// 一段话里每句留多久：按字数，2.4～4.2 秒
-const lineMs = (text) => Math.min(4200, Math.max(2400, 1400 + 140 * text.length))
 // 锅里空着（今天还没下锅）：这一级以下的出去找吃的（从营地边上走掉、藏起来），这一级以上的留下来在锅边喊饿；
 // 至少留一只最亲的，营地不会一只都没有；一下锅，走掉的闻着香味回来
 const STAY_LEVEL = 3
@@ -57,7 +56,6 @@ const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原�
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
 const START_MS = [300, 1500]
-const BUBBLE_MS = 3000
 const TAP_MS = 600
 const ROLL_MS = 1200
 const PET_MS = 1500
@@ -65,7 +63,6 @@ const EAT_MS = 2000
 const JUMP_MS = 3000
 const HELLO_MS = 4000
 const PAIR_MS = 5000
-const PATH_MARGIN = 60 // 绕障碍时离它多远
 const BODY_GAP = 1.1 // 目标点离别的宠物至少几个身位
 const SUN_LOVERS = ['jutuan', 'guigui']
 const PAIR_CHANCE = 0.08
@@ -94,22 +91,6 @@ const realHour = () => new Date().getHours()
 
 const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by)
 
-// 一段路 from → to 跨过哪些东西的那条线（lines：[{ l, r, y }]），返回跨过去的那些点（按先后）。
-// 只要这一段路上身子哪儿横着挨着它就算（不只是跨线那一下）：斜着走，跨线时在旁边、走着走着挨上了，也得在跨线处切开，
-// 不然后半段按前半段的前后排，走到提灯后面还盖在提灯上面
-function depthCuts(from, to, half, lines) {
-  const ts = []
-  const len = Math.hypot(to.x - from.x, to.y - from.y)
-  lines.forEach((o) => {
-    if ((from.y - o.y) * (to.y - o.y) >= 0) return
-    if (Math.max(from.x, to.x) + half < o.l || Math.min(from.x, to.x) - half > o.r) return
-    const t = (o.y - from.y) / (to.y - from.y)
-    if (t * len > 1 && (1 - t) * len > 1) ts.push(t)
-  })
-  ts.sort((p, q) => p - q)
-  return ts.map((t) => ({ x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, piece: true }))
-}
-
 // lit：篝火点着没有（锅是空的火不烧，夜里火边也只有月光）；pot：今天锅里煮着的食物 id
 // visitors：[{ id, foodId }] 客人；saved：上次离开时的 snapshot()（{ id: { x, y, right, action, until, sleepStyle } }）
 function createLife({
@@ -126,7 +107,6 @@ function createLife({
   sheetSrc = (id) => (animBase ? `${animBase}${id}.png` : ''),
 }) {
   let chatTimer = null
-  let quietUntil = 0 // 这之前不自己开口（上一个气泡收起后两分钟）
   let placed = decor
   let lamps = lampsOf(placed)
   let running = false
@@ -147,6 +127,8 @@ function createLife({
     if (pet && !animals.some((a) => a.id === pet.id)) animals.push(makeAnimal(pet, 1, animals.length, { foodId: v.foodId || '' }))
   })
   const sizeOf = (a) => a.pet.size * PET_ZOOM
+  const walk = createWalk({ decor, now, sizeOf })
+  const bubbles = createBubbles({ animals, clock, emit: (a) => emit(a) })
 
   // ---------------------------------------------------------------- 地方
 
@@ -286,71 +268,6 @@ function createLife({
     a.timer = running ? clock.set(() => turn(a), ms) : null
   }
 
-  // 说一句（ms 毫秒后收起）；收起后两分钟内不自己开口（autoSay）
-  function say(a, text, ms = BUBBLE_MS) {
-    a.speech = null
-    show(a, text, ms)
-  }
-
-  function show(a, text, ms) {
-    a.bubble = text
-    a.bubbleDx = null
-    a.recent = (a.recent || []).concat(text).slice(-RECENT_LINES)
-    clock.clear(a.bubbleTimer)
-    a.bubbleTimer = clock.set(() => {
-      a.bubbleTimer = null
-      if (a.speech && a.speech.length) return nextLine(a)
-      a.bubble = ''
-      a.speech = null
-      quietUntil = now() + AUTO_GAP_MS
-      emit(a)
-    }, ms)
-  }
-
-  // 说一段：一句一句换着显示
-  function speak(a, lines) {
-    const list = (lines || []).filter(Boolean)
-    if (!list.length) return 0
-    a.speech = list.slice(1)
-    show(a, list[0], lineMs(list[0]))
-    return list.reduce((sum, l) => sum + lineMs(l), 0)
-  }
-
-  function nextLine(a) {
-    const text = a.speech.shift()
-    show(a, text, lineMs(text))
-    emit(a)
-  }
-
-  // 有别的气泡在屏幕上
-  const talking = (except) => animals.some((b) => b !== except && b.bubble && !b.hidden)
-
-  // 不是你点出来的话：没别的气泡、上一句收起两分钟后才说；说不了就不说（返回 false）
-  function autoSay(a, text, ms) {
-    if (!text || talking(a) || a.bubble || now() < quietUntil) return false
-    say(a, text, ms)
-    return true
-  }
-
-  // 跟着事情来的一句（新住户打招呼、走开找吃的、闻着香味回来、下锅后先吃的那只）：只要没别的气泡就说
-  function eventSay(a, text, ms) {
-    if (!text || talking(a)) return false
-    say(a, text, ms)
-    return true
-  }
-
-  // 你点了谁、喂了谁、叫了谁：别的气泡先收起来，屏幕上只有它在说
-  function hush(except) {
-    animals.forEach((b) => {
-      if (b === except || !b.bubble) return
-      clock.clear(b.bubbleTimer)
-      b.bubbleTimer = null
-      b.bubble = ''
-      b.speech = null
-      emit(b)
-    })
-  }
-
   function heart(a) {
     a.tapping = true
     clock.clear(a.tapTimer)
@@ -362,167 +279,26 @@ function createLife({
 
   // ---------------------------------------------------------------- 走
 
-  // 绕路：禁区（帐篷、篝火、木盖、提灯）和摆着的装饰的落脚框都是障碍。在每个障碍外面一圈取点，两点之间直线不碰障碍就连上，
-  // 走最短的那条（Dijkstra）；图只在装饰变了的时候重算。起点 / 终点在某件装饰的落脚框里（躺在吊床上、去窝里睡）的，那件这回不算障碍
-  let graph = null
-
-  function obstacles() {
-    const out = nogoPolys().map((poly) => ({ poly }))
-    placed.forEach((p) => {
-      if (!decorById(p.id)) return
-      const r = footRect(p.id, p.x, p.y)
-      out.push({ poly: [[r.left, r.top], [r.right, r.top], [r.right, r.bottom], [r.left, r.bottom]], decor: p.uid })
-    })
-    out.forEach((o) => {
-      const xs = o.poly.map((q) => q[0])
-      const ys = o.poly.map((q) => q[1])
-      o.box = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
-    })
-    return out
-  }
-
-  function clear(p, q, obs) {
-    const l = Math.min(p.x, q.x)
-    const r = Math.max(p.x, q.x)
-    const t = Math.min(p.y, q.y)
-    const b = Math.max(p.y, q.y)
-    return !obs.some((o) => !(r < o.box[0] || l > o.box[2] || b < o.box[1] || t > o.box[3]) && segmentHitsPoly([p.x, p.y], [q.x, q.y], o.poly))
-  }
-
-  function buildGraph() {
-    const obs = obstacles()
-    const nodes = []
-    obs.forEach((o) => {
-      const cx = o.poly.reduce((acc, q) => acc + q[0], 0) / o.poly.length
-      const cy = o.poly.reduce((acc, q) => acc + q[1], 0) / o.poly.length
-      o.poly.forEach(([x, y]) => {
-        const len = Math.hypot(x - cx, y - cy) || 1
-        const n = { x: x + ((x - cx) / len) * PATH_MARGIN, y: y + ((y - cy) / len) * PATH_MARGIN }
-        if (inGrass(n.x, n.y) && !obs.some((q) => pointInPoly(n.x, n.y, q.poly))) nodes.push(n)
-      })
-    })
-    const edges = nodes.map(() => [])
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        if (!clear(nodes[i], nodes[j], obs)) continue
-        const d = dist(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y)
-        edges[i].push([j, d])
-        edges[j].push([i, d])
-      }
-    }
-    return { obs, nodes, edges }
-  }
-
-  function detour(from, to) {
-    if (!graph) graph = buildGraph()
-    const obs = graph.obs.filter((o) => !o.decor || (!pointInPoly(from.x, from.y, o.poly) && !pointInPoly(to.x, to.y, o.poly)))
-    if (clear(from, to, obs)) return [to]
-    const { nodes, edges } = graph
-    const n = nodes.length
-    const best = new Array(n).fill(Infinity)
-    const prev = new Array(n).fill(-1)
-    const done = new Array(n).fill(false)
-    const toGoal = new Array(n).fill(Infinity)
-    nodes.forEach((nd, i) => {
-      if (clear(from, nd, obs)) best[i] = dist(from.x, from.y, nd.x, nd.y)
-      if (clear(nd, to, obs)) toGoal[i] = dist(nd.x, nd.y, to.x, to.y)
-    })
-    let goal = { d: Infinity, via: -1 }
-    for (;;) {
-      let u = -1
-      for (let i = 0; i < n; i++) if (!done[i] && best[i] < Infinity && (u < 0 || best[i] < best[u])) u = i
-      if (u < 0 || best[u] >= goal.d) break
-      done[u] = true
-      if (best[u] + toGoal[u] < goal.d) goal = { d: best[u] + toGoal[u], via: u }
-      edges[u].forEach(([v, d]) => {
-        if (!done[v] && best[u] + d < best[v]) {
-          best[v] = best[u] + d
-          prev[v] = u
-        }
-      })
-    }
-    if (goal.via < 0) return null
-    const path = [to]
-    for (let u = goal.via; u >= 0; u = prev[u]) path.unshift({ x: nodes[u].x, y: nodes[u].y })
-    return path
-  }
-
   function walkTo(a, spot, then) {
-    const path = detour({ x: a.x, y: a.y }, spot)
+    const path = walk.route({ x: a.x, y: a.y }, spot)
     if (!path) return false
     a.goal = { spot, then, path }
     stepAlong(a)
     return true
   }
 
-  // 会挡住宠物 / 被宠物挡住的东西，各自按一条横线排前后：抠图层（帐篷一条条）、装饰
-  const cutLines = cutoutStrips().map((c) => ({ l: c.l, r: c.r, y: c.zy }))
-  function occluders() {
-    const out = cutLines.slice()
-    placed.forEach((p) => {
-      if (!decorById(p.id)) return
-      const rect = patchRect(p.id, p.x, p.y)
-      out.push({ l: rect.left, r: rect.right, y: p.y })
-    })
-    return out
-  }
-
-  // 一段路要是跨过了某样东西的那条线、跨的时候身子又横着挨着它，就在跨过去的那一点切开：
-  // 每一小段里和谁前谁后都不变，按这段中点的 y 排（不然一出发就按终点排，走到锅后面之前就先钻到锅后面去了）
-  function splitForDepth(from, to, half) {
-    return depthCuts(from, to, half, occluders())
-  }
-
-  // 走下一小段：返回这段终点，宠物的前后按这段中点排
-  function nextStep(a, path) {
-    let next = path.shift()
-    const half = (sizeOf(a) * scaleAt(Math.max(a.y, next.y))) / 2
-    const cuts = splitForDepth({ x: a.x, y: a.y }, next, half)
-    if (cuts.length) {
-      path.unshift(...cuts.slice(1), { ...next, piece: true })
-      next = cuts[0]
-    }
-    a.right = facingFor(next.x - a.x, a.right)
-    a.dir = dirOf(next.x - a.x, next.y - a.y, a.dir)
-    // 切开的小段照原来的速度走（不设最短时长，不然走到切点会顿一下）
-    const ms = Math.round((dist(a.x, a.y, next.x, next.y) / a.pet.speed) * 1000)
-    a.duration = next.piece ? Math.max(16, ms) : Math.max(300, ms)
-    a.depthY = (a.y + next.y) / 2
-    moveTo(a, next)
-    return next
-  }
-
-  // 这一小段从哪儿、什么时候出发、走多久（a.duration 要先设好）：离开营地时按它算出走到哪儿了（freeze），
-  // 不然记下的是终点、回来接着滑过去
-  function moveTo(a, to) {
-    a.seg = { x: a.x, y: a.y, t0: now(), ms: a.duration }
-    a.x = to.x
-    a.y = to.y
-  }
-
-  // 正在走这一小段（还没走完）
-  const moving = (a) => !!a.seg && a.seg.ms > 0 && now() - a.seg.t0 < a.seg.ms
-
-  // 这会儿在屏幕上实际走到哪儿了（这一小段按时间线性插值，和 CSS 的 linear 过渡一样）
-  function whereNow(a) {
-    if (!moving(a)) return { x: a.x, y: a.y }
-    const t = Math.max(0, (now() - a.seg.t0) / a.seg.ms)
-    return { x: a.seg.x + (a.x - a.seg.x) * t, y: a.seg.y + (a.y - a.seg.y) * t }
-  }
-
   function stepAlong(a) {
     a.sway = null
     a.next = null
-    nextStep(a, a.goal.path)
+    const ms = walk.step(a, a.goal.path)
     a.action = a.pet.gait === 'fly' ? 'fly' : 'walk'
     emit(a)
-    schedule(a, a.duration)
+    schedule(a, ms)
   }
 
   function arrived(a) {
     const g = a.goal
-    a.duration = 0
-    a.depthY = null
+    walk.land(a)
     if (g.path.length) return stepAlong(a)
     const then = g.then
     a.goal = { spot: g.spot }
@@ -547,13 +323,6 @@ function createLife({
     a.goal = null
     a.emoji = ''
     doFor(a, 'idle', ms)
-  }
-
-  // ---------------------------------------------------------------- 一回合
-
-  function away(a) {
-    const h = hour()
-    return !!a.pet.hours && (h < a.pet.hours[0] || h >= a.pet.hours[1])
   }
 
   // ---------------------------------------------------------------- 睡
@@ -607,14 +376,14 @@ function createLife({
     a.until = 0
     a.goal = a.goal && !a.goal.path ? a.goal : null
     if (!byTap) return rest(a)
-    hush(a)
-    say(a, '嗯…？醒啦')
+    bubbles.take(a, '嗯…？醒啦')
     a.goal = null
     doFor(a, 'happy', WAKE_MS)
   }
 
   // ---------------------------------------------------------------- 一回合
 
+  // 不在营地的钟点（鹤鹤只在早上来）
   function away(a) {
     const h = hour()
     return !!a.pet.hours && (h < a.pet.hours[0] || h >= a.pet.hours[1])
@@ -638,7 +407,7 @@ function createLife({
   function eatAtPot(a, ms, line) {
     const eat = (b) => {
       facePot(b)
-      if (line) eventSay(b, line)
+      if (line) bubbles.event(b, line)
       doFor(b, 'eat', ms, '😋')
     }
     const spot = nearFire(a)
@@ -652,7 +421,7 @@ function createLife({
     const spot = nearFire(a)
     const sniff = (b) => {
       b.right = SCENE.fire[0] > b.x
-      autoSay(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
+      bubbles.auto(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
       doFor(b, 'fidget', SNIFF_MS)
     }
     if (spot && walkTo(a, spot, sniff)) return
@@ -675,12 +444,11 @@ function createLife({
     if (a.hidden) {
       const [ex, ey] = pick(SCENE.entries)
       a.hidden = false
-      a.x = ex
-      a.y = ey
+      walk.put(a, ex, ey)
       // 出去找吃的回来了：闻着锅里的香味，先去锅边吃一口
       if (a.why === 'hungry') {
         a.why = ''
-        eventSay(a, backLine(a.id))
+        bubbles.event(a, backLine(a.id))
         return eatAtPot(a, POT_EAT_MS)
       }
     }
@@ -722,7 +490,7 @@ function createLife({
       const spot = nearFire(a)
       const wait = (b) => {
         facePot(b)
-        autoSay(b, lineOf(b), CHAT_BUBBLE_MS)
+        bubbles.auto(b, lineOf(b), CHAT_BUBBLE_MS)
         doFor(b, 'sit', between(DO_MS), '💭')
       }
       if (spot && walkTo(a, spot, wait)) return
@@ -854,11 +622,10 @@ function createLife({
     a.action = action
     a.emoji = ''
     a.sway = null
-    a.duration = ms
-    moveTo(a, to)
+    walk.go(a, to, ms)
     a.depthY = depthY
     a.next = (b) => {
-      b.duration = 0
+      walk.land(b)
       then(b)
     }
     emit(a)
@@ -890,11 +657,11 @@ function createLife({
       b.action = 'away'
       b.why = 'hungry'
       b.goal = null
-      b.bubble = ''
+      bubbles.drop(b)
       emit(b)
       schedule(b, between(NIGHT_MS))
     }
-    eventSay(a, leaveLine(a.id))
+    bubbles.event(a, leaveLine(a.id))
     if (!walkTo(a, { x: ex, y: ey, action: 'idle' }, gone)) gone(a)
   }
 
@@ -921,7 +688,7 @@ function createLife({
     const quiet = animals.filter(still)
     if (quiet.length) {
       const a = pick(quiet)
-      if (autoSay(a, lineOf(a), CHAT_BUBBLE_MS)) {
+      if (bubbles.auto(a, lineOf(a), CHAT_BUBBLE_MS)) {
         emit(a)
         if (a.action === 'idle') schedule(a, CHAT_BUBBLE_MS + 400)
       }
@@ -940,7 +707,7 @@ function createLife({
     // 只有先开口的那只冒气泡（能说的时候），另一只回个表情：不会两个气泡叠在一起
     return walkTo(a, spot, (me) => {
       me.right = b.x > me.x
-      autoSay(me, rule.aLine, PAIR_MS)
+      bubbles.auto(me, rule.aLine, PAIR_MS)
       b.emoji = rule.bEmoji
       b.right = me.x > b.x
       emit(b)
@@ -959,30 +726,26 @@ function createLife({
       return
     }
     const spot = nearFire(a) || randomGrass(a)
-    if (spot) {
-      a.x = spot.x
-      a.y = spot.y
-    }
+    if (spot) walk.put(a, spot.x, spot.y)
   }
 
   // 从营地边上走进来，走到锅边：新住户先打招呼、吃一口；客人闻一闻
   function walkIn(a) {
     const [ex, ey] = pick(SCENE.entries)
-    a.x = ex
-    a.y = ey
-    if (!a.visitor) eventSay(a, a.pet.lines.hello, HELLO_MS)
+    walk.put(a, ex, ey)
+    if (!a.visitor) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
     const spot = nearFire(a) || { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'idle' }
     const then = a.visitor
       ? (b) => {
           b.right = SCENE.fire[0] > b.x
-          autoSay(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
+          bubbles.auto(b, sniffLine(b.id, b.visitor.foodId, random), SNIFF_MS)
           doFor(b, 'fidget', SNIFF_MS)
         }
       : (b) => {
           facePot(b)
           doFor(b, 'eat', EAT_MS, '')
         }
-    a.goal = { spot, then, path: detour({ x: a.x, y: a.y }, spot) || [spot] }
+    a.goal = { spot, then, path: walk.route({ x: a.x, y: a.y }, spot) || [spot] }
   }
 
   // 站在装饰上的点（吊床、窝、梯子）的那件装饰：回来时接着在上面，排前后按那件装饰
@@ -1004,8 +767,7 @@ function createLife({
     if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.y) || !inGrass(s.x, s.y)) return false
     const spot = decorSpotAt(s.x, s.y)
     if (!spot && inDecorFoot(s.x, s.y)) return false
-    a.x = s.x
-    a.y = s.y
+    walk.put(a, s.x, s.y)
     a.right = s.right !== false
     a.sleepStyle = s.sleepStyle === 'B' ? 'B' : 'A'
     if (spot) a.goal = { spot }
@@ -1029,7 +791,7 @@ function createLife({
       return
     }
     if (restore(a, memory[a.id])) {
-      if (arriving.has(a.id)) eventSay(a, a.pet.lines.hello, HELLO_MS)
+      if (arriving.has(a.id)) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
       return
     }
     if (arriving.has(a.id) || a.visitor) return walkIn(a)
@@ -1050,7 +812,10 @@ function createLife({
         // 叼着礼物的：接着走，或者已经到了就举着
         if (a.holdGift) {
           if (a.goal && a.goal.path && a.goal.path.length) return stepAlongGift(a)
-          if (a.goal && a.goal.then && a.action !== 'gift') return a.goal.then(a)
+          if (a.goal && a.goal.then && a.action !== 'gift') {
+            walk.land(a)
+            return a.goal.then(a)
+          }
           return
         }
         // 暂停时正在走：路没走完接着走；走完了（path 空）下一回合由 turn 收尾
@@ -1079,17 +844,17 @@ function createLife({
       running = false
       clock.clear(chatTimer)
       chatTimer = null
+      bubbles.stop()
       animals.forEach((a) => {
-        ;[a.timer, a.bubbleTimer, a.tapTimer].forEach((h) => clock.clear(h))
-        a.timer = a.bubbleTimer = a.tapTimer = null
-        a.speech = null
+        ;[a.timer, a.tapTimer].forEach((h) => clock.clear(h))
+        a.timer = a.tapTimer = null
       })
     },
 
     updateDecor(next) {
       placed = next
       lamps = lampsOf(placed)
-      graph = null
+      walk.update(placed)
       // 正在玩的东西收走了、挪走了：不玩了（坐在秋千上的也不摆了）
       animals.forEach((a) => {
         const spot = a.goal && a.goal.spot
@@ -1109,12 +874,8 @@ function createLife({
       if (!a || a.hidden) return
       heart(a)
       if (a.action === 'sleep' && !a.holdGift) return wake(a, true)
-      hush(a)
-      if (a.bubble && a.speech && a.speech.length) {
-        nextLine(a)
-        return
-      }
-      const ms = speak(a, a.visitor ? visitorSpeech(a.id, a.visitor.foodId, random) : speechOf(a))
+      if (bubbles.next(a)) return
+      const ms = bubbles.take(a, a.visitor ? visitorSpeech(a.id, a.visitor.foodId, random) : speechOf(a))
       // 站着的听你说话：说完前先别走开
       if (!a.visitor && a.action === 'idle' && !(a.goal && a.goal.path) && !a.next && running) schedule(a, ms + 400)
       emit(a)
@@ -1138,8 +899,7 @@ function createLife({
       const a = animals[i]
       if (!a || a.hidden) return
       a.goal = a.goal && !a.goal.path ? a.goal : null
-      hush(a)
-      say(a, liked ? a.pet.lines.fed : a.pet.lines.dislike)
+      bubbles.take(a, liked ? a.pet.lines.fed : a.pet.lines.dislike)
       doFor(a, liked ? 'eat' : 'dislike', EAT_MS, liked ? '😋' : '💦')
     },
 
@@ -1173,8 +933,7 @@ function createLife({
         a.goal = null
         a.next = null
         if (!useSpot(a, spot)) continue
-        hush(a)
-        say(a, CALL_LINES[spot.action] || '来啦')
+        bubbles.take(a, CALL_LINES[spot.action] || '来啦')
         heart(a)
         emit(a)
         return { ok: true, name: a.pet.name, index: a.index, action: spot.action }
@@ -1199,7 +958,7 @@ function createLife({
       a.holdGift = true
       a.goal = null
       const spot = { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'gift' }
-      a.goal = { spot, then: (b) => { b.action = 'gift'; b.emoji = '🎁'; b.duration = 0; emit(b) }, path: detour({ x: a.x, y: a.y }, spot) || [spot] }
+      a.goal = { spot, then: (b) => { b.action = 'gift'; b.emoji = '🎁'; emit(b) }, path: walk.route({ x: a.x, y: a.y }, spot) || [spot] }
       stepAlongGift(a)
       return true
     },
@@ -1208,8 +967,7 @@ function createLife({
       animals.forEach((a) => {
         if (!a.holdGift) return
         a.holdGift = false
-        hush(a)
-        say(a, '给你的！')
+        bubbles.take(a, '给你的！')
         rest(a)
       })
     },
@@ -1271,13 +1029,7 @@ function createLife({
     // 不然屏幕上那段走路的过渡还没走完、记下的又是终点，回来时它们会不迈腿地一路滑过去（10/29 用户：切回营地全都在漂移）
     freeze() {
       animals.forEach((a) => {
-        if (a.hidden || !moving(a)) return
-        const at = whereNow(a)
-        a.x = at.x
-        a.y = at.y
-        a.seg = null
-        a.duration = 0
-        a.depthY = null
+        if (a.hidden || !walk.halt(a)) return
         a.next = null
         if (a.goal && a.goal.path) a.goal = null
         if (['walk', 'fly', 'gift', 'slide', 'climb'].indexOf(a.action) !== -1) a.action = 'idle'
@@ -1312,13 +1064,13 @@ function createLife({
 
   // 叼礼物走路：和普通走路一样，但 holdGift 期间 turn 不接管，所以自己串
   function stepAlongGift(a) {
-    nextStep(a, a.goal.path)
+    const ms = walk.step(a, a.goal.path)
     a.action = 'gift'
     a.emoji = '🎁'
     emit(a)
     clock.clear(a.timer)
-    a.timer = clock.set(() => (a.goal.path.length ? stepAlongGift(a) : (a.depthY = null, a.goal.then(a))), a.duration)
+    a.timer = clock.set(() => (a.goal.path.length ? stepAlongGift(a) : (walk.land(a), a.goal.then(a))), ms)
   }
 }
 
-module.exports = { createLife, depthCuts, PET_ZOOM }
+module.exports = { createLife, PET_ZOOM }

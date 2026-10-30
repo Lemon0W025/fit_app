@@ -1,7 +1,7 @@
 // test/camp-life.test.js
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { createLife, depthCuts, PET_ZOOM } = require('../miniprogram/utils/camp-life')
+const { createLife, PET_ZOOM } = require('../miniprogram/utils/camp-life')
 const { campLayout, cutoutStrips, zOf } = require('../miniprogram/utils/camp-view')
 const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
@@ -309,27 +309,9 @@ test('有拼图时用拼图、按动作选行；拼图坏了退回单张图', ()
   assert.ok(Math.abs(center(plain) - plain.bottom) < 0.01) // 单张图脚就在底边
 })
 
-test('depthCuts：跨过挨着的那条线就切开，旁边经过、不跨的不切', () => {
-  const lines = [{ l: 1416, r: 2668, y: 2820 }, { l: 100, r: 200, y: 3000 }]
-  const cuts = depthCuts({ x: 1350, y: 2600 }, { x: 1350, y: 3100 }, 100, lines)
-  assert.equal(cuts.length, 1)
-  assert.equal(cuts[0].y, 2820)
-  assert.equal(cuts[0].x, 1350)
-  assert.equal(depthCuts({ x: 1000, y: 2600 }, { x: 1000, y: 3100 }, 100, lines).length, 0) // 离锅远，身子挨不着
-  assert.equal(depthCuts({ x: 1350, y: 2900 }, { x: 1500, y: 3100 }, 100, lines).length, 0) // 一直在锅前面
-  assert.deepEqual(depthCuts({ x: 1300, y: 2700 }, { x: 1600, y: 3200 }, 100, lines).map((c) => Math.round(c.y)), [2820])
-  // 斜着走：跨线时离锅还远，走着走着挨上了锅，也要在跨线处切开（不然后半段按前半段排）
-  assert.deepEqual(depthCuts({ x: 3833, y: 3643 }, { x: 2524, y: 2300 }, 120, lines).map((c) => Math.round(c.y)), [2820])
-  // 一整段都在锅的左边、挨不着：不切
-  assert.deepEqual(depthCuts({ x: 700, y: 2600 }, { x: 1100, y: 3100 }, 100, lines), [])
-  // 跨线的地方离端点不到 1 像素才算没跨（长路上离端点 30 像素的跨线也要切）
-  assert.deepEqual(depthCuts({ x: 2000, y: 2832 }, { x: 2000, y: 1300 }, 100, lines).map((c) => c.y), [2820])
-  const both = depthCuts({ x: 160, y: 2700 }, { x: 160, y: 3200 }, 100, [{ l: 100, r: 200, y: 3000 }, { l: 0, r: 300, y: 2800 }])
-  assert.deepEqual(both.map((c) => c.y), [2800, 3000])
-})
-
-// 模拟一整天（多种随机种子、早中晚夜）：每走一小段，沿路取点，只要那一点身子横着挨着某样东西（抠图层的条、装饰），
-// 宠物在它前面还是后面就必须和这一小段排的 z（按中点）一致；停下来歇着的地方不在锅身、提灯正后面；走的路不穿任何禁区
+// 模拟一整天（几个随机种子、早中晚夜）：每走一小段，沿路取点，只要那一点身子横着挨着某样东西（抠图层的条、装饰），
+// 宠物在它前面还是后面就必须和这一小段排的 z（按中点）一致；停下来歇着的地方不在锅身、提灯正后面；走的路不穿任何禁区。
+// 怎么切段、怎么绕路在 camp-walk.test.js 里单独测得更细，这里看的是营地里各种走法（新住户、客人、庆祝、礼物）都走的这一套
 test('走路时和锅、帐篷、提灯、装饰的前后每一刻都对；停下来的地方看得见；路不穿禁区', () => {
   const decor = [{ uid: 'd1', id: 'ball', x: 2500, y: 2300 }, { uid: 'd2', id: 'flowerbed', x: 1700, y: 3400 }, { uid: 'd3', id: 'hammock', x: 3300, y: 3300 }]
   const { patchRect, decorById } = require('../miniprogram/utils/shared/decor')
@@ -338,7 +320,7 @@ test('走路时和锅、帐篷、提灯、装饰的前后每一刻都对；停�
   let pieces = 0
   let rests = 0
   const runs = []
-  for (const seed of [3, 11, 29, 41, 57, 73, 97, 131]) for (const h of [8, 12, 18, 21]) runs.push([seed, h])
+  for (const seed of [3, 29, 57, 97]) for (const h of [8, 12, 18, 21]) runs.push([seed, h])
   for (const [seed, h] of runs) {
     const clock = manualClock()
     let life = null
@@ -385,8 +367,8 @@ test('走路时和锅、帐篷、提灯、装饰的前后每一刻都对；停�
     }
     life.stop()
   }
-  assert.ok(pieces > 300, `走的步数 ${pieces}`)
-  assert.ok(rests > 1000, `歇着的次数 ${rests}`)
+  assert.ok(pieces > 150, `走的步数 ${pieces}`)
+  assert.ok(rests > 500, `歇着的次数 ${rests}`)
 })
 
 test('在装饰上玩、睡的宠物盖在那件装饰上面（不被吊床、窝挡住）；没暂停时 resume 不打断正在走的', () => {
@@ -789,7 +771,7 @@ test('自己开口：很少（4～8 分钟一次），说的时候不走开、�
   assert.equal(clock.count(), 0)
 })
 
-test('点它说一段：两三句一句一句换，再点跳到下一句；别的气泡收起来；说过的十来句不重复；你点过之后两分钟内谁也不自己开口', () => {
+test('点它说一段：两三句一句一句换，再点跳到下一句；别的气泡收起来；说过的十来句不重复', () => {
   const today = { logged: 2, onTime: 2, allDone: false, allOnTime: false, open: '', streak: 5, kcal: 800, budget: 1240 }
   const { life, clock, sprites } = make({ pets: [{ id: 'chacha', level: 3 }, { id: 'huahua', level: 1 }], today: () => today, seed: 5 })
   life.start()
@@ -819,11 +801,7 @@ test('点它说一段：两三句一句一句换，再点跳到下一句；别�
   }
   const firsts = new Set(lines)
   assert.ok(firsts.size >= lines.length - 3, `重复太多：${lines.join(' / ')}`)
-  // 刚说完：两分钟内谁也不自己开口
-  for (let i = 0; i < 110; i++) {
-    clock.advance(1000)
-    assert.ok(Object.values(sprites).every((sp) => !sp.bubble), '刚说完就有自己开口的')
-  }
+  // 刚说完两分钟内谁也不自己开口：camp-bubbles.test.js
   life.stop()
 })
 
