@@ -8,6 +8,8 @@
 // 用法：
 //   npm run wx:function            上传并部署 api 云函数（云端安装依赖）
 //   npm run wx:preview             生成预览二维码 → .wechat/preview-qrcode.jpg，用微信扫码体验
+//   npm run wx:preview -- <页面> [参数]   扫码直接打开到这一页，比如模拟点了饭点提醒：
+//                                  npm run wx:preview -- pages/checkin/checkin "mealType=dinner&from=remind"
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
 //   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器（饭点提醒每 10 分钟看一次；填了 remindTemplate 再建）
 //   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base-vN/、decor-vN/、anim-vN/、cut-vN/
@@ -162,6 +164,7 @@ async function main() {
   if (command === 'preview') {
     fs.mkdirSync(OUT_DIR, { recursive: true })
     const dest = path.join(OUT_DIR, 'preview-qrcode.jpg')
+    const [pagePath, searchQuery] = args
     await ci.preview({
       project,
       desc: lastCommitSubject() || 'preview',
@@ -169,8 +172,10 @@ async function main() {
       robot: ROBOT,
       qrcodeFormat: 'image',
       qrcodeOutputDest: dest,
+      ...(pagePath ? { pagePath } : {}),
+      ...(searchQuery ? { searchQuery } : {}),
     })
-    console.log(`✓ 预览二维码已生成：${dest}`)
+    console.log(`✓ 预览二维码已生成：${dest}${pagePath ? `（打开到 ${pagePath}${searchQuery ? `?${searchQuery}` : ''}）` : ''}`)
     return
   }
 
