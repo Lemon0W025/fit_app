@@ -98,3 +98,17 @@
 4. `npm run wx:preview`，用 SendUserFile 把 `.wechat/preview-qrcode.jpg` 发给用户扫码，先试建档、记体重（不依赖 AI）
 5. AI：请用户在「云开发控制台 → AI → 生文模型」打开 `hy3` 和 `hy-vision-2.0-instruct` 的「套餐抵扣」开关，然后试拍照打卡；失败就看云函数日志定位分组或模型问题
 6. 都正常后先把 `cloudfunctions/api/config.js` 的 `testGrant`、`testPets`、`testVisitors`、`testUnlimited` 都改成 `null`、`npm run wx:function`，再 `npm run wx:upload -- 1.0.0 首个体验版`，请用户在「版本管理」选为体验版、在「成员管理」加妈妈为体验成员（营地的正式图没到之前先别给妈妈）
+
+## Agent skills
+
+### Issue tracker
+
+需求和待办记在 GitHub Issues（Lemon0W025/fit_app）。See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+用默认的五个标签：needs-triage / needs-info / ready-for-agent / ready-for-human / wontfix。See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+单一上下文：根目录一个 `CONTEXT.md` + `docs/adr/`（现在都还没有，真用到时再建）。See `docs/agents/domain.md`.
