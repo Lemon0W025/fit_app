@@ -4,7 +4,6 @@ const { localHour } = require('../../utils/shared/date')
 const { MEAL_WORDS, mealTimesOf, mealAt, timingFor, windowText } = require('../../utils/shared/timing')
 const { clockOf } = require('../../utils/fx')
 const { analysisSteps } = require('../../utils/view')
-const { peopleChips, PEOPLE_MORE } = require('../../utils/portion')
 
 // 认菜和算热量是同一次调用：认菜这步走 6 秒后把「算热量」点亮，让等的人知道还在往前走
 const COUNT_AFTER_MS = 6000
@@ -30,7 +29,6 @@ Page({
     photoTips: PHOTO_TIPS,
     // 几个人一起吃：默认就我
     people: 1,
-    peopleChips: peopleChips(1),
   },
 
   // 首页大卡带着餐次进来就用它；不然按饭点窗口猜，都不在窗口里按钟点猜
@@ -86,22 +84,9 @@ Page({
     this.setData({ note: e.detail.value })
   },
 
-  // 「几个人一起吃？」：和家里人一起吃的，小暖按人数算她那一份
-  pickPeople(e) {
-    const value = e.currentTarget.dataset.value
-    if (value === 'more') {
-      wx.showActionSheet({
-        itemList: PEOPLE_MORE.map((n) => `${n} 个人`),
-        success: (res) => this.setPeople(PEOPLE_MORE[res.tapIndex]),
-      })
-      return
-    }
-    this.setPeople(Number(value))
-  },
-
-  setPeople(people) {
-    if (!people) return
-    this.setData({ people, peopleChips: peopleChips(people) })
+  // 「几个人一起吃？」（components/people）：和家里人一起吃的，小暖按人数算她那一份
+  onPeople(e) {
+    this.setData({ people: e.detail.value })
   },
 
   // 开了微信提醒的：交给小暖之前顺手申请一次「允许」（要在点击里调；勾了「总是保持」就不弹），允许了攒一次提醒

@@ -21,9 +21,7 @@
   </view>
 
   <view class="section-title">几个人一起吃？</view>
-  <view class="chips people-chips">
-    <view wx:for="{{peopleChips}}" wx:key="label" class="chip {{item.on ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPeople">{{item.label}}</view>
-  </view>
+  <people-pick value="{{people}}" bind:change="onPeople" />
   <view wx:if="{{people > 1}}" class="people-tip">一盘一锅大家夹的菜，小暖按 {{people}} 份算你那一份</view>
 
   <view class="section-title">想跟小暖说点什么（选填）</view>

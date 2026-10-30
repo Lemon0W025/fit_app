@@ -2,7 +2,7 @@ const api = require('../../utils/api')
 const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
-const { adjustView, adjustRequest, previewText, peopleChips, peopleText, PEOPLE_MORE } = require('../../utils/portion')
+const { adjustView, adjustRequest, previewText, peopleText } = require('../../utils/portion')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
 const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
@@ -25,7 +25,6 @@ Page({
     adjust: null,
     adjustShow: false,
     // 几个人一起吃
-    peopleChips: peopleChips(1),
     peopleText: '',
   },
 
@@ -200,24 +199,12 @@ Page({
   // ---------------------------------------------------------------- 几个人一起吃
 
   peopleView(meal) {
-    const people = meal.people || 1
-    return { peopleChips: peopleChips(people), peopleText: peopleText(people) }
+    return { peopleText: peopleText(meal.people || 1) }
   },
 
-  // 点「就我 / 2 人 / … / 更多」：大家夹的菜按人数分（meal.share）
-  pickPeople(e) {
-    const value = e.currentTarget.dataset.value
-    if (value === 'more') {
-      wx.showActionSheet({
-        itemList: PEOPLE_MORE.map((n) => `${n} 个人`),
-        success: (res) => this.setPeople(PEOPLE_MORE[res.tapIndex]),
-      })
-      return
-    }
-    this.setPeople(Number(value))
-  },
-
-  setPeople(people) {
+  // 点「就我 / 2 人 / … / 更多」（components/people）：大家夹的菜按人数分（meal.share）
+  onPeople(e) {
+    const people = e.detail.value
     if (!people || people === (this.data.meal.people || 1)) return
     this.update('meal.share', { people }, people > 1 ? `按 ${people} 个人算好了` : '按一个人算好了')
   },

@@ -1,0 +1,14 @@
+/* 六个排一行，一样宽 */
+.pp-row {
+  flex-wrap: nowrap;
+  gap: 10rpx;
+}
+
+.pp-row .pp-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 16rpx 0;
+  text-align: center;
+  white-space: nowrap;
+  font-size: 30rpx;
+}

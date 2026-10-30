@@ -1,6 +1,7 @@
 {
   "navigationBarTitleText": "打卡这一餐",
   "usingComponents": {
-    "segmented": "/components/segmented/segmented"
+    "segmented": "/components/segmented/segmented",
+    "people-pick": "/components/people/people"
   }
 }

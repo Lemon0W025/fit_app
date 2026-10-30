@@ -176,21 +176,6 @@
   font-weight: 600;
 }
 
-.people-chips {
-  flex-wrap: nowrap;
-  gap: 10rpx;
-}
-
-/* 六个排一行，一样宽 */
-.people-chips .chip {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 16rpx 0;
-  text-align: center;
-  white-space: nowrap;
-  font-size: 30rpx;
-}
-
 /* 改份量的抽屉 */
 .adj-preview {
   margin-top: 8rpx;

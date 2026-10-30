@@ -1,0 +1,3 @@
+<view class="chips pp-row">
+  <view wx:for="{{chips}}" wx:key="label" class="chip pp-chip {{item.on ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="onTap">{{item.label}}</view>
+</view>

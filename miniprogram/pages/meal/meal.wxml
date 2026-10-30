@@ -61,9 +61,7 @@
     <!-- 和家里人一起吃的：点人数，大家夹的菜按人数分 -->
     <view class="people">
       <view class="people-title">几个人一起吃？</view>
-      <view class="chips people-chips">
-        <view wx:for="{{peopleChips}}" wx:key="label" class="chip {{item.on ? 'chip-on' : ''}}" hover-class="chip-press" hover-stay-time="100" data-value="{{item.value}}" bindtap="pickPeople">{{item.label}}</view>
-      </view>
+      <people-pick value="{{meal.people || 1}}" bind:change="onPeople" />
     </view>
     <view wx:for="{{meal.dishes}}" wx:key="index" class="dish" hover-class="dish-press" hover-stay-time="100" data-index="{{item.index}}" bindtap="openDish">
       <view class="dish-main">

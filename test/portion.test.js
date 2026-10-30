@@ -54,11 +54,9 @@ test('几个人一起吃：大家夹的菜整份 = 她那份 × 人数，「全�
   assert.ok(oldDish.max >= 4)
 })
 
-test('「几个人一起吃？」那排和结果页那句', () => {
-  const { peopleChips, peopleText } = require('../miniprogram/utils/portion')
-  assert.deepEqual(peopleChips(1).map((c) => [c.label, c.on]), [['就我', true], ['2 人', false], ['3 人', false], ['4 人', false], ['5 人', false], ['更多', false]])
-  assert.equal(peopleChips(3).find((c) => c.on).value, 3)
-  assert.deepEqual(peopleChips(8).slice(-1)[0], { value: 'more', label: '8 人', on: true })
+// 那一排的格子：portions-page.test.js 里测 components/people
+test('结果页大字下面那句：几个人一起吃', () => {
+  const { peopleText } = require('../miniprogram/utils/portion')
   assert.equal(peopleText(1), '')
   assert.equal(peopleText(5), '5 个人一起吃，算的是你那一份')
 })

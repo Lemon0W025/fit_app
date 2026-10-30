@@ -258,11 +258,11 @@ const SCENARIOS = {
       fixDate(T, '2026-10-22T18:10:00+08:00')
       const page = loadPage('checkin', createWx(async () => ({ ok: true, data: null })))
       page.onLoad({})
-      page.setPeople(5)
+      page.onPeople({ detail: { value: 5 } })
       return { data: snap(page) }
     },
     drive: async (page) => {
-      await page.evaluate(() => document.querySelector('.people-chips').scrollIntoView({ block: 'center' }))
+      await page.evaluate(() => document.querySelector('.pp-row').scrollIntoView({ block: 'center' }))
       await page.waitForTimeout(1500)
     },
   },

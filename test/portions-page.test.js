@@ -3,7 +3,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { analysisJson } = require('./helpers/fake-repo')
-const { createWx, loadPage, settle, event, readWxml } = require('./helpers/page-harness')
+const { createWx, loadPage, loadComponent, settle, event, readWxml } = require('./helpers/page-harness')
 const { manualClock } = require('./helpers/manual-clock')
 const { fixDate } = require('./helpers/fixed-date')
 
@@ -144,7 +144,29 @@ const HOTPOT = [
   { name: '火锅', portion: '一锅', grams: 1500, kcal: 1500, shared: true },
 ]
 
-test('打卡页「几个人一起吃？」：默认就我；点 5 人、更多选 8 人；交给小暖时带着人数', async (t) => {
+test('「几个人一起吃？」那一排（components/people）：就我、2～5 人、更多弹出 6 / 7 / 8 / 10；点了发 change，和现在一样的不发', () => {
+  const wx = createWx(async () => ({ ok: true, data: null }))
+  const pick = loadComponent('people', wx, { value: 1 })
+  assert.deepEqual(pick.data.chips.map((c) => [c.label, c.on]), [['就我', true], ['2 人', false], ['3 人', false], ['4 人', false], ['5 人', false], ['更多', false]])
+  pick.onTap(event({ value: 1 }))
+  assert.deepEqual(pick.events, [])
+  pick.onTap(event({ value: 5 }))
+  assert.deepEqual(pick.events.pop(), ['change', { value: 5 }])
+  wx.actionSheetChoice = 2
+  pick.onTap(event({ value: 'more' }))
+  assert.deepEqual(pick.events.pop(), ['change', { value: 8 }])
+  // 页面改了 value：那一格亮、「更多」写人数
+  pick.setData({ value: 8 })
+  assert.deepEqual(pick.data.chips.slice(-1)[0], { value: 'more', label: '8 人', on: true })
+  pick.onTap(event({ value: 'more' }))
+  assert.deepEqual(pick.events, [], '又选了 8 人')
+  // 一开始就是 4 个人（结果页打开时已经分过）：那一格亮
+  const four = loadComponent('people', wx, { value: 4 })
+  four.attach()
+  assert.equal(four.data.chips.find((c) => c.on).label, '4 人')
+})
+
+test('打卡页「几个人一起吃？」：默认就我；选了 5 人，交给小暖时带着人数', async (t) => {
   fixDate(t, '2026-10-22T18:10:00+08:00')
   const cloud = createFakeCloud({ replies: [analysisJson({ foods: HOTPOT })] })
   const { main } = loadCloudFunction(cloud)
@@ -153,14 +175,9 @@ test('打卡页「几个人一起吃？」：默认就我；点 5 人、更多�
   const page = loadPage('checkin', wx)
   page.onLoad({})
   assert.equal(page.data.people, 1)
-  assert.equal(page.data.peopleChips.find((c) => c.on).label, '就我')
-  page.pickPeople(event({ value: 5 }))
-  assert.equal(page.data.people, 5)
-  wx.actionSheetChoice = 2
-  page.pickPeople(event({ value: 'more' }))
+  page.onPeople(event({}, { value: 8 }))
   assert.equal(page.data.people, 8)
-  assert.equal(page.data.peopleChips.slice(-1)[0].label, '8 人')
-  page.pickPeople(event({ value: 5 }))
+  page.onPeople(event({}, { value: 5 }))
   page.onNote(event({}, { value: '火锅' }))
   page.submit()
   await settle()
@@ -168,13 +185,14 @@ test('打卡页「几个人一起吃？」：默认就我；点 5 人、更多�
   const meal = await main({ action: 'meal.get', data: { mealId } })
   assert.equal(meal.data.people, 5)
   assert.match(JSON.stringify(cloud.aiCalls[0].messages), /5 个人一起吃/)
-  assert.match(readWxml('checkin'), /bindtap="pickPeople"/)
+  assert.match(readWxml('checkin'), /<people-pick value="\{\{people\}\}" bind:change="onPeople"/)
+  assert.match(readWxml('meal'), /<people-pick value="\{\{meal.people \|\| 1\}\}" bind:change="onPeople"/)
 })
 
 test('结果页改人数：火锅按 5 个人分、米饭不动，热量滚到新数，写「5 个人一起吃，算的是你那一份」；点火锅的抽屉里「全部」是整锅', async (t) => {
   const { page, wx } = await openMeal(t, [analysisJson({ foods: HOTPOT })])
-  assert.equal(page.data.peopleChips.find((c) => c.on).value, 1)
-  page.pickPeople(event({ value: 5 }))
+  assert.equal(page.data.meal.people, 1)
+  page.onPeople(event({}, { value: 5 }))
   await settle()
   page.clock.advance(1000)
   assert.equal(page.data.meal.people, 5)
@@ -188,7 +206,7 @@ test('结果页改人数：火锅按 5 个人分、米饭不动，热量滚到�
   assert.equal(page.data.adjust.preview, '约 300 克 · 300 千卡')
   // 改回就我：回到原来的
   page.closeAdjust()
-  page.pickPeople(event({ value: 1 }))
+  page.onPeople(event({}, { value: 1 }))
   await settle()
   page.clock.advance(1000)
   assert.equal(page.data.meal.kcalText, '约 1674 千卡')

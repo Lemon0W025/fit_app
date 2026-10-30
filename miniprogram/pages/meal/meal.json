@@ -3,6 +3,7 @@
   "usingComponents": {
     "celebrate": "/components/celebrate/celebrate",
     "sheet": "/components/sheet/sheet",
-    "slider-bar": "/components/slider/slider"
+    "slider-bar": "/components/slider/slider",
+    "people-pick": "/components/people/people"
   }
 }
