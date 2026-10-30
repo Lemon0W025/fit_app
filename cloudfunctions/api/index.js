@@ -16,6 +16,7 @@ const { createWeightService } = require('./services/weight')
 const { createForestService } = require('./services/forest')
 const { createCampService } = require('./services/camp')
 const { createRemindService } = require('./services/remind')
+const { createTestPerks } = require('./lib/test-perks')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -24,7 +25,7 @@ const repo = createRepo(cloud.database())
 const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
 const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
-const camp = createCampService({ repo, now, forest, getGrant: () => config.testGrant, getTestPets: () => config.testPets, getTestVisitors: () => config.testVisitors, getTestUnlimited: () => config.testUnlimited })
+const camp = createCampService({ repo, now, forest, perks: createTestPerks({ config, now }) })
 // 微信服务通知（一次性订阅消息）：config.remindTemplate 填了模板 ID 才会发
 const remind = createRemindService({ repo, now, config, send: (msg) => cloud.openapi.subscribeMessage.send(msg), log })
 

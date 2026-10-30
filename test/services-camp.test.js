@@ -2,6 +2,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createCampService } = require('../cloudfunctions/api/services/camp')
+const { createTestPerks } = require('../cloudfunctions/api/lib/test-perks')
 const { createFakeRepo, NOW, TODAY } = require('./helpers/fake-repo')
 const { PITY } = require('../cloudfunctions/api/lib/shared/garden')
 const { GOLD_SWING } = require('../cloudfunctions/api/lib/shared/decor')
@@ -11,11 +12,12 @@ function sequence(values) {
   return () => (queue.length ? queue.shift() : 0)
 }
 
-// NOW 是 2026-10-22 04:00Z，即北京时间 12 点；hourOf 可注入
-function setup({ random = sequence([]), camp, now = NOW, hour = 12, getGrant, getTestPets, getTestVisitors, getTestUnlimited } = {}) {
+// NOW 是 2026-10-22 04:00Z，即北京时间 12 点；hourOf 可注入；tests：测试福利的 config（testGrant / testPets / testVisitors / testUnlimited）
+function setup({ random = sequence([]), camp, now = NOW, hour = 12, tests = null } = {}) {
   const repo = createFakeRepo()
   if (camp) repo.state.gardens.set('u1', camp)
-  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, getGrant, getTestPets, getTestVisitors, getTestUnlimited })
+  const perks = tests ? createTestPerks({ config: tests, now: () => now }) : undefined
+  const service = createCampService({ repo, now: () => now, random, hourOf: () => hour, perks })
   return { repo, service }
 }
 
@@ -43,7 +45,7 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
 })
 
 test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
-  const { service } = setup({ camp: rich({ arrivals: ['doudou'] }), getGrant: () => ({ id: 'g1', beans: 500, until: '2026-12-31' }) })
+  const { service } = setup({ camp: rich({ arrivals: ['doudou'] }), tests: { testGrant: { id: 'g1', beans: 500, until: '2026-12-31' } } })
   const v = await service.get('u1', { markSeen: true })
   assert.equal(v.testGift, 500)
   assert.equal(v.beans, 620)
@@ -55,7 +57,7 @@ test('get：测试福利只送一次；markSeen 清掉新住户', async () => {
 
 test('get：测试期间（config.testPets）还没来的宠物一次全放出来，1 级、不弹新住户；只放一次，过了日子不放', async () => {
   const { PETS } = require('../cloudfunctions/api/lib/shared/pets')
-  const { repo, service } = setup({ camp: rich({ pets: [{ id: 'doudou', since: '2026-10-20', fed: 9, fedToday: { date: '', n: 0 } }], visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: TODAY }] }), getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }) })
+  const { repo, service } = setup({ camp: rich({ pets: [{ id: 'doudou', since: '2026-10-20', fed: 9, fedToday: { date: '', n: 0 } }], visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: TODAY }] }), tests: { testPets: { id: 'all-pets-1', until: '2026-12-31' } } })
   const v = await service.get('u1')
   assert.deepEqual(v.visitors, [], '客人也一起住下了')
   assert.deepEqual(v.pets.map((p) => p.id).sort(), PETS.map((p) => p.id).sort())
@@ -67,7 +69,7 @@ test('get：测试期间（config.testPets）还没来的宠物一次全放出�
   const again = await service.get('u1')
   assert.equal(again.pets.length, PETS.length)
 
-  const late = setup({ camp: rich(), getTestPets: () => ({ id: 'all-pets-1', until: '2026-10-21' }) })
+  const late = setup({ camp: rich(), tests: { testPets: { id: 'all-pets-1', until: '2026-10-21' } } })
   assert.deepEqual((await late.service.get('u1')).pets.map((p) => p.id), ['doudou'])
 })
 
@@ -91,7 +93,7 @@ test('get：测试客人（config.testVisitors）：挪走几只、送能引它�
   const all = PETS.map((p) => ({ id: p.id, since: TODAY, fed: p.id === 'doudou' ? 9 : 0, fedToday: { date: '', n: 0 } }))
   const conf = { id: 'visitors-1', until: '2026-11-30', remove: ['nuonuo', 'qiqi'], foods: { huluobo: 1, kaohongshu: 1 } }
   const camp = rich({ pets: all, foods: { xiaomi: 1 }, pot: { date: TODAY, foods: ['xiaomi', 'yumili', 'lianzi'] }, arrivals: ['qiqi'], grants: ['all-pets-1'] })
-  const { repo, service } = setup({ camp, random: () => 0, getTestPets: () => ({ id: 'all-pets-1', until: '2026-12-31' }), getTestVisitors: () => conf })
+  const { repo, service } = setup({ camp, random: () => 0, tests: { testPets: { id: 'all-pets-1', until: '2026-12-31' }, testVisitors: conf } })
   const v = await service.get('u1')
   assert.deepEqual(v.pets.map((p) => p.id).sort(), PETS.map((p) => p.id).filter((id) => id !== 'nuonuo' && id !== 'qiqi').sort())
   assert.equal(v.pets.find((p) => p.id === 'doudou').fed, 9, '留下的不动')
@@ -105,14 +107,14 @@ test('get：测试客人（config.testVisitors）：挪走几只、送能引它�
   const again = await service.get('u1')
   assert.deepEqual(again.visitors, [{ id: 'nuonuo', foodId: 'huluobo' }])
   assert.equal(again.pets.length, PETS.length - 2)
-  const late = setup({ camp: rich(), getTestVisitors: () => ({ ...conf, until: '2026-10-21' }) })
+  const late = setup({ camp: rich(), tests: { testVisitors: { ...conf, until: '2026-10-21' } } })
   assert.equal((await late.service.get('u1')).foods.length, 0)
 })
 
 test('测试无限资源（config.testUnlimited）：暖豆和每样食物每次都补满，花了、下锅了也补回来；过了日子不补', async () => {
   const { FOODS, TREATS } = require('../cloudfunctions/api/lib/shared/foods')
   const conf = { until: '2026-11-30', beans: 99999, foods: 9 }
-  const { repo, service } = setup({ camp: rich({ foods: { xiaomi: 20 } }), random: () => 0, getTestUnlimited: () => conf })
+  const { repo, service } = setup({ camp: rich({ foods: { xiaomi: 20 } }), random: () => 0, tests: { testUnlimited: conf } })
   const v = await service.get('u1')
   assert.equal(v.beans, 99999)
   assert.equal(v.foods.length, FOODS.length + TREATS.length)
@@ -124,7 +126,7 @@ test('测试无限资源（config.testUnlimited）：暖豆和每样食物每次
   assert.equal((await service.buy('u1', { decorId: 'hammock' })).beans, 99999)
   const cooked = await service.putFood('u1', { foodId: 'huluobo' })
   assert.equal(cooked.foods.find((f) => f.id === 'huluobo').count, 9)
-  const late = setup({ camp: rich(), getTestUnlimited: () => ({ ...conf, until: '2026-10-21' }) })
+  const late = setup({ camp: rich(), tests: { testUnlimited: { ...conf, until: '2026-10-21' } } })
   const lv = await late.service.get('u1')
   assert.deepEqual([lv.beans, lv.foods.length], [120, 0])
 })

@@ -26,6 +26,8 @@ module.exports = {
   // 填好后 npm run wx:function、npm run wx:trigger（建每 10 分钟的定时触发器）。null 时小程序里不显示微信提醒，只有手机日历闹钟
   remindTemplate: null,
 
+  // ---- 下面四样都是测试期间的福利（怎么做的全在 lib/test-perks.js）。上传体验版给家人之前四样都改成 null，再 npm run wx:function ----
+
   // 测试福利：until 这天（含）之前打开庭院的账号，各送一次 beans 暖豆（id 换了可以再送一次）。
   // 只给开发测试用，上传体验版给家人之前改成 null
   testGrant: { id: 'preview-1', beans: 5000, until: '2026-10-26' },

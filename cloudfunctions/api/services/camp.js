@@ -2,6 +2,7 @@ const { AppError, CODES } = require('../lib/errors')
 const { normalizeCamp, migrated } = require('../lib/camp-state')
 const { dateKey } = require('../lib/shared/date')
 const { RARITIES, SPIN_COST, WELCOME_BEANS, PITY, beanBalance, rollRarity, currentTerm } = require('../lib/shared/garden')
+const { NO_PERKS } = require('../lib/test-perks')
 const { PETS, petById } = require('../lib/shared/pets')
 const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
 const { dailyMenu } = require('../lib/menu')
@@ -24,41 +25,20 @@ const TASTE_HINT = {
 }
 
 // hourOf：本地钟点（礼物 5 点后才有；云函数默认按北京时间算）
-// getTestPets：测试期间把宠物都放出来（config.testPets）
-// getTestVisitors：测试「客人」那一步（config.testVisitors）：挪走几只、送能引它们来的食物
-// getTestUnlimited：测试期间无限资源（config.testUnlimited）：暖豆、每样食物读的时候和存的时候都补满
-function createCampService({ repo, now, random = Math.random, getGrant = () => null, getTestPets = () => null, getTestVisitors = () => null, getTestUnlimited = () => null, forest = null, hourOf = null }) {
+// perks：测试期间的福利（lib/test-perks.js），不给就没有
+function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, forest = null, hourOf = null }) {
   const today = () => dateKey(now())
   const hour = () => (hourOf ? hourOf() : (now().getUTCHours() + 8) % 24)
 
-  // 测试无限资源：暖豆不到 beans 就补到 beans，每样食物（含节气点心）不到 foods 份就补到；返回有没有补
-  function topUp(camp) {
-    const t = getTestUnlimited()
-    if (!t || today() > t.until) return false
-    let changed = false
-    const need = (t.beans || 0) - beanBalance(camp)
-    if (need > 0) {
-      camp.beans = { ...camp.beans, bonus: camp.beans.bonus + need }
-      changed = true
-    }
-    FOODS.concat(TREATS).forEach((f) => {
-      if ((camp.foods[f.id] || 0) < (t.foods || 0)) {
-        camp.foods = { ...camp.foods, [f.id]: t.foods }
-        changed = true
-      }
-    })
-    return changed
-  }
-
   async function load(openid) {
     const camp = normalizeCamp(await repo.getGarden(openid))
-    topUp(camp)
+    perks.topUp(camp)
     return camp
   }
 
-  // 存之前也补满（花了、下锅了，回给页面的就已经是满的）
+  // 存之前也补满（测试无限资源：花了、下锅了，回给页面的就已经是满的）
   async function save(openid, camp) {
-    topUp(camp)
+    perks.topUp(camp)
     await repo.saveGarden(openid, camp)
   }
 
@@ -154,41 +134,9 @@ function createCampService({ repo, now, random = Math.random, getGrant = () => n
         welcome = { beans: WELCOME_BEANS, petId: STARTER_PET }
         dirty = true
       }
-      const grant = getGrant()
-      let testGift = 0
-      if (grant && today() <= grant.until && camp.grants.indexOf(grant.id) === -1) {
-        camp.grants = camp.grants.concat(grant.id)
-        camp.beans = { ...camp.beans, bonus: camp.beans.bonus + grant.beans }
-        testGift = grant.beans
-        dirty = true
-      }
-      // 测试期间：还没来的宠物一次全放出来（1 级、不弹新住户），每个账号只放一次
-      const testPets = getTestPets()
-      if (testPets && today() <= testPets.until && camp.grants.indexOf(testPets.id) === -1) {
-        camp.grants = camp.grants.concat(testPets.id)
-        const have = residentIds(camp)
-        camp.pets = camp.pets.concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
-        camp.visitors = []
-        dirty = true
-      }
-      // 测试无限资源：补满了就存一次（首页的暖豆也读得到）
-      if (topUp(camp)) dirty = true
-      // 测试客人：remove 里的几只先搬走（再下锅才能引来），送 foods 里的食物；今天锅里煮的退回背包、锅清空。每个账号只做一次
-      const testVisitors = getTestVisitors()
-      if (testVisitors && today() <= testVisitors.until && camp.grants.indexOf(testVisitors.id) === -1) {
-        const gone = testVisitors.remove || []
-        camp.grants = camp.grants.concat(testVisitors.id)
-        camp.pets = camp.pets.filter((p) => gone.indexOf(p.id) === -1)
-        camp.arrivals = camp.arrivals.filter((id) => gone.indexOf(id) === -1)
-        camp.visitors = camp.visitors.filter((v) => gone.indexOf(v.id) === -1)
-        potFoods(camp).forEach((id) => addToBag(camp, id))
-        camp.pot = { date: '', foods: [] }
-        Object.keys(testVisitors.foods || {}).forEach((id) => {
-          if (foodById(id)) camp.foods = { ...camp.foods, [id]: (camp.foods[id] || 0) + testVisitors.foods[id] }
-        })
-        dirty = true
-      }
-      const result = view(camp, { welcome, testGift })
+      const test = perks.atGet(camp)
+      if (test.changed) dirty = true
+      const result = view(camp, { welcome, testGift: test.testGift })
       if (input && input.markSeen && camp.arrivals.length) {
         camp.arrivals = []
         dirty = true
