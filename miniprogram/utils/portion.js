@@ -1,7 +1,10 @@
 // 结果页改份量（点一道菜 → 抽屉里一根滑杆）：滑杆的范围、快捷按钮、拖的时候跟着变的「约 N 克 · M 千卡」、发给 meal.adjust 的参数。
-// 有克数的菜按克数拖（10 克一格，小份 5 克、大份 50 克），没克数的老打卡按「原来的几倍」拖（0.25 倍一格）。纯函数，有单测
+// 有克数的菜按克数拖（10 克一格，小份 5 克、大份 50 克），没克数的老打卡按「原来的几倍」拖（0.25 倍一格）。纯函数，有单测。
+// 热量怎么跟着变、能改到多少，和云函数存的是同一套（shared/dish.js），预览的数就是存下来的数
 
-const GRAMS_MAX = 3000
+const { LIMITS, isShared, resize } = require('./shared/dish')
+
+const GRAMS_MAX = LIMITS.gramsMax
 const FACTOR = { min: 0.25, max: 3, step: 0.25 }
 // 快捷按钮：相对打开时的份量
 const CHIPS = [
@@ -43,8 +46,8 @@ function sliderFor(dish) {
 }
 
 function kcalAt(dish, mode, value) {
-  const ratio = mode === 'grams' ? value / dish.grams : value
-  return Math.round(dish.kcal * ratio)
+  const r = resize(dish, mode === 'grams' ? { grams: value } : { factor: value })
+  return r.dish ? r.dish.kcal : dish.kcal
 }
 
 function timesText(value) {
@@ -64,15 +67,15 @@ function chipsFor(slider) {
   return CHIPS.map((c) => ({ label: c.label, value: snap(base * c.times, slider) }))
 }
 
-// 一整份是现在的几倍：大家夹的菜（shared 不是 false）按人数分过，整份 = 她那份 × 人数
-const wholeTimes = (dish, people) => (dish.shared === false ? 1 : Math.max(1, people || 1))
+// 一整份是现在的几倍：大家夹的菜按人数分过，整份 = 她那份 × 人数
+const wholeTimes = (dish, people) => (isShared(dish) ? Math.max(1, people || 1) : 1)
 
-// 「一整份里我吃了」那排：克数按格子落；倍数（老打卡）保留两位小数
+// 「一整份里我吃了」那排：克数按格子落；倍数（老打卡）保留两位小数，最多改到 LIMITS.factorMax 倍
 function partsFor(slider, dish, people) {
   const whole = slider.value * wholeTimes(dish, people)
   return PARTS.map((p) => ({
     label: p.label,
-    value: slider.mode === 'grams' ? snap(whole * p.times, slider) : Math.round(whole * p.times * 100) / 100,
+    value: slider.mode === 'grams' ? snap(whole * p.times, slider) : Math.min(LIMITS.factorMax, Math.round(whole * p.times * 100) / 100),
   }))
 }
 
@@ -85,7 +88,7 @@ function adjustView(dish, index, people = 1) {
       const span = slider.step * 10
       slider.max = Math.min(GRAMS_MAX, Math.max(slider.max, Math.ceil((slider.value * times) / span) * span))
     } else {
-      slider.max = Math.max(slider.max, times)
+      slider.max = Math.min(LIMITS.factorMax, Math.max(slider.max, times))
     }
   }
   return {

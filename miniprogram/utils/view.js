@@ -6,6 +6,7 @@ const { MEAL_WORDS } = require('./shared/timing')
 const { BEANS } = require('./shared/forest')
 const { petImage } = require('./camp-view')
 const { milestoneLine } = require('./milestone-lines')
+const { isShared } = require('./shared/dish')
 
 // 还没建档时进度条用的兜底预算
 const FALLBACK_DAILY_KCAL = 1500
@@ -14,7 +15,7 @@ const FALLBACK_DAILY_KCAL = 1500
 // 几个人一起吃时大家夹的菜写「一锅 · 你那份约 300 克」
 function dishRows(foods, people = 1) {
   return (foods || []).map((f, index) => {
-    const mine = people > 1 && f.shared !== false
+    const mine = people > 1 && isShared(f)
     const grams = f.grams > 0 ? `${mine ? '你那份' : ''}约 ${f.grams} 克` : mine ? '你那份' : ''
     return {
       index,

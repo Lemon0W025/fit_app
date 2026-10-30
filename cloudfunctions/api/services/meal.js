@@ -1,23 +1,15 @@
 const { AppError, CODES } = require('../lib/errors')
 const { parseMealAnalysis } = require('../lib/parse')
 const { buildMealMessages } = require('../lib/prompts')
-const { sumMeals, round1 } = require('../lib/shared/nutrition')
+const { sumMeals } = require('../lib/shared/nutrition')
 const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
 const { MAIN_MEALS, dayBeans, mealStamps, beansHint } = require('../lib/shared/forest')
 const { mealTimesOf, timingFor } = require('../lib/shared/timing')
+const { LIMITS, isShared, peopleOf, resize, share, totalsAfter } = require('../lib/shared/dish')
 
 const NOTE_MAX = 200
-// 改份量（meal.adjust）：克数 1～3000，按比例 0.1～5 倍；她家常用份量留最近 12 样
-const GRAMS_MIN = 1
-const GRAMS_MAX = 3000
-const FACTOR_MIN = 0.1
-const FACTOR_MAX = 5
-const DISH_KCAL_MAX = 5000
-const DISH_MACRO_MAX = 500
-const PORTIONS_KEEP = 12
-const PEOPLE_MAX = 20 // 几个人一起吃：最多几个人
-const MACROS = ['protein', 'carbs', 'fat']
+const PORTIONS_KEEP = 12 // 她家常用份量留最近几样
 
 function text(v, max) {
   return typeof v === 'string' ? v.trim().slice(0, max) : ''
@@ -43,93 +35,6 @@ function beansChange(beforeMeals, afterMeals, meal, times, at, milestone = null)
     // 这一次让连续打卡到了里程碑（结果页弹庆祝、发纪念章）
     milestone,
   }
-}
-
-// 一道菜改到多少：{ grams（新克数，没克数的菜是 0）, ratio（热量、营养素乘多少）}；参数不对抛 BAD_REQUEST
-function dishScale(dish, src) {
-  const has = dish.grams > 0
-  if (src.grams !== undefined) {
-    const g = Number(src.grams)
-    if (typeof src.grams !== 'number' || !isFinite(g) || g < GRAMS_MIN || g > GRAMS_MAX) {
-      throw new AppError(CODES.BAD_REQUEST, `克数要在 ${GRAMS_MIN}～${GRAMS_MAX} 之间`)
-    }
-    if (!has) throw new AppError(CODES.BAD_REQUEST, '这道菜没有记克数，按比例改吧')
-    const grams = Math.round(g)
-    return { grams, ratio: grams / dish.grams }
-  }
-  if (src.factor !== undefined) {
-    const f = Number(src.factor)
-    if (typeof src.factor !== 'number' || !isFinite(f) || f < FACTOR_MIN || f > FACTOR_MAX) {
-      throw new AppError(CODES.BAD_REQUEST, '份量改得太离谱了')
-    }
-    if (!has) return { grams: 0, ratio: f }
-    const grams = Math.min(GRAMS_MAX, Math.max(GRAMS_MIN, Math.round(dish.grams * f)))
-    return { grams, ratio: grams / dish.grams }
-  }
-  throw new AppError(CODES.BAD_REQUEST, '要改成多少？')
-}
-
-// 这道菜按比例缩放：热量、营养素（有的话）都乘 ratio
-function scaleDish(dish, { grams, ratio }) {
-  const next = { ...dish, kcal: Math.round(Math.min(DISH_KCAL_MAX, dish.kcal * ratio)), adjusted: true }
-  delete next.base // 她自己改的为准，之后按人数分从这儿算
-  if (grams > 0) next.grams = grams
-  MACROS.forEach((k) => {
-    if (typeof dish[k] === 'number') next[k] = round1(Math.min(DISH_MACRO_MAX, dish[k] * ratio))
-  })
-  return next
-}
-
-// 一道菜从 dish 变成 next（null = 删掉）后的总数：按这道菜的变化量加减（老打卡的总数是 AI 给的、不一定等于菜之和，别的菜那部分不动）。
-// 这道菜没有营养素（老打卡）时，总营养素按总热量的比例缩放
-function totalsAfter(a, dish, next) {
-  const totalKcal = Math.max(0, Math.round((a.totalKcal || 0) + (next ? next.kcal : 0) - dish.kcal))
-  const out = { totalKcal }
-  const byDish = typeof dish.protein === 'number'
-  MACROS.forEach((k) => {
-    const old = a[k] || 0
-    if (byDish) out[k] = Math.max(0, round1(old + (next ? next[k] : 0) - dish[k]))
-    else out[k] = a.totalKcal > 0 ? round1((old * totalKcal) / a.totalKcal) : old
-  })
-  return out
-}
-
-// 大家夹的一道菜按人数分：每次都从第一次分之前的样子（base：那时的克数、热量、营养素和人数）算，
-// 改来改去、改回原来的人数不会越算越偏；她单独改过这道菜（adjust）就以她改的为准（base 去掉）
-function shareDish(dish, before, people) {
-  const base = dish.base || { grams: dish.grams || 0, kcal: dish.kcal, people: before, ...pickMacros(dish) }
-  const next = { ...dish }
-  delete next.base
-  if (people === base.people) {
-    next.kcal = base.kcal
-    if (base.grams > 0) next.grams = base.grams
-    MACROS.forEach((k) => {
-      if (typeof base[k] === 'number') next[k] = base[k]
-    })
-    return next
-  }
-  const ratio = base.people / people
-  next.kcal = Math.round(Math.min(DISH_KCAL_MAX, base.kcal * ratio))
-  if (base.grams > 0) next.grams = Math.min(GRAMS_MAX, Math.max(GRAMS_MIN, Math.round(base.grams * ratio)))
-  MACROS.forEach((k) => {
-    if (typeof base[k] === 'number') next[k] = round1(Math.min(DISH_MACRO_MAX, base[k] * ratio))
-  })
-  next.base = base
-  return next
-}
-
-function pickMacros(dish) {
-  const out = {}
-  MACROS.forEach((k) => {
-    if (typeof dish[k] === 'number') out[k] = dish[k]
-  })
-  return out
-}
-
-// 几个人一起吃：1～20 的整数，不对就当一个人
-function peopleOf(v) {
-  const n = Number(v)
-  return Number.isInteger(n) && n >= 1 && n <= PEOPLE_MAX ? n : 1
 }
 
 // 第一次改份量 / 人数：把 AI 原来的菜单和总热量存下（结果页「小暖原来估 N 千卡」）
@@ -323,7 +228,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       if (src.remove === true) {
         if (foods.length <= 1) throw new AppError(CODES.BAD_REQUEST, '这顿就剩这一道了，没吃的话删掉整条打卡吧')
       } else {
-        next = scaleDish(dish, dishScale(dish, src))
+        const r = resize(dish, src)
+        if (r.error) throw new AppError(CODES.BAD_REQUEST, r.error)
+        next = r.dish
       }
       const nextFoods = foods.slice()
       if (next) nextFoods[index] = next
@@ -349,15 +256,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const a = meal.analysis
       if (meal.status !== 'done' || !a || a.isFood === false) throw new AppError(CODES.BAD_REQUEST, '这顿还没算好，先不能改人数')
       const people = src.people
-      if (typeof people !== 'number' || !Number.isInteger(people) || people < 1 || people > PEOPLE_MAX) {
-        throw new AppError(CODES.BAD_REQUEST, `人数要在 1～${PEOPLE_MAX} 之间`)
+      if (typeof people !== 'number' || !Number.isInteger(people) || people < 1 || people > LIMITS.peopleMax) {
+        throw new AppError(CODES.BAD_REQUEST, `人数要在 1～${LIMITS.peopleMax} 之间`)
       }
       const before = peopleOf(meal.people)
       if (people === before) return meal
       let totals = { totalKcal: a.totalKcal, protein: a.protein, carbs: a.carbs, fat: a.fat }
       const foods = (a.foods || []).map((dish) => {
-        if (dish.shared === false) return dish
-        const next = shareDish(dish, before, people)
+        if (!isShared(dish)) return dish
+        const next = share(dish, before, people)
         totals = totalsAfter({ ...a, ...totals }, dish, next)
         return next
       })
