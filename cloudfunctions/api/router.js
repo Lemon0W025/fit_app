@@ -29,6 +29,8 @@ const ROUTES = {
   'remind.subscribed': ['remind', 'subscribed'],
   'remind.setNotify': ['remind', 'setNotify'],
   'remind.calendarDone': ['remind', 'calendarDone'],
+  'account.info': ['account', 'info'],
+  'account.reset': ['account', 'reset'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

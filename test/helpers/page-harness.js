@@ -72,6 +72,14 @@ function createWx(main) {
     navigateBack() {
       log.nav.push(['navigateBack'])
     },
+    reLaunch(o) {
+      log.nav.push(['reLaunch', o.url])
+      if (o.success) o.success()
+    },
+    pageScrollTo(o) {
+      log.scrolls = (log.scrolls || []).concat(o.selector || o.scrollTop)
+      if (o.success) o.success()
+    },
     stopPullDownRefresh() {},
     previewImage() {},
     vibrateShort(o) {
@@ -86,6 +94,12 @@ function createWx(main) {
     getStorageSync(key) {
       if (wx.failStorage) throw new Error('getStorageSync:fail')
       return wx.storage[key] === undefined ? '' : clone(wx.storage[key])
+    },
+    removeStorageSync(key) {
+      delete wx.storage[key]
+    },
+    clearStorageSync() {
+      wx.storage = {}
     },
     // 庭院容器 #garden 在屏幕上的位置；其他节点（如体重图 canvas）在测试里拿不到
     gardenRect: { left: 16, top: 100 },

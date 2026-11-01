@@ -2,14 +2,15 @@ const api = require('../../utils/api')
 const { buildDayView, greetingText, beansCard, nextMealCard } = require('../../utils/view')
 const { localHour } = require('../../utils/shared/date')
 const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
-const { beansHint } = require('../../utils/shared/forest')
 const { clockOf } = require('../../utils/fx')
 const { guideCard } = require('../../utils/guide')
+const { TOURS, seen, markSeen } = require('../../utils/tours')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
 
 // 下一顿大卡和提示跟着时间走（倒计时、过点），每分钟按现在的时间重算一次
 const REFRESH_MS = 60000
+const TOUR_AFTER_MS = 700 // 卡片浮上来之后再开始导览
 
 Page({
   data: {
@@ -20,6 +21,8 @@ Page({
     greeting: '',
     summarizing: false,
     guide: null,
+    tourSteps: TOURS.today,
+    tourShow: false,
   },
 
   onShow() {
@@ -28,10 +31,12 @@ Page({
 
   onHide() {
     this.stopRefresh()
+    this.stopTour()
   },
 
   onUnload() {
     this.stopRefresh()
+    this.stopTour()
   },
 
   onPullDownRefresh() {
@@ -62,6 +67,7 @@ Page({
           guide: guideCard(day.guide, this.guideHidden()),
         })
         this.refresh()
+        this.maybeTour()
       })
       .catch((err) => {
         this.setData({ loading: false })
@@ -70,11 +76,11 @@ Page({
   },
 
   refresh() {
-    const now = new Date()
     const meals = this.day.meals || []
+    // 暖豆卡只说得了多少、印章、连续几天；该拍哪顿、能得多少在上面的大卡里说
     this.setData({
-      card: nextMealCard(mealStatus(meals, this.times, now)),
-      daily: beansCard({ ...this.day.daily, hint: beansHint(meals, this.times, now) }),
+      card: nextMealCard(mealStatus(meals, this.times, new Date())),
+      daily: beansCard(this.day.daily),
     })
     this.stopRefresh()
     this.refreshTimer = clockOf(this).set(() => this.refresh(), REFRESH_MS)
@@ -84,6 +90,27 @@ Page({
     if (!this.refreshTimer) return
     clockOf(this).clear(this.refreshTimer)
     this.refreshTimer = null
+  },
+
+  // 第一次进首页（建好档以后）：新手导览，看过就不再自动出来（「使用说明」里能再看一遍）
+  maybeTour() {
+    if (this.data.tourShow || this.tourTimer || seen('today')) return
+    this.tourTimer = clockOf(this).set(() => {
+      this.tourTimer = null
+      this.setData({ tourShow: true })
+    }, TOUR_AFTER_MS)
+  },
+
+  stopTour() {
+    if (!this.tourTimer) return
+    clockOf(this).clear(this.tourTimer)
+    this.tourTimer = null
+  },
+
+  onTourDone() {
+    markSeen('today')
+    this.setData({ tourShow: false })
+    wx.pageScrollTo({ scrollTop: 0, duration: 300 })
   },
 
   goGarden() {

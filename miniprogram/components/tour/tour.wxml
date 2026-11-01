@@ -1,0 +1,14 @@
+<view wx:if="{{show && step}}" class="tour {{ready ? 'tour-ready' : ''}}" catchtap="next" catchtouchmove="noop">
+  <view wx:if="{{hole}}" class="tour-hole" style="left: {{hole.left}}px; top: {{hole.top}}px; width: {{hole.width}}px; height: {{hole.height}}px"></view>
+  <view wx:if="{{!hole}}" class="tour-dim"></view>
+  <view wx:if="{{tip}}" class="tour-tip" style="{{tip.style}}" catchtap="next">
+    <view wx:if="{{tip.side !== 'none'}}" class="tour-arrow tour-arrow-{{tip.side}}" style="left: {{tip.arrow}}px"></view>
+    <view class="tour-count">{{i + 1}} / {{steps.length}}</view>
+    <view class="tour-title">{{step.title}}</view>
+    <view class="tour-text">{{step.text}}</view>
+    <view class="tour-actions">
+      <view wx:if="{{!last}}" class="tour-skip" catchtap="skip">跳过</view>
+      <view class="tour-next" hover-class="tour-next-press" hover-stay-time="100" catchtap="next">{{nextText}}</view>
+    </view>
+  </view>
+</view>

@@ -18,9 +18,10 @@
     </view>
 
     <view wx:if="{{card}}" class="fx-rise fx-d1">
-      <view class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
+      <view id="tour-next" class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
         <view class="next-title">{{card.title}}</view>
         <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
+        <view wx:if="{{card.reward}}" class="next-reward">🫘 {{card.reward}}</view>
         <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
           <button class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
         </view>
@@ -28,21 +29,20 @@
       </view>
     </view>
 
-    <view wx:if="{{daily}}" class="card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
+    <view wx:if="{{daily}}" id="tour-beans" class="card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
       <image class="beans-card-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
       <view class="beans-card-body">
         <view class="beans-card-title">{{daily.title}}</view>
         <view class="stamps">
           <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}} fx-pop" style="animation-delay: {{300 + index * 100}}ms">{{item.label}}</view>
         </view>
-        <view class="beans-card-hint">{{daily.hint}}</view>
         <view wx:if="{{daily.streakText}}" class="beans-card-streak">{{daily.streakText}}</view>
         <view wx:if="{{daily.onTimeText}}" class="beans-card-streak">⏰ {{daily.onTimeText}}</view>
       </view>
       <text class="beans-card-arrow">›</text>
     </view>
 
-    <view class="card hero fx-rise fx-d3">
+    <view id="tour-ring" class="card hero fx-rise fx-d3">
       <view class="hero-top">
         <text>{{view.dateLabel}}</text>
         <text>每日预算 {{view.dailyKcal}} 千卡</text>
@@ -90,4 +90,7 @@
       <button class="btn-plain" bindtap="generateSummary" loading="{{summarizing}}" disabled="{{summarizing || view.meals.length === 0}}">{{view.summary ? '重新总结' : '生成今日总结'}}</button>
     </view>
   </block>
+
+  <!-- 第一次进来：一步一步圈出要点的地方（utils/tours.js） -->
+  <tour steps="{{tourSteps}}" show="{{tourShow}}" bind:done="onTourDone" />
 </view>

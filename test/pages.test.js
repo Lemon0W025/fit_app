@@ -10,7 +10,7 @@ const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
 const { fixDate } = require('./helpers/fixed-date')
 
-const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile', 'remind', 'welcome']
+const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile', 'remind', 'welcome', 'manual']
 
 test('app.json 里的页面文件和 tabBar 图标都存在', () => {
   const fs = require('node:fs')
@@ -408,7 +408,8 @@ test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡',
   await settle()
   assert.equal(today.data.card.title, '午饭 · 12:00')
   assert.equal(today.data.card.sub, '11:00～13:00 拍算准时，还剩 1 小时 40 分')
-  assert.equal(today.data.daily.hint, '午饭 11:00～13:00 拍算准时，能得 15 暖豆')
+  assert.equal(today.data.card.reward, '准时拍能得 15 暖豆')
+  assert.doesNotMatch(readWxml('today'), /daily\.hint/, '暖豆卡不再重复说该拍哪顿')
   today.goCheckin(event({ mealType: 'lunch' }))
   assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/checkin/checkin?mealType=lunch'])
 
@@ -417,7 +418,7 @@ test('今日页：下一顿大卡跟着时间走，按钮带着餐次去打卡',
   today.clock.advance(60000)
   assert.equal(today.data.card.title, '午饭还没拍')
   assert.equal(today.data.card.warn, true)
-  assert.equal(today.data.daily.hint, '午饭过点了，现在补拍也有 5 暖豆')
+  assert.equal(today.data.card.sub, '现在补拍也有 5 暖豆')
 
   today.onHide()
   assert.equal(today.clock.count(), 0)
@@ -645,21 +646,16 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   const carrot = camp.data.foodBag.find((f) => f.id === 'huluobo')
   assert.deepEqual(carrot.smell.map((p) => p.id), camp.camp.menu.huluobo)
   carrot.smell.forEach((p) => assert.equal(p.known, p.id === 'doudou', p.id))
-  // 拿着胡萝卜：拖到锅上松手就下锅
+  // 点锅打开的背包：点胡萝卜，问一句就下锅（不用拖）
   camp.pickFood(event({ id: 'huluobo' }))
-  assert.equal(camp.data.mode, 'feed')
-  assert.deepEqual(camp.data.selectedSmell, carrot.smell)
+  await settle()
+  assert.equal(wx.log.modals.pop(), '把胡萝卜放进锅里煮上，爱吃的小动物会闻着香味来')
+  assert.equal(camp.data.bagOpen, false)
+  assert.equal(camp.data.mode, 'view')
+  assert.equal(wx.log.toasts.pop(), '胡萝卜下锅啦，香味飘出去了…')
   wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
   camp.worldRect = wx.worldRect
   const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
-  const potAt = touchAt(SCENE.fire[0] * camp.L.k, (SCENE.fire[1] - 300) * camp.L.k)
-  camp.onDragStart(potAt)
-  await settle()
-  assert.equal(camp.data.drag.ok, true)
-  camp.onDragEnd(potAt)
-  await settle()
-  assert.equal(camp.data.mode, 'view')
-  assert.equal(wx.log.toasts.pop(), '胡萝卜下锅啦，香味飘出去了…')
   // 火点上了（锅里一层、有火苗、没有熄火的补丁）；今天菜单里胡萝卜那几只中挑了一只闻着香味从营地边上进来当客人
   const guest = cloud.db.collections.get('gardens').get('u1').visitors[0].id
   const guestName = petById(guest).name
@@ -677,8 +673,19 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(wx.log.modals.pop(), '锅里煮着：胡萝卜。爱吃的小动物会过来')
   assert.equal(camp.data.bagOpen, true)
   camp.closeBag()
-  // 客人不能喂：拿着小米拖到糯糯身上，不算喂它
+  // 背包按钮打开的：点一样问「放进锅里 / 拿去喂」；拿在手里时下面一排是闻着它会来的
+  wx.actionSheetChoice = 1
+  camp.openBag()
   camp.pickFood(event({ id: 'xiaomi' }))
+  assert.deepEqual(wx.log.actionSheets.pop(), ['放进锅里煮上', '拿着小米去喂一只小动物'])
+  assert.equal(camp.data.mode, 'feed')
+  assert.deepEqual(camp.data.selectedSmell, camp.data.foodBag.find((f) => f.id === 'xiaomi').smell)
+  // 拿着的拖到锅上也能下锅（这里不松手）
+  const potAt = touchAt(SCENE.fire[0] * camp.L.k, (SCENE.fire[1] - 300) * camp.L.k)
+  camp.onDragStart(potAt)
+  await settle()
+  assert.equal(camp.data.drag.ok, true)
+  // 客人不能喂：拖到客人身上不算
   const nv = camp.data.pets[1]
   assert.equal(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), null)
   camp.cancel()

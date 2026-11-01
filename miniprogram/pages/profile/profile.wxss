@@ -36,7 +36,7 @@
 }
 
 .disclaimer {
-  font-size: 24rpx;
+  font-size: 26rpx;
   color: var(--gray);
   line-height: 1.6;
   padding: 0 8rpx;
@@ -79,5 +79,9 @@
 .remind-entry-arrow {
   font-size: 40rpx;
   color: var(--gray);
+}
+
+.reset-entry .remind-entry-title {
+  color: var(--red, #d4543c);
 }
 

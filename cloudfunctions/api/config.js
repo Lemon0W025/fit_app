@@ -26,27 +26,25 @@ module.exports = {
   // 填好后 npm run wx:function、npm run wx:trigger（建每 10 分钟的定时触发器）。null 时小程序里不显示微信提醒，只有手机日历闹钟
   remindTemplate: null,
 
-  // ---- 下面四样都是测试期间的福利（怎么做的全在 lib/test-perks.js）。上传体验版给家人之前四样都改成 null，再 npm run wx:function ----
+  // ---- 下面几样都是测试期间用的（福利怎么做的在 lib/test-perks.js，从头再来在 services/account.js）。
+  // ---- 上传体验版给家人之前全改成 null，再 npm run wx:function ----
 
-  // 测试福利：until 这天（含）之前打开庭院的账号，各送一次 beans 暖豆（id 换了可以再送一次）。
-  // 只给开发测试用，上传体验版给家人之前改成 null
-  testGrant: { id: 'preview-1', beans: 5000, until: '2026-10-26' },
+  // 测试福利：until 这天（含）之前打开营地的账号，各送一次 beans 暖豆（id 换了可以再送一次）
+  testGrant: null,
 
   // 测试：until 这天（含）之前打开营地的账号，还没来的宠物一次全放出来（1 级），不用扭蛋喂食等它们搬来。
-  // 只给开发测试用，上传体验版给家人之前改成 null
-  testPets: { id: 'all-pets-1', until: '2026-11-30' },
+  // 10/31 用户要从零开始体验，关了（例：{ id: 'all-pets-1', until: '2026-11-30' }）
+  testPets: null,
 
-  // 测试「客人」那一步：until 这天（含）之前打开营地的账号，remove 里的几只先搬走、送 foods 里能引它们来的食物
-  // （胡萝卜→糯糯、莲子→莲莲、柿子→柿柿、烤红薯→杞杞、核桃→薯薯、小鱼干→花花、竹笋→笋宝），今天锅里煮的退回背包。每个账号一次（id 换了再来一次）。
-  // 只给开发测试用，上传体验版给家人之前改成 null
-  testVisitors: {
-    id: 'visitors-1',
-    until: '2026-11-30',
-    remove: ['nuonuo', 'lianlian', 'shishi', 'qiqi', 'shushu', 'huahua', 'sunbao'],
-    foods: { huluobo: 1, lianzi: 1, shizi: 1, kaohongshu: 1, hetao: 1, xiaoyugan: 1, zhusun: 1 },
-  },
+  // 测试「客人」那一步：remove 里的几只先搬走、送 foods 里能引它们来的食物，今天锅里煮的退回背包。每个账号一次。
+  // 10/31 关了（例：{ id: 'visitors-1', until: '2026-11-30', remove: ['nuonuo'], foods: { huluobo: 1 } }）
+  testVisitors: null,
 
   // 测试期间无限资源：until 这天（含）之前，每次读营地、每次存之前，暖豆不到 beans 就补到 beans，
-  // 每样食物（23 样 + 10 样节气点心）不到 foods 份就补到 foods 份。只给开发测试用，上传体验版给家人之前改成 null
-  testUnlimited: { until: '2026-11-30', beans: 99999, foods: 9 },
+  // 每样食物不到 foods 份就补到 foods 份。10/31 用户要从零开始：只留暖豆无限，食物要自己扭蛋抽（foods: 0）
+  testUnlimited: { until: '2026-11-30', beans: 99999, foods: 0 },
+
+  // 测试：「我的」页最下面多一个「从头再来」，清空自己这个账号的全部数据（档案、打卡和照片、体重、营地、提醒），
+  // 回到第一次打开的样子，好从新手指引走一遍。只清点按钮的那个人自己的
+  testReset: { until: '2026-11-30' },
 }

@@ -1,0 +1,127 @@
+/* 新手导览。类名都带 tour- 前缀：预览渲染器没有样式隔离。压暗用圈的超大阴影（圈本身是透明的，下面的东西亮着看得见）；
+   换一步时整层淡一下，圈和卡片位置直接到（不跟着滑，长辈看着不晕） */
+.tour {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tour-ready {
+  opacity: 1;
+}
+
+.tour-dim {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(30, 26, 20, 0.62);
+}
+
+.tour-hole {
+  position: absolute;
+  border-radius: 24rpx;
+  box-shadow: 0 0 0 4000rpx rgba(30, 26, 20, 0.62);
+}
+
+/* 圈外一圈白光一呼一吸，看得出是这儿 */
+.tour-hole::after {
+  content: '';
+  position: absolute;
+  left: -6rpx;
+  top: -6rpx;
+  right: -6rpx;
+  bottom: -6rpx;
+  border: 4rpx solid #fff;
+  border-radius: 28rpx;
+  animation: tour-glow 1.6s ease-in-out infinite;
+}
+
+@keyframes tour-glow {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(1.03); }
+}
+
+.tour-tip {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 32rpx 36rpx 28rpx;
+  border-radius: 28rpx;
+  background: #fffdf8;
+  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.25);
+}
+
+.tour-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-left: 24rpx solid transparent;
+  border-right: 24rpx solid transparent;
+}
+
+.tour-arrow-up {
+  top: -22rpx;
+  border-bottom: 24rpx solid #fffdf8;
+}
+
+.tour-arrow-down {
+  bottom: -22rpx;
+  border-top: 24rpx solid #fffdf8;
+}
+
+.tour-count {
+  font-size: 26rpx;
+  color: #8a8174;
+}
+
+.tour-title {
+  margin-top: 8rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #2f2a24;
+}
+
+.tour-text {
+  margin-top: 12rpx;
+  font-size: 34rpx;
+  line-height: 1.55;
+  color: #3f3830;
+}
+
+.tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 28rpx;
+}
+
+.tour-skip {
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 16rpx 28rpx;
+  font-size: 30rpx;
+  color: #8a8174;
+}
+
+.tour-next {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: 16rpx;
+  padding: 18rpx 48rpx;
+  border-radius: 44rpx;
+  background: #4e7d5b;
+  color: #fff;
+  font-size: 34rpx;
+  font-weight: 600;
+  transition: transform 0.15s;
+}
+
+.tour-next-press {
+  transform: scale(0.96);
+}

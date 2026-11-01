@@ -47,12 +47,21 @@ function createFakeDb() {
   }
 
   function query(name, where, order, lim) {
+    const matches = () => [...getCol(name).values()].filter((d) => Object.keys(where).every((k) => matchValue(d[k], where[k])))
     return {
       where: (w) => query(name, w, order, lim),
       orderBy: (field, dir) => query(name, where, [...(order || []), { field, dir }], lim),
       limit: (n) => query(name, where, order, n),
+      // 只取哪几个字段：假库照样整条给（测试不在意）
+      field: () => query(name, where, order, lim),
+      // 按条件批量删（云函数端才能这么删）
+      async remove() {
+        const docs = matches()
+        docs.forEach((d) => getCol(name).delete(d._id))
+        return { stats: { removed: docs.length } }
+      },
       async get() {
-        const docs = [...getCol(name).values()].filter((d) => Object.keys(where).every((k) => matchValue(d[k], where[k])))
+        const docs = matches()
         if (order) {
           docs.sort((a, b) => {
             for (const { field, dir } of order) {
@@ -180,6 +189,7 @@ require('../../cloudfunctions/api/config').testGrant = null
 require('../../cloudfunctions/api/config').testPets = null
 require('../../cloudfunctions/api/config').testVisitors = null
 require('../../cloudfunctions/api/config').testUnlimited = null
+require('../../cloudfunctions/api/config').testReset = null
 require('../../cloudfunctions/api/config').remindTemplate = null
 
 function loadCloudFunction(fakeCloud) {

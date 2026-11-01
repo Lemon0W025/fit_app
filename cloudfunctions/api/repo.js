@@ -6,6 +6,8 @@ const MEALS_PER_DAY_LIMIT = 100
 const MEALS_PER_RANGE_LIMIT = 1000
 // 定时触发器一次看多少人（家人自用，几个人而已）
 const REMINDERS_LIMIT = 100
+// 一个人的全部数据在哪几个集合里（从头再来时清空）
+const USER_COLLECTIONS = ['users', 'meals', 'summaries', 'weights', 'gardens', 'portions', 'reminders']
 
 function isMissingCollection(e) {
   const msg = String((e && (e.errMsg || e.message)) || '')
@@ -118,6 +120,18 @@ function createRepo(db) {
     async hasAnyMeal(openid) {
       const res = await withCollection('meals', (c) => c.where({ _openid: openid }).limit(1).get())
       return res.data.length > 0
+    },
+
+    // 从头再来：这个人在每个集合里的文档全删掉（按 _openid；档案、营地这些文档的 _id 就是 openid，也一起删）。
+    // 返回打卡照片的 fileID（调用的去删云存储里的照片）
+    async resetUser(openid) {
+      const photos = await withCollection('meals', (c) => c.where({ _openid: openid }).field({ fileID: true }).limit(MEALS_PER_RANGE_LIMIT).get())
+      const fileIDs = photos.data.map((m) => m.fileID).filter(Boolean)
+      for (const name of USER_COLLECTIONS) {
+        await withCollection(name, (c) => c.where({ _openid: openid }).remove())
+        await withCollection(name, (c) => c.where({ _id: openid }).remove())
+      }
+      return { fileIDs }
     },
 
     async saveWeight(openid, date, weightKg) {

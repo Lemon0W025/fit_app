@@ -91,6 +91,18 @@ function createFakeRepo() {
       return state.meals.some((m) => m._openid === openid)
     },
 
+    async resetUser(openid) {
+      const fileIDs = state.meals.filter((m) => m._openid === openid).map((m) => m.fileID).filter(Boolean)
+      state.meals = state.meals.filter((m) => m._openid !== openid)
+      ;[state.profiles, state.gardens, state.portions, state.reminders].forEach((map) => map.delete(openid))
+      ;[state.summaries, state.weights].forEach((map) => {
+        ;[...map.keys()].forEach((k) => {
+          if (k.startsWith(`${openid}_`)) map.delete(k)
+        })
+      })
+      return { fileIDs }
+    },
+
     async saveWeight(openid, date, weightKg) {
       state.weights.set(`${openid}_${date}`, { _openid: openid, date, weightKg })
     },

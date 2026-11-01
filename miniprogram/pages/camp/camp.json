@@ -3,6 +3,7 @@
   "disableScroll": true,
   "usingComponents": {
     "sheet": "/components/sheet/sheet",
-    "segmented": "/components/segmented/segmented"
+    "segmented": "/components/segmented/segmented",
+    "tour": "/components/tour/tour"
   }
 }

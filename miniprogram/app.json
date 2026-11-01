@@ -11,7 +11,8 @@
     "pages/album/album",
     "pages/forest/forest",
     "pages/remind/remind",
-    "pages/welcome/welcome"
+    "pages/welcome/welcome",
+    "pages/manual/manual"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F6F1E7",

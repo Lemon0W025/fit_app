@@ -29,10 +29,6 @@
   color: #b8763a;
 }
 
-.beans-card-hint {
-  font-size: 28rpx;
-}
-
 .beans-card-streak {
   font-size: 26rpx;
   color: var(--muted);
@@ -145,6 +141,12 @@
   font-size: 32rpx;
   margin-top: 8rpx;
   color: var(--muted);
+}
+
+.next-reward {
+  font-size: 30rpx;
+  margin-top: 6rpx;
+  color: #b9741f;
 }
 
 .next-btn {

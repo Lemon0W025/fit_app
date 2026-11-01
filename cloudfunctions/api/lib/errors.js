@@ -7,6 +7,7 @@ const CODES = {
   AI_FAILED: 'AI_FAILED',
   NO_MEALS: 'NO_MEALS',
   NO_BEANS: 'NO_BEANS',
+  FORBIDDEN: 'FORBIDDEN',
 }
 
 class AppError extends Error {

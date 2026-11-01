@@ -87,7 +87,7 @@
     </view>
 
     <view wx:if="{{mode === 'view'}}" class="side side-left">
-      <view class="side-btn" bindtap="goAlbum">
+      <view id="tour-album" class="side-btn" bindtap="goAlbum">
         <image class="side-icon" src="/images/garden/ui/book.png" mode="aspectFit" />
         <text class="side-label">图册</text>
       </view>
@@ -97,21 +97,21 @@
       </view>
     </view>
     <view wx:if="{{mode === 'view'}}" class="side side-right">
-      <view class="side-btn" bindtap="goGacha">
+      <view id="tour-gacha" class="side-btn" bindtap="goGacha">
         <image class="side-icon" src="/images/garden/ui/gacha.png" mode="aspectFit" />
         <text class="side-label">扭蛋</text>
         <view wx:if="{{canSpin}}" class="dot"></view>
       </view>
-      <view class="side-btn" bindtap="goShop">
+      <view id="tour-shop" class="side-btn" bindtap="goShop">
         <image class="side-icon" src="/images/garden/ui/shop.png" mode="aspectFit" />
         <text class="side-label">商店</text>
       </view>
-      <view class="side-btn" bindtap="openBag">
+      <view id="tour-bag" class="side-btn" bindtap="openBag">
         <image class="side-icon" src="/images/garden/ui/bag.png" mode="aspectFit" />
         <text class="side-label">背包</text>
         <view wx:if="{{bagCount}}" class="badge">{{bagCount}}</view>
       </view>
-      <view class="side-btn" bindtap="openResidents">
+      <view id="tour-residents" class="side-btn" bindtap="openResidents">
         <image class="side-icon" src="/images/garden/ui/paw.png" mode="aspectFit" />
         <text class="side-label">住户</text>
       </view>
@@ -156,7 +156,7 @@
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
-        <view class="muted small bag-hint">点一样拿在手里：拖进锅里煮上（下面是今天闻着它会来的小动物，黑影是还没来过的），或者拖到小动物身上喂它</view>
+        <view class="muted small bag-hint">{{bagForPot ? '点一样，放进锅里煮上' : '点一样：放进锅里煮上，或者拿着去喂一只小动物'}}（下面是今天闻着它会来的小动物，黑影是还没来过的）</view>
       </view>
       <view class="bag-pane {{bagTab === 'decor' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
@@ -193,12 +193,15 @@
       <view class="welcome-title">欢迎来到暖暖营地！</view>
       <view class="welcome-text">豆豆已经在篝火边等你了，送你 {{welcome.beans}} 暖豆。营地这样玩：</view>
       <view class="welcome-steps">
-        <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，在背包里拖进锅里煮上</view>
+        <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，点锅放进去煮上</view>
         <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，下次拍正餐就住下</view>
         <view class="welcome-step"><text class="welcome-no">3</text>点小动物，它会跟你说话；暖豆还能买家具</view>
       </view>
-      <button class="btn-primary" bindtap="goGacha">去扭蛋</button>
-      <view class="link link-muted welcome-later" bindtap="closeWelcome">先看看</view>
+      <button class="btn-primary" bindtap="closeWelcome">带我看看怎么玩</button>
+      <view class="link link-muted welcome-later" bindtap="goGacha">直接去扭蛋</view>
     </view>
   </view>
+
+  <!-- 第一次进营地：欢迎卡之后一步一步圈出锅、扭蛋、背包……（utils/tours.js） -->
+  <tour steps="{{tourSteps}}" show="{{tourShow}}" bind:done="onTourDone" />
 </view>

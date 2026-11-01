@@ -188,21 +188,21 @@ test('buildCalendarCells：周一开头的日历，每天印章和暖豆', () =>
 test('nextMealCard：首页下一顿大卡', () => {
   const base = { mealType: 'lunch', word: '午饭', time: '12:00', window: '11:00～13:00' }
   assert.deepEqual(nextMealCard({ state: 'upcoming', ...base }), {
-    state: 'upcoming', title: '午饭 · 12:00', sub: '11:00～13:00 拍算准时', button: '📷 拍午饭', mealType: 'lunch', small: false, warn: false,
+    state: 'upcoming', title: '午饭 · 12:00', sub: '11:00～13:00 拍算准时', reward: '准时拍能得 15 暖豆', button: '📷 拍午饭', mealType: 'lunch', small: false, warn: false,
   })
   assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 40 }).sub, '11:00～13:00 拍算准时，还剩 40 分钟')
   assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 100 }).sub, '11:00～13:00 拍算准时，还剩 1 小时 40 分')
   assert.equal(nextMealCard({ state: 'open', ...base, minutesLeft: 60 }).sub, '11:00～13:00 拍算准时，还剩 1 小时')
   assert.deepEqual(nextMealCard({ state: 'missed', ...base }), {
-    state: 'missed', title: '午饭还没拍', sub: '现在补拍也算数', button: '📷 补拍午饭', mealType: 'lunch', small: false, warn: true,
+    state: 'missed', title: '午饭还没拍', sub: '现在补拍也有 5 暖豆', reward: '', button: '📷 补拍午饭', mealType: 'lunch', small: false, warn: true,
   })
   assert.deepEqual(nextMealCard({ state: 'done', ...base, onTime: true, next: { mealType: 'dinner', word: '晚饭', time: '18:00' } }), {
-    state: 'done', title: '午饭准时拍了 ✓', sub: '下一顿：晚饭 18:00', button: '拍加餐', mealType: 'snack', small: true, warn: false,
+    state: 'done', title: '午饭准时拍了 ✓', sub: '下一顿：晚饭 18:00', reward: '', button: '拍加餐', mealType: 'snack', small: true, warn: false,
   })
   assert.equal(nextMealCard({ state: 'done', ...base, onTime: false, next: null }).title, '午饭拍了 ✓')
   assert.equal(nextMealCard({ state: 'done', ...base, onTime: false, next: null }).sub, '')
   assert.deepEqual(nextMealCard({ state: 'allDone', allOnTime: true }), {
-    state: 'allDone', title: '今天三顿都准时拍了 ✓', sub: '', button: '加餐也可以拍', mealType: 'snack', small: true, warn: false,
+    state: 'allDone', title: '今天三顿都准时拍了 ✓', sub: '', reward: '', button: '加餐也可以拍', mealType: 'snack', small: true, warn: false,
   })
   assert.equal(nextMealCard({ state: 'allDone', allOnTime: false }).title, '今天三顿都拍完啦 ✓')
   assert.equal(nextMealCard(null), null)

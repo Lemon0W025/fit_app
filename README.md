@@ -83,10 +83,11 @@
 miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
   pages/today|camp|weight|profile  四个 tab：今日（首页）、营地、体重、我的
   pages/checkin|meal          打卡、打卡详情
+  pages/welcome|remind|manual 欢迎页、饭点提醒、使用说明（「我的」里进）
   pages/gacha|shop|album|forest  扭蛋机（食物）、商店（装饰）、营地图册、打卡日历
   utils/api.js               调用云函数、上传照片、错误提示
   utils/fx.js, confetti.js   打卡动效：数字滚动、轻震（时钟可注入）；彩带的纯计算（小程序 canvas 和录屏共用）
-  components/                自定义组件：medal 纪念章（纯 CSS）、celebrate 庆祝（彩带 + 里程碑卡）、sheet 抽屉、ring 热量环、segmented 分段、slider 滑杆、switch 开关、people「几个人一起吃？」
+  components/                自定义组件：medal 纪念章（纯 CSS）、celebrate 庆祝（彩带 + 里程碑卡）、sheet 抽屉、ring 热量环、segmented 分段、slider 滑杆、switch 开关、people「几个人一起吃？」、tour 新手导览（步骤在 utils/tours.js）
   utils/view.js, chart.js    页面展示整理、体重图
   utils/camp-view.js         画 ↔ 屏幕换算、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 锅和客人、色调
   utils/camp-life.js, pets.js, anim.js, scene-fx.js  宠物作息、台词、逐帧动画帧选择、篝火等动效
@@ -99,7 +100,7 @@ miniprogram/                 小程序前端（原生 WXML/WXSS/JS）
 cloudfunctions/api/          唯一的云函数，按 action 路由
   config.js                  ← AI 模型配置在这里
   services/                  建档、打卡、今日/总结、体重、每日暖豆、营地（扭蛋、下锅、喂、商店、摆放、礼物、图册）
-  lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑；test-perks.js 测试期间的福利（config 里四个 test* 开关）
+  lib/                       提示词、AI 输出解析、校验、文档迁移等纯逻辑；test-perks.js 测试期间的福利（config 里的 test* 开关；从头再来在 services/account.js）
 scripts/draw-images.py      tabBar 图标等（需要 Pillow：pip install pillow）
 scripts/camp/               营地布局示意 blockout.py、占位图 placeholders.py、原画切块和垫图 cut_art.py、高清 detail_crops / merge_details、量坐标 overlay、精确抠图 cutouts、锅里的内容 pot_fill、夜里的光 light_map、篝火逐帧和热气 fx_art、锅是空的时熄了火的样子 fire_off、画的上下补天空和草地 extend_art、把画上火边两个碗擦掉 erase_bowls、装饰原地重绘 decor_crop / decor_patch、金色秋千调色 gold_variant、秋千拆成架子和座位 swing_parts、夜里火着的点火版夜景 lit_night、宠物图册小图、头像和全家福 pet_art
 scripts/preview/            营地实时录屏 record-camp.js（真实页面逻辑驱动浏览器，录 MP4 / GIF 逐帧看前后和光）、打卡动效录屏 record-checkin.js + WXML 渲染器（认自定义组件）

@@ -92,5 +92,22 @@
     <text class="remind-entry-arrow">›</text>
   </view>
 
+  <view class="card remind-entry" hover-class="fx-press" bindtap="goManual">
+    <view class="remind-entry-body">
+      <view class="remind-entry-title">📖 使用说明</view>
+      <view class="muted small">怎么拍照打卡、能得到什么、营地怎么玩</view>
+    </view>
+    <text class="remind-entry-arrow">›</text>
+  </view>
+
+  <!-- 测试期间（云函数 config.testReset 开着）才有：清空自己的数据，从新手指引重新走一遍 -->
+  <view wx:if="{{canReset}}" class="card remind-entry reset-entry" hover-class="fx-press" bindtap="startOver">
+    <view class="remind-entry-body">
+      <view class="remind-entry-title">🔄 从头再来（测试用）</view>
+      <view class="muted small">清空档案、打卡、体重、营地，回到第一次打开的样子</view>
+    </view>
+    <text class="remind-entry-arrow">›</text>
+  </view>
+
   <view class="disclaimer">小暖的建议仅供日常参考，不能替代医生。如有糖尿病、高血压等慢性病，或正在孕期、哺乳期，请先咨询医生再控制饮食。</view>
 </view>

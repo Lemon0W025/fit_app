@@ -231,7 +231,7 @@ button.btn-small {
 }
 
 .bag-name {
-  font-size: 24rpx;
+  font-size: 26rpx;
   white-space: normal;
   line-height: 1.3;
   padding: 0 6rpx;
@@ -456,7 +456,7 @@ button.btn-small {
 }
 
 .hud-today-text {
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: 700;
   color: #b8763a;
 }
@@ -518,7 +518,7 @@ button.btn-small {
 }
 
 .side-label {
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 800;
   color: #8a4f1a;
   margin-top: -4rpx;

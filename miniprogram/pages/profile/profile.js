@@ -35,6 +35,19 @@ function mealRows(form) {
   })
 }
 
+// 手机上存的（新手三步、导览看过没有、小动物在哪）和这次打开记在内存里的，全清掉
+function forgetLocal() {
+  try {
+    wx.clearStorageSync()
+  } catch (e) {
+    // 清不掉的本地记录不影响重新开始
+  }
+  const g = getApp().globalData
+  Object.keys(g).forEach((k) => {
+    g[k] = null
+  })
+}
+
 Page({
   data: {
     loading: true,
@@ -48,6 +61,14 @@ Page({
     ],
     activityOptions: Object.keys(ACTIVITY_LABELS).map((value) => ({ value, label: ACTIVITY_LABELS[value] })),
     mealRows: mealRows(EMPTY_FORM),
+    canReset: false,
+  },
+
+  // 测试期间才有「从头再来」
+  onLoad() {
+    api.call('account.info')
+      .then((info) => this.setData({ canReset: !!(info && info.canReset) }))
+      .catch(() => {})
   },
 
   onShow() {
@@ -94,6 +115,40 @@ Page({
 
   goRemind() {
     wx.navigateTo({ url: '/pages/remind/remind' })
+  },
+
+  goManual() {
+    wx.navigateTo({ url: '/pages/manual/manual' })
+  },
+
+  // 从头再来（测试用）：先问一句，清空云端自己的数据，再清掉手机上存的（新手三步、导览看过没有、小动物在哪），
+  // 整个小程序重新打开到首页 → 欢迎页 → 建档……
+  startOver() {
+    wx.showModal({
+      title: '从头再来？',
+      content: '会清空你的档案、所有打卡和照片、体重、营地（小动物、暖豆、家具）和提醒，回到第一次打开的样子。清掉就找不回来了。',
+      confirmText: '清空',
+      confirmColor: '#d4543c',
+      success: (res) => {
+        if (res.confirm) this.reset()
+      },
+    })
+  },
+
+  reset() {
+    wx.showLoading({ title: '正在清空', mask: true })
+    api.call('account.reset')
+      .then(() => {
+        wx.hideLoading()
+        forgetLocal()
+        this.dirty = false
+        // 营地页关掉时会把小动物在哪再存一次：重新打开完了再清一遍
+        wx.reLaunch({ url: '/pages/today/today', success: forgetLocal })
+      })
+      .catch((err) => {
+        wx.hideLoading()
+        api.showError(err)
+      })
   },
 
   save() {

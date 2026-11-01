@@ -9,6 +9,7 @@ const { petById } = require('../../utils/shared/pets')
 const { foodById } = require('../../utils/shared/foods')
 const { decorById, placeProblem } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
+const { TOURS, seen, markSeen } = require('../../utils/tours')
 
 const DOUBLE_TAP_MS = 300
 const HOUR_CHECK_MS = 60000
@@ -16,6 +17,7 @@ const VIEW_SETTLE_MS = 300 // 第一次进来排好版后再对准一次篝火
 const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩完再平移
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
 const SIDE_PAD = 64 // 屏幕两边按钮那一溜多宽（px），说话的气泡让开
+const TOUR_AFTER_MS = 900 // 画面摆好、锅的点击区出来以后再开始导览
 // 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
 const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
 
@@ -60,6 +62,7 @@ Page({
     drag: null,
     swayOn: {},
     bagOpen: false,
+    bagForPot: false, // 点锅打开的背包：点一样就下锅
     bagTab: 'food',
     bagTabs: [
       { label: '食物', value: 'food' },
@@ -73,6 +76,8 @@ Page({
     giftReady: false,
     giftShown: false,
     welcome: null,
+    tourSteps: TOURS.camp,
+    tourShow: false,
     celebrate: false,
   },
 
@@ -90,6 +95,7 @@ Page({
   onHide() {
     this.stopLife()
     this.later('viewTimer', null)
+    this.later('tourTimer', null)
   },
 
   onUnload() {
@@ -114,6 +120,7 @@ Page({
           return
         }
         this.render(view, true)
+        this.maybeTour()
         // 打卡成功回来：全员庆祝
         const app = getApp()
         if (app && app.globalData && app.globalData.celebrate) {
@@ -483,11 +490,16 @@ Page({
   // ---------------------------------------------------------------- 背包、锅
 
   openBag() {
-    this.setData({ bagOpen: true })
+    this.setData({ bagOpen: true, bagForPot: false })
+  },
+
+  // 点锅：打开背包的「吃的」，点一样就下锅
+  openPotBag() {
+    this.setData({ bagOpen: true, bagTab: 'food', bagForPot: true })
   },
 
   closeBag() {
-    this.setData({ bagOpen: false })
+    this.setData({ bagOpen: false, bagForPot: false })
   },
 
   // 背包顶上的「食物 / 装饰」（components/segmented）
@@ -495,8 +507,36 @@ Page({
     this.setData({ bagTab: e.detail.value })
   },
 
+  // 点了背包里一样吃的：点锅打开的，问一句就下锅；背包按钮打开的，问放进锅里还是拿去喂一只（拖拽对长辈难，下锅不用拖）
   pickFood(e) {
     const { id } = e.currentTarget.dataset
+    const f = foodById(id)
+    const name = f ? f.name : '它'
+    if (this.data.bagForPot) {
+      this.closeBag()
+      wx.showModal({
+        title: '放进锅里？',
+        content: `把${name}放进锅里煮上，爱吃的小动物会闻着香味来`,
+        confirmText: '放进去',
+        success: (res) => {
+          if (res.confirm) this.cook(id)
+        },
+      })
+      return
+    }
+    wx.showActionSheet({
+      itemList: ['放进锅里煮上', `拿着${name}去喂一只小动物`],
+      success: (res) => {
+        if (res.tapIndex === 0) {
+          this.closeBag()
+          this.cook(id)
+        } else this.holdFood(id)
+      },
+    })
+  },
+
+  // 拿在手里：拖到小动物身上喂它（拖进锅里也能下锅）
+  holdFood(id) {
     const f = foodById(id)
     const item = this.data.foodBag.find((x) => x.id === id)
     this.selected = { type: 'feed', foodId: id }
@@ -523,7 +563,7 @@ Page({
         wx.showToast({ title: '背包里没有吃的，去扭蛋机抽一个吧', icon: 'none' })
         return
       }
-      this.setData({ bagOpen: true, bagTab: 'food' })
+      this.openPotBag()
       return
     }
     const more = foods.length < 3 && this.data.foodBag.length > 0
@@ -534,7 +574,7 @@ Page({
       cancelText: '好的',
       confirmText: more ? '再放一样' : '好的',
       success: (res) => {
-        if (more && res.confirm) this.setData({ bagOpen: true, bagTab: 'food' })
+        if (more && res.confirm) this.openPotBag()
       },
     })
   },
@@ -751,6 +791,18 @@ Page({
 
   closeWelcome() {
     this.setData({ welcome: null })
+    this.maybeTour()
+  },
+
+  // 第一次进营地：有欢迎卡先看欢迎卡（关了再开始），没有就等画面摆好再开始；看过就不再自动出来
+  maybeTour() {
+    if (this.data.welcome || this.data.tourShow || seen('camp')) return
+    this.later('tourTimer', () => this.setData({ tourShow: true }), TOUR_AFTER_MS)
+  },
+
+  onTourDone() {
+    markSeen('camp')
+    this.setData({ tourShow: false })
   },
 
   noop() {},
