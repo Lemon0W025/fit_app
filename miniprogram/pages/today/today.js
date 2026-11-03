@@ -5,6 +5,7 @@ const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
 const { clockOf } = require('../../utils/fx')
 const { guideCard } = require('../../utils/guide')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
+const { appVersion } = require('../../utils/remind')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
 
@@ -58,6 +59,7 @@ Page({
         getApp().globalData.mealTimes = this.times
         // 微信提醒开没开（打卡页提交时要不要顺手申请「允许」）
         getApp().globalData.remind = day.remind || null
+        this.checkSilent(day.remind)
         // 直接给最后的数：热量卡的圆环（components/ring）自己把数字和圆环从上次显示的数一起滚过去（第一次从 0），
         // 页面藏起来时它跳到最后的数
         this.setData({
@@ -141,7 +143,33 @@ Page({
     this.setData({ guide: null })
   },
 
+  // 她第一次「允许」时勾了「总是保持以上选择」的话，以后申请不弹窗：点首页拍照时也顺手攒一次（没勾的不在这儿弹，只在交给小暖时问）
+  checkSilent(remind) {
+    this.silentTemplate = ''
+    const id = remind && remind.notify ? remind.templateId : ''
+    if (!id || !wx.getSetting) return
+    wx.getSetting({
+      withSubscriptions: true,
+      success: (res) => {
+        const items = (res.subscriptionsSetting && res.subscriptionsSetting.itemSettings) || {}
+        if (items[id] === 'accept') this.silentTemplate = id
+      },
+    })
+  },
+
+  silentSubscribe() {
+    const id = this.silentTemplate
+    if (!id || !wx.requestSubscribeMessage) return
+    wx.requestSubscribeMessage({
+      tmplIds: [id],
+      success: (res) => {
+        if (res[id] === 'accept') api.call('remind.subscribed', { accepted: true, version: appVersion() }).catch(() => {})
+      },
+    })
+  },
+
   goCheckin(e) {
+    this.silentSubscribe()
     const mealType = e && e.currentTarget && e.currentTarget.dataset.mealType
     wx.navigateTo({ url: mealType ? `/pages/checkin/checkin?mealType=${mealType}` : '/pages/checkin/checkin' })
   },

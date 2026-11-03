@@ -132,6 +132,12 @@ function createWx(main) {
     openSetting() {
       log.settings = (log.settings || 0) + 1
     },
+    // 订阅消息的设置：wx.subscriptionItems = { 模板 ID: 'accept' }（勾了「总是保持」的才有）
+    subscriptionItems: {},
+    getSetting(o) {
+      if (o.success) o.success({ authSetting: {}, subscriptionsSetting: { mainSwitch: true, itemSettings: { ...wx.subscriptionItems } } })
+    },
+    getAccountInfoSync: () => ({ miniProgram: { appId: 'wx-test', envVersion: wx.envVersion || 'develop' } }),
     showActionSheet(o) {
       log.actionSheets = (log.actionSheets || []).concat([o.itemList])
       if (o.success) o.success({ tapIndex: wx.actionSheetChoice })

@@ -18,12 +18,15 @@ module.exports = {
   //   'base64'：把图片内容直接塞进请求（模型拿不到链接时改用这个）
   imageMode: 'url',
 
-  // 饭点提醒的微信服务通知（一次性订阅消息）：小程序后台「功能 → 订阅消息」选一个「用餐提醒 / 打卡提醒」类公共模板后填：
+  // 饭点提醒的微信服务通知（一次性订阅消息）。一般不用填：小程序「我的 → 饭点提醒」点「开通微信提醒」，云函数自己找 / 加模板，
+  // 存进集合 settings（lib/remind-template.js）。想自己指定模板时在这里填，填了以它为准。
+  // 自己指定的话：小程序后台「功能 → 订阅消息」选一个「用餐提醒 / 打卡提醒」类公共模板后填：
   //   id：模板 ID；state：'trial'（体验版，给妈妈用的就是体验版）/ 'developer' / 'formal'；
   //   fields：我们的几样说法填到模板的哪个字段（模板详情里的 thing1、time2……）：
   //     meal「午饭还没拍哦」、mealTime「2026-10-29 12:00」（time / date 类字段用这个）、tip「13:00 前拍还算准时」、name「小暖养生」
   //   例：{ id: 'xxxx', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
-  // 填好后 npm run wx:function、npm run wx:trigger（建每 10 分钟的定时触发器）。null 时小程序里不显示微信提醒，只有手机日历闹钟
+  // 填好后 npm run wx:function。null 时用一键开通存下的模板；都没有时提醒页只有「开通微信提醒」按钮和手机日历闹钟。
+  // 定时触发器（每 10 分钟看一次）用 npm run wx:trigger 建一次就行
   remindTemplate: null,
 
   // ---- 下面几样都是测试期间用的（福利怎么做的在 lib/test-perks.js，从头再来在 services/account.js）。

@@ -134,6 +134,8 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
   const deletedFiles = []
   // 发出去的订阅消息；sendError 设了就按它抛（{ errCode: 43101 } 之类）
   const messages = []
+  // 一键开通时加进「我的模板」的
+  const added = []
   let sendError = null
   return {
     DYNAMIC_CURRENT_ENV: Symbol('DYNAMIC_CURRENT_ENV'),
@@ -168,12 +170,31 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
           messages.push(clone(msg))
           return { errCode: 0 }
         },
+        // 一键开通用：小程序的类目、公共模板库（一个「用餐提醒」）、加进「我的模板」
+        async getCategory() {
+          return { data: [{ id: 616, name: '健康管理' }] }
+        },
+        async getPubTemplateTitleList({ keyword }) {
+          return { data: /用餐|提醒/.test(keyword) ? [{ tid: 1888, title: '用餐提醒', type: 2, categoryId: '616' }] : [] }
+        },
+        async getPubTemplateKeyWordsById() {
+          return { data: [{ kid: 1, name: '用餐时间', rule: 'time' }, { kid: 2, name: '提醒内容', rule: 'thing' }, { kid: 3, name: '温馨提示', rule: 'thing' }] }
+        },
+        async addTemplate({ tid, kidList }) {
+          added.push({ tid, kidList: [...kidList] })
+          return { priTmplId: 'tmpl-auto' }
+        },
+        async getTemplateList() {
+          if (!added.length) return { data: [] }
+          return { data: [{ priTmplId: 'tmpl-auto', title: '用餐提醒', type: 2, content: '提醒内容:{{thing2.DATA}}\n用餐时间:{{time1.DATA}}\n温馨提示:{{thing3.DATA}}\n' }] }
+        },
       },
     },
     db,
     aiCalls,
     deletedFiles,
     messages,
+    addedTemplates: added,
     failSend(err) {
       sendError = err
     },

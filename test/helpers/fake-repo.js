@@ -13,6 +13,7 @@ function createFakeRepo() {
     gardens: new Map(),
     portions: new Map(),
     reminders: new Map(),
+    settings: new Map(),
     seq: 0,
   }
 
@@ -87,6 +88,14 @@ function createFakeRepo() {
     async listReminders() {
       return [...state.reminders.entries()].filter(([, d]) => d.notify === true && d.credits > 0).map(([id, d]) => ({ ...clone(d), _id: id, _openid: id }))
     },
+    async getSetting(key) {
+      const doc = state.settings.get(key)
+      return doc ? { ...clone(doc), _id: key } : null
+    },
+    async saveSetting(key, doc) {
+      state.settings.set(key, clone(doc))
+    },
+
     async hasAnyMeal(openid) {
       return state.meals.some((m) => m._openid === openid)
     },

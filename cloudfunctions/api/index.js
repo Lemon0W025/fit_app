@@ -28,7 +28,7 @@ const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
 const camp = createCampService({ repo, now, forest, perks: createTestPerks({ config, now }) })
 // 微信服务通知（一次性订阅消息）：config.remindTemplate 填了模板 ID 才会发
-const remind = createRemindService({ repo, now, config, send: (msg) => cloud.openapi.subscribeMessage.send(msg), log })
+const remind = createRemindService({ repo, now, config, send: (msg) => cloud.openapi.subscribeMessage.send(msg), wxapi: cloud.openapi.subscribeMessage, log })
 
 const route = createRouter(
   {

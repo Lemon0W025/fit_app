@@ -1,4 +1,5 @@
 const api = require('../../utils/api')
+const { appVersion } = require('../../utils/remind')
 const { MEAL_ORDER, MEAL_LABELS, guessMealType, isMealType } = require('../../utils/shared/meal-types')
 const { localHour } = require('../../utils/shared/date')
 const { MEAL_WORDS, mealTimesOf, mealAt, timingFor, windowText } = require('../../utils/shared/timing')
@@ -123,7 +124,7 @@ Page({
     wx.requestSubscribeMessage({
       tmplIds: [id],
       success: (res) => {
-        if (res[id] === 'accept') api.call('remind.subscribed', { accepted: true }).catch(() => {})
+        if (res[id] === 'accept') api.call('remind.subscribed', { accepted: true, version: appVersion() }).catch(() => {})
       },
       complete: () => this.send(),
     })

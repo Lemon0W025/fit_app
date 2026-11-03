@@ -42,4 +42,13 @@ function calendarEvents(times, now) {
   }))
 }
 
-module.exports = { remindView, calendarEvents, nextAt }
+// 现在用的是哪个版本（开发版预览 develop / 体验版 trial / 正式版 release）：攒「允许」时带上，点通知打开同一个版本
+function appVersion() {
+  try {
+    return wx.getAccountInfoSync().miniProgram.envVersion || ''
+  } catch (e) {
+    return ''
+  }
+}
+
+module.exports = { remindView, calendarEvents, nextAt, appVersion }

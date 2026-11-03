@@ -1,6 +1,13 @@
 {
   "permissions": {
-    "openapi": ["subscribeMessage.send"]
+    "openapi": [
+      "subscribeMessage.send",
+      "subscribeMessage.getTemplateList",
+      "subscribeMessage.getCategory",
+      "subscribeMessage.getPubTemplateTitleList",
+      "subscribeMessage.getPubTemplateKeyWordsById",
+      "subscribeMessage.addTemplate"
+    ]
   },
   "triggers": [
     {

@@ -1,7 +1,7 @@
 // 饭点提醒（准时打卡设计第二块）：手机日历里加三个每天重复的饭点闹钟；有微信模板时还能开「快过饭点还没拍，用微信提醒我」。
 // 第一次建档后自动进来（?first=1），底下「设好了，去拍第一顿」
 const api = require('../../utils/api')
-const { remindView, calendarEvents } = require('../../utils/remind')
+const { remindView, calendarEvents, appVersion } = require('../../utils/remind')
 
 Page({
   data: {
@@ -94,10 +94,29 @@ Page({
           wx.showModal({ title: '没有允许', content: '要点「允许」才能用微信提醒。最好勾上「总是保持以上选择，不再询问」', showCancel: false })
           return
         }
-        api.call('remind.subscribed', { accepted: true }).then(() => this.setNotify(true)).catch((err) => api.showError(err))
+        api.call('remind.subscribed', { accepted: true, version: appVersion() }).then(() => this.setNotify(true)).catch((err) => api.showError(err))
       },
       fail: () => api.showError(new Error('微信提醒打不开，稍后再试')),
     })
+  },
+
+  // 一键开通：云函数自己找一个「用餐提醒 / 打卡提醒」模板加上；开通好了再点开关「允许」
+  setupWechat() {
+    if (this.data.working) return
+    this.setData({ working: true })
+    wx.showLoading({ title: '正在开通', mask: true })
+    api.call('remind.setup')
+      .then((res) => {
+        wx.hideLoading()
+        this.setData({ working: false })
+        this.show(res)
+        wx.showModal({ title: '开通好了', content: '打开下面「微信提醒」的开关，弹出来时勾上「总是保持以上选择」再点「允许」', showCancel: false })
+      })
+      .catch((err) => {
+        wx.hideLoading()
+        this.setData({ working: false })
+        api.showError(err)
+      })
   },
 
   setNotify(on) {

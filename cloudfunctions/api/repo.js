@@ -8,6 +8,8 @@ const MEALS_PER_RANGE_LIMIT = 1000
 const REMINDERS_LIMIT = 100
 // 一个人的全部数据在哪几个集合里（从头再来时清空）
 const USER_COLLECTIONS = ['users', 'meals', 'summaries', 'weights', 'gardens', 'portions', 'reminders']
+// 大家共用的设置（一键开通的微信提醒模板……），一个 key 一个文档；不属于哪个人，从头再来也不删
+const SETTINGS = 'settings'
 
 function isMissingCollection(e) {
   const msg = String((e && (e.errMsg || e.message)) || '')
@@ -116,6 +118,13 @@ function createRepo(db) {
       const res = await withCollection('reminders', (c) => c.where({ notify: true, credits: _.gt(0) }).limit(REMINDERS_LIMIT).get())
       return res.data
     },
+    async getSetting(key) {
+      return findOne(SETTINGS, { _id: key })
+    },
+    async saveSetting(key, doc) {
+      await setDoc(SETTINGS, key, { ...doc, updatedAt: Date.now() })
+    },
+
     // 拍过没有（新手三步）
     async hasAnyMeal(openid) {
       const res = await withCollection('meals', (c) => c.where({ _openid: openid }).limit(1).get())

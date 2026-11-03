@@ -174,9 +174,9 @@ async function welcomeData(n) {
 }
 const onlySlide = (n) => () => `<style>.wx-swiper-item{display:none}.wx-swiper-item:nth-child(${n + 1}){display:block;height:100%}.cards{display:flex}</style>`
 
-// 饭点提醒页（第一次进来）：有微信模板时的样子
-async function remindData() {
-  const res = { mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }, calendar: null, templateId: 'tmpl', notify: true, credits: 3 }
+// 饭点提醒页（第一次进来）：有微信模板时的样子；templateId 给 '' 是还没开通（最上面「开通微信提醒」）
+async function remindData(templateId = 'tmpl') {
+  const res = { mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }, calendar: null, templateId, notify: !!templateId, credits: 3 }
   const page = loadPage('remind', createWx(async (req) => ({ ok: true, data: req.action === 'remind.get' ? res : null })))
   page.onLoad({ first: '1' })
   page.onShow()
@@ -249,7 +249,8 @@ const SCENARIOS = {
   calendar: { page: 'forest', seconds: 3, build: calendarData },
   welcome: { page: 'welcome', seconds: 1.5, build: () => welcomeData(0), script: onlySlide(0) },
   'welcome-last': { page: 'welcome', seconds: 1.5, build: () => welcomeData(3), script: onlySlide(3) },
-  'remind-first': { page: 'remind', seconds: 1.5, build: remindData },
+  'remind-first': { page: 'remind', seconds: 1.5, build: () => remindData() },
+  'remind-setup': { page: 'remind', seconds: 1.5, build: () => remindData('') },
   'today-guide': { page: 'today', tab: 'today', seconds: 2, build: () => todayData('10:00', []) },
   // 点微信提醒进来：拍照页、晚饭选好、顶上一句
   'checkin-remind': {
