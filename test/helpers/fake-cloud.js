@@ -137,6 +137,46 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
   // 一键开通时加进「我的模板」的
   const added = []
   let sendError = null
+  // 云调用 cloud.openapi：和 wx-server-sdk 一样既能直接 .subscribeMessage，也能 cloud.openapi({ convertCase: false }).subscribeMessage；
+  // openapiCalls 记下每次调的是哪个接口、参数名转没转成下划线（addTemplate 必须不转，见 index.js）
+  const subscribeMessage = {
+    async send(msg) {
+      if (sendError) throw sendError
+      messages.push(clone(msg))
+      return { errCode: 0 }
+    },
+    // 一键开通用：小程序的类目、公共模板库（一个「用餐提醒」）、加进「我的模板」
+    async getCategory() {
+      return { data: [{ id: 616, name: '健康管理' }] }
+    },
+    async getPubTemplateTitleList({ keyword }) {
+      return { data: /用餐|提醒/.test(keyword) ? [{ tid: 1888, title: '用餐提醒', type: 2, categoryId: '616' }] : [] }
+    },
+    async getPubTemplateKeyWordsById() {
+      return { data: [{ kid: 1, name: '用餐时间', rule: 'time' }, { kid: 2, name: '提醒内容', rule: 'thing' }, { kid: 3, name: '温馨提示', rule: 'thing' }] }
+    },
+    async addTemplate({ tid, kidList }) {
+      added.push({ tid, kidList: [...kidList] })
+      return { priTmplId: 'tmpl-auto' }
+    },
+    async getTemplateList() {
+      if (!added.length) return { data: [] }
+      return { data: [{ priTmplId: 'tmpl-auto', title: '用餐提醒', type: 2, content: '提醒内容:{{thing2.DATA}}\n用餐时间:{{time1.DATA}}\n温馨提示:{{thing3.DATA}}\n' }] }
+    },
+  }
+  const openapiCalls = []
+  const withOptions = (opts) => {
+    const out = {}
+    Object.keys(subscribeMessage).forEach((k) => {
+      out[k] = (...args) => {
+        openapiCalls.push({ api: k, convertCase: opts.convertCase !== false })
+        return subscribeMessage[k](...args)
+      }
+    })
+    return { subscribeMessage: out }
+  }
+  const openapi = (opts) => withOptions(opts || {})
+  openapi.subscribeMessage = withOptions({}).subscribeMessage
   return {
     DYNAMIC_CURRENT_ENV: Symbol('DYNAMIC_CURRENT_ENV'),
     init() {},
@@ -163,33 +203,8 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
       deletedFiles.push(...fileList)
       return { fileList: [] }
     },
-    openapi: {
-      subscribeMessage: {
-        async send(msg) {
-          if (sendError) throw sendError
-          messages.push(clone(msg))
-          return { errCode: 0 }
-        },
-        // 一键开通用：小程序的类目、公共模板库（一个「用餐提醒」）、加进「我的模板」
-        async getCategory() {
-          return { data: [{ id: 616, name: '健康管理' }] }
-        },
-        async getPubTemplateTitleList({ keyword }) {
-          return { data: /用餐|提醒/.test(keyword) ? [{ tid: 1888, title: '用餐提醒', type: 2, categoryId: '616' }] : [] }
-        },
-        async getPubTemplateKeyWordsById() {
-          return { data: [{ kid: 1, name: '用餐时间', rule: 'time' }, { kid: 2, name: '提醒内容', rule: 'thing' }, { kid: 3, name: '温馨提示', rule: 'thing' }] }
-        },
-        async addTemplate({ tid, kidList }) {
-          added.push({ tid, kidList: [...kidList] })
-          return { priTmplId: 'tmpl-auto' }
-        },
-        async getTemplateList() {
-          if (!added.length) return { data: [] }
-          return { data: [{ priTmplId: 'tmpl-auto', title: '用餐提醒', type: 2, content: '提醒内容:{{thing2.DATA}}\n用餐时间:{{time1.DATA}}\n温馨提示:{{thing3.DATA}}\n' }] }
-        },
-      },
-    },
+    openapi,
+    openapiCalls,
     db,
     aiCalls,
     deletedFiles,

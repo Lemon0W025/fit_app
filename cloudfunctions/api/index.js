@@ -28,7 +28,17 @@ const { getImageUrl, deleteFile } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
 const camp = createCampService({ repo, now, forest, perks: createTestPerks({ config, now }) })
 // 微信服务通知（一次性订阅消息）：config.remindTemplate 填了模板 ID 才会发
-const remind = createRemindService({ repo, now, config, send: (msg) => cloud.openapi.subscribeMessage.send(msg), wxapi: cloud.openapi.subscribeMessage, log })
+// 开通用的几个模板接口（addTemplate 等）参数名本来就是驼峰（kidList / sceneDesc），云调用默认会转成 kid_list，
+// 微信就收不到关键词、报 200020，所以要 convertCase: false（微信官方示例也是这样）；它们返回的字段也本来就是驼峰。
+// send 的参数是下划线的（template_id / miniprogram_state），照旧让 SDK 转
+const remind = createRemindService({
+  repo,
+  now,
+  config,
+  send: (msg) => cloud.openapi.subscribeMessage.send(msg),
+  wxapi: cloud.openapi({ convertCase: false }).subscribeMessage,
+  log,
+})
 
 const route = createRouter(
   {

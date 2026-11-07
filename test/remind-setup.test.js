@@ -237,6 +237,10 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   assert.match(wx.log.modals.pop(), /总是保持以上选择/)
   assert.equal(page.data.view.wechat, true)
   assert.deepEqual(cloud.addedTemplates, [{ tid: '1888', kidList: [2, 1, 3] }])
+  // 模板接口不能让 SDK 把 kidList 转成 kid_list（真机报 200020 就是这个）；发通知的 send 照旧转
+  const adminCalls = cloud.openapiCalls.filter((c) => c.api !== 'send')
+  assert.ok(adminCalls.length > 0)
+  assert.ok(adminCalls.every((c) => c.convertCase === false), JSON.stringify(adminCalls))
   page.toggleNotify(event({}, { value: true }))
   await settle()
   assert.equal(asked, 1)
