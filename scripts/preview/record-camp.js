@@ -438,8 +438,11 @@ async function record(name, sc, browser) {
   const night = V.isNight(sc.hour)
   // 夜里也让它们醒着走（录走路的样子）：先把睡觉的叫起来
   const d = snap(camp)
-  d.cuts = V.cutoutViews(L, sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt, night)
-  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, sc.decor || [], sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt)
+  // 抠图层（帐篷 / 锅 / 木盖 / 提灯）：art/cut 没生成过的环境（云端）用包里的 PNG 兜底（和页面 onCutError 一样），
+  // 不然锅那层是破图、看到的是底图上的锅，摆在锅边的花会盖在锅上（11/07 用户以为是 bug）
+  const cutArt = fs.existsSync(path.join(REPO, 'art', 'cut')) ? require(`${REPO}/miniprogram/config`).cutArt : ''
+  d.cuts = V.cutoutViews(L, sc.potLevel, cutArt, night)
+  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, sc.decor || [], sc.potLevel, cutArt)
   const scale = sc.scale === 'min' ? L.minScale : sc.scale === 'max' ? L.maxScale : sc.scale
   d.view = sc.focus ? V.focusOffset(sc.focus[0], sc.focus[1], L, winOf(sc), scale) : V.homeView(L, winOf(sc))
   d.daily = null
