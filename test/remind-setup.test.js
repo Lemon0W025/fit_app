@@ -148,6 +148,19 @@ test('setupTemplate：新版一次性模板（tid 10000001 起）kidList 传空�
   await assert.rejects(setupTemplate(none), (e) => e.errCode === 200020 && e.detail === '打卡提醒 10000456')
 })
 
+test('setupTemplate：报错时记下是哪一步；某个模板读不到关键词就换下一个', async () => {
+  const fail = (code) => async () => {
+    const e = new Error('x')
+    e.errCode = code
+    throw e
+  }
+  await assert.rejects(setupTemplate({ ...fakeApi(), getCategory: fail(48001) }), (e) => e.errCode === 48001 && e.detail === '读服务类目')
+  const api = fakeApi({ pub: { 502: MEAL, 501: TODO } })
+  const words = api.getPubTemplateKeyWordsById
+  api.getPubTemplateKeyWordsById = async (q) => (q.tid === 502 ? fail(200014)() : words(q))
+  assert.equal((await setupTemplate(api)).id, 'p-501')
+})
+
 test('setupTemplate：「我的模板」里有填不上的字段（人数）就不直接用，另外加一个', async () => {
   const api = fakeApi({ mine: [{ priTmplId: 'mine-x', title: '用餐提醒', type: 2, content: '提醒内容:{{thing1.DATA}}\n人数:{{number2.DATA}}' }], pub: { 502: MEAL } })
   const found = await setupTemplate(api)

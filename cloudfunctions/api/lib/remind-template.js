@@ -71,10 +71,21 @@ function fieldsOf(roles) {
 
 const dataOf = (res) => (res && Array.isArray(res.data) ? res.data : [])
 
+// 调微信接口，出错时在错误上记一笔是哪一步（报错时带给用户截图）
+async function step(name, fn) {
+  try {
+    return await fn()
+  } catch (e) {
+    const err = e && typeof e === 'object' ? e : new Error(String(e))
+    if (!err.detail) err.detail = name
+    throw err
+  }
+}
+
 // 找一个能用的模板，返回 { id, title, fields, added }；找不到抛 Error（message 说给用户听）
 async function setupTemplate(api) {
   // 1. 已经加过的（自己在后台加的，或者上次加的）：一次性、标题像提醒、字段认得出来
-  const mine = dataOf(await api.getTemplateList())
+  const mine = dataOf(await step('读我的模板', () => api.getTemplateList()))
     .filter((t) => t.type === ONE_TIME && rankOf(t.title) < TITLE_RANK.length)
     .map((t) => ({ t, words: wordsOfContent(t.content) }))
     .map((x) => ({ ...x, roles: rolesOf(x.words) }))
@@ -83,13 +94,13 @@ async function setupTemplate(api) {
   if (mine.length) return { id: mine[0].t.priTmplId, title: mine[0].t.title, fields: fieldsOf(mine[0].roles), added: false }
 
   // 2. 公共模板库：按小程序的服务类目、几个关键词搜一次性模板
-  const cats = dataOf(await api.getCategory())
+  const cats = dataOf(await step('读服务类目', () => api.getCategory()))
   if (!cats.length) throw new Error('小程序还没有设置服务类目，到后台「设置 → 基本设置 → 服务类目」加一个再来')
   const ids = cats.map((c) => c.id).join(',')
   const seen = new Set()
   const titles = []
   for (const keyword of SEARCH) {
-    const list = dataOf(await api.getPubTemplateTitleList({ ids, start: 0, limit: 30, keyword }))
+    const list = dataOf(await step(`搜模板库「${keyword}」`, () => api.getPubTemplateTitleList({ ids, start: 0, limit: 30, keyword })))
     list.forEach((t) => {
       if (t.type !== ONE_TIME || seen.has(t.tid) || rankOf(t.title) >= TITLE_RANK.length) return
       seen.add(t.tid)
@@ -105,7 +116,14 @@ async function setupTemplate(api) {
   let tries = 0
   for (const t of titles) {
     if (tries >= MAX_TRIES) break
-    const words = dataOf(await api.getPubTemplateKeyWordsById({ tid: t.tid }))
+    let raw
+    try {
+      raw = await step(`读关键词 ${t.title} ${t.tid}`, () => api.getPubTemplateKeyWordsById({ tid: t.tid }))
+    } catch (e) {
+      lastError = e
+      continue
+    }
+    const words = dataOf(raw)
       .map((w) => ({ name: w.name, rule: w.rule, kid: Number(w.kid), key: `${w.rule}${w.kid}` }))
     const roles = rolesOf(words)
     if (!roles) continue
@@ -134,7 +152,7 @@ async function setupTemplate(api) {
       }
       if (!id) continue
       // 字段名以加好的模板内容为准（一般就是 rule + kid）；内容里有我们填不上的字段就不用它
-      const real = dataOf(await api.getTemplateList()).find((x) => x.priTmplId === id)
+      const real = dataOf(await step('读加好的模板', () => api.getTemplateList())).find((x) => x.priTmplId === id)
       if (real) {
         const realWords = wordsOfContent(real.content)
         const realRoles = rolesOf(realWords)
