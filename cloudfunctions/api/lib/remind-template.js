@@ -11,8 +11,10 @@ const MEAL_NAME = /内容|事项|项目|名称|主题|餐|事件|任务/
 const TIME_NAME = /时间|日期/
 const TIP_NAME = /提示|备注|说明|温馨|建议/
 const SCENE = '到饭点还没拍照打卡时提醒'
-const PICK = ['meal', 'mealTime', 'tip', 'status'] // 从公共模板库加时选这几个关键词（name 不加）
+const PICK = ['meal', 'mealTime', 'tip', 'status'] // 从公共模板库加老模板时选这几个关键词（name / endTime 不加）
 const MAX_TRIES = 6
+// 新版一次性模板（tid 10000001 起）：关键词是模板定死的，addTemplate 的 kidList 只能传空数组（传了就报 200020）
+const isNewTid = (tid) => Number(tid) >= 10000001 && Number(tid) < 20000000
 
 const rankOf = (title) => {
   const i = TITLE_RANK.findIndex((re) => re.test(String(title || '')))
@@ -20,7 +22,8 @@ const rankOf = (title) => {
 }
 
 // 关键词（{ name, rule, key }）里认出各放什么：meal「午饭还没拍哦」（thing）、mealTime 饭点（time / date）、tip 提示（另一个 thing）、
-// status「还没拍」（phrase）、name 小程序名字（再多一个 thing）。没有能放「哪顿没拍」的 thing 就不能用（null）
+// status「还没拍」（phrase）、name 小程序名字（再多一个 thing）、endTime 准时截止（再多一个 time / date）。
+// 没有能放「哪顿没拍」的 thing 就不能用（null）
 function rolesOf(words) {
   const things = words.filter((w) => w.rule === 'thing')
   const times = words.filter((w) => w.rule === 'time' || w.rule === 'date')
@@ -30,12 +33,14 @@ function rolesOf(words) {
   const tip = rest.find((w) => TIP_NAME.test(w.name)) || rest[0] || null
   const name = rest.find((w) => w !== tip) || null
   const time = times.find((w) => TIME_NAME.test(w.name)) || times[0] || null
+  const endTime = times.find((w) => w !== time) || null
   const status = words.find((w) => w.rule === 'phrase') || null
   const roles = { meal }
   if (time) roles.mealTime = time
   if (tip) roles.tip = tip
   if (status) roles.status = status
   if (name) roles.name = name
+  if (endTime) roles.endTime = endTime
   return roles
 }
 
@@ -93,21 +98,27 @@ async function setupTemplate(api) {
   }
   titles.sort((a, b) => rankOf(a.title) - rankOf(b.title))
 
-  // 3. 挑关键词够用的加上：addTemplate 要 2～5 个关键词（数字 kid），只认得出一个的跳过；
-  //    哪个加不上（比如报 200020 关键词不对）就换下一个，最多试 MAX_TRIES 次，都不行把最后一次的错误码带出去
+  // 3. 挑一个加上，哪个加不上就换下一个，最多试 MAX_TRIES 次，都不行把最后一次的错误码带出去：
+  //    新版模板（isNewTid）关键词定死、kidList 传空数组，所以每个关键词我们都得填得上，填不上的跳过；
+  //    老模板自己挑 2～5 个关键词（数字 kid），只认得出一个的跳过，加不上先少挑几个再试
   let lastError = null
   let tries = 0
   for (const t of titles) {
     if (tries >= MAX_TRIES) break
     const words = dataOf(await api.getPubTemplateKeyWordsById({ tid: t.tid }))
       .map((w) => ({ name: w.name, rule: w.rule, kid: Number(w.kid), key: `${w.rule}${w.kid}` }))
-      .filter((w) => Number.isFinite(w.kid))
     const roles = rolesOf(words)
     if (!roles) continue
-    const kids = PICK.filter((k) => roles[k]).map((k) => roles[k].kid)
-    if (kids.length < 2) continue
-    // 先加三四个关键词的，加不上再只加「哪顿没拍 + 一个」
-    const tryLists = kids.length > 2 ? [kids, kids.slice(0, 2)] : [kids]
+    const fresh = isNewTid(t.tid)
+    let tryLists
+    if (fresh) {
+      if (!coversAll(words, roles)) continue
+      tryLists = [[]]
+    } else {
+      const kids = PICK.filter((k) => roles[k]).map((k) => roles[k].kid).filter((k) => Number.isFinite(k))
+      if (kids.length < 2) continue
+      tryLists = kids.length > 2 ? [kids, kids.slice(0, 2)] : [kids]
+    }
     for (const kidList of tryLists) {
       if (tries >= MAX_TRIES) break
       tries += 1
@@ -117,23 +128,29 @@ async function setupTemplate(api) {
         id = added && added.priTmplId
       } catch (e) {
         lastError = e && typeof e === 'object' ? e : new Error(String(e))
-        lastError.detail = `${t.title} ${kidList.join(',')}`
+        lastError.detail = `${t.title} ${t.tid}${kidList.length ? ` ${kidList.join(',')}` : ''}`
         console.log('remind template add failed', t.tid, t.title, kidList, e && (e.errCode || e.code), e && e.message)
         continue
       }
       if (!id) continue
-      // 字段名以加好的模板内容为准（一般就是 rule + kid）
+      // 字段名以加好的模板内容为准（一般就是 rule + kid）；内容里有我们填不上的字段就不用它
       const real = dataOf(await api.getTemplateList()).find((x) => x.priTmplId === id)
-      const realRoles = real ? rolesOf(wordsOfContent(real.content)) : null
+      if (real) {
+        const realWords = wordsOfContent(real.content)
+        const realRoles = rolesOf(realWords)
+        if (realRoles && coversAll(realWords, realRoles)) return { id, title: t.title, fields: fieldsOf(realRoles), added: true }
+        console.log('remind template has fields we cannot fill', id, real.content)
+        continue
+      }
       const picked = {}
-      PICK.forEach((k) => {
-        if (roles[k] && kidList.indexOf(roles[k].kid) !== -1) picked[k] = roles[k]
+      Object.keys(roles).forEach((k) => {
+        if (fresh || kidList.indexOf(roles[k].kid) !== -1) picked[k] = roles[k]
       })
-      return { id, title: t.title, fields: fieldsOf(realRoles || picked), added: true }
+      return { id, title: t.title, fields: fieldsOf(picked), added: true }
     }
   }
   if (lastError) throw lastError
   throw new Error('公共模板库里没找到能用的提醒模板，到后台「订阅消息」里手动选一个「用餐提醒」')
 }
 
-module.exports = { setupTemplate, rolesOf, wordsOfContent, coversAll }
+module.exports = { setupTemplate, rolesOf, wordsOfContent, coversAll, isNewTid }

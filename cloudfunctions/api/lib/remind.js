@@ -31,7 +31,7 @@ function planReminders({ times, meals, now, sent }) {
 }
 
 // 一条提醒的内容：按模板的字段（config.remindTemplate.fields：{ 我们的说法: 模板字段名 }）填。
-// 我们的说法：meal「午饭还没拍哦」、mealTime「2026-10-29 12:00」（time / date 类字段）、tip「13:00 前拍还算准时」、status「还没拍」（phrase 类字段）、name「小暖自律打卡」
+// 我们的说法：meal「午饭还没拍哦」、mealTime「2026-10-29 12:00」（time / date 类字段）、tip「13:00 前拍还算准时」、status「还没拍」（phrase 类字段）、name「小暖自律打卡」、endTime「2026-10-29 13:00」（第二个时间字段）
 function messageFor(template, mealType, times, now) {
   const word = MEAL_WORDS[mealType]
   const end = clockText(toMinutes(times[mealType]) + WINDOW_MINUTES)
@@ -41,6 +41,7 @@ function messageFor(template, mealType, times, now) {
     tip: `${end} 前拍还算准时`,
     status: '还没拍',
     name: '小暖自律打卡',
+    endTime: `${dateKey(now)} ${end.length < 5 ? `0${end}` : end}`,
   }
   const data = {}
   Object.keys(template.fields || {}).forEach((key) => {

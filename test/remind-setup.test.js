@@ -30,14 +30,16 @@ function fakeApi({ mine = [], pub = {}, categories = [{ id: 616 }], refuse = {} 
     },
     async addTemplate({ tid, kidList }) {
       calls.added.push({ tid, kidList })
-      // 真接口：kidList 要 2～5 个数字；refuse[tid] 模拟某个模板加不上
-      if (!Array.isArray(kidList) || kidList.length < 2 || kidList.length > 5 || kidList.some((k) => typeof k !== 'number') || (refuse[tid] && refuse[tid](kidList))) {
+      // 真接口：新版模板（tid 10000001 起）kidList 只能是空数组、关键词全带上；老模板要 2～5 个数字；refuse[tid] 模拟某个模板加不上
+      const fresh = Number(tid) >= 10000001 && Number(tid) < 20000000
+      const badKids = !Array.isArray(kidList) || (fresh ? kidList.length !== 0 : kidList.length < 2 || kidList.length > 5 || kidList.some((k) => typeof k !== 'number'))
+      if (badKids || (refuse[tid] && refuse[tid](kidList))) {
         const e = new Error('invalid kidList')
         e.errCode = 200020
         throw e
       }
       const t = pub[tid]
-      const content = kidList.map((kid) => {
+      const content = (fresh ? t.words.map((w) => w.kid) : kidList).map((kid) => {
         const w = t.words.find((x) => x.kid === kid)
         return `${w.name}:{{${w.rule}${kid}.DATA}}`
       }).join('\n')
@@ -111,11 +113,39 @@ test('setupTemplate：加不上（200020）先少加几个关键词再试，还�
   assert.equal((await setupTemplate(next)).id, 'p-501')
   // 全都加不上
   const none = fakeApi({ pub: { 502: MEAL, 501: TODO }, refuse: { 502: () => true, 501: () => true } })
-  await assert.rejects(setupTemplate(none), (e) => e.errCode === 200020 && /待办事项提醒 1,2/.test(e.detail))
+  await assert.rejects(setupTemplate(none), (e) => e.errCode === 200020 && /待办事项提醒 501 1,2/.test(e.detail))
   const repo = createFakeRepo()
   repo.state.profiles.set('u1', { ...PROFILE })
   const service = createRemindService({ repo, now: () => new Date(), config: {}, wxapi: fakeApi({ pub: { 502: MEAL }, refuse: { 502: () => true } }) })
-  await assert.rejects(service.setup('u1'), { code: 'BAD_REQUEST', message: /错误码 200020 · 用餐提醒 2,1/ })
+  await assert.rejects(service.setup('u1'), { code: 'BAD_REQUEST', message: /错误码 200020 · 用餐提醒 502 2,1/ })
+})
+
+test('setupTemplate：新版一次性模板（tid 10000001 起）kidList 传空数组、关键词全带上；有填不上的字段（人数）的新模板跳过', async () => {
+  const NEW_MEAL = { title: '用餐提醒', words: [{ kid: 1, name: '用餐时间', rule: 'time' }, { kid: 2, name: '提醒内容', rule: 'thing' }, { kid: 3, name: '人数', rule: 'number' }] }
+  const NEW_CLOCK = {
+    title: '打卡提醒',
+    words: [{ kid: 1, name: '打卡项目', rule: 'thing' }, { kid: 2, name: '开始时间', rule: 'time' }, { kid: 3, name: '截止时间', rule: 'time' }, { kid: 4, name: '备注', rule: 'thing' }, { kid: 5, name: '小程序', rule: 'thing' }],
+  }
+  const api = fakeApi({ pub: { 10000123: NEW_MEAL, 10000456: NEW_CLOCK } })
+  const found = await setupTemplate(api)
+  assert.deepEqual(api.calls.added, [{ tid: '10000456', kidList: [] }])
+  assert.deepEqual(found.fields, { meal: 'thing1', mealTime: 'time2', tip: 'thing4', name: 'thing5', endTime: 'time3' })
+  const { messageFor } = require('../cloudfunctions/api/lib/remind')
+  const times = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
+  assert.deepEqual(messageFor(found, 'breakfast', times, new Date('2026-11-07T08:00:00+08:00')), {
+    thing1: { value: '早饭还没拍哦' },
+    time2: { value: '2026-11-07 07:30' },
+    thing4: { value: '8:30 前拍还算准时' },
+    thing5: { value: '小暖自律打卡' },
+    time3: { value: '2026-11-07 08:30' },
+  })
+  // 再开通：「我的模板」里这个字段全填得上，直接用
+  const again = await setupTemplate(api)
+  assert.equal(again.added, false)
+  assert.equal(again.id, 'p-10000456')
+  // 新模板加不上：错误里带 tid，不带关键词
+  const none = fakeApi({ pub: { 10000456: NEW_CLOCK }, refuse: { 10000456: () => true } })
+  await assert.rejects(setupTemplate(none), (e) => e.errCode === 200020 && e.detail === '打卡提醒 10000456')
 })
 
 test('setupTemplate：「我的模板」里有填不上的字段（人数）就不直接用，另外加一个', async () => {
