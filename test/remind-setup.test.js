@@ -10,7 +10,7 @@ const { manualClock } = require('./helpers/manual-clock')
 const { fixDate } = require('./helpers/fixed-date')
 
 // 假的订阅消息接口：mine 是「我的模板」，pub 是公共模板库 { tid: { title, words } }
-function fakeApi({ mine = [], pub = {}, categories = [{ id: 616 }] } = {}) {
+function fakeApi({ mine = [], pub = {}, categories = [{ id: 616 }], refuse = {} } = {}) {
   const calls = { added: [], searched: [] }
   const list = mine.slice()
   return {
@@ -30,6 +30,12 @@ function fakeApi({ mine = [], pub = {}, categories = [{ id: 616 }] } = {}) {
     },
     async addTemplate({ tid, kidList }) {
       calls.added.push({ tid, kidList })
+      // 真接口：kidList 要 2～5 个数字；refuse[tid] 模拟某个模板加不上
+      if (!Array.isArray(kidList) || kidList.length < 2 || kidList.length > 5 || kidList.some((k) => typeof k !== 'number') || (refuse[tid] && refuse[tid](kidList))) {
+        const e = new Error('invalid kidList')
+        e.errCode = 200020
+        throw e
+      }
       const t = pub[tid]
       const content = kidList.map((kid) => {
         const w = t.words.find((x) => x.kid === kid)
@@ -80,6 +86,43 @@ test('setupTemplate：没设服务类目、模板库里没有能用的，说清�
   await assert.rejects(setupTemplate(fakeApi({ pub: { 9: { title: '快递到达通知', words: [{ kid: 1, name: '单号', rule: 'character_string' }] } } })), /用餐提醒/)
   // 长期订阅的不要
   await assert.rejects(setupTemplate(fakeApi({ pub: { 7: { ...MEAL, type: 3 } } })), /用餐提醒/)
+})
+
+test('setupTemplate：只认得出一个关键词的模板跳过（微信要 2～5 个），phrase 字段填「还没拍」', async () => {
+  const ONE = { title: '用餐提醒', words: [{ kid: 1, name: '提醒内容', rule: 'thing' }, { kid: 2, name: '人数', rule: 'number' }] }
+  const CLOCK = { title: '打卡提醒', words: [{ kid: 1, name: '打卡项目', rule: 'thing' }, { kid: 2, name: '打卡状态', rule: 'phrase' }, { kid: 3, name: '金额', rule: 'amount' }] }
+  const api = fakeApi({ pub: { 11: ONE, 12: CLOCK } })
+  const found = await setupTemplate(api)
+  assert.deepEqual(api.calls.added, [{ tid: '12', kidList: [1, 2] }])
+  assert.deepEqual(found.fields, { meal: 'thing1', status: 'phrase2' })
+  const { messageFor } = require('../cloudfunctions/api/lib/remind')
+  const times = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
+  assert.deepEqual(messageFor(found, 'lunch', times, new Date('2026-11-07T12:40:00+08:00')), { thing1: { value: '午饭还没拍哦' }, phrase2: { value: '还没拍' } })
+})
+
+test('setupTemplate：加不上（200020）先少加几个关键词再试，还不行换下一个模板；都不行把错误码和试的哪个带出去', async () => {
+  // 502 三个关键词加不上、两个可以
+  const api = fakeApi({ pub: { 502: MEAL, 501: TODO }, refuse: { 502: (kids) => kids.length > 2 } })
+  const found = await setupTemplate(api)
+  assert.deepEqual(api.calls.added.map((a) => a.kidList), [[2, 1, 3], [2, 1]])
+  assert.deepEqual(found.fields, { meal: 'thing2', mealTime: 'time1' })
+  // 502 怎么都加不上：换 501
+  const next = fakeApi({ pub: { 502: MEAL, 501: TODO }, refuse: { 502: () => true } })
+  assert.equal((await setupTemplate(next)).id, 'p-501')
+  // 全都加不上
+  const none = fakeApi({ pub: { 502: MEAL, 501: TODO }, refuse: { 502: () => true, 501: () => true } })
+  await assert.rejects(setupTemplate(none), (e) => e.errCode === 200020 && /待办事项提醒 1,2/.test(e.detail))
+  const repo = createFakeRepo()
+  repo.state.profiles.set('u1', { ...PROFILE })
+  const service = createRemindService({ repo, now: () => new Date(), config: {}, wxapi: fakeApi({ pub: { 502: MEAL }, refuse: { 502: () => true } }) })
+  await assert.rejects(service.setup('u1'), { code: 'BAD_REQUEST', message: /错误码 200020 · 用餐提醒 2,1/ })
+})
+
+test('setupTemplate：「我的模板」里有填不上的字段（人数）就不直接用，另外加一个', async () => {
+  const api = fakeApi({ mine: [{ priTmplId: 'mine-x', title: '用餐提醒', type: 2, content: '提醒内容:{{thing1.DATA}}\n人数:{{number2.DATA}}' }], pub: { 502: MEAL } })
+  const found = await setupTemplate(api)
+  assert.equal(found.id, 'p-502')
+  assert.equal(found.added, true)
 })
 
 test('remind.setup：开通后存进 settings 大家共用，再开通不重复加；config 填了模板就用 config 的；接口报错带错误码', async () => {

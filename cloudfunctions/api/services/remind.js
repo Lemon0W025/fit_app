@@ -90,7 +90,8 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
         } catch (e) {
           log('remind setup failed', e && (e.errCode || e.code), e && e.message)
           const code = e && (e.errCode || e.code)
-          throw new AppError(CODES.BAD_REQUEST, code ? `微信提醒没开通成功（错误码 ${code}），把这句截图发给家里人` : (e && e.message) || '微信提醒没开通成功')
+          const detail = e && e.detail ? ` · ${e.detail}` : ''
+          throw new AppError(CODES.BAD_REQUEST, code ? `微信提醒没开通成功（错误码 ${code}${detail}），把这句截图发给家里人` : (e && e.message) || '微信提醒没开通成功')
         }
         await repo.saveSetting(SETTING, { id: found.id, title: found.title, fields: found.fields, state: 'trial', at: now().getTime() })
       }

@@ -11,13 +11,16 @@ const MEAL_NAME = /内容|事项|项目|名称|主题|餐|事件|任务/
 const TIME_NAME = /时间|日期/
 const TIP_NAME = /提示|备注|说明|温馨|建议/
 const SCENE = '到饭点还没拍照打卡时提醒'
+const PICK = ['meal', 'mealTime', 'tip', 'status'] // 从公共模板库加时选这几个关键词（name 不加）
+const MAX_TRIES = 6
 
 const rankOf = (title) => {
   const i = TITLE_RANK.findIndex((re) => re.test(String(title || '')))
   return i === -1 ? TITLE_RANK.length : i
 }
 
-// 关键词（{ name, rule, key }）里认出 meal / mealTime / tip 各放哪个；没有能放「哪顿没拍」的 thing 就不能用（null）
+// 关键词（{ name, rule, key }）里认出各放什么：meal「午饭还没拍哦」（thing）、mealTime 饭点（time / date）、tip 提示（另一个 thing）、
+// status「还没拍」（phrase）、name 小程序名字（再多一个 thing）。没有能放「哪顿没拍」的 thing 就不能用（null）
 function rolesOf(words) {
   const things = words.filter((w) => w.rule === 'thing')
   const times = words.filter((w) => w.rule === 'time' || w.rule === 'date')
@@ -25,11 +28,21 @@ function rolesOf(words) {
   if (!meal) return null
   const rest = things.filter((w) => w !== meal)
   const tip = rest.find((w) => TIP_NAME.test(w.name)) || rest[0] || null
+  const name = rest.find((w) => w !== tip) || null
   const time = times.find((w) => TIME_NAME.test(w.name)) || times[0] || null
+  const status = words.find((w) => w.rule === 'phrase') || null
   const roles = { meal }
   if (time) roles.mealTime = time
   if (tip) roles.tip = tip
+  if (status) roles.status = status
+  if (name) roles.name = name
   return roles
+}
+
+// 模板里每个字段我们都填得上（订阅消息少填一个字段就发不出去）
+function coversAll(words, roles) {
+  const used = new Set(Object.keys(roles).map((k) => roles[k].key))
+  return words.every((w) => used.has(w.key))
 }
 
 // 模板内容「提醒内容:{{thing1.DATA}}\n用餐时间:{{time2.DATA}}」→ [{ name, rule, key }]
@@ -58,8 +71,9 @@ async function setupTemplate(api) {
   // 1. 已经加过的（自己在后台加的，或者上次加的）：一次性、标题像提醒、字段认得出来
   const mine = dataOf(await api.getTemplateList())
     .filter((t) => t.type === ONE_TIME && rankOf(t.title) < TITLE_RANK.length)
-    .map((t) => ({ t, roles: rolesOf(wordsOfContent(t.content)) }))
-    .filter((x) => x.roles)
+    .map((t) => ({ t, words: wordsOfContent(t.content) }))
+    .map((x) => ({ ...x, roles: rolesOf(x.words) }))
+    .filter((x) => x.roles && coversAll(x.words, x.roles))
     .sort((a, b) => rankOf(a.t.title) - rankOf(b.t.title))
   if (mine.length) return { id: mine[0].t.priTmplId, title: mine[0].t.title, fields: fieldsOf(mine[0].roles), added: false }
 
@@ -79,21 +93,47 @@ async function setupTemplate(api) {
   }
   titles.sort((a, b) => rankOf(a.title) - rankOf(b.title))
 
-  // 3. 挑第一个关键词够用的加上（最多三个关键词：哪顿没拍、饭点、提示）
+  // 3. 挑关键词够用的加上：addTemplate 要 2～5 个关键词（数字 kid），只认得出一个的跳过；
+  //    哪个加不上（比如报 200020 关键词不对）就换下一个，最多试 MAX_TRIES 次，都不行把最后一次的错误码带出去
+  let lastError = null
+  let tries = 0
   for (const t of titles) {
-    const words = dataOf(await api.getPubTemplateKeyWordsById({ tid: t.tid })).map((w) => ({ name: w.name, rule: w.rule, kid: w.kid, key: `${w.rule}${w.kid}` }))
+    if (tries >= MAX_TRIES) break
+    const words = dataOf(await api.getPubTemplateKeyWordsById({ tid: t.tid }))
+      .map((w) => ({ name: w.name, rule: w.rule, kid: Number(w.kid), key: `${w.rule}${w.kid}` }))
+      .filter((w) => Number.isFinite(w.kid))
     const roles = rolesOf(words)
     if (!roles) continue
-    const kidList = ['meal', 'mealTime', 'tip'].filter((k) => roles[k]).map((k) => roles[k].kid)
-    const added = await api.addTemplate({ tid: String(t.tid), kidList, sceneDesc: SCENE })
-    const id = added && added.priTmplId
-    if (!id) continue
-    // 字段名以加好的模板内容为准（一般就是 rule + kid）
-    const real = dataOf(await api.getTemplateList()).find((x) => x.priTmplId === id)
-    const realRoles = real ? rolesOf(wordsOfContent(real.content)) : null
-    return { id, title: t.title, fields: fieldsOf(realRoles || roles), added: true }
+    const kids = PICK.filter((k) => roles[k]).map((k) => roles[k].kid)
+    if (kids.length < 2) continue
+    // 先加三四个关键词的，加不上再只加「哪顿没拍 + 一个」
+    const tryLists = kids.length > 2 ? [kids, kids.slice(0, 2)] : [kids]
+    for (const kidList of tryLists) {
+      if (tries >= MAX_TRIES) break
+      tries += 1
+      let id = null
+      try {
+        const added = await api.addTemplate({ tid: String(t.tid), kidList, sceneDesc: SCENE })
+        id = added && added.priTmplId
+      } catch (e) {
+        lastError = e && typeof e === 'object' ? e : new Error(String(e))
+        lastError.detail = `${t.title} ${kidList.join(',')}`
+        console.log('remind template add failed', t.tid, t.title, kidList, e && (e.errCode || e.code), e && e.message)
+        continue
+      }
+      if (!id) continue
+      // 字段名以加好的模板内容为准（一般就是 rule + kid）
+      const real = dataOf(await api.getTemplateList()).find((x) => x.priTmplId === id)
+      const realRoles = real ? rolesOf(wordsOfContent(real.content)) : null
+      const picked = {}
+      PICK.forEach((k) => {
+        if (roles[k] && kidList.indexOf(roles[k].kid) !== -1) picked[k] = roles[k]
+      })
+      return { id, title: t.title, fields: fieldsOf(realRoles || picked), added: true }
+    }
   }
+  if (lastError) throw lastError
   throw new Error('公共模板库里没找到能用的提醒模板，到后台「订阅消息」里手动选一个「用餐提醒」')
 }
 
-module.exports = { setupTemplate, rolesOf, wordsOfContent }
+module.exports = { setupTemplate, rolesOf, wordsOfContent, coversAll }
