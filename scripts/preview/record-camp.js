@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night tent-sleep tent-night talk-phone hungry-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night tent-sleep tent-sleep-night talk-phone hungry-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
 //   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
@@ -176,16 +176,16 @@ const SCENARIOS = {
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
   },
-  // 进帐篷睡（11/07）：糯糯、豆豆趴在帐篷里只露个小脑袋（两个床位；白天同时睡的最多四分之一，所以放 8 只）；糯糯 12 秒后睡够了出来站在门口再走开；杞杞在门口溜达
+  // 进帐篷睡（11/07）：糯糯、豆豆趴在帐篷里（两个床位，身子在布帘后面、头露在门洞里；白天同时睡的最多四分之一，所以放 8 只）；糯糯 12 秒后睡够了出来站在门口再走开；杞杞在门口溜达
   'tent-sleep': {
     hour: 10, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 20, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'],
-    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 12000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: true, action: 'tent', until: 60000 } },
-    plan: [[0, 2, 1500, 1700]],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 12000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: false, action: 'tent', until: 60000 } },
+    plan: [],
   },
-  'tent-night': {
+  'tent-sleep-night': {
     hour: 22, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 6, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
-    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 60000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: true, action: 'tent', until: 60000 } },
-    plan: [[0, 2, 1500, 1700]],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 60000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: false, action: 'tent', until: 60000 } },
+    plan: [],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),

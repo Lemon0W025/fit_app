@@ -897,10 +897,19 @@ test('离开营地前 freeze：走到一半的就地停下（按出发时间算�
 
 // ---------------------------------------------------------------- 帐篷里睡
 
-const TENT_FRONT = cutoutStrips().filter((c) => c.cut === 'tent')
+const HOLE_XS = SCENE.tent.hole.map((p) => p[0])
+const DOOR_STRIPS = cutoutStrips().filter((c) => c.cut === 'tent' && c.r > Math.min(...HOLE_XS) && c.l < Math.max(...HOLE_XS))
 const bedOf = (w) => SCENE.tent.beds.find((b) => Math.hypot(b.at[0] - w.x, b.at[1] - w.y) < 1) || null
 
-test('困了多半去大帐篷里睡：走到门口 → 背对着站一下 → 趴在帐篷里只露个小脑袋（正面那帧裁掉下半截、没影子、💤、排在帐篷前面）；睡够了出来站在门口再走', () => {
+// tentClip 里的多边形换回画的像素（框的左上角 + 每个点）：应该正好是门洞
+function clipToWorld(sp) {
+  const m = sp.tentClip.match(/^clip-path: polygon\(([^)]*)\)/)
+  assert.ok(m, sp.tentClip)
+  const top = L.height - sp.bottom - sp.width
+  return m[1].split(', ').map((pt) => pt.split(' ').map((v) => parseFloat(v))).map(([px, py]) => [(sp.left + px) / L.k, (top + py) / L.k])
+}
+
+test('困了多半去大帐篷里睡：走到门口 → 背对着站一下 → 趴在床位上（睡姿、朝着门洞、没影子、💤），整只裁成门洞的形状（布帘、横木后面的看不见），排在门洞那几条帐篷前面；睡够了出来站在门口再走', () => {
   let done = false
   for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
     const { life, clock, sprites } = make({ pets: [{ id: 'nuonuo', level: 2 }], seed, hour: 22, sheets: { nuonuo: { top: 0.31, c: true } }, animBase: 'cloud://x/anim/' })
@@ -926,18 +935,20 @@ test('困了多半去大帐篷里睡：走到门口 → 背对着站一下 → �
     assert.equal(sp.action, 'tent')
     assert.equal(sp.emoji, '💤')
     assert.equal(sp.shadow.width, 0)
-    assert.equal(sp.flip, false)
-    // 正面站着那帧（C 张第 6 行 = 整张的第 18 行）；头顶 0.31、脚 0.9：露 42% 就裁掉 65%，再往下挪 55%（裁的边正好落在脚那条线上）
-    assert.deepEqual([sp.anim.sheet, sp.anim.row], ['c', 17])
-    assert.equal(sp.tentStyle, 'clip-path: inset(0 0 65% 0); -webkit-clip-path: inset(0 0 65% 0); transform: translateY(55%)')
-    // 排在它横着跨到的每一条帐篷前面
-    const half = sp.width / L.k / 2
-    TENT_FRONT.filter((c) => c.r > w.x - half && c.l < w.x + half).forEach((c) => assert.ok(sp.z > zOf(c.zy), `被帐篷的条 ${c.key}（${c.zy}）挡住了`))
+    // 朝着门洞躺：左边的床位朝右、右边的朝左
+    assert.equal(sp.flip, !bed.right)
+    // 趴着睡那行（A 张第 3 行）；拼图里脚在格底往上 10%，往下挪 10% 踩在床位上
+    assert.deepEqual([sp.anim.sheet, sp.anim.row], ['a', 2])
+    assert.equal(sp.tentShift, 'transform: translateY(10%)')
+    // 裁的形状换回画上正好是门洞
+    clipToWorld(sp).forEach(([x, y], k) => assert.ok(Math.abs(x - SCENE.tent.hole[k][0]) < 1 && Math.abs(y - SCENE.tent.hole[k][1]) < 1, `门洞第 ${k} 个点对不上：${x | 0},${y | 0}`))
+    // 排在门洞那几条帐篷前面（不然门洞里画的帐篷里面把它整个盖住）
+    DOOR_STRIPS.forEach((c) => assert.ok(sp.z > zOf(c.zy) + 1, `被帐篷的条 ${c.key}（${c.zy}）挡住了`))
     // 睡够了（夜里 1～5 分钟）：出来站在门口、面朝我们，接着该干嘛干嘛（不会站在禁区里）
     assert.ok(until(clock, () => life.whereIs()[0].action !== 'tent', 1000, 400), '没醒')
     const out = life.whereIs()[0]
     assert.ok(Math.hypot(bed.door[0] - out.x, bed.door[1] - out.y) < 1, `醒了应该站在门口，却在 ${out.x | 0},${out.y | 0}`)
-    assert.equal(sprites[0].tentStyle, '')
+    assert.deepEqual([sprites[0].tentClip, sprites[0].tentShift], ['', ''])
     assert.ok(sprites[0].shadow.width > 0)
     assert.ok(until(clock, () => sprites[0].action === 'walk', 500, 200), '醒了以后不走了')
     life.stop()
@@ -946,31 +957,40 @@ test('困了多半去大帐篷里睡：走到门口 → 背对着站一下 → �
   assert.ok(done, '8 个种子都没去帐篷里睡')
 })
 
-test('帐篷里：点它就醒、出来站在门口；切走再回来（snapshot / saved）没睡完接着趴在里面，睡完了站在门口；床位一只一个；没有 C 张用单张图照样裁', () => {
-  const bed = SCENE.tent.beds[0]
+test('帐篷里：门口站着的排在睡在里面的前面；点它就醒、出来站在门口；切走再回来没睡完接着趴在里面，睡完了站在门口；床位一只一个、前面的床位排在后面的前面；没有拼图的单张图照样裁、不挪', () => {
+  const [left, right] = SCENE.tent.beds
   const clock = manualClock()
   const future = clock.now() + 3600000
-  const saved = { nuonuo: { x: bed.at[0], y: bed.at[1], right: true, action: 'tent', until: future } }
+  const saved = { nuonuo: { x: left.at[0], y: left.at[1], right: true, action: 'tent', until: future } }
   const { life, sprites } = make({ pets: [{ id: 'nuonuo', level: 2 }], saved, hour: 22, clock })
   const sp = life.sprites()[0]
   assert.equal(sp.action, 'tent')
   assert.equal(sp.sheet, '')
-  // 单张图：头顶 0.05、脚在底边：裁 60%、挪 60%
-  assert.equal(sp.tentStyle, 'clip-path: inset(0 0 60% 0); -webkit-clip-path: inset(0 0 60% 0); transform: translateY(60%)')
+  assert.ok(sp.tentClip.startsWith('clip-path: polygon('))
+  assert.equal(sp.tentShift, '')
+  assert.equal(sp.flip, false)
   assert.equal(sp.shadow.width, 0)
   assert.equal(life.whereIs()[0].text, '在帐篷里睡觉')
   // 记下来还是在帐篷里
-  assert.deepEqual(life.snapshot().nuonuo, { x: bed.at[0], y: bed.at[1], right: true, action: 'tent', until: future, sleepStyle: 'A' })
-  // 第二只来了：这个床位有人，去另一个
-  const two = make({ pets: [{ id: 'nuonuo', level: 2 }, { id: 'doudou', level: 1, home: true }], saved, hour: 22, seed: 3, clock })
-  assert.equal(two.life.whereIs()[0].action, 'tent')
-  two.life.stop()
+  assert.deepEqual(life.snapshot().nuonuo, { x: left.at[0], y: left.at[1], right: true, action: 'tent', until: future, sleepStyle: 'A' })
+  // 两个床位都有人（夜里同时睡的最多一半，放四只）：右边的朝左躺；左边（靠前）的排在右边（靠后）的前面
+  const four = [{ id: 'nuonuo', level: 2 }, { id: 'qiqi', level: 2 }, { id: 'doudou', level: 1, home: true }, { id: 'jutuan', level: 2 }]
+  const both = make({ pets: four, saved: { ...saved, qiqi: { x: right.at[0], y: right.at[1], right: false, action: 'tent', until: future } }, hour: 22, clock })
+  const [a, b] = both.life.sprites()
+  assert.deepEqual([a.action, b.action, b.flip], ['tent', 'tent', true])
+  assert.ok(a.z > b.z, `前面的 ${a.z} 应该在后面的 ${b.z} 前面`)
+  // 门口站着的（门口睡觉点、进出帐篷站的点）身子挡得到门洞的，都排在帐篷里睡的前面
+  SCENE.tent.spots.concat(SCENE.tent.beds.map((d) => d.door)).forEach(([x, y]) => {
+    const half = (petById('nuonuo').size * PET_ZOOM * scaleAt(y)) / 2
+    if (x - half > Math.max(...HOLE_XS) || x + half < Math.min(...HOLE_XS)) return
+    assert.ok(zOf(y) + 1 > a.z, `门口 ${x},${y} 的被帐篷里睡的盖住了`)
+  })
   // 点它：醒了、先出来站在门口（这一帧不带过渡），下一拍开心一下
   life.start()
   life.tap(0)
   const w = life.whereIs()[0]
-  assert.ok(Math.hypot(bed.door[0] - w.x, bed.door[1] - w.y) < 1, `应该站在门口，却在 ${w.x | 0},${w.y | 0}`)
-  assert.deepEqual([sprites[0].action, sprites[0].duration, sprites[0].tentStyle, sprites[0].flip], ['idle', 0, '', false])
+  assert.ok(Math.hypot(left.door[0] - w.x, left.door[1] - w.y) < 1, `应该站在门口，却在 ${w.x | 0},${w.y | 0}`)
+  assert.deepEqual([sprites[0].action, sprites[0].duration, sprites[0].tentClip], ['idle', 0, ''])
   assert.ok(sprites[0].shadow.width > 0)
   clock.advance(100)
   assert.equal(sprites[0].action, 'happy')
@@ -980,7 +1000,7 @@ test('帐篷里：点它就醒、出来站在门口；切走再回来（snapshot
   const late = make({ pets: [{ id: 'nuonuo', level: 2 }], saved: { nuonuo: { ...saved.nuonuo, until: 1 } }, hour: 12, clock })
   const lw = late.life.whereIs()[0]
   assert.equal(lw.action, 'idle')
-  assert.ok(Math.hypot(bed.door[0] - lw.x, bed.door[1] - lw.y) < 1)
+  assert.ok(Math.hypot(left.door[0] - lw.x, left.door[1] - lw.y) < 1)
   // 床位的 x / y 乱写的不认（站回火边）
   const bad = make({ pets: [{ id: 'nuonuo', level: 2 }], saved: { nuonuo: { x: 1500, y: 1300, right: true, action: 'tent', until: future } }, hour: 12, clock })
   assert.ok(!pointInPoly(bad.life.whereIs()[0].x, bad.life.whereIs()[0].y, SCENE.nogo.tent))

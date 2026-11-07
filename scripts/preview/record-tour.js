@@ -2,7 +2,7 @@
 // 页面用真实页面逻辑算出数据渲染成 HTML；导览组件的位置要量页面里的节点，所以先在浏览器里量好目标的位置，
 // 再交给组件自己的 place() 算圈和卡片，渲染出来盖在页面那一块上（和真机一样只盖页面，不盖导航栏和底部 tab）。
 //
-//   node scripts/preview/record-tour.js [today | manual | profile]（不写全拍）
+//   node scripts/preview/record-tour.js [today | manual | gacha | profile]（不写全拍）
 // 需要 Playwright（云端环境里装好了）
 const fs = require('fs')
 const path = require('path')
@@ -111,6 +111,17 @@ const SCENES = {
     const page = loadPage('manual', wx)
     page.onLoad()
     await shootPage(browser, 'manual', snap(page))
+  },
+  // 扭蛋页：单抽、十连并排的两个大按钮（暖豆够 / 十连不够两张）
+  async gacha(browser) {
+    const view = { beans: 650, spinCost: 30, spinMany: 10, spinManyCost: 300, pityLeft: 6, rates: [{ id: 'common', label: '普通', weight: 65 }, { id: 'rare', label: '稀有', weight: 25 }, { id: 'epic', label: '珍稀', weight: 8 }, { id: 'legendary', label: '传说', weight: 2 }], term: null }
+    for (const [name, beans] of [['gacha', 650], ['gacha-poor', 120]]) {
+      const wx = createWx(async () => ({ ok: true, data: { ...view, beans } }))
+      const page = loadPage('gacha', wx)
+      page.onShow()
+      await settle()
+      await shootPage(browser, name, snap(page), { page: 'gacha' })
+    }
   },
   async profile(browser) {
     config().testReset = { until: '2999-12-31' }

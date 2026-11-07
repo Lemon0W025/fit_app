@@ -14,6 +14,7 @@ Page({
     spinMany: 10,
     spinManyCost: 300,
     pityLeft: 10,
+    tenSure: true, // 十连里一定有珍稀以上（再扭 pityLeft 次必出，十连扭得到）
     ratesText: '',
     termText: '',
     phase: 'idle', // idle 待扭 / shaking 机器摇晃 / capsule 扭蛋掉出来 / reveal 打开 / many 十连一起开
@@ -38,6 +39,7 @@ Page({
           spinMany: view.spinMany || 10,
           spinManyCost: view.spinManyCost || view.spinCost * 10,
           pityLeft: view.pityLeft,
+          tenSure: view.pityLeft <= (view.spinMany || 10),
           ratesText: view.rates.map((r) => `${r.label} ${Math.round((r.weight / total) * 100)}%`).join(' · '),
           termText: termItems ? `${view.term.name}限定点心「${termItems}」出现概率提高` : '',
         })
@@ -50,7 +52,7 @@ Page({
     this.setData({ phase: 'shaking', result: null })
     Promise.all([api.call('camp.spin'), wait(this.shakeMs)])
       .then(([res]) => {
-        this.setData({ phase: 'capsule', beans: res.beans, pityLeft: res.pityLeft, result: decorate(res) })
+        this.setData({ phase: 'capsule', beans: res.beans, pityLeft: res.pityLeft, tenSure: res.pityLeft <= this.data.spinMany, result: decorate(res) })
       })
       .catch((err) => {
         this.setData({ phase: 'idle' })
@@ -65,7 +67,7 @@ Page({
     Promise.all([api.call('camp.spinMany'), wait(this.shakeMs)])
       .then(([res]) => {
         const results = res.results.map(decorate)
-        this.setData({ phase: 'many', beans: res.beans, pityLeft: res.pityLeft, results, manyText: summarize(results) })
+        this.setData({ phase: 'many', beans: res.beans, pityLeft: res.pityLeft, tenSure: res.pityLeft <= this.data.spinMany, results, manyText: summarize(results) })
       })
       .catch((err) => {
         this.setData({ phase: 'idle' })
@@ -77,7 +79,7 @@ Page({
   canSpin(cost, short) {
     if (['idle', 'reveal', 'many'].indexOf(this.data.phase) === -1) return false
     if (this.data.beans < cost) {
-      wx.showToast({ title: short, icon: 'none' })
+      wx.showToast({ title: `${short}（还差 ${cost - this.data.beans}）`, icon: 'none' })
       return false
     }
     return true

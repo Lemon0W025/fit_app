@@ -61,14 +61,18 @@ const GATHER = 2 // 那件家具上已经有别的小家伙了：挑它的机会
 const TENT_CHANCE = 0.7
 const TENT_NAP_MS = [45000, 120000] // 白天在帐篷里睡多久（夜里按 NIGHT_NAP）
 const TENT_IN_MS = 600 // 到了门口背对着我们站一下（进去）再趴下
-const TENT_SHOW = 0.42 // 露出身子的多少（从头顶往下算）：只露个小脑袋
 const SIP_MS = 1800 // 水壶炉边：低头喝一口多久
 const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', tea: '喝口热茶去', play: '玩去喽' }
-// 帐篷按 128 宽的条、各按自己那段前沿排前后（camp-view.cutoutStrips）：在帐篷里露头的那只横着跨几条，就排在它们全都前面
-const TENT_STRIPS = cutoutStrips().filter((c) => c.cut === 'tent')
+// 在帐篷里睡的排在门洞那几条帐篷（camp-view.cutoutStrips，128 宽一条、按自己那段前沿排前后）前面：门洞里画的是帐篷里面，
+// 不排在前面就被整个盖住；露出来的范围由门洞的形状管（tentClip），布帘、帐篷布、横木挡住的地方本来就裁掉了。
+// 门口外面站着的排在它前面（它们脚下的 y 比门洞那几条的前沿都大）；靠前的床位再往前一点，两只都在时前面那只盖住后面那只
+const HOLE_XS = SCENE.tent.hole.map((p) => p[0])
+const TENT_DEPTH = Math.max(...cutoutStrips().filter((c) => c.cut === 'tent' && c.r > Math.min(...HOLE_XS) && c.l < Math.max(...HOLE_XS)).map((c) => c.zy)) + 4
+const BACK_BED_Y = Math.min(...SCENE.tent.beds.map((b) => b.at[1]))
+const bedDepth = (bed) => TENT_DEPTH + (bed.at[1] - BACK_BED_Y) / 6
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
-const DIR_ACTIONS = ['idle', 'eat', 'sit', 'tent'] // 做这些时保持朝向（别的动作回侧面）
+const DIR_ACTIONS = ['idle', 'eat', 'sit'] // 做这些时保持朝向（别的动作回侧面）
 const START_MS = [300, 1500]
 const TAP_MS = 600
 const ROLL_MS = 1200
@@ -264,8 +268,9 @@ function createLife({
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
       bubble: a.bubble, bubbleWidth, bubbleLeft: a.bubble ? a.bubbleDx : 0, tailLeft: a.bubble ? Math.min(Math.max(width / 2 - a.bubbleDx, TAIL_EDGE), bubbleWidth - TAIL_EDGE) : 0, bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
       emoji: a.action === 'sleep' || a.action === 'tent' ? '💤' : a.emoji, tapping: a.tapping, sway,
-      // 在帐篷里：只露头顶往下那一截（内联样式，裁掉下半截、整个往下挪到下巴搁在门槛上）
-      tentStyle: a.action === 'tent' ? tentStyle(sh) : '',
+      // 在帐篷里：整只裁成门洞的形状（tentClip，按这只的框算的门洞多边形）；拼图里脚在格底往上 FOOT，往下挪这么多让脚踩在床位上
+      tentClip: a.action === 'tent' ? tentClip(x - width / 2, y - width) : '',
+      tentShift: a.action === 'tent' && sh ? `transform: translateY(${Math.round(FOOT * 100)}%)` : '',
       // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
       ...nightLayers(a.x, a.y),
       shadow: { left: x - shadowW / 2, bottom: feet - shadowW / 6, width: shadowW, height: shadowW / 3 },
@@ -280,14 +285,10 @@ function createLife({
     return a.y
   }
 
-  // 在帐篷里露个小脑袋：从头顶（拼图里待机帧头顶在格高的 top 处、脚在格底往上 FOOT；单张图头顶约 0.05、脚在底边）往下只留 TENT_SHOW，
-  // 下面裁掉，再整个往下挪，让裁的那条边正好落在脚那条线上（= 床位的 y，画上帐篷地板的前沿）
-  function tentStyle(sh) {
-    const top = sh ? sh.top : 0.05
-    const foot = sh ? FOOT : 0
-    const cut = Math.round((top + (1 - foot - top) * (1 - TENT_SHOW)) * 100)
-    const shift = cut - Math.round(foot * 100)
-    return `clip-path: inset(0 0 ${cut}% 0); -webkit-clip-path: inset(0 0 ${cut}% 0); transform: translateY(${shift}%)`
+  // 门洞的形状，换成这只的框（左上角在屏幕上的 left / top）里的坐标：在帐篷里睡的只在这块里露出来
+  function tentClip(left, top) {
+    const pts = SCENE.tent.hole.map(([hx, hy]) => `${Math.round((hx * L.k - left) * 10) / 10}px ${Math.round((hy * L.k - top) * 10) / 10}px`).join(', ')
+    return `clip-path: polygon(${pts}); -webkit-clip-path: polygon(${pts})`
   }
 
   function nightLayers(x, y) {
@@ -396,23 +397,16 @@ function createLife({
       .sort((p, q) => dist(self.x, self.y, p.x, p.y) - dist(self.x, self.y, q.x, q.y))
   }
 
-  // 露头的这只排在它横着跨到的帐篷条全都前面
-  function tentDepth(a) {
-    const half = (sizeOf(a) * scaleAt(a.y)) / 2
-    const zys = TENT_STRIPS.filter((c) => c.r > a.x - half && c.l < a.x + half).map((c) => c.zy)
-    return Math.max(a.y, ...zys) + 4
-  }
-
-  // 到门口了：背对着我们站一下（进去），然后趴在里面只露个小脑袋（正面那帧裁掉下半截，下巴搁在门槛上），睡 ms 毫秒
+  // 到门口了：背对着我们站一下（进去），然后趴在床位上睡 ms 毫秒（身子在布帘后面，头露在门洞里）
   function goIn(a, bed, ms) {
     a.dir = 'back'
     doFor(a, 'idle', TENT_IN_MS, '', {
       next: (b) => {
         walk.put(b, bed.at[0], bed.at[1])
-        b.dir = 'front'
-        b.right = true
+        b.right = bed.right
+        b.sleepStyle = 'A'
         b.until = now() + ms
-        doFor(b, 'tent', ms, '', { depthY: tentDepth(b) })
+        doFor(b, 'tent', ms, '', { depthY: bedDepth(bed) })
       },
     })
   }
@@ -822,15 +816,17 @@ function createLife({
     if (s.action === 'tent') {
       const bed = bedAt(s.x, s.y)
       if (!bed) return false
-      a.right = true
-      a.dir = 'front'
+      a.right = bed.right
       if (s.until > now() && animals.filter((b) => asleep(b)).length < napCap()) {
         walk.put(a, bed.at[0], bed.at[1])
         a.goal = { spot: { x: bed.door[0], y: bed.door[1], action: 'tent', bed } }
         a.action = 'tent'
         a.until = s.until
-        a.depthY = tentDepth(a)
-      } else walk.put(a, bed.door[0], bed.door[1])
+        a.depthY = bedDepth(bed)
+      } else {
+        walk.put(a, bed.door[0], bed.door[1])
+        a.dir = 'front'
+      }
       return true
     }
     if (!inGrass(s.x, s.y)) return false

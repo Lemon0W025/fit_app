@@ -18,13 +18,13 @@ const MS = {
 // 有 C 张时按方向换的行（别的动作不分方向）
 const DIR_ROWS = {
   back: { walk: 'walkBack', fly: 'walkBack', idle: 'idleBack', eat: 'eatBack', sit: 'sitBack' },
-  front: { walk: 'walkFront', fly: 'walkFront', idle: 'idleFront', tent: 'idleFront' },
+  front: { walk: 'walkFront', fly: 'walkFront', idle: 'idleFront' },
 }
 const STEEP = 1.2 // 竖着的位移比横着的大这么多倍才算正面 / 背影
 const FOOT = 0.1 // 拼图里脚踩在格底往上这么高（格高的比例，和 scripts/pack_anim.py 的 FOOT 一样）
 // camp-life 的动作 → 拼图里的行名
-// tent：在帐篷里趴着只露个小脑袋（正面站着那帧裁掉下半截；没有 C 张就用待机）
-const ALIAS = { fly: 'walk', sleep: 'sleepA', sit: 'idle', soak: 'idle', sun: 'idle', play: 'idle', tent: 'idle', dislike: 'idle', away: 'idle', look: 'idle' }
+// tent：在帐篷里趴着睡（第一种睡姿，头朝右），只在门洞里露出来
+const ALIAS = { fly: 'walk', sleep: 'sleepA', sit: 'idle', soak: 'idle', sun: 'idle', play: 'idle', tent: 'sleepA', dislike: 'idle', away: 'idle', look: 'idle' }
 
 // dir：side / back / front；c：这只有没有 C 张
 function frameFor(action, { sleepStyle = 'A', dir = 'side', c = false } = {}) {

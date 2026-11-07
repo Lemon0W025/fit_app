@@ -13,10 +13,25 @@
     <image class="machine {{phase === 'shaking' ? 'machine-shake' : ''}}" src="/images/garden/ui/gacha.png" mode="aspectFit" />
   </view>
 
-  <button class="btn-primary btn-big" bindtap="spin" disabled="{{phase === 'shaking' || phase === 'capsule'}}">
-    {{phase === 'shaking' ? '咕噜咕噜…' : '扭一个（' + spinCost + ' 暖豆）'}}
-  </button>
-  <button class="btn-plain btn-many" bindtap="spinMany" disabled="{{phase === 'shaking' || phase === 'capsule'}}">一口气扭 {{spinMany}} 个（{{spinManyCost}} 暖豆）</button>
+  <!-- 单抽、十连并排（抽卡游戏的样子）：上面扭几次，下面暖豆和价钱；十连黑底高亮、角上一条「必出珍稀」 -->
+  <view class="pull-row {{phase === 'shaking' || phase === 'capsule' ? 'pull-busy' : ''}}">
+    <view class="pull pull-one" hover-class="pull-press" bindtap="spin">
+      <view class="pull-title">扭 <text class="pull-n num">1</text> 次</view>
+      <view class="pull-cost {{beans < spinCost ? 'pull-poor' : ''}}">
+        <image class="pull-bean" src="/images/garden/ui/bean.png" mode="aspectFit" />
+        <text class="num">{{spinCost}}</text>
+      </view>
+    </view>
+    <view class="pull pull-ten" hover-class="pull-press" bindtap="spinMany">
+      <view wx:if="{{tenSure}}" class="pull-ribbon">必出珍稀</view>
+      <view class="pull-title">扭 <text class="pull-n num">{{spinMany}}</text> 次</view>
+      <view class="pull-cost {{beans < spinManyCost ? 'pull-poor' : ''}}">
+        <image class="pull-bean" src="/images/garden/ui/bean.png" mode="aspectFit" />
+        <text class="num">{{spinManyCost}}</text>
+      </view>
+    </view>
+  </view>
+  <view class="pull-hint">{{phase === 'shaking' ? '咕噜咕噜…' : ''}}</view>
 
   <view class="card info">
     <view class="info-line">🎯 再扭 <text class="strong">{{pityLeft}}</text> 次，必出珍稀以上</view>

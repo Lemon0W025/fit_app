@@ -701,9 +701,9 @@ button.btn-small {
 .act-soak { clip-path: inset(0 0 38% 0); -webkit-clip-path: inset(0 0 38% 0); transform: translateY(38%); animation: bob 2s ease-in-out infinite; }
 @keyframes bob { 0%, 100% { transform: translateY(38%); } 50% { transform: translateY(41%); } }
 .act-dislike { animation: shake 0.4s ease-in-out 3; }
-/* 在帐篷里睡：裁多少、往下挪多少按这只身子在格里的位置算，写在内联样式里（camp-life 的 tentStyle）；这里只管不叠别的动画。💤 挨着露出来的脑袋 */
-.act-tent { animation: none; }
-.pet-tent .act-emoji { top: 36%; }
+/* 在帐篷里睡：门洞的形状写在内联样式里（camp-life 的 tentClip）。💤 挨着露出来的脑袋（趴着，头在框的中间偏下、朝右；朝左的翻到左边） */
+.pet-tent .act-emoji { top: 34%; right: 2%; }
+.pet-tent-flip .act-emoji { right: auto; left: 2%; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
 
 /* 拖拽：装饰的幽灵块 + 落脚框 */

@@ -34,7 +34,7 @@ function describe(state) {
 const CSS_ACTIONS = {
   walk: 'act-walk', fly: 'act-fly', idle: 'act-idle', sleep: 'act-sleep', eat: 'act-eat', fidget: 'act-idle', happy: 'act-happy',
   roll: 'act-roll', pet: 'act-pet', gift: 'act-walk', jump: 'act-jump', special: 'act-happy', sit: 'act-sit',
-  sun: 'act-sleep', play: 'act-happy', tent: 'act-tent', dislike: 'act-dislike', away: '', look: 'act-idle',
+  sun: 'act-sleep', play: 'act-happy', tent: 'act-sleep', dislike: 'act-dislike', away: '', look: 'act-idle',
 }
 
 module.exports = { periodOf, describe, CSS_ACTIONS }
