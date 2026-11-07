@@ -1,6 +1,8 @@
 // 宠物的日常：每只一个定时器，轮到它时按时段决定去哪、干什么，走到了做一会儿再换。坐标全是画的像素，页面按缩放画
 // 定时器（clock）、随机数、钟点（hour）都能注入，测试里手动推进
-// 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：从营地边上进来、在锅边转悠，不睡、不在「找它」里
+// 住户之外还有「客人」（闻着锅里的香味来的，下次拍正餐住下）：在锅边转悠，不睡、不在「找它」里
+// 下锅以后，出去找吃的那几只和客人排着队一只一只回来（第一只几秒后，之后每只隔十几秒，客人排在最后），从屏幕左右两边的画面外走进来；
+// 新住户（拍正餐后搬来的）照旧从树林边的入口进来
 // 困了随机小睡（白天少、夜里多，同时睡的有上限），点睡着的会醒；离开营地时 snapshot() 记下各自在哪，回来从原地接着来
 // 说话：说什么在 pet-talk.js，什么时候能说在 camp-bubbles.js（屏幕上同一时间最多一个气泡）；点它说一段（两三句，一句一句换着显示，
 // 再点一下跳到下一句）；自己开口很少（几分钟一句）
@@ -37,6 +39,15 @@ const CHAT_BUBBLE_MS = 4500 // 自己开口的那句留多久；说话时站着�
 // 锅里空着（今天还没下锅）：这一级以下的出去找吃的（从营地边上走掉、藏起来），这一级以上的留下来在锅边喊饿；
 // 至少留一只最亲的，营地不会一只都没有；一下锅，走掉的闻着香味回来
 const STAY_LEVEL = 3
+// 下锅以后，出去找吃的那几只和闻着香味来的客人排着队回来（11/07 用户：一下子全从上面冒出来不自然）：
+// 第一只过 BACK_FIRST_MS 才到，之后每只隔 BACK_GAP_MS；客人至少 VISITOR_MS 才到；都从屏幕左右两边（看得到的那段外面 EDGE_OUT）进来
+const BACK_FIRST_MS = [4000, 10000]
+const BACK_GAP_MS = [8000, 18000]
+const VISITOR_MS = [15000, 40000]
+const BACK_LATE_MS = 2000 // 排到的时间错过这么久（切过 tab 回来）就重新排队
+const EDGE_OUT = 140 // 从屏幕边上往外多少（画的像素）出现
+const EDGE_IN = 120 // 离画的左右边至少这么多（草地里）
+const SHOW_MS = 80 // 从外面进来：先在边上现身一帧再迈腿（藏着的元素是重新画的，直接给第一段的终点就从那儿冒出来了）
 const HUNGRY_POT_CHANCE = 0.3 // 留下来的饿着时，去锅边坐着等的机会
 // 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
 const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'tea', 'perch']
@@ -178,6 +189,20 @@ function createLife({
 
   // 停下来的地方：草地上、不在锅身 / 提灯正后面（会被整个挡住）、离别人远
   const restable = (x, y, self) => inGrass(x, y) && !hiddenAt(x, y) && awayFromOthers(x, y, self)
+
+  // 画面左右两边、火那一排附近的一点：看得到屏幕就在看得到的那段外面一点（像从画面外走进来），看不到就是画的两边；
+  // side -1 左 / 1 右；yHint 尽量用这个高度（出去找吃的从自己这一行走出去）。草地外、锅后面不算
+  function edgePoint(side, yHint) {
+    const view = visible()
+    const edge = side < 0 ? (view ? view.left / L.k - EDGE_OUT : 0) : view ? view.right / L.k + EDGE_OUT : SCENE.width
+    const x = Math.min(SCENE.width - EDGE_IN, Math.max(EDGE_IN, edge))
+    const lo = SCENE.fire[1] - 400
+    const hi = SCENE.fire[1] + 800
+    const ys = yHint == null ? [] : [Math.min(hi, Math.max(lo, yHint))]
+    for (let i = 0; i < 12; i++) ys.push(lo + random() * (hi - lo))
+    const y = ys.find((v) => inGrass(x, v) && !hiddenAt(x, v))
+    return y == null ? null : { x, y, action: 'idle' }
+  }
 
   // 草地上随机一点
   function randomGrass(self, tries = 30) {
@@ -442,15 +467,37 @@ function createLife({
     }
     if (leaving(a)) return findFood(a)
     if (a.hidden) {
+      // 闻着香味来的（找吃的回来的、客人）：排着队一只一只进，从屏幕左右两边进来
+      if (a.why === 'hungry' || a.why === 'smell') {
+        const wait = queueBack(a)
+        if (wait > 0) return schedule(a, wait)
+        const why = a.why
+        const from = edgePoint(random() < 0.5 ? -1 : 1)
+        const [ex, ey] = from ? [from.x, from.y] : pick(SCENE.entries)
+        a.why = ''
+        a.hidden = false
+        a.action = 'idle'
+        walk.put(a, ex, ey)
+        // 先在边上现身，下一拍再往锅边走：客人闻一闻；出去找吃的回来的先去锅边吃一口
+        a.next = why === 'smell'
+          ? (b) => {
+              walkIn(b, { x: ex, y: ey })
+              stepAlong(b)
+            }
+          : (b) => {
+              bubbles.event(b, backLine(b.id))
+              eatAtPot(b, POT_EAT_MS)
+            }
+        emit(a)
+        return schedule(a, SHOW_MS)
+      }
+      // 不在营地的时段过了（鹤鹤早上回来）：从树林边的入口现身，下一拍再走
       const [ex, ey] = pick(SCENE.entries)
       a.hidden = false
+      a.action = 'idle'
       walk.put(a, ex, ey)
-      // 出去找吃的回来了：闻着锅里的香味，先去锅边吃一口
-      if (a.why === 'hungry') {
-        a.why = ''
-        bubbles.event(a, backLine(a.id))
-        return eatAtPot(a, POT_EAT_MS)
-      }
+      emit(a)
+      return schedule(a, SHOW_MS)
     }
     if (a.action === 'sleep') {
       if (a.until > now() + 50) return schedule(a, a.until - now())
@@ -636,6 +683,21 @@ function createLife({
 
   const hungry = () => !pot().length
 
+  // 排队进场：下一只最早什么时候能进来。这只还没排上就给它排一个（现在或者队尾），返回还要等多久；
+  // 排到的时间早就过了（切过 tab 回来）重新排
+  let nextBack = 0
+  function queueBack(a) {
+    const t = now()
+    if (!a.backAt || t - a.backAt > BACK_LATE_MS) {
+      a.backAt = Math.max(t, nextBack)
+      nextBack = a.backAt + between(BACK_GAP_MS)
+    }
+    const wait = a.backAt - t
+    if (wait > 50) return wait
+    a.backAt = 0
+    return 0
+  }
+
   // 留下来的那只：住户里最亲的（等级最高，一样高的先来的）
   function keeper() {
     return animals.filter((a) => !a.visitor).sort((p, q) => q.level - p.level || p.index - q.index)[0] || null
@@ -651,7 +713,8 @@ function createLife({
     if (a.hidden) return schedule(a, between(NIGHT_MS))
     a.until = 0
     a.sway = null
-    const [ex, ey] = SCENE.entries.slice().sort((p, q) => dist(a.x, a.y, p[0], p[1]) - dist(a.x, a.y, q[0], q[1]))[0]
+    const out = edgePoint(a.x < SCENE.width / 2 ? -1 : 1, a.y)
+    const [ex, ey] = out ? [out.x, out.y] : SCENE.entries.slice().sort((p, q) => dist(a.x, a.y, p[0], p[1]) - dist(a.x, a.y, q[0], q[1]))[0]
     const gone = (b) => {
       b.hidden = true
       b.action = 'away'
@@ -729,9 +792,9 @@ function createLife({
     if (spot) walk.put(a, spot.x, spot.y)
   }
 
-  // 从营地边上走进来，走到锅边：新住户先打招呼、吃一口；客人闻一闻
-  function walkIn(a) {
-    const [ex, ey] = pick(SCENE.entries)
+  // 从营地边上走进来（from 没给就是树林边的入口），走到锅边：新住户先打招呼、吃一口；客人闻一闻
+  function walkIn(a, from) {
+    const [ex, ey] = from ? [from.x, from.y] : pick(SCENE.entries)
     walk.put(a, ex, ey)
     if (!a.visitor) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
     const spot = nearFire(a) || { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'idle' }
@@ -788,6 +851,15 @@ function createLife({
       a.hidden = true
       a.action = 'away'
       a.why = 'hungry'
+      return
+    }
+    // 上次离开时还在外面（找吃的还没回来、客人还没到）：接着在外面排队，到点从边上进来
+    const s = memory[a.id]
+    if (s && s.hidden && (s.why === 'hungry' || s.why === 'smell')) {
+      a.hidden = true
+      a.action = 'away'
+      a.why = s.why
+      a.backAt = s.backAt || 0
       return
     }
     if (restore(a, memory[a.id])) {
@@ -994,10 +1066,18 @@ function createLife({
 
     // 下锅了：爱吃的住户（ids）走到锅边吃一会儿；睡着的也醒过来去吃
     cook(ids) {
-      // 出去找吃的那几只：闻着香味，陆续从营地边上回来（turn 里回来先去锅边吃）
-      animals.forEach((a) => {
-        if (a.hidden && a.why === 'hungry' && running) schedule(a, between(START_MS) + a.index * 400)
-      })
+      // 出去找吃的那几只：闻着香味，排着队一只一只从屏幕两边回来（turn 里回来先去锅边吃）；爱吃锅里这样的先回
+      // 当场排好队（不等下一拍）：之后加的客人才会排在它们后面
+      const back = animals.filter((a) => a.hidden && a.why === 'hungry')
+      if (back.length) {
+        nextBack = Math.max(nextBack, now() + between(BACK_FIRST_MS))
+        back.sort((p, q) => Number(likesPot(q)) - Number(likesPot(p)) || p.index - q.index)
+        back.forEach((a) => {
+          a.backAt = nextBack
+          nextBack += between(BACK_GAP_MS)
+          if (running) schedule(a, Math.max(50, a.backAt - now()))
+        })
+      }
       // 爱吃的都去锅边吃；只有第一只说「好吃」（不会一下子冒一排气泡）
       let first = true
       animals.forEach((a) => {
@@ -1018,10 +1098,16 @@ function createLife({
       const a = makeAnimal(pet, 1, animals.length, { foodId: v.foodId || '' })
       animals.push(a)
       if (away(a)) settle(a)
-      else walkIn(a)
+      else {
+        // 香味飘出去要一会儿：过 VISITOR_MS 才从屏幕边上进来，正在排队回来的住户在前面就排在后面
+        a.hidden = true
+        a.action = 'away'
+        a.why = 'smell'
+        a.backAt = Math.max(now() + between(VISITOR_MS), nextBack)
+        nextBack = a.backAt + between(BACK_GAP_MS)
+      }
       emit(a)
-      if (running && a.goal && a.goal.path && a.goal.path.length) stepAlong(a)
-      else if (running) schedule(a, between(START_MS))
+      if (running) schedule(a, between(START_MS))
       return a.index
     },
 
@@ -1042,7 +1128,10 @@ function createLife({
     snapshot() {
       const out = {}
       animals.forEach((a) => {
-        if (a.hidden) return
+        if (a.hidden) {
+          if (a.why === 'hungry' || a.why === 'smell') out[a.id] = { hidden: true, why: a.why, backAt: a.backAt || 0 }
+          return
+        }
         const sleeping = a.action === 'sleep' && !a.holdGift
         out[a.id] = { x: a.x, y: a.y, right: a.right, action: sleeping ? 'sleep' : 'idle', until: sleeping ? a.until : 0, sleepStyle: a.sleepStyle }
       })

@@ -197,6 +197,11 @@ const SCENARIOS = {
   },
   // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
   'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
+  // 锅空着、三只出去找吃的了；3 秒时胡萝卜下锅：找吃的回来的和客人排着队、一只一只从屏幕左右两边进来（11/07）
+  'arrive-phone': {
+    phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 48, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'huahua'], plan: [],
+    bag: { foods: { huluobo: 1 } }, events: [[3000, (life, camp) => camp.cook('huluobo')]],
+  },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
@@ -217,6 +222,8 @@ async function build(sc) {
   const cloud = createFakeCloud({ replies: [] })
   const { main: fn } = loadCloudFunction(cloud)
   const wx = createWx(fn)
+  // 拼图（art/anim，不进仓库）没生成过的环境：让假的下载失败，宠物退回包里的单张图，不然是一片破图
+  if (!fs.existsSync(path.join(REPO, 'art', 'anim'))) wx.failDownloads = true
   wx.getWindowInfo = () => ({ pixelRatio: 1, windowWidth: winOf(sc).width, windowHeight: winOf(sc).height, statusBarHeight: 20 })
   await fn({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
   const camp = loadPage('camp', wx)
@@ -430,7 +437,8 @@ async function record(name, sc, browser) {
   d.termText = ''
   d.peekText = ''
   d.giftReady = false
-  d.pets = life.sprites()
+  // 藏着的（出去找吃的、还没到的客人）也先渲染出元素来，由 apply 用 display 开关（不然回来时没有元素可挪）
+  d.pets = life.sprites().map((s) => ({ ...s, hidden: false }))
   // 抽屉：按开着渲染出 DOM（一加载先藏起来，由 sheetUi 开关）
   if (sc.ui && sc.sheet === 'residents') {
     d.residentsOpen = true
@@ -457,6 +465,10 @@ async function record(name, sc, browser) {
       // 影子是宠物前面最近的那个 .shadow（中间可能隔着说话的气泡）
       let shadow = pet.previousElementSibling
       while (shadow && !shadow.classList.contains('shadow')) shadow = shadow.previousElementSibling
+      // 藏起来 / 现身（真机上是 wx:if，重新画的元素没有过渡）
+      pet.style.display = s.hidden ? 'none' : ''
+      if (shadow) shadow.style.display = s.hidden ? 'none' : ''
+      if (s.hidden) return
       pet.style.transitionDuration = `${s.duration}ms`
       pet.style.zIndex = s.z
       pet.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
@@ -595,6 +607,8 @@ async function record(name, sc, browser) {
   let clockMs = 0
   const total = sc.seconds * 1000
   const pending = plan.filter((p) => p[0] > 0).sort((a, b) => a[0] - b[0])
+  // 一开始就藏着的（出去找吃的）先藏起来
+  for (const [i, s] of life.sprites().entries()) if (s.hidden) await apply(i, s)
   const events = (sc.events || []).slice().sort((a, b) => a[0] - b[0])
   const ui = sc.ui ? sheetUi(page, camp, sc) : null
   while (clockMs < total) {
@@ -607,7 +621,7 @@ async function record(name, sc, browser) {
         const ok = life.goTo(i, x, y)
         if (!ok) console.log(name, 'goTo failed', i, x, y)
       }
-      while (events.length && events[0][0] <= now) events.shift()[1](life)
+      while (events.length && events[0][0] <= now) events.shift()[1](life, camp)
       camp.clock.advance(dt)
       clockMs = now
       await sync()

@@ -10,6 +10,7 @@ const RARITIES = [
 
 // 扭蛋 30 暖豆一抽；第一次进来送 60
 const SPIN_COST = 30
+const SPIN_MANY = 10 // 十连：一口气扭这么多（SPIN_COST × SPIN_MANY 暖豆；十次里按保底至少一个珍稀以上）
 const WELCOME_BEANS = 60
 // 连续 PITY-1 次没出珍稀及以上，第 PITY 次必出
 const PITY = 10
@@ -80,6 +81,6 @@ function currentTerm(dateKey) {
 }
 
 module.exports = {
-  RARITIES, SPIN_COST, WELCOME_BEANS, PITY, SOLAR_TERMS,
+  RARITIES, SPIN_COST, SPIN_MANY, WELCOME_BEANS, PITY, SOLAR_TERMS,
   beanBalance, pickWeighted, rollRarity, currentTerm,
 }

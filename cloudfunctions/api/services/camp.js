@@ -1,7 +1,7 @@
 const { AppError, CODES } = require('../lib/errors')
 const { normalizeCamp, migrated } = require('../lib/camp-state')
 const { dateKey } = require('../lib/shared/date')
-const { RARITIES, SPIN_COST, WELCOME_BEANS, PITY, beanBalance, rollRarity, currentTerm } = require('../lib/shared/garden')
+const { RARITIES, SPIN_COST, SPIN_MANY, WELCOME_BEANS, PITY, beanBalance, rollRarity, currentTerm } = require('../lib/shared/garden')
 const { NO_PERKS } = require('../lib/test-perks')
 const { PETS, petById } = require('../lib/shared/pets')
 const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
@@ -73,6 +73,8 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
     return {
       beans: Math.max(0, beanBalance(camp)),
       spinCost: SPIN_COST,
+      spinMany: SPIN_MANY,
+      spinManyCost: SPIN_COST * SPIN_MANY,
       pityLeft: PITY - camp.gacha.sincePity,
       rates: RARITIES.map(({ id, label, weight }) => ({ id, label, weight })),
       term: termInfo(),
@@ -94,6 +96,18 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
     const foods = { ...camp.foods, [foodId]: camp.foods[foodId] - 1 }
     if (!foods[foodId]) delete foods[foodId]
     camp.foods = foods
+  }
+
+  // 扭一次：扣 SPIN_COST、按保底抽稀有度、抽食物进背包、记没吃过的
+  function pullOnce(camp, term) {
+    const rarity = rollRarity(random(), camp.gacha.sincePity)
+    const foodId = pickFood(rarity, term && term.key, random())
+    const isNew = camp.tasted.indexOf(foodId) === -1
+    camp.beans = { ...camp.beans, spent: camp.beans.spent + SPIN_COST }
+    addToBag(camp, foodId)
+    if (isNew) camp.tasted = camp.tasted.concat(foodId)
+    camp.gacha = { pulls: camp.gacha.pulls + 1, sincePity: HIGH_RARITIES.indexOf(rarity) !== -1 ? 0 : camp.gacha.sincePity + 1 }
+    return { foodId, rarity, isNew }
   }
 
   function addToBag(camp, foodId) {
@@ -155,16 +169,21 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
     async spin(openid) {
       const camp = await load(openid)
       if (beanBalance(camp) < SPIN_COST) throw new AppError(CODES.NO_BEANS, '暖豆不够啦，再打卡一顿就有了')
-      const term = currentTerm(today())
-      const rarity = rollRarity(random(), camp.gacha.sincePity)
-      const foodId = pickFood(rarity, term && term.key, random())
-      const isNew = camp.tasted.indexOf(foodId) === -1
-      camp.beans = { ...camp.beans, spent: camp.beans.spent + SPIN_COST }
-      addToBag(camp, foodId)
-      if (isNew) camp.tasted = camp.tasted.concat(foodId)
-      camp.gacha = { pulls: camp.gacha.pulls + 1, sincePity: HIGH_RARITIES.indexOf(rarity) !== -1 ? 0 : camp.gacha.sincePity + 1 }
+      const r = pullOnce(camp, currentTerm(today()))
       await save(openid, camp)
-      return { foodId, rarity, isNew, beans: Math.max(0, beanBalance(camp)), pityLeft: PITY - camp.gacha.sincePity }
+      return { ...r, beans: Math.max(0, beanBalance(camp)), pityLeft: PITY - camp.gacha.sincePity }
+    },
+
+    // 十连：一口气扭 SPIN_MANY 个（保底照常往下数，十次里至少一个珍稀以上），一次存
+    async spinMany(openid) {
+      const camp = await load(openid)
+      const cost = SPIN_COST * SPIN_MANY
+      if (beanBalance(camp) < cost) throw new AppError(CODES.NO_BEANS, `十连要 ${cost} 暖豆，再打几顿卡就有了`)
+      const term = currentTerm(today())
+      const results = []
+      for (let i = 0; i < SPIN_MANY; i++) results.push(pullOnce(camp, term))
+      await save(openid, camp)
+      return { results, beans: Math.max(0, beanBalance(camp)), pityLeft: PITY - camp.gacha.sincePity }
     },
 
     // 下锅：今天第一样下锅就点火、煮一整天。爱吃它的住户这就过来吃（亲密 + feedGain）；

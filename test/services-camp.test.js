@@ -88,6 +88,29 @@ test('spin：扣 30 暖豆，按随机数抽食物，保底，节气点心入池
   await assert.rejects(poor.service.spin('u1'), { code: 'NO_BEANS' })
 })
 
+test('spinMany：十连扣 300 暖豆、十个结果一次存，保底照常往下数（十次里至少一个珍稀以上）；暖豆不够不扭', async () => {
+  const { repo, service } = setup({ camp: rich({ beans: { earned: {}, bonus: 400, spent: 0 } }), random: () => 0.1 })
+  const r = await service.spinMany('u1')
+  assert.equal(r.results.length, 10)
+  assert.equal(r.beans, 100)
+  assert.equal(r.pityLeft, PITY, '第十个保底出了珍稀，计数归零')
+  assert.deepEqual(r.results.slice(0, 9).map((x) => x.rarity), Array(9).fill('common'))
+  assert.equal(r.results[9].rarity, 'epic')
+  // 同一样只有第一次算新
+  const firsts = {}
+  r.results.forEach((x) => {
+    assert.equal(x.isNew, !firsts[x.foodId], x.foodId)
+    firsts[x.foodId] = true
+  })
+  const stored = await repo.getGarden('u1')
+  assert.equal(Object.values(stored.foods).reduce((t, n) => t + n, 0), 10)
+  assert.equal(stored.gacha.pulls, 10)
+  assert.equal(stored.beans.spent, 300)
+  const poor = setup({ camp: rich({ beans: { earned: {}, bonus: 200, spent: 0 } }) })
+  await assert.rejects(poor.service.spinMany('u1'), { code: 'NO_BEANS' })
+  assert.equal((await poor.service.get('u1')).spinManyCost, 300)
+})
+
 test('get：测试客人（config.testVisitors）：挪走几只、送能引它们来的食物，锅里煮的退回背包；每个账号一次，过了日子不做', async () => {
   const { PETS } = require('../cloudfunctions/api/lib/shared/pets')
   const all = PETS.map((p) => ({ id: p.id, since: TODAY, fed: p.id === 'doudou' ? 9 : 0, fedToday: { date: '', n: 0 } }))

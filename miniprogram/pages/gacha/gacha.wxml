@@ -16,6 +16,7 @@
   <button class="btn-primary btn-big" bindtap="spin" disabled="{{phase === 'shaking' || phase === 'capsule'}}">
     {{phase === 'shaking' ? '咕噜咕噜…' : '扭一个（' + spinCost + ' 暖豆）'}}
   </button>
+  <button class="btn-plain btn-many" bindtap="spinMany" disabled="{{phase === 'shaking' || phase === 'capsule'}}">一口气扭 {{spinMany}} 个（{{spinManyCost}} 暖豆）</button>
 
   <view class="card info">
     <view class="info-line">🎯 再扭 <text class="strong">{{pityLeft}}</text> 次，必出珍稀以上</view>
@@ -23,10 +24,29 @@
     <view class="info-line muted small">暖豆只能靠打卡赚：每天早午晚三顿都打卡，暖豆最多</view>
   </view>
 
-  <view wx:if="{{phase === 'capsule' || phase === 'reveal'}}" class="overlay">
+  <view wx:if="{{phase === 'capsule' || phase === 'reveal' || phase === 'many'}}" class="overlay">
     <view wx:if="{{phase === 'capsule'}}" class="capsule-box" bindtap="openCapsule">
       <image class="capsule" src="{{result.capsule}}" mode="aspectFit" />
       <view class="capsule-tip">点一下，打开扭蛋</view>
+    </view>
+
+    <!-- 十连：十个一起开，一个一个蹦出来 -->
+    <view wx:elif="{{phase === 'many'}}" class="reveal reveal-many">
+      <view class="many-title">{{spinMany}} 个都开出来啦</view>
+      <view class="many-grid">
+        <view wx:for="{{results}}" wx:key="index" class="many-cell fx-pop" style="animation-delay: {{index * 90}}ms; border-color: {{item.rarityColor}}">
+          <view wx:if="{{item.isNew}}" class="many-new">新</view>
+          <image class="many-image" src="{{item.image}}" mode="aspectFit" />
+          <view class="many-name">{{item.name}}</view>
+          <view class="many-rarity" style="color: {{item.rarityColor}}">{{item.rarityLabel}}</view>
+        </view>
+      </view>
+      <view class="many-sum">{{manyText}}</view>
+      <view class="reveal-actions">
+        <button class="btn-plain reveal-btn" bindtap="goCamp">去喂它们</button>
+        <button class="btn-primary reveal-btn" bindtap="spinMany" disabled="{{beans < spinManyCost}}">再来十连</button>
+      </view>
+      <view class="link link-muted" bindtap="closeResult">收进背包</view>
     </view>
 
     <view wx:else class="reveal">

@@ -134,7 +134,7 @@
       </view>
     </view>
 
-    <sheet show="{{bagOpen}}" bindclose="closeBag">
+    <sheet show="{{bagOpen}}" bindclose="closeBag" tuck="{{bagTuck}}">
       <view slot="head" class="bag-tabs">
         <segmented options="{{bagTabs}}" value="{{bagTab}}" bindchange="switchBag" />
       </view>
@@ -142,7 +142,7 @@
       <view class="bag-panes">
       <view class="bag-pane {{bagTab === 'food' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{foodBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
-          <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood">
+          <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood" bindtouchstart="onBagTouchStart" bindtouchmove="onBagTouchMove" bindtouchend="onBagTouchEnd" bindtouchcancel="onBagTouchEnd">
             <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
             <view class="bag-name">{{item.name}}</view>
             <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
@@ -152,7 +152,7 @@
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
-        <view class="muted small bag-hint">{{bagForPot ? '点一样，放进锅里煮上' : '点一样：放进锅里煮上，或者拿着去喂一只小动物'}}（下面是今天闻着它会来的小动物，黑影是还没来过的）</view>
+        <view class="muted small bag-hint">按住一样往上拖，拖到锅上松手就煮上（拖到小动物身上是喂它）；点一下也行。下面是今天闻着它会来的小动物，黑影是还没来过的</view>
       </view>
       <view class="bag-pane {{bagTab === 'decor' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">

@@ -211,3 +211,75 @@ button.reveal-btn {
   flex: 1;
   margin: 0;
 }
+
+/* 十连 */
+button.btn-many {
+  margin-top: 0;
+}
+
+.reveal-many {
+  width: 92%;
+  padding: 32rpx 24rpx 20rpx;
+}
+
+.many-title {
+  font-size: 38rpx;
+  font-weight: 800;
+  margin-bottom: 20rpx;
+}
+
+/* 五个一排、两排 */
+.many-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.many-cell {
+  position: relative;
+  width: calc((100% - 48rpx) / 5);
+  padding: 12rpx 4rpx 8rpx;
+  box-sizing: border-box;
+  border-radius: 20rpx;
+  border: 3rpx solid var(--line);
+  background: var(--chip);
+  text-align: center;
+}
+
+.many-image {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.many-name {
+  font-size: 22rpx;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.many-rarity {
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.many-new {
+  position: absolute;
+  top: -10rpx;
+  right: -6rpx;
+  z-index: 1;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: var(--red);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 30rpx;
+}
+
+.many-sum {
+  margin-top: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}

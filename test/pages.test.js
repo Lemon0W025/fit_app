@@ -665,8 +665,10 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
   assert.equal(camp.data.peekText, `👀 ${guestName}闻着香味来了…下次拍正餐就住下`)
   assert.deepEqual(camp.data.pets.map((p) => [p.id, p.visitor]), [['doudou', false], [guest, true]])
-  camp.clock.advance(100)
-  assert.equal(camp.data.pets[1].action, 'walk')
+  // 香味飘出去要一会儿：客人先不在，过几十秒才从屏幕边上走进来（camp-life.test.js 测具体时间和位置）
+  assert.equal(camp.data.pets[1].hidden, true)
+  camp.clock.advance(45000)
+  assert.equal(camp.data.pets[1].hidden, false)
   // 点锅：说锅里煮着什么，还能再放（确认就打开背包）
   camp.closeBag()
   camp.tapPot()
@@ -685,9 +687,10 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   camp.onDragStart(potAt)
   await settle()
   assert.equal(camp.data.drag.ok, true)
-  // 客人不能喂：拖到客人身上不算
+  // 客人不能喂：拖到客人身上不算它（它这会儿在锅边闻，落点可能正好是锅）
   const nv = camp.data.pets[1]
-  assert.equal(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), null)
+  const hitGuest = camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k })
+  assert.ok(!hitGuest || hitGuest.pet == null, JSON.stringify(hitGuest))
   camp.cancel()
 
   // 切走再回来：小动物都在原地（走到一半的就地停下，记在本地存储里）

@@ -19,6 +19,7 @@ const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩�
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
 const SIDE_PAD = 64 // 屏幕两边按钮那一溜多宽（px），说话的气泡让开
 const TOUR_AFTER_MS = 900 // 画面摆好、锅的点击区出来以后再开始导览
+const BAG_SLOP = 10 // 背包里的吃的：手指往上挪过这么多（px）才算拖出来
 // 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
 const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
 
@@ -64,6 +65,7 @@ Page({
     swayOn: {},
     bagOpen: false,
     bagForPot: false, // 点锅打开的背包：点一样就下锅
+    bagTuck: false, // 背包里按住吃的往上拖：抽屉先收下去（不卸）
     bagTab: 'food',
     bagTabs: [
       { label: '食物', value: 'food' },
@@ -497,7 +499,7 @@ Page({
   },
 
   closeBag() {
-    this.setData({ bagOpen: false, bagForPot: false })
+    this.setData({ bagOpen: false, bagForPot: false, bagTuck: false })
   },
 
   // 背包顶上的「食物 / 装饰」（components/segmented）
@@ -505,8 +507,60 @@ Page({
     this.setData({ bagTab: e.detail.value })
   },
 
+  // 背包里的吃的：按住往上拖出来，拖到锅上 / 小动物身上松手（11/07 用户：不想先点一下再点一下）。
+  // 横着划是滚背包、往下拉是拖抽屉，都不算；往上拖过 BAG_SLOP 就拿起来：抽屉收下去（tuck，不卸载，手指按着的元素还在、touchmove 不断），
+  // 进 feed 模式、幽灵图跟着手指，松手按落点处理。点一下照旧问一句
+  onBagTouchStart(e) {
+    const t = e.touches && e.touches[0]
+    this.suppressTap = false
+    this.bagTouch = t ? { id: e.currentTarget.dataset.id, x0: t.clientX, y0: t.clientY, dragging: false } : null
+  },
+
+  onBagTouchMove(e) {
+    const bt = this.bagTouch
+    const t = e.touches && e.touches[0]
+    if (!bt || !t) return
+    if (!bt.dragging) {
+      const dx = t.clientX - bt.x0
+      const dy = t.clientY - bt.y0
+      if (Math.abs(dx) < BAG_SLOP && Math.abs(dy) < BAG_SLOP) return
+      if (-dy <= Math.abs(dx)) {
+        this.bagTouch = null
+        return
+      }
+      bt.dragging = true
+      this.liftFood(bt.id)
+    }
+    this.updateDrag(t.clientX, t.clientY)
+  },
+
+  onBagTouchEnd(e) {
+    const bt = this.bagTouch
+    this.bagTouch = null
+    if (!bt || !bt.dragging) return
+    this.suppressTap = true
+    const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
+    this.setData({ drag: null, bagOpen: false, bagTuck: false, bagForPot: false })
+    if (!t || !this.worldRect) return this.cancel()
+    this.feedAt(V.fromTouch(t.clientX, t.clientY, this.worldRect, this.L), true)
+  },
+
+  // 从背包里拿起来（抽屉收下去、不卸）
+  liftFood(id) {
+    const f = foodById(id)
+    const item = this.data.foodBag.find((x) => x.id === id)
+    this.selected = { type: 'feed', foodId: id }
+    this.setData({ bagTuck: true, mode: 'feed', selectedName: f ? f.name : '', selectedSmell: item ? item.smell : [] })
+    if (this.life) this.life.pause()
+    this.queryWorldRect()
+  },
+
   // 点了背包里一样吃的：点锅打开的，问一句就下锅；背包按钮打开的，问放进锅里还是拿去喂一只（拖拽对长辈难，下锅不用拖）
   pickFood(e) {
+    if (this.suppressTap) {
+      this.suppressTap = false
+      return
+    }
     const { id } = e.currentTarget.dataset
     const f = foodById(id)
     const name = f ? f.name : '它'
@@ -680,11 +734,13 @@ Page({
     return null
   },
 
-  feedAt(p) {
+  // fromBag：从背包里直接拖出来的，没放到锅上 / 小动物身上就算了（不留在手里）
+  feedAt(p, fromBag = false) {
     const sel = this.selected
     const hit = this.hitTarget(p)
     if (!hit) {
-      wx.showToast({ title: '拖到锅里或者小动物身上松手', icon: 'none' })
+      wx.showToast({ title: fromBag ? '没放进去：拖到锅上再松手' : '拖到锅里或者小动物身上松手', icon: 'none' })
+      if (fromBag) this.cancel()
       return
     }
     if (hit.pot) {
@@ -714,11 +770,12 @@ Page({
         this.render(view)
         const cooked = view.cooked || { eaters: [] }
         if (this.life) {
+          // 先让出去找吃的排队回来，客人排在它们后面（先加客人的话它会排到队首）
+          this.life.cook(cooked.eaters)
           if (cooked.visitor) {
             this.life.addVisitor({ id: cooked.visitor, foodId })
             this.loadSheets([cooked.visitor])
           }
-          this.life.cook(cooked.eaters)
           this.updateHungry()
         }
         const food = foodById(foodId)

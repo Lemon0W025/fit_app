@@ -458,7 +458,7 @@ test('商店：顶上一排标签（全部 + 装饰的几类），选了哪类�
 
 test('营地背包：两个抽屉换成 sheet（点遮罩 / ✕ / 往下拉都由页面关），食物 / 装饰换成分段控制器', () => {
   const wxml = readWxml('camp')
-  assert.match(wxml, /<sheet show="\{\{bagOpen\}\}" bindclose="closeBag">/)
+  assert.match(wxml, /<sheet show="\{\{bagOpen\}\}" bindclose="closeBag" tuck="\{\{bagTuck\}\}">/)
   assert.match(wxml, /<sheet show="\{\{residentsOpen\}\}" title="住户[^"]*" bindclose="closeResidents">/)
   assert.match(wxml, /<view slot="head" class="bag-tabs">\s*<segmented options="\{\{bagTabs\}\}" value="\{\{bagTab\}\}" bindchange="switchBag" \/>/)
   assert.doesNotMatch(wxml, /drawer/)

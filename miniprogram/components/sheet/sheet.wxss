@@ -130,3 +130,15 @@
 .sheet-inner {
   padding: 4rpx 32rpx 16rpx;
 }
+
+/* tuck：开着但收到屏幕下面去（页面从抽屉里拖东西出来时）：面板按关的过渡退下去，遮罩淡掉、不挡手势 */
+.sheet-open.sheet-tuck .sheet-panel {
+  transform: translate3d(0, 100%, 0);
+  transition: transform 260ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+
+.sheet-open.sheet-tuck .sheet-mask {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-in;
+}
