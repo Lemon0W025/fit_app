@@ -1,9 +1,9 @@
 .empty { padding: 120rpx 0; text-align: center; color: var(--muted); }
 .beans { display: flex; align-items: center; gap: 12rpx; margin-bottom: 16rpx; }
 .beans-icon { width: 56rpx; height: 56rpx; }
-.beans-num { font-size: 44rpx; font-weight: 700; }
+.beans-num { font-size: 44rpx; font-weight: 700; color: var(--gold-ink); }
 .beans-unit { color: var(--muted); }
-.group-title { font-size: 34rpx; font-weight: 600; margin-bottom: 16rpx; }
+.group-title { font-size: 34rpx; font-weight: 700; color: var(--brand); margin-bottom: 16rpx; }
 .grid { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .cell { width: calc((100% - 40rpx) / 3); display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
 .cell-image { width: 160rpx; height: 130rpx; }
@@ -28,7 +28,7 @@
   flex: 1 1 auto;
   height: 68rpx;
   padding: 0 14rpx;
-  border-radius: 34rpx;
+  border-radius: 999rpx;
   line-height: 64rpx;
   text-align: center;
   white-space: nowrap;
@@ -48,5 +48,5 @@
 }
 
 .tag-press {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }

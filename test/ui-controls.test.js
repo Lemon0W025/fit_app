@@ -453,7 +453,7 @@ test('商店：顶上一排标签（全部 + 装饰的几类），选了哪类�
   assert.match(wxml, /class="tag \{\{tag === item\.id \? 'tag-on' : ''\}\}" hover-class="tag-press"/)
   const css = fs.readFileSync(path.join(__dirname, '../miniprogram/pages/shop/shop.wxss'), 'utf8')
   assert.match(css, /\.tag-on \{[^}]*background: var\(--primary\);[^}]*color: #fff/)
-  assert.match(css, /\.tag-press \{[^}]*transform: scale\(0\.96\)/)
+  assert.match(css, /\.tag-press \{[^}]*transform: scale\(0\.95\)/)
 })
 
 test('营地背包：两个抽屉换成 sheet（点遮罩 / ✕ / 往下拉都由页面关），食物 / 装饰换成分段控制器', () => {

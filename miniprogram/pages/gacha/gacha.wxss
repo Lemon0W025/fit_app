@@ -13,21 +13,23 @@
 .beans-num {
   font-size: 52rpx;
   font-weight: 700;
-  color: #d97a1e;
+  color: var(--gold-ink);
   margin-left: 8rpx;
 }
 
 .beans-unit {
   font-size: 28rpx;
-  color: #b8763a;
+  color: var(--gold-ink);
   margin-left: 8rpx;
 }
 
 .term {
   font-size: 26rpx;
-  color: #b8763a;
-  background: #fff4e0;
-  border-radius: 16rpx;
+  font-weight: 600;
+  color: var(--gold-ink);
+  background: var(--gold-wash);
+  box-shadow: inset 0 0 0 2rpx var(--gold-light);
+  border-radius: 999rpx;
   padding: 12rpx 20rpx;
   text-align: center;
 }
@@ -152,7 +154,7 @@
   position: absolute;
   top: 24rpx;
   right: 24rpx;
-  background: #e8553b;
+  background: var(--red);
   color: #fff;
   font-weight: 700;
   font-size: 28rpx;

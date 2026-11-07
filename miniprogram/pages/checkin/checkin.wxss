@@ -5,10 +5,10 @@
 /* 点微信提醒进来的 */
 .remind-hi {
   margin-top: 16rpx;
-  padding: 20rpx 28rpx;
-  border-radius: 20rpx;
-  background: var(--primary-soft);
-  color: var(--primary);
+  padding: 24rpx 32rpx;
+  border-radius: 24rpx;
+  background: var(--house);
+  color: #fff;
   font-size: 32rpx;
   font-weight: 600;
 }
@@ -16,7 +16,7 @@
 .photo-picker {
   text-align: center;
   padding: 64rpx 32rpx;
-  border: 4rpx dashed var(--line);
+  border: 4rpx dashed #c9c4ba;
   box-shadow: none;
 }
 
@@ -26,8 +26,9 @@
 }
 
 .photo-tip {
-  font-size: 32rpx;
-  font-weight: 600;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--brand);
   margin: 12rpx 0;
 }
 
@@ -72,7 +73,7 @@
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(47, 42, 36, 0.45);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -102,7 +103,7 @@
   border-radius: 24rpx;
   overflow: hidden;
   background: var(--gray-soft);
-  box-shadow: 0 8rpx 24rpx rgba(80, 60, 30, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 .scan-photo {
@@ -186,12 +187,13 @@
 
 .timing {
   font-size: 30rpx;
+  font-weight: 600;
   margin: 12rpx 8rpx 0;
-  color: #d9822b;
+  color: var(--yellow);
 }
 
 .timing-on {
-  color: var(--primary);
+  color: var(--brand);
   font-weight: 700;
 }
 
@@ -199,6 +201,6 @@
 .people-tip {
   margin: 12rpx 8rpx 0;
   font-size: 28rpx;
-  color: var(--primary);
+  color: var(--brand);
 }
 

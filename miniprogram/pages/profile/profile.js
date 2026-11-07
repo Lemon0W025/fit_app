@@ -128,7 +128,7 @@ Page({
       title: '从头再来？',
       content: '会清空你的档案、所有打卡和照片、体重、营地（小动物、暖豆、家具）和提醒，回到第一次打开的样子。清掉就找不回来了。',
       confirmText: '清空',
-      confirmColor: '#d4543c',
+      confirmColor: '#C82014',
       success: (res) => {
         if (res.confirm) this.reset()
       },

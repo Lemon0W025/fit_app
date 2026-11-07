@@ -15,15 +15,15 @@
     "pages/manual/manual"
   ],
   "window": {
-    "navigationBarBackgroundColor": "#F6F1E7",
+    "navigationBarBackgroundColor": "#F2F0EB",
     "navigationBarTitleText": "小暖自律打卡",
     "navigationBarTextStyle": "black",
-    "backgroundColor": "#F6F1E7",
+    "backgroundColor": "#F2F0EB",
     "backgroundTextStyle": "dark"
   },
   "tabBar": {
-    "color": "#8A8378",
-    "selectedColor": "#4E7D5B",
+    "color": "#6B6B6B",
+    "selectedColor": "#00754A",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [

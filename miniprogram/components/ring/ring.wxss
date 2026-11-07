@@ -2,14 +2,14 @@
    两个半圆：各自装在只露半边的盒子里，里面是一整个圆框、只有两条边有颜色（正好半圈），rotate 转进来多少就露多少。
    数字每 40ms 一步（countUp），圆环跟着转、每步之间 40ms 线性过渡，看着是连续的 */
 .ring {
-  --ring-color: var(--primary, #4e7d5b);
+  --ring-color: var(--primary, #00754a);
   position: relative;
   display: inline-block;
   vertical-align: top;
 }
 
 .ring-warn {
-  --ring-color: var(--red, #d1543f);
+  --ring-color: var(--red, #c82014);
 }
 
 .ring-track,
@@ -26,7 +26,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  border-color: var(--gray-soft, #f1ede6);
+  border-color: var(--ceramic, #edebe9);
 }
 
 .ring-half {
@@ -99,15 +99,15 @@
 }
 
 .ring-unit {
-  color: var(--muted, #7a7166);
+  color: var(--muted, rgba(0, 0, 0, 0.6));
 }
 
 .ring-sub {
   margin-top: 6rpx;
   font-weight: 600;
-  color: var(--text, #2f2a24);
+  color: var(--brand, #006241);
 }
 
 .ring-warn .ring-sub {
-  color: var(--red, #d1543f);
+  color: var(--red, #c82014);
 }

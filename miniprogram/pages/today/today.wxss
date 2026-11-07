@@ -1,14 +1,16 @@
+/* 页面大标题：Starbucks Green */
 .greeting {
-  font-size: 40rpx;
+  font-size: 44rpx;
   font-weight: 700;
+  color: var(--brand);
   margin: 8rpx 8rpx 24rpx;
 }
 
+/* 暖豆卡是奖励卡（金色奶油底 + 金边，见 app.wxss 的 .reward-card） */
 .beans-card {
   display: flex;
   align-items: center;
-  padding: 20rpx 24rpx;
-  background: linear-gradient(90deg, #fff4e0 0%, #ffffff 80%);
+  padding: 24rpx 28rpx;
 }
 
 .beans-card-icon {
@@ -26,7 +28,7 @@
 .beans-card-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #b8763a;
+  color: var(--gold-ink);
 }
 
 .beans-card-streak {
@@ -37,7 +39,7 @@
 
 .beans-card-arrow {
   font-size: 44rpx;
-  color: var(--gray);
+  color: var(--gold);
   margin-left: 8rpx;
 }
 
@@ -74,7 +76,7 @@
 .meal-thumb {
   width: 160rpx;
   height: 160rpx;
-  border-radius: 16rpx;
+  border-radius: 20rpx;
   flex-shrink: 0;
   background: var(--gray-soft);
 }
@@ -93,9 +95,9 @@
 }
 
 .meal-kcal {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--primary);
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--brand);
   margin-top: 4rpx;
 }
 
@@ -118,50 +120,59 @@
   line-height: 1.8;
 }
 
-/* 首页「下一顿」大卡 */
+/* 首页「下一顿」大卡：深绿横幅（.band），白字；按钮白底绿字；
+   能得多少暖豆是金色胶囊；过点了标题换成暖橙、呼吸光也是暖橙 */
 .next-card {
-  padding: 32rpx 28rpx;
-  background: linear-gradient(135deg, #eaf5ec 0%, #ffffff 85%);
-}
-
-.next-card-warn {
-  background: linear-gradient(135deg, #fff1e0 0%, #ffffff 85%);
+  padding: 40rpx 36rpx 36rpx;
 }
 
 .next-title {
-  font-size: 48rpx;
+  font-size: 52rpx;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .next-card-warn .next-title {
-  color: #d9822b;
+  color: #ffc98a;
 }
 
 .next-sub {
   font-size: 32rpx;
-  margin-top: 8rpx;
-  color: var(--muted);
+  margin-top: 12rpx;
+  color: var(--on-dark-soft);
 }
 
 .next-reward {
-  font-size: 30rpx;
-  margin-top: 6rpx;
-  color: #b9741f;
+  display: inline-block;
+  margin-top: 20rpx;
+  padding: 6rpx 22rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid var(--gold);
+  color: var(--gold-light);
+  font-size: 28rpx;
+  font-weight: 600;
 }
 
 .next-btn {
-  margin-top: 24rpx;
+  margin-top: 32rpx;
+  margin-bottom: 0;
 }
 
 .next-link {
-  margin-top: 16rpx;
+  display: inline-block;
+  margin-top: 24rpx;
+  padding: 12rpx 32rpx;
+  border-radius: 999rpx;
+  border: 3rpx solid rgba(255, 255, 255, 0.85);
   font-size: 30rpx;
-  color: var(--primary);
+  font-weight: 600;
+  color: #fff;
 }
 
-/* 新手三步 */
+/* 新手三步：浅绿底 + 绿边 */
 .guide {
-  border: 3rpx solid var(--primary);
+  background: var(--primary-wash);
+  box-shadow: var(--shadow-card), inset 0 0 0 3rpx var(--primary);
 }
 
 .guide-head {
@@ -174,7 +185,7 @@
   flex: 1;
   font-size: 34rpx;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--brand);
 }
 
 .guide-hide {
@@ -198,6 +209,7 @@
   margin-right: 20rpx;
   border-radius: 50%;
   border: 3rpx solid var(--primary);
+  background: #fff;
   color: var(--primary);
   font-size: 28rpx;
   font-weight: 700;

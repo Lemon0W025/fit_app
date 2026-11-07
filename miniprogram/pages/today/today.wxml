@@ -18,18 +18,18 @@
     </view>
 
     <view wx:if="{{card}}" class="fx-rise fx-d1">
-      <view id="tour-next" class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
+      <view id="tour-next" class="card band next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
         <view class="next-title">{{card.title}}</view>
         <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
-        <view wx:if="{{card.reward}}" class="next-reward">🫘 {{card.reward}}</view>
+        <view wx:if="{{card.reward}}"><view class="next-reward">🫘 {{card.reward}}</view></view>
         <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
-          <button class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
+          <button class="btn-primary btn-big btn-on-dark next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
         </view>
         <view wx:else class="next-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}} ›</view>
       </view>
     </view>
 
-    <view wx:if="{{daily}}" id="tour-beans" class="card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
+    <view wx:if="{{daily}}" id="tour-beans" class="card reward-card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
       <image class="beans-card-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
       <view class="beans-card-body">
         <view class="beans-card-title">{{daily.title}}</view>

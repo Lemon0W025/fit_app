@@ -21,13 +21,13 @@
   top: 0;
   right: 0;
   bottom: 0;
-  background: rgba(30, 26, 20, 0.62);
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .tour-hole {
   position: absolute;
   border-radius: 24rpx;
-  box-shadow: 0 0 0 4000rpx rgba(30, 26, 20, 0.62);
+  box-shadow: 0 0 0 4000rpx rgba(0, 0, 0, 0.6);
 }
 
 /* 圈外一圈白光一呼一吸，看得出是这儿 */
@@ -53,8 +53,8 @@
   box-sizing: border-box;
   padding: 32rpx 36rpx 28rpx;
   border-radius: 28rpx;
-  background: #fffdf8;
-  box-shadow: 0 12rpx 40rpx rgba(0, 0, 0, 0.25);
+  background: #ffffff;
+  box-shadow: 0 0 12rpx rgba(0, 0, 0, 0.2), 0 16rpx 40rpx rgba(0, 0, 0, 0.2);
 }
 
 .tour-arrow {
@@ -67,31 +67,32 @@
 
 .tour-arrow-up {
   top: -22rpx;
-  border-bottom: 24rpx solid #fffdf8;
+  border-bottom: 24rpx solid #ffffff;
 }
 
 .tour-arrow-down {
   bottom: -22rpx;
-  border-top: 24rpx solid #fffdf8;
+  border-top: 24rpx solid #ffffff;
 }
 
 .tour-count {
   font-size: 26rpx;
-  color: #8a8174;
+  font-weight: 600;
+  color: #00754a;
 }
 
 .tour-title {
   margin-top: 8rpx;
   font-size: 40rpx;
   font-weight: 700;
-  color: #2f2a24;
+  color: #006241;
 }
 
 .tour-text {
   margin-top: 12rpx;
   font-size: 34rpx;
   line-height: 1.55;
-  color: #3f3830;
+  color: rgba(0, 0, 0, 0.87);
 }
 
 .tour-actions {
@@ -106,7 +107,7 @@
   white-space: nowrap;
   padding: 16rpx 28rpx;
   font-size: 30rpx;
-  color: #8a8174;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .tour-next {
@@ -114,8 +115,8 @@
   white-space: nowrap;
   margin-left: 16rpx;
   padding: 18rpx 48rpx;
-  border-radius: 44rpx;
-  background: #4e7d5b;
+  border-radius: 999rpx;
+  background: #00754a;
   color: #fff;
   font-size: 34rpx;
   font-weight: 600;
@@ -123,5 +124,5 @@
 }
 
 .tour-next-press {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }

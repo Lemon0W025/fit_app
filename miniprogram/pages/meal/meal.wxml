@@ -1,7 +1,7 @@
 <view wx:if="{{loading}}" class="empty">加载中…</view>
 
 <view class="page {{fxSkip ? 'fx-skip' : ''}}" wx:if="{{meal}}" bindtap="skipFx">
-  <view wx:if="{{gain}}" class="card gain-banner fx-rise" hover-class="fx-press" bindtap="goCamp">
+  <view wx:if="{{gain}}" class="card reward-card gain-banner fx-rise" hover-class="fx-press" bindtap="goCamp">
     <image class="gain-icon fx-pop fx-d3" src="/images/garden/ui/bean.png" mode="aspectFit" />
     <view class="gain-body">
       <view class="gain-title">{{gain.title}}</view>
@@ -12,7 +12,7 @@
       <view class="gain-hint">{{gain.hint}}</view>
     </view>
   </view>
-  <view wx:if="{{arrival}}" class="card arrival-banner fx-rise fx-d6" hover-class="fx-press" bindtap="goCamp">
+  <view wx:if="{{arrival}}" class="card reward-card arrival-banner fx-rise fx-d6" hover-class="fx-press" bindtap="goCamp">
     <image class="arrival-image" src="{{arrival.image}}" mode="aspectFit" />
     <view class="arrival-body">
       <view class="arrival-title">{{arrival.text}}</view>
@@ -22,7 +22,7 @@
 
   <image wx:if="{{meal.fileID}}" class="hero-photo fx-rise fx-d1" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
 
-  <view class="card fx-rise fx-d2">
+  <view class="card band meal-band fx-rise fx-d2">
     <view class="meal-head">
       <text class="meal-label">{{meal.label}}</text>
       <text class="meal-time">{{meal.timeText}}</text>

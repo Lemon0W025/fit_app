@@ -4,7 +4,7 @@ const { round1 } = require('../../utils/shared/nutrition')
 const { dateKey } = require('../../utils/shared/date')
 
 const CHART_PADDING = 24
-const CHART_COLORS = { line: '#4E7D5B', grid: '#ECE4D6', text: '#7A7166', target: '#C98A14' }
+const CHART_COLORS = { line: '#00754A', grid: '#E7E5E0', text: '#666666', target: '#B07A1E' }
 
 function shortDate(key) {
   return `${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`

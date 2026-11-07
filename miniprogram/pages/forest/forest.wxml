@@ -1,7 +1,7 @@
 <view wx:if="{{!loaded}}" class="empty">正在翻打卡日历…</view>
 
 <view class="page" wx:if="{{loaded}}">
-  <view class="card today-card">
+  <view class="card reward-card today-card">
     <view class="today-title">{{daily.title}}</view>
     <view class="stamps today-stamps">
       <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>

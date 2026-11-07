@@ -57,16 +57,18 @@ page {
 .hud-note {
   display: inline-block;
   margin-bottom: 10rpx;
-  padding: 10rpx 20rpx;
+  padding: 10rpx 24rpx;
   font-size: 26rpx;
-  color: #b8763a;
-  background: rgba(255, 244, 224, 0.95);
-  border-radius: 16rpx;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999rpx;
+  box-shadow: var(--shadow-card);
 }
 
 .hud-note-green {
-  color: var(--primary);
-  background: rgba(238, 246, 234, 0.95);
+  color: var(--brand);
+  background: rgba(234, 244, 240, 0.96);
 }
 
 .recenter {
@@ -77,11 +79,11 @@ page {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 .recenter-icon {
@@ -98,7 +100,7 @@ page {
   line-height: 36rpx;
   padding: 0 8rpx;
   border-radius: 18rpx;
-  background: #e8553b;
+  background: var(--red);
   color: #fff;
   font-size: 22rpx;
   text-align: center;
@@ -114,10 +116,10 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fffbe8;
+  background: var(--gold-wash);
   border-radius: 24rpx;
   padding: 24rpx;
-  box-shadow: 0 6rpx 16rpx rgba(60, 50, 30, 0.16);
+  box-shadow: var(--shadow-float), inset 0 0 0 2rpx var(--gold-light);
 }
 
 /* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
@@ -171,7 +173,7 @@ page {
 
 .smell-label {
   font-size: 26rpx;
-  color: #8a6a1e;
+  color: var(--gold-ink);
   margin-right: 10rpx;
 }
 
@@ -219,8 +221,8 @@ button.btn-small {
   margin-right: 16rpx;
   padding: 12rpx 0 10rpx;
   text-align: center;
-  border: 3rpx solid var(--line);
-  border-radius: 20rpx;
+  border: 3rpx solid transparent;
+  border-radius: 24rpx;
   background: var(--gray-soft);
   vertical-align: top;
 }
@@ -243,7 +245,7 @@ button.btn-small {
   right: 10rpx;
   font-size: 24rpx;
   font-weight: 700;
-  color: #d97a1e;
+  color: var(--gold-ink);
 }
 
 .overlay {
@@ -252,7 +254,7 @@ button.btn-small {
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(47, 42, 36, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -265,6 +267,7 @@ button.btn-small {
   border-radius: 32rpx;
   padding: 40rpx 40rpx 24rpx;
   text-align: center;
+  box-shadow: var(--shadow-float);
 }
 
 .welcome-gift {
@@ -286,9 +289,9 @@ button.btn-small {
 }
 
 .welcome-title {
-  font-size: 38rpx;
+  font-size: 40rpx;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--brand);
   margin: 12rpx 0;
 }
 
@@ -424,10 +427,10 @@ button.btn-small {
   min-width: 200rpx;
   padding: 0 28rpx 0 6rpx;
   box-sizing: border-box;
-  border: 4rpx solid #ffffff;
-  border-radius: 40rpx;
-  background: linear-gradient(180deg, #3577c0 0%, #1d4f8a 100%);
-  box-shadow: 0 6rpx 0 rgba(20, 50, 90, 0.35);
+  border: 3rpx solid var(--gold);
+  border-radius: 999rpx;
+  background: var(--house);
+  box-shadow: var(--shadow-float);
 }
 
 .res-icon {
@@ -451,14 +454,15 @@ button.btn-small {
   align-items: center;
   gap: 10rpx;
   padding: 6rpx 16rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-card);
 }
 
 .hud-today-text {
   font-size: 26rpx;
   font-weight: 700;
-  color: #b8763a;
+  color: var(--gold-ink);
 }
 
 .stamps-mini {
@@ -473,7 +477,7 @@ button.btn-small {
 }
 
 .stamps-mini .stamp-on {
-  box-shadow: 0 0 0 4rpx #f0b429;
+  box-shadow: 0 0 0 4rpx var(--gold);
 }
 
 .stamps-mini .stamp-on::after {
@@ -503,13 +507,12 @@ button.btn-small {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  border: 4rpx solid #ffffff;
-  background: linear-gradient(180deg, #fff8ec 0%, #ffe9c7 100%);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6rpx 0 rgba(150, 100, 40, 0.25);
+  box-shadow: var(--shadow-float);
 }
 
 .side-icon {
@@ -519,8 +522,8 @@ button.btn-small {
 
 .side-label {
   font-size: 24rpx;
-  font-weight: 800;
-  color: #8a4f1a;
+  font-weight: 700;
+  color: var(--house);
   margin-top: -4rpx;
 }
 
@@ -531,7 +534,7 @@ button.btn-small {
   width: 22rpx;
   height: 22rpx;
   border-radius: 50%;
-  background: #e8553b;
+  background: var(--red);
   border: 3rpx solid #ffffff;
 }
 
@@ -545,14 +548,14 @@ button.btn-small {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: 26rpx 56rpx;
-  border-radius: 60rpx;
-  border: 5rpx solid #ffffff;
-  background: linear-gradient(180deg, #6fcf5a 0%, #3e9a3a 100%);
-  box-shadow: 0 8rpx 0 #2c6e2a;
+  padding: 28rpx 60rpx;
+  border-radius: 999rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.9);
+  background: var(--primary);
+  box-shadow: var(--shadow-float);
   color: #ffffff;
   font-size: 40rpx;
-  font-weight: 800;
+  font-weight: 700;
   white-space: nowrap;
 }
 
@@ -618,7 +621,7 @@ button.btn-small {
   align-items: center;
   gap: 20rpx;
   padding: 16rpx 8rpx;
-  border-bottom: 2rpx solid rgba(0, 0, 0, 0.05);
+  border-bottom: 2rpx solid var(--line);
 }
 
 .res-avatar {
@@ -643,6 +646,7 @@ button.btn-small {
 
 .res-go {
   font-size: 28rpx;
+  font-weight: 600;
   color: var(--primary);
 }
 
@@ -661,7 +665,7 @@ button.btn-small {
 .ghosted { opacity: 0.6; }
 /* 点锅的地方：透明，排在锅那层上面、锅前面的宠物下面 */
 .pot-hit { position: absolute; }
-.hud-note-gold { background: rgba(255, 244, 214, 0.95); color: #9a6b12; }
+.hud-note-gold { background: rgba(250, 246, 238, 0.96); color: var(--gold-ink); box-shadow: var(--shadow-card), inset 0 0 0 2rpx var(--gold-light); }
 /* 背包抽屉（components/sheet）顶上的「食物 / 装饰」（components/segmented） */
 .bag-tabs { width: 360rpx; }
 .bag-hint { margin-top: 8rpx; }
@@ -814,7 +818,7 @@ button.btn-small {
   height: 44rpx;
   margin-right: 16rpx;
   border-radius: 50%;
-  background: var(--primary, #4e7d5b);
+  background: var(--primary, #00754a);
   color: #fff;
   font-size: 26rpx;
   line-height: 44rpx;
