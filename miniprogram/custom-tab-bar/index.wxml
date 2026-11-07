@@ -1,0 +1,15 @@
+<view class="tb">
+  <block wx:for="{{tabs}}" wx:key="key">
+    <view wx:if="{{item.camera}}" class="tb-cam-wrap">
+      <view class="tb-cam" hover-class="tb-press" bindtap="shoot">
+        <image class="tb-cam-icon" src="/images/icons/camera-white.svg" mode="aspectFit" />
+      </view>
+    </view>
+    <view wx:else class="tb-item {{current === item.page ? 'tb-on' : ''}}" hover-class="tb-press" data-page="{{item.page}}" bindtap="go">
+      <view class="tb-dot">
+        <image class="tb-icon" src="/images/icons/{{item.icon}}{{current === item.page ? '' : '-off'}}.svg" mode="aspectFit" />
+      </view>
+      <text class="tb-text">{{item.text}}</text>
+    </view>
+  </block>
+</view>

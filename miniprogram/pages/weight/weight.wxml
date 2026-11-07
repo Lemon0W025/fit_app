@@ -1,6 +1,9 @@
 <view class="page">
   <view class="card">
-    <view class="card-title">{{todayRecorded ? '今天已经记过了，可以更新' : '记录今天的体重'}}</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/pencil.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">{{todayRecorded ? '今天已经记过了，可以更新' : '记录今天的体重'}}</text>
+    </view>
     <view class="weight-row">
       <view class="input-wrap weight-input">
         <input class="field-input" type="digit" value="{{input}}" bindinput="onInput" placeholder="{{latest ? '上次 ' + latest.weightKg : '比如 65.5'}}" />
@@ -12,11 +15,14 @@
     <view class="muted small">每天早上起床、上完厕所、空腹称一次最准</view>
   </view>
 
-  <view class="card">
-    <view class="card-title">最近的变化</view>
+  <view class="card card-lime">
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/scale.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">最近的变化</text>
+    </view>
     <block wx:if="{{items.length}}">
       <view class="latest">
-        <text class="latest-num">{{latest.weightKg}}</text>
+        <text class="latest-num num">{{latest.weightKg}}</text>
         <text class="latest-unit">kg</text>
       </view>
       <view wx:if="{{changeText}}" class="change">{{changeText}}</view>
@@ -27,7 +33,10 @@
   </view>
 
   <view wx:if="{{recent.length}}" class="card">
-    <view class="card-title">最近 7 次</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/calendar.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">最近 7 次</text>
+    </view>
     <view wx:for="{{recent}}" wx:key="date" class="list-row">
       <text>{{item.date}}</text>
       <text>{{item.weightKg}} kg</text>

@@ -2,9 +2,10 @@ const api = require('../../utils/api')
 const { computeChart, drawChart } = require('../../utils/chart')
 const { round1 } = require('../../utils/shared/nutrition')
 const { dateKey } = require('../../utils/shared/date')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const CHART_PADDING = 24
-const CHART_COLORS = { line: '#00754A', grid: '#E7E5E0', text: '#666666', target: '#B07A1E' }
+const CHART_COLORS = { line: '#17191C', grid: '#E3E5DF', text: '#6B6F76', target: '#F5A524' }
 
 function shortDate(key) {
   return `${Number(key.slice(5, 7))}月${Number(key.slice(8, 10))}日`
@@ -40,6 +41,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     this.load()
   },
 

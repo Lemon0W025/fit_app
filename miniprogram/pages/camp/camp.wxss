@@ -67,8 +67,8 @@ page {
 }
 
 .hud-note-green {
-  color: var(--brand);
-  background: rgba(234, 244, 240, 0.96);
+  color: var(--lime-ink);
+  background: rgba(227, 246, 181, 0.96);
 }
 
 .recenter {
@@ -116,10 +116,10 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: var(--gold-wash);
-  border-radius: 24rpx;
-  padding: 24rpx;
-  box-shadow: var(--shadow-float), inset 0 0 0 2rpx var(--gold-light);
+  background: #ffffff;
+  border-radius: 40rpx;
+  padding: 28rpx;
+  box-shadow: var(--shadow-float);
 }
 
 /* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
@@ -173,7 +173,7 @@ page {
 
 .smell-label {
   font-size: 26rpx;
-  color: var(--gold-ink);
+  color: var(--muted);
   margin-right: 10rpx;
 }
 
@@ -222,8 +222,8 @@ button.btn-small {
   padding: 12rpx 0 10rpx;
   text-align: center;
   border: 3rpx solid transparent;
-  border-radius: 24rpx;
-  background: var(--gray-soft);
+  border-radius: 32rpx;
+  background: var(--chip);
   vertical-align: top;
 }
 
@@ -244,8 +244,8 @@ button.btn-small {
   top: 6rpx;
   right: 10rpx;
   font-size: 24rpx;
-  font-weight: 700;
-  color: var(--gold-ink);
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .overlay {
@@ -264,7 +264,7 @@ button.btn-small {
 .welcome {
   width: 78%;
   background: var(--card);
-  border-radius: 32rpx;
+  border-radius: 48rpx;
   padding: 40rpx 40rpx 24rpx;
   text-align: center;
   box-shadow: var(--shadow-float);
@@ -289,9 +289,9 @@ button.btn-small {
 }
 
 .welcome-title {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: var(--brand);
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--ink);
   margin: 12rpx 0;
 }
 
@@ -427,9 +427,8 @@ button.btn-small {
   min-width: 200rpx;
   padding: 0 28rpx 0 6rpx;
   box-sizing: border-box;
-  border: 3rpx solid var(--gold);
   border-radius: 999rpx;
-  background: var(--house);
+  background: #ffffff;
   box-shadow: var(--shadow-float);
 }
 
@@ -441,9 +440,10 @@ button.btn-small {
 .res-num {
   flex: 1;
   text-align: center;
-  font-size: 38rpx;
+  font-family: var(--font-num);
+  font-size: 40rpx;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .hud-today {
@@ -462,7 +462,7 @@ button.btn-small {
 .hud-today-text {
   font-size: 26rpx;
   font-weight: 700;
-  color: var(--gold-ink);
+  color: var(--bean-ink);
 }
 
 .stamps-mini {
@@ -523,7 +523,7 @@ button.btn-small {
 .side-label {
   font-size: 24rpx;
   font-weight: 700;
-  color: var(--house);
+  color: var(--ink);
   margin-top: -4rpx;
 }
 
@@ -536,33 +536,6 @@ button.btn-small {
   border-radius: 50%;
   background: var(--red);
   border: 3rpx solid #ffffff;
-}
-
-/* 底部大打卡按钮 */
-.checkin-btn {
-  position: absolute;
-  left: 50%;
-  bottom: 36rpx;
-  z-index: 50;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 28rpx 60rpx;
-  border-radius: 999rpx;
-  border: 4rpx solid rgba(255, 255, 255, 0.9);
-  background: var(--primary);
-  box-shadow: var(--shadow-float);
-  color: #ffffff;
-  font-size: 40rpx;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.checkin-icon {
-  width: 52rpx;
-  height: 52rpx;
-  margin-right: 10rpx;
 }
 
 /* 物件、小动物脚下的影子 */
@@ -645,9 +618,12 @@ button.btn-small {
 }
 
 .res-go {
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--ink);
+  color: #fff;
   font-size: 28rpx;
-  font-weight: 600;
-  color: var(--primary);
+  font-weight: 700;
 }
 
 /* ---- 营地专用 ---- */
@@ -665,7 +641,7 @@ button.btn-small {
 .ghosted { opacity: 0.6; }
 /* 点锅的地方：透明，排在锅那层上面、锅前面的宠物下面 */
 .pot-hit { position: absolute; }
-.hud-note-gold { background: rgba(250, 246, 238, 0.96); color: var(--gold-ink); box-shadow: var(--shadow-card), inset 0 0 0 2rpx var(--gold-light); }
+.hud-note-gold { background: rgba(255, 241, 214, 0.96); color: var(--bean-ink); }
 /* 背包抽屉（components/sheet）顶上的「食物 / 装饰」（components/segmented） */
 .bag-tabs { width: 360rpx; }
 .bag-hint { margin-top: 8rpx; }
@@ -818,8 +794,9 @@ button.btn-small {
   height: 44rpx;
   margin-right: 16rpx;
   border-radius: 50%;
-  background: var(--primary, #00754a);
-  color: #fff;
+  background: var(--lime, #c4ef5a);
+  color: var(--ink, #17191c);
+  font-weight: 800;
   font-size: 26rpx;
   line-height: 44rpx;
   text-align: center;

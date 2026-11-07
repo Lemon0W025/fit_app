@@ -1,48 +1,76 @@
 /* 全局样式：字号偏大、对比清晰，方便长辈使用
-   配色和组件照 Starbucks 的设计系统（docs/superpowers/specs/2026-11-07-ui-starbucks-style-design.md）：
-   奶油色底、白卡片；四档绿各管一件事（--brand 标题和大数字、--primary 按钮、--house 深绿横幅、--primary-soft 浅绿底）；
-   金色只给暖豆、准时、纪念章这些「奖励」时刻；按钮一律胶囊、按下缩到 0.95；阴影是两三层很淡的叠起来；不用渐变 */
+   「便当盒」风格（docs/superpowers/specs/2026-11-07-ui-bento-design.md，参考 CaloriCam 一类的健康 App）：
+   浅灰底、大圆角白卡片；每张卡左上一个图标小圆章 + 标题；超大加粗数字；粗胶囊进度条（碳水粉、脂肪黄、蛋白质蓝）；
+   主按钮黑色胶囊、黑卡上用柠檬绿；柠檬绿只当点缀和「今天吃了多少」那张卡；暖豆、准时、纪念章用暖橙 */
 page {
-  /* 底和卡片 */
-  --bg: #f2f0eb;
+  /* 底、卡片、小圆章 */
+  --bg: #f3f4f0;
   --card: #ffffff;
-  --ceramic: #edebe9;
+  --chip: #f1f2ee;
+  --line: #ebece8;
 
-  /* 四档绿 */
-  --brand: #006241;
-  --primary: #00754a;
-  --house: #1e3932;
-  --uplift: #2b5148;
-  --primary-soft: #d4e9e2;
-  --primary-wash: #eaf4f0;
+  /* 墨黑和柠檬绿 */
+  --ink: #17191c;
+  --lime: #c4ef5a;
+  --lime-soft: #e3f6b5;
+  --lime-wash: #f3fbe0;
+  --lime-deep: #8ac226;
+  --lime-ink: #3f5c00;
 
-  /* 字：不用纯黑，跟奶油底一个温度；次要字比 Starbucks 的 58% 深一点（长辈看得清） */
-  --text: rgba(0, 0, 0, 0.87);
-  --muted: rgba(0, 0, 0, 0.6);
+  /* 字 */
+  --text: #17191c;
+  --muted: #6b6f76;
   --on-dark: #ffffff;
-  --on-dark-soft: rgba(255, 255, 255, 0.78);
-  --line: #e7e5e0;
+  --on-dark-soft: rgba(255, 255, 255, 0.7);
 
-  /* 奖励金：--gold 做边和底，字用 --gold-ink（金色字在白底上太浅） */
-  --gold: #cba258;
-  --gold-light: #dfc49d;
-  --gold-wash: #faf6ee;
-  --gold-ink: #85631f;
+  /* 暖豆（奖励）和过点（提醒） */
+  --bean: #f5a524;
+  --bean-soft: #fff1d6;
+  --bean-ink: #8a5300;
+  --peach: #ffb37a;
+  --peach-soft: #ffe8d6;
+  --peach-ink: #a24a12;
+
+  /* 三大营养素 */
+  --carbs: #ffb8c6;
+  --carbs-soft: #ffe7ec;
+  --carbs-ink: #b8304f;
+  --fat: #ffd86b;
+  --fat-soft: #fff4cf;
+  --fat-ink: #8f6200;
+  --protein: #a9d3ff;
+  --protein-soft: #e3f1ff;
+  --protein-ink: #24609e;
 
   /* 评级 */
-  --green: #00754a;
-  --green-soft: #d4e9e2;
-  --yellow: #9a6200;
-  --yellow-soft: #fdf2d8;
-  --amber: #d08a1c;
-  --red: #c82014;
-  --red-soft: #fbe9e7;
-  --gray: #a19d96;
-  --gray-soft: #f2f0eb;
+  --green: var(--lime-ink);
+  --green-soft: var(--lime-soft);
+  --yellow: #8f6200;
+  --yellow-soft: #fff1c9;
+  --amber: var(--bean);
+  --red: #d93a40;
+  --red-soft: #ffe4e4;
+  --gray: #a3a7ad;
+  --gray-soft: var(--chip);
+  --ceramic: var(--chip);
 
-  /* 阴影：卡片一层发丝 + 一层贴地，浮起来的按钮再加一层环境光 */
-  --shadow-card: 0 0 1rpx rgba(0, 0, 0, 0.14), 0 2rpx 2rpx rgba(0, 0, 0, 0.12), 0 8rpx 24rpx rgba(0, 0, 0, 0.04);
-  --shadow-float: 0 0 12rpx rgba(0, 0, 0, 0.2), 0 16rpx 24rpx rgba(0, 0, 0, 0.14);
+  /* 旧名字（页面和组件里还在用）：都指到新的上面 */
+  --primary: var(--ink);
+  --brand: var(--ink);
+  --house: var(--ink);
+  --primary-soft: var(--lime-soft);
+  --primary-wash: var(--lime-wash);
+  --gold: var(--bean);
+  --gold-light: #ffd48a;
+  --gold-wash: var(--bean-soft);
+  --gold-ink: var(--bean-ink);
+
+  /* 阴影：很淡、往下散 */
+  --shadow-card: 0 2rpx 4rpx rgba(23, 25, 28, 0.03), 0 12rpx 32rpx rgba(23, 25, 28, 0.05);
+  --shadow-float: 0 4rpx 8rpx rgba(23, 25, 28, 0.08), 0 16rpx 36rpx rgba(23, 25, 28, 0.16);
+
+  /* 数字用几何感的字（iPhone 上有，别的手机退回系统字） */
+  --font-num: 'Avenir Next', 'DIN Alternate', 'Helvetica Neue', -apple-system, sans-serif;
 
   background: var(--bg);
   color: var(--text);
@@ -55,26 +83,143 @@ page {
   padding: 24rpx 32rpx 64rpx;
 }
 
+/* ---------------------------------------------------------------- 卡片 */
 .card {
   background: var(--card);
-  border-radius: 24rpx;
-  padding: 32rpx;
+  border-radius: 40rpx;
+  padding: 36rpx;
   margin-bottom: 24rpx;
   box-shadow: var(--shadow-card);
 }
 
+.card-lime {
+  background: var(--lime-soft);
+}
+
+.card-ink,
+.band {
+  background: var(--ink);
+  color: var(--on-dark);
+}
+
+.band .muted,
+.card-ink .muted {
+  color: var(--on-dark-soft);
+}
+
+.card-peach {
+  background: var(--peach-soft);
+}
+
+/* 奖励卡：暖豆、新住户、日历的今天 */
+.reward-card {
+  background: var(--bean-soft);
+}
+
 .card-title {
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 16rpx;
 }
 
-/* 段落标题：Starbucks Green、加粗，靠颜色和粗细分层次 */
-.section-title {
+/* 卡片头：左边图标小圆章 + 标题，右边一句话或箭头 */
+.card-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.chip-icon {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: var(--chip);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chip-icon image,
+.chip-icon .chip-img {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.card-lime .chip-icon,
+.reward-card .chip-icon,
+.card-peach .chip-icon {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.card-ink .chip-icon,
+.band .chip-icon {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* 黑卡上的图标反白 */
+.card-ink .chip-icon image,
+.band .chip-icon image,
+.icon-white {
+  filter: invert(1);
+}
+
+.card-head-title {
+  flex: 1;
+  min-width: 0;
   font-size: 32rpx;
+  font-weight: 700;
+}
+
+.card-head-more {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.card-ink .card-head-more,
+.band .card-head-more {
+  color: var(--on-dark-soft);
+}
+
+.card-head-go {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  margin-left: 8rpx;
+}
+
+/* 段落标题 */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  font-size: 36rpx;
+  font-weight: 800;
+  margin: 48rpx 8rpx 20rpx;
+}
+
+.section-more {
+  margin-left: auto;
+  font-size: 28rpx;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- 数字 */
+.num {
+  font-family: var(--font-num);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.num-unit {
+  margin-left: 8rpx;
+  font-size: 30rpx;
   font-weight: 600;
-  color: var(--brand);
-  margin: 48rpx 8rpx 16rpx;
+  color: var(--muted);
+  letter-spacing: 0;
 }
 
 .muted {
@@ -91,70 +236,142 @@ page {
   padding: 48rpx 32rpx;
 }
 
-/* 按钮：一律胶囊，按下缩到 0.95 */
+/* ---------------------------------------------------------------- 胶囊进度条 */
+.bar {
+  position: relative;
+  height: 24rpx;
+  border-radius: 999rpx;
+  background: var(--chip);
+  overflow: hidden;
+}
+
+/* 宽度直接给（style="width: N%"）；第一次出来从左边滑进来 */
+.bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: var(--lime);
+  animation: bar-in 0.8s cubic-bezier(0.2, 0.8, 0.3, 1) 0.2s backwards;
+}
+
+@keyframes bar-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.bar-carbs { background: var(--carbs); }
+.bar-fat { background: var(--fat); }
+.bar-protein { background: var(--protein); }
+
+/* ---------------------------------------------------------------- 按钮：一律胶囊，按下缩到 0.95 */
 button::after {
   border: none;
 }
 
 button.btn-primary {
   width: 100% !important;
-  background: var(--primary);
+  background: var(--ink);
   color: #fff;
   border-radius: 999rpx;
   font-size: 34rpx;
-  font-weight: 600;
-  padding: 22rpx 0;
+  font-weight: 700;
+  padding: 26rpx 0;
   margin: 24rpx 0;
 }
 
 button.btn-primary[disabled] {
-  background: #a9cbbd !important;
+  background: #b9bcc1 !important;
   color: #fff !important;
 }
 
 button.btn-big {
-  padding: 30rpx 0;
+  padding: 32rpx 0;
   font-size: 36rpx;
 }
 
 button.btn-plain {
   width: 100% !important;
-  background: transparent;
-  color: var(--primary);
-  border: 3rpx solid var(--primary);
+  background: var(--chip);
+  color: var(--ink);
   border-radius: 999rpx;
   font-size: 32rpx;
-  font-weight: 600;
-  padding: 16rpx 0;
+  font-weight: 700;
+  padding: 22rpx 0;
   margin-top: 24rpx;
 }
 
 button.btn-plain[disabled] {
   color: var(--gray) !important;
-  border-color: var(--line) !important;
-  background: transparent !important;
+  background: var(--chip) !important;
 }
 
-/* 深绿横幅上的按钮：白底绿字（主）、白边白字（次） */
-button.btn-on-dark {
-  background: #fff;
-  color: var(--primary);
+/* 黑卡上的主按钮：柠檬绿底黑字 */
+button.btn-on-dark,
+button.btn-lime {
+  background: var(--lime);
+  color: var(--ink);
 }
 
 button.btn-on-dark[disabled] {
-  background: rgba(255, 255, 255, 0.5) !important;
-  color: var(--house) !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: var(--ink) !important;
 }
 
-button.btn-ghost-dark {
-  background: transparent;
-  color: #fff;
-  border-color: #fff;
+button.btn-peach {
+  background: var(--peach);
+  color: var(--ink);
+}
+
+/* 按钮里的图标 */
+.btn-icon {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
+  vertical-align: -10rpx;
+}
+
+/* 白色圆钮（右上角的小按钮） */
+.round-btn {
+  flex-shrink: 0;
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.round-btn image {
+  width: 44rpx;
+  height: 44rpx;
+}
+
+/* 白色胶囊（「📅 10月22日 ⌄」这类） */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 80rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.pill image {
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.pill image:first-child {
+  margin-right: 12rpx;
 }
 
 .link {
-  color: var(--primary);
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 700;
   padding: 16rpx;
 }
 
@@ -166,35 +383,19 @@ button.btn-ghost-dark {
   color: var(--red);
 }
 
-/* 深绿横幅（Starbucks 的 House Green 带）：白字，次要字 78% 白 */
-.band {
-  background: var(--house);
-  color: var(--on-dark);
-}
-
-.band .muted {
-  color: var(--on-dark-soft);
-}
-
-/* 奖励卡：金色奶油底 + 金边（暖豆、新住户、纪念章） */
-.reward-card {
-  background: var(--gold-wash);
-  box-shadow: var(--shadow-card), inset 0 0 0 2rpx var(--gold-light);
-}
-
-/* 金色胶囊：「+20 暖豆」「准时」这类奖励小标签 */
+/* 金色 / 暖豆小胶囊：「+20 暖豆」「准时拍能得 15 暖豆」 */
 .pill-gold {
   display: inline-block;
-  padding: 4rpx 20rpx;
+  padding: 6rpx 22rpx;
   border-radius: 999rpx;
-  border: 2rpx solid var(--gold);
-  color: var(--gold-ink);
+  background: var(--bean-soft);
+  color: var(--bean-ink);
   font-size: 26rpx;
   font-weight: 700;
   line-height: 1.5;
 }
 
-/* 选项小块 */
+/* ---------------------------------------------------------------- 选项小块 */
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -205,21 +406,21 @@ button.btn-ghost-dark {
   flex-direction: column;
 }
 
-/* 和商店的标签一样：按下缩到 0.95 再回来（hover-class="chip-press"），选中 / 取消时底色、字色、边框 200ms 过渡 */
+/* 和商店的标签一样：按下缩到 0.95 再回来（hover-class="chip-press"），选中 / 取消时底色、字色、边框 200ms 过渡；选中是黑底白字 */
 .chip {
-  padding: 16rpx 36rpx;
+  padding: 18rpx 36rpx;
   border-radius: 999rpx;
-  background: var(--gray-soft);
+  background: var(--chip);
   color: var(--text);
   border: 3rpx solid transparent;
   transition: transform 0.15s, background-color 0.2s, color 0.2s, border-color 0.2s;
 }
 
 .chip-on {
-  background: var(--primary-wash);
-  color: var(--brand);
-  border-color: var(--primary);
-  font-weight: 600;
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+  font-weight: 700;
 }
 
 .chip-press {
@@ -229,15 +430,15 @@ button.btn-ghost-dark {
 /* 评级标签 */
 .badge {
   font-size: 26rpx;
-  font-weight: 600;
+  font-weight: 700;
   padding: 4rpx 18rpx;
   border-radius: 999rpx;
   margin-left: 12rpx;
 }
 
 .badge-green {
-  color: var(--brand);
-  background: var(--green-soft);
+  color: var(--lime-ink);
+  background: var(--lime-soft);
 }
 
 .badge-yellow {
@@ -253,10 +454,10 @@ button.btn-ghost-dark {
 .badge-failed,
 .badge-none {
   color: var(--muted);
-  background: var(--ceramic);
+  background: var(--chip);
 }
 
-/* 表单 */
+/* ---------------------------------------------------------------- 表单 */
 .field {
   margin-bottom: 32rpx;
 }
@@ -280,16 +481,16 @@ button.btn-ghost-dark {
 .input-wrap {
   display: flex;
   align-items: center;
-  background: var(--gray-soft);
-  border-radius: 16rpx;
-  padding: 0 24rpx;
-  box-shadow: inset 0 0 0 2rpx var(--line);
+  background: var(--chip);
+  border-radius: 28rpx;
+  padding: 0 28rpx;
 }
 
 .field-input {
   flex: 1;
-  height: 92rpx;
+  height: 96rpx;
   font-size: 34rpx;
+  font-weight: 600;
 }
 
 .unit {
@@ -302,42 +503,56 @@ button.btn-ghost-dark {
   width: 100%;
   min-height: 160rpx;
   box-sizing: border-box;
-  background: var(--gray-soft);
-  border-radius: 16rpx;
-  padding: 20rpx 24rpx;
+  background: var(--chip);
+  border-radius: 28rpx;
+  padding: 24rpx 28rpx;
   font-size: 30rpx;
-  box-shadow: inset 0 0 0 2rpx var(--line);
 }
 
-/* 营养素三栏 */
+/* ---------------------------------------------------------------- 营养素三块：蛋白质蓝、碳水粉、脂肪黄 */
 .macros {
   display: flex;
-  justify-content: space-between;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-  border-top: 2rpx solid var(--line);
+  gap: 16rpx;
+  margin-top: 28rpx;
 }
 
 .macro {
   flex: 1;
+  padding: 20rpx 0 18rpx;
+  border-radius: 28rpx;
   text-align: center;
+  background: var(--protein-soft);
 }
 
-.macro + .macro {
-  border-left: 2rpx solid var(--line);
+.macro:nth-child(2) {
+  background: var(--carbs-soft);
+}
+
+.macro:nth-child(3) {
+  background: var(--fat-soft);
 }
 
 .macro-num {
-  font-size: 34rpx;
-  font-weight: 700;
+  font-family: var(--font-num);
+  font-size: 38rpx;
+  font-weight: 800;
+  color: var(--protein-ink);
+}
+
+.macro:nth-child(2) .macro-num {
+  color: var(--carbs-ink);
+}
+
+.macro:nth-child(3) .macro-num {
+  color: var(--fat-ink);
 }
 
 .macro-label {
   font-size: 26rpx;
-  color: var(--muted);
+  color: var(--text);
 }
 
-/* 餐食通用 */
+/* ---------------------------------------------------------------- 餐食通用 */
 .meal-head {
   display: flex;
   align-items: center;
@@ -345,7 +560,7 @@ button.btn-ghost-dark {
 
 .meal-label {
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .meal-time {
@@ -358,7 +573,7 @@ button.btn-ghost-dark {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 18rpx 0;
+  padding: 22rpx 0;
   border-bottom: 2rpx solid var(--line);
 }
 
@@ -382,43 +597,44 @@ button.btn-ghost-dark {
 }
 
 .stamp {
-  width: 52rpx;
-  height: 52rpx;
+  width: 56rpx;
+  height: 56rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 26rpx;
-  font-weight: 700;
+  font-weight: 800;
   box-sizing: border-box;
-  color: #fff;
+  color: var(--ink);
 }
 
 .stamp-green {
-  background: var(--green);
+  background: var(--lime);
 }
 
 .stamp-yellow {
-  background: var(--amber);
+  background: var(--fat);
 }
 
 .stamp-red {
-  background: var(--red);
+  background: var(--carbs);
 }
 
 .stamp-done {
-  background: var(--gray);
+  background: var(--chip);
+  color: var(--muted);
 }
 
 .stamp-none {
-  border: 3rpx dashed var(--gray);
+  border: 3rpx dashed #c9ccd0;
   color: var(--gray);
 }
 
-/* 准时拍的那顿：奖励金边 + 角上一个「准」（金底深绿字，Starbucks 奖励的配色） */
+/* 准时拍的那顿：暖橙圈 + 角上一个「准」 */
 .stamp-on {
   position: relative;
-  box-shadow: 0 0 0 5rpx var(--gold);
+  box-shadow: 0 0 0 5rpx var(--bean);
 }
 
 .stamp-on::after {
@@ -429,8 +645,8 @@ button.btn-ghost-dark {
   width: 32rpx;
   height: 32rpx;
   border-radius: 50%;
-  background: var(--gold);
-  color: var(--house);
+  background: var(--bean);
+  color: var(--ink);
   font-size: 20rpx;
   font-weight: 700;
   line-height: 32rpx;
@@ -452,7 +668,7 @@ button.btn-ghost-dark {
 }
 
 .stamps-small .stamp-on {
-  box-shadow: 0 0 0 3rpx var(--gold);
+  box-shadow: 0 0 0 3rpx var(--bean);
 }
 
 .stamps-small .stamp-on::after {
@@ -485,13 +701,13 @@ button.btn-ghost-dark {
 }
 
 @keyframes fx-breathe {
-  0%, 100% { box-shadow: var(--shadow-card), 0 0 0 0 rgba(0, 117, 74, 0); }
-  50% { box-shadow: var(--shadow-card), 0 0 0 14rpx rgba(0, 117, 74, 0.22); }
+  0%, 100% { box-shadow: var(--shadow-card), 0 0 0 0 rgba(160, 214, 50, 0); }
+  50% { box-shadow: var(--shadow-card), 0 0 0 16rpx rgba(160, 214, 50, 0.45); }
 }
 
 @keyframes fx-breathe-warn {
-  0%, 100% { box-shadow: var(--shadow-card), 0 0 0 0 rgba(203, 132, 40, 0); }
-  50% { box-shadow: var(--shadow-card), 0 0 0 14rpx rgba(203, 132, 40, 0.32); }
+  0%, 100% { box-shadow: var(--shadow-card), 0 0 0 0 rgba(255, 150, 80, 0); }
+  50% { box-shadow: var(--shadow-card), 0 0 0 16rpx rgba(255, 150, 80, 0.4); }
 }
 
 @keyframes fx-nudge {
@@ -524,7 +740,7 @@ button.btn-ghost-dark {
   right: -8rpx;
   bottom: -8rpx;
   border-radius: 50%;
-  border: 6rpx solid rgba(203, 162, 88, 0.6);
+  border: 6rpx solid rgba(245, 165, 36, 0.6);
   opacity: 0;
   animation: fx-ink 0.7s ease-out 0.35s forwards;
 }
@@ -538,7 +754,7 @@ button.btn-ghost-dark {
 .fx-breathe-warn { animation: fx-breathe-warn 2.5s ease-in-out infinite; }
 .fx-nudge { animation: fx-nudge 2s ease-in-out infinite; }
 
-/* 按下去缩一点，松手弹回（Starbucks 的 scale(0.95)）：按钮用自带的 button-hover，卡片、小块用 hover-class="fx-press"（选项小块 .chip 的过渡在上面） */
+/* 按下去缩一点，松手弹回：按钮用自带的 button-hover，卡片、小块用 hover-class="fx-press"（选项小块 .chip 的过渡在上面） */
 button,
 .card {
   transition: transform 0.15s, opacity 0.15s;
@@ -557,7 +773,8 @@ button.button-hover {
 .fx-skip .fx-rise,
 .fx-skip .fx-pop,
 .fx-skip .fx-stamp,
-.fx-skip .fx-stamp.stamp-on::after {
+.fx-skip .fx-stamp.stamp-on::after,
+.fx-skip .bar-fill {
   animation: none;
 }
 

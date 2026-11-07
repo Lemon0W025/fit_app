@@ -39,14 +39,14 @@
 .slide-image-wide {
   width: 620rpx;
   height: 410rpx;
-  border-radius: 24rpx;
+  border-radius: 40rpx;
   box-shadow: var(--shadow-card);
 }
 
 .slide-title {
-  font-size: 52rpx;
-  font-weight: 700;
-  color: var(--brand);
+  font-size: 56rpx;
+  font-weight: 800;
+  color: var(--ink);
   margin-bottom: 24rpx;
 }
 
@@ -71,12 +71,13 @@
 
 .step-no {
   flex-shrink: 0;
-  width: 52rpx;
-  height: 52rpx;
+  width: 56rpx;
+  height: 56rpx;
   margin-right: 20rpx;
   border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
+  background: var(--lime);
+  color: var(--ink);
+  font-weight: 800;
   font-size: 30rpx;
   line-height: 52rpx;
   text-align: center;
@@ -93,7 +94,7 @@
   height: 16rpx;
   margin: 0 10rpx;
   border-radius: 8rpx;
-  background: #d6d2ca;
+  background: #d9dbd6;
   transition: transform 200ms, background-color 200ms;
 }
 

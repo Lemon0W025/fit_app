@@ -1,74 +1,115 @@
-<view class="page">
+<view class="page today">
   <view wx:if="{{loading}}" class="empty">小暖正在翻今天的记录…</view>
 
   <block wx:if="{{view}}">
-    <view class="greeting fx-rise">{{greeting}}</view>
+    <!-- 顶上：问好 + 日期，右边圆钮去打卡日历 -->
+    <view class="top fx-rise">
+      <view class="top-text">
+        <view class="greeting">{{greeting}}</view>
+        <view class="top-date">{{view.dateLabel}}</view>
+      </view>
+      <view class="round-btn" hover-class="fx-press" bindtap="goCalendar">
+        <image src="/images/icons/calendar.svg" mode="aspectFit" />
+      </view>
+    </view>
 
     <!-- 新手三步：做完了就不显示 -->
     <view wx:if="{{guide}}" class="card guide fx-rise">
-      <view class="guide-head">
-        <text class="guide-title">{{guide.title}}</text>
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/sparkle.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">{{guide.title}}</text>
         <text class="guide-hide" bindtap="hideGuide">不用了</text>
       </view>
       <view wx:for="{{guide.steps}}" wx:key="key" class="guide-step {{item.done ? 'guide-done' : ''}}" hover-class="{{item.done ? '' : 'fx-press'}}" data-action="{{item.action}}" bindtap="guideStep">
         <view class="guide-mark">{{item.done ? '✓' : index + 1}}</view>
         <text class="guide-label">{{item.label}}</text>
-        <text wx:if="{{!item.done}}" class="guide-go">去做 ›</text>
+        <text wx:if="{{!item.done}}" class="guide-go">去做</text>
       </view>
     </view>
 
+    <!-- 下一顿：黑色大卡，超大的饭点时间，柠檬绿拍照按钮（过点了换暖橙） -->
     <view wx:if="{{card}}" class="fx-rise fx-d1">
-      <view id="tour-next" class="card band next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
-        <view class="next-title">{{card.title}}</view>
-        <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
-        <view wx:if="{{card.reward}}"><view class="next-reward">🫘 {{card.reward}}</view></view>
-        <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
-          <button class="btn-primary btn-big btn-on-dark next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
+      <view id="tour-next" class="card hero {{card.warn ? 'hero-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
+        <view class="hero-top">
+          <view class="chip-icon"><image src="/images/icons/clock.svg" mode="aspectFit" /></view>
+          <text class="hero-kicker">{{hero.kicker}}</text>
+          <text wx:if="{{hero.pill}}" class="hero-pill">{{hero.pill}}</text>
         </view>
-        <view wx:else class="next-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}} ›</view>
+        <view class="hero-big num">{{hero.big}}</view>
+        <view wx:if="{{hero.line}}" class="hero-line">{{hero.line}}</view>
+        <view wx:if="{{card.reward}}" class="hero-reward">
+          <image class="hero-bean" src="/images/garden/ui/bean.png" mode="aspectFit" />
+          <text>{{card.reward}}</text>
+        </view>
+        <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
+          <button class="btn-primary btn-big hero-btn {{card.warn ? 'btn-peach' : 'btn-lime'}}" data-meal-type="{{card.mealType}}" bindtap="goCheckin">
+            <image class="btn-icon" src="/images/icons/camera.svg" mode="aspectFit" />{{hero.button}}
+          </button>
+        </view>
+        <view wx:else class="hero-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">
+          <image class="btn-icon icon-white" src="/images/icons/camera.svg" mode="aspectFit" />{{card.button}}
+        </view>
       </view>
     </view>
 
-    <view wx:if="{{daily}}" id="tour-beans" class="card reward-card beans-card fx-rise fx-d2" hover-class="fx-press" bindtap="goGarden">
-      <image class="beans-card-icon" src="/images/garden/ui/bean.png" mode="aspectFit" />
-      <view class="beans-card-body">
-        <view class="beans-card-title">{{daily.title}}</view>
-        <view class="stamps">
+    <!-- 今天吃了多少：柠檬绿卡，左边大大的百分比，右边圆环 -->
+    <view id="tour-ring" class="card card-lime intake fx-rise fx-d2">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/flame.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">今天吃了</text>
+        <text class="card-head-more">预算 {{view.dailyKcal}} 千卡</text>
+      </view>
+      <view class="intake-body">
+        <view class="intake-left">
+          <view class="intake-pct num">{{view.percent}}<text class="intake-pct-unit">%</text></view>
+          <view class="intake-status {{view.over ? 'intake-over' : ''}}">{{view.statusText}}</view>
+        </view>
+        <ring value="{{view.totals.kcal}}" max="{{view.dailyKcal}}" size="{{272}}" />
+      </view>
+    </view>
+
+    <!-- 三大营养素：粗胶囊进度条（碳水粉、蛋白质蓝、脂肪黄） -->
+    <view class="card fx-rise fx-d3">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/pie.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">三大营养素</text>
+        <text class="card-head-more">吃了 / 建议</text>
+      </view>
+      <view wx:for="{{view.macros}}" wx:key="key" class="mac">
+        <view class="mac-top">
+          <text class="mac-label">{{item.label}}</text>
+          <text class="mac-val"><text class="mac-got">{{item.got}}</text> / {{item.goal}} 克</text>
+        </view>
+        <view class="mac-row">
+          <text class="mac-pct num">{{item.percent}}%</text>
+          <view class="bar mac-bar"><view class="bar-fill bar-{{item.key}}" style="width: {{item.width}}%"></view></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 今天的暖豆：大数字 + 早午晚三个印章 -->
+    <view wx:if="{{daily}}" id="tour-beans" class="card reward-card beans fx-rise fx-d4" hover-class="fx-press" bindtap="goGarden">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/garden/ui/bean.png" mode="aspectFit" /></view>
+        <text class="card-head-title">今天的暖豆</text>
+        <text class="card-head-more">去营地</text>
+        <image class="card-head-go" src="/images/icons/chevron.svg" mode="aspectFit" />
+      </view>
+      <view class="beans-row">
+        <view class="beans-num num">{{daily.beans}}<text class="num-unit">暖豆</text></view>
+        <view class="stamps beans-stamps">
           <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}} fx-pop" style="animation-delay: {{300 + index * 100}}ms">{{item.label}}</view>
         </view>
-        <view wx:if="{{daily.streakText}}" class="beans-card-streak">{{daily.streakText}}</view>
-        <view wx:if="{{daily.onTimeText}}" class="beans-card-streak">⏰ {{daily.onTimeText}}</view>
       </view>
-      <text class="beans-card-arrow">›</text>
+      <view wx:if="{{daily.streakText}}" class="beans-line">{{daily.streakText}}</view>
+      <view wx:if="{{daily.onTimeText}}" class="beans-line">⏰ {{daily.onTimeText}}</view>
     </view>
 
-    <view id="tour-ring" class="card hero fx-rise fx-d3">
-      <view class="hero-top">
-        <text>{{view.dateLabel}}</text>
-        <text>每日预算 {{view.dailyKcal}} 千卡</text>
-      </view>
-      <view class="hero-ring">
-        <ring value="{{view.totals.kcal}}" max="{{view.dailyKcal}}" size="{{320}}" />
-      </view>
-      <view wx:if="{{view.over}}" class="hero-status hero-status-over">{{view.statusText}}</view>
-      <view class="macros">
-        <view class="macro">
-          <view class="macro-num">{{view.totals.protein}}g</view>
-          <view class="macro-label">蛋白质</view>
-        </view>
-        <view class="macro">
-          <view class="macro-num">{{view.totals.carbs}}g</view>
-          <view class="macro-label">碳水</view>
-        </view>
-        <view class="macro">
-          <view class="macro-num">{{view.totals.fat}}g</view>
-          <view class="macro-label">脂肪</view>
-        </view>
-      </view>
+    <view class="section-title">今天的打卡<text wx:if="{{view.meals.length}}" class="section-more">{{view.meals.length}} 顿</text></view>
+    <view wx:if="{{view.meals.length === 0}}" class="card empty-card">
+      <view class="chip-icon empty-icon"><image src="/images/icons/camera.svg" mode="aspectFit" /></view>
+      <view>还没有打卡哦，吃饭前先拍一张给小暖看看～</view>
     </view>
-
-    <view class="section-title">今天的打卡</view>
-    <view wx:if="{{view.meals.length === 0}}" class="card empty">还没有打卡哦，吃饭前先拍一张给小暖看看～</view>
     <view wx:for="{{view.meals}}" wx:key="_id" class="card meal fx-rise" hover-class="fx-press" style="animation-delay: {{400 + index * 80}}ms" data-id="{{item._id}}" bindtap="openMeal">
       <image wx:if="{{item.fileID}}" class="meal-thumb" src="{{item.fileID}}" mode="aspectFill" lazy-load />
       <view wx:else class="meal-thumb meal-thumb-text">✍️</view>
@@ -76,15 +117,21 @@
         <view class="meal-head">
           <text class="meal-label">{{item.label}}</text>
           <text class="meal-time">{{item.timeText}}</text>
-          <text wx:if="{{item.ratingText}}" class="badge badge-{{item.ratingClass}}">{{item.ratingText}}</text>
         </view>
         <view class="meal-kcal {{item.ratingClass === 'failed' ? 'meal-kcal-failed' : ''}}">{{item.kcalText}}</view>
         <view class="meal-comment">{{item.commentText}}</view>
       </view>
+      <view class="meal-side">
+        <text wx:if="{{item.ratingText}}" class="badge badge-{{item.ratingClass}}">{{item.ratingText}}</text>
+        <image class="meal-go" src="/images/icons/chevron-off.svg" mode="aspectFit" />
+      </view>
     </view>
 
-    <view class="section-title">小暖的今日总结</view>
-    <view class="card">
+    <view class="card summary">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/sparkle.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">小暖的今日总结</text>
+      </view>
       <view wx:if="{{view.summary}}" class="summary-text">{{view.summary.text}}</view>
       <view wx:else class="muted">吃完今天最后一餐，让小暖帮你复盘一下吧。</view>
       <button class="btn-plain" bindtap="generateSummary" loading="{{summarizing}}" disabled="{{summarizing || view.meals.length === 0}}">{{view.summary ? '重新总结' : '生成今日总结'}}</button>

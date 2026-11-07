@@ -1,7 +1,7 @@
-// 彩带：纯计算（生成、往前走、画），小程序的 canvas 和预览录屏的浏览器共用。颜色用 app.wxss 的绿和奖励金
+// 彩带：纯计算（生成、往前走、画），小程序的 canvas 和预览录屏的浏览器共用。颜色用 app.wxss 的柠檬绿、墨黑、营养素的粉黄蓝和暖豆橙
 // milestone：从屏幕上方一整排往下撒（约 2 秒落完）；burst：从顶上中间往两边喷一小把（约 1 秒）
 
-const COLORS = ['#00754a', '#cba258', '#7fbfa4', '#1e3932', '#dfc49d', '#e98a6b']
+const COLORS = ['#c4ef5a', '#17191c', '#ffb8c6', '#ffd86b', '#a9d3ff', '#f5a524']
 const SHAPES = ['strip', 'strip', 'strip', 'bean', 'ring']
 const COUNT = { burst: 40, milestone: 80 }
 const RUN_MS = { burst: 1400, milestone: 2600 }

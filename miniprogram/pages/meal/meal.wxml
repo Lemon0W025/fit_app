@@ -16,21 +16,23 @@
     <image class="arrival-image" src="{{arrival.image}}" mode="aspectFit" />
     <view class="arrival-body">
       <view class="arrival-title">{{arrival.text}}</view>
-      <view class="arrival-link">去营地看看 ›</view>
+      <view class="arrival-link">去营地看看<image class="arrival-go" src="/images/icons/chevron.svg" mode="aspectFit" /></view>
     </view>
   </view>
 
   <image wx:if="{{meal.fileID}}" class="hero-photo fx-rise fx-d1" src="{{meal.fileID}}" mode="aspectFill" bindtap="previewPhoto" />
 
-  <view class="card band meal-band fx-rise fx-d2">
-    <view class="meal-head">
-      <text class="meal-label">{{meal.label}}</text>
-      <text class="meal-time">{{meal.timeText}}</text>
-      <text wx:if="{{meal.ratingText}}" class="badge badge-{{meal.ratingClass}}">{{meal.ratingText}}</text>
+  <!-- 这一顿多少千卡：柠檬绿卡，超大数字，下面三块营养素 -->
+  <view class="card card-lime kcal-card fx-rise fx-d2">
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/flame.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">{{meal.label}}<text class="meal-time">{{meal.timeText}}</text></text>
+      <text wx:if="{{meal.ratingText}}" class="badge badge-{{meal.ratingClass}} kcal-badge">{{meal.ratingText}}</text>
     </view>
 
     <block wx:if="{{meal.status === 'done'}}">
-      <view class="big-kcal">{{meal.kcalText}}</view>
+      <view wx:if="{{meal.analysis.isFood}}" class="big-kcal"><text class="big-kcal-pre">约</text><text class="num">{{meal.analysis.totalKcal}}</text><text class="num-unit">千卡</text></view>
+      <view wx:else class="big-kcal big-kcal-text">{{meal.kcalText}}</view>
       <view wx:if="{{meal.mode === 'text'}}" class="muted small">（根据文字描述估算）</view>
       <view wx:if="{{peopleText}}" class="adjusted-note">{{peopleText}}</view>
       <view wx:if="{{meal.adjustedText}}" class="adjusted-note">{{meal.adjustedText}}</view>
@@ -56,11 +58,15 @@
 
   <!-- 每道菜一行，点了弹抽屉拖滑杆改份量 -->
   <view wx:if="{{meal.dishes.length}}" class="card fx-rise fx-d3">
-    <view class="card-title">吃了哪些</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/utensils.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">吃了哪些</text>
+      <text class="card-head-more">{{meal.dishes.length}} 样</text>
+    </view>
     <view class="dish-hint">估得不对？点一道菜，拖一拖改份量</view>
     <!-- 和家里人一起吃的：点人数，大家夹的菜按人数分 -->
     <view class="people">
-      <view class="people-title">几个人一起吃？</view>
+      <view class="people-title"><image class="people-icon" src="/images/icons/users.svg" mode="aspectFit" />几个人一起吃？</view>
       <people-pick value="{{meal.people || 1}}" bind:change="onPeople" />
     </view>
     <view wx:for="{{meal.dishes}}" wx:key="index" class="dish" hover-class="dish-press" hover-stay-time="100" data-index="{{item.index}}" bindtap="openDish">
@@ -69,21 +75,27 @@
         <view wx:if="{{item.sub}}" class="dish-sub">{{item.sub}}</view>
       </view>
       <text class="dish-kcal">{{item.kcalText}}</text>
-      <text class="dish-go">›</text>
+      <image class="dish-go" src="/images/icons/chevron-off.svg" mode="aspectFit" />
     </view>
   </view>
 
   <view wx:if="{{meal.analysis}}" class="card coach fx-rise fx-d4">
-    <view class="coach-name">🌿 小暖说</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/sparkle.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">小暖说</text>
+    </view>
     <view class="coach-text">{{meal.analysis.comment}}</view>
-    <block wx:if="{{meal.analysis.suggestion}}">
-      <view class="coach-name coach-name-next">下一餐建议</view>
+    <view wx:if="{{meal.analysis.suggestion}}" class="coach-next">
+      <view class="coach-name">下一餐建议</view>
       <view class="coach-text">{{meal.analysis.suggestion}}</view>
-    </block>
+    </view>
   </view>
 
   <view wx:if="{{meal.status === 'failed' || editing}}" class="card">
-    <view class="card-title">{{meal.status === 'failed' ? '补充一下描述，帮小暖认清楚' : '估得不准？补充描述后重新分析'}}</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/pencil.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">{{meal.status === 'failed' ? '补充一下描述，帮小暖认清楚' : '估得不准？补充描述后重新分析'}}</text>
+    </view>
     <textarea class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：一碗米饭、半盘青椒肉丝，汤没喝" />
     <button class="btn-primary" bindtap="reanalyze" disabled="{{working}}">重新分析</button>
   </view>

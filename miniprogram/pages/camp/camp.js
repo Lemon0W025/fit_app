@@ -10,6 +10,7 @@ const { foodById } = require('../../utils/shared/foods')
 const { decorById, placeProblem } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const DOUBLE_TAP_MS = 300
 const HOUR_CHECK_MS = 60000
@@ -88,6 +89,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     this.cancel()
     this.load()
   },
@@ -292,10 +294,6 @@ Page({
     if (!id || this.badSheets.has(id)) return
     this.badSheets.add(id)
     if (this.life) this.life.noSheet(id)
-  },
-
-  goCheckin() {
-    wx.navigateTo({ url: '/pages/checkin/checkin' })
   },
 
   // ---------------------------------------------------------------- 宠物

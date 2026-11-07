@@ -17,24 +17,31 @@
 }
 
 .manual-icon {
-  width: 64rpx;
-  height: 64rpx;
-  margin-right: 16rpx;
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 20rpx;
+  padding: 10rpx;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: var(--chip);
   flex-shrink: 0;
 }
 
 .manual-emoji {
-  width: 64rpx;
-  margin-right: 16rpx;
-  font-size: 48rpx;
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 20rpx;
+  border-radius: 50%;
+  background: var(--chip);
+  font-size: 40rpx;
+  line-height: 72rpx;
   text-align: center;
   flex-shrink: 0;
 }
 
 .manual-title {
   font-size: 38rpx;
-  font-weight: 700;
-  color: var(--brand);
+  font-weight: 800;
 }
 
 .manual-line {
@@ -47,8 +54,8 @@
   flex-shrink: 0;
   font-size: 34rpx;
   line-height: 1.6;
-  color: var(--primary);
-  font-weight: 700;
+  color: var(--lime-deep);
+  font-weight: 800;
 }
 
 .manual-text {

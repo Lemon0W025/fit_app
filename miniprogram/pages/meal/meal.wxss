@@ -1,7 +1,7 @@
 .gain-banner {
   display: flex;
   align-items: center;
-  padding: 20rpx 28rpx;
+  padding: 28rpx 32rpx;
 }
 
 .gain-icon {
@@ -16,9 +16,9 @@
 }
 
 .gain-title {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: var(--gold-ink);
+  font-size: 38rpx;
+  font-weight: 800;
+  color: var(--bean-ink);
 }
 
 .gain-hint {
@@ -34,7 +34,7 @@
 .arrival-banner {
   display: flex;
   align-items: center;
-  padding: 20rpx 28rpx;
+  padding: 28rpx 32rpx;
 }
 
 .arrival-image {
@@ -55,52 +55,72 @@
 }
 
 .arrival-link {
+  display: flex;
+  align-items: center;
   font-size: 28rpx;
-  font-weight: 600;
-  color: var(--primary);
+  font-weight: 700;
+  color: var(--ink);
   margin-top: 6rpx;
+}
+
+.arrival-go {
+  width: 32rpx;
+  height: 32rpx;
+  margin-left: 4rpx;
 }
 
 .hero-photo {
   width: 100%;
-  height: 520rpx;
-  border-radius: 24rpx;
+  height: 540rpx;
+  border-radius: 40rpx;
   display: block;
   margin-bottom: 24rpx;
   box-shadow: var(--shadow-card);
 }
 
+/* 这一顿多少千卡：柠檬绿卡（.card-lime） */
+.kcal-card .meal-time {
+  margin-left: 16rpx;
+  font-weight: 400;
+}
+
+.kcal-badge {
+  background: #fff;
+}
+
 .big-kcal {
-  font-size: 60rpx;
+  display: flex;
+  align-items: baseline;
+  margin-top: 4rpx;
+}
+
+.big-kcal .num {
+  font-size: 128rpx;
+}
+
+.big-kcal-pre {
+  margin-right: 8rpx;
+  font-size: 34rpx;
   font-weight: 700;
-  color: var(--brand);
-  margin-top: 12rpx;
 }
 
-/* 这一顿多少千卡：深绿横幅（Starbucks 商品页的营养信息带），白色大数字，营养素三栏用半透明白线隔开 */
-.meal-band .meal-time,
-.meal-band .macro-label,
-.meal-band .note-line {
-  color: var(--on-dark-soft);
+.big-kcal-text {
+  font-size: 56rpx;
+  font-weight: 800;
 }
 
-.meal-band .big-kcal {
-  color: #fff;
+.kcal-card .macro {
+  background: rgba(255, 255, 255, 0.8);
 }
 
-.meal-band .adjusted-note {
-  color: var(--gold-light);
-}
-
-.meal-band .macros,
-.meal-band .macro + .macro {
-  border-color: rgba(255, 255, 255, 0.2);
+.kcal-card .adjusted-note {
+  color: var(--lime-ink);
 }
 
 .error-box {
   margin-top: 16rpx;
-  padding: 20rpx 24rpx;
-  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 28rpx;
   background: var(--yellow-soft);
   color: var(--yellow);
   font-size: 30rpx;
@@ -120,7 +140,7 @@
 
 /* 吃了哪些：一道菜一行，整行能点 */
 .dish-hint {
-  margin: -8rpx 0 8rpx;
+  margin: -4rpx 0 8rpx;
   font-size: 28rpx;
   color: var(--muted);
 }
@@ -128,10 +148,10 @@
 .dish {
   display: flex;
   align-items: center;
-  min-height: 112rpx;
+  min-height: 116rpx;
   margin: 0 -16rpx;
   padding: 12rpx 16rpx;
-  border-radius: 16rpx;
+  border-radius: 24rpx;
   border-bottom: 2rpx solid var(--line);
   transition: transform 150ms, background-color 150ms;
 }
@@ -142,7 +162,7 @@
 
 .dish-press {
   transform: scale(0.98);
-  background-color: var(--primary-wash);
+  background-color: var(--chip);
 }
 
 .dish-main {
@@ -152,6 +172,7 @@
 
 .dish-name {
   font-size: 34rpx;
+  font-weight: 600;
 }
 
 .dish-tag {
@@ -172,16 +193,16 @@
 .dish-kcal {
   flex-shrink: 0;
   margin-left: 16rpx;
-  font-size: 32rpx;
-  font-weight: 600;
-  color: var(--brand);
+  font-family: var(--font-num);
+  font-size: 34rpx;
+  font-weight: 800;
 }
 
 .dish-go {
   flex-shrink: 0;
-  margin-left: 12rpx;
-  font-size: 40rpx;
-  color: var(--gray);
+  width: 36rpx;
+  height: 36rpx;
+  margin-left: 8rpx;
 }
 
 /* 几个人一起吃 */
@@ -192,18 +213,26 @@
 }
 
 .people-title {
-  margin-bottom: 12rpx;
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
+}
+
+.people-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 12rpx;
 }
 
 /* 改份量的抽屉 */
 .adj-preview {
   margin-top: 8rpx;
   text-align: center;
-  font-size: 44rpx;
-  font-weight: 700;
-  color: var(--brand);
+  font-family: var(--font-num);
+  font-size: 48rpx;
+  font-weight: 800;
 }
 
 .adj-chips {
@@ -239,25 +268,23 @@
 }
 
 .adj-remove {
-  color: var(--red);
-  border-color: var(--red);
+  color: var(--red) !important;
+  background: var(--red-soft) !important;
 }
 
-/* 小暖说：浅绿底，左边一道品牌绿 */
-.coach {
-  background: var(--primary-wash);
-  box-shadow: var(--shadow-card), inset 8rpx 0 0 var(--primary);
+/* 小暖说：白卡；下一餐建议是一块浅灰圆角 */
+.coach-next {
+  margin-top: 24rpx;
+  padding: 24rpx 28rpx;
+  border-radius: 28rpx;
+  background: var(--chip);
 }
 
 .coach-name {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 700;
-  color: var(--brand);
-  margin-bottom: 8rpx;
-}
-
-.coach-name-next {
-  margin-top: 24rpx;
+  color: var(--muted);
+  margin-bottom: 4rpx;
 }
 
 .coach-text {

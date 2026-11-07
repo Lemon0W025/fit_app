@@ -28,7 +28,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(23, 25, 28, 0.45);
 }
 
 .sheet-panel {
@@ -58,7 +58,7 @@
 .sheet-move {
   position: relative;
   background: var(--card, #fff);
-  border-radius: 32rpx 32rpx 0 0;
+  border-radius: 48rpx 48rpx 0 0;
   box-shadow: 0 0 2rpx rgba(0, 0, 0, 0.14), 0 -8rpx 24rpx rgba(0, 0, 0, 0.1);
   padding-bottom: calc(24rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
@@ -85,7 +85,7 @@
   height: 10rpx;
   margin: 0 auto 10rpx;
   border-radius: 5rpx;
-  background: #d6d2ca;
+  background: #d9dbd6;
 }
 
 .sheet-bar {
@@ -100,9 +100,9 @@
 }
 
 .sheet-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: var(--brand, #006241);
+  font-size: 36rpx;
+  font-weight: 800;
+  color: var(--ink, #17191c);
 }
 
 .sheet-close {
@@ -120,7 +120,7 @@
 
 .sheet-close-press {
   transform: scale(0.9);
-  background: var(--ceramic, #edebe9);
+  background: var(--chip, #f1f2ee);
 }
 
 .sheet-body {

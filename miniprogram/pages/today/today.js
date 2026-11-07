@@ -1,11 +1,12 @@
 const api = require('../../utils/api')
-const { buildDayView, greetingText, beansCard, nextMealCard } = require('../../utils/view')
+const { buildDayView, greetingText, beansCard, nextMealCard, nextMealHero } = require('../../utils/view')
 const { localHour } = require('../../utils/shared/date')
 const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
 const { clockOf } = require('../../utils/fx')
 const { guideCard } = require('../../utils/guide')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
 const { appVersion } = require('../../utils/remind')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
 
@@ -19,6 +20,7 @@ Page({
     view: null,
     daily: null,
     card: null,
+    hero: null,
     greeting: '',
     summarizing: false,
     guide: null,
@@ -27,6 +29,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     this.load()
   },
 
@@ -80,8 +83,10 @@ Page({
   refresh() {
     const meals = this.day.meals || []
     // 暖豆卡只说得了多少、印章、连续几天；该拍哪顿、能得多少在上面的大卡里说
+    const status = mealStatus(meals, this.times, new Date())
     this.setData({
-      card: nextMealCard(mealStatus(meals, this.times, new Date())),
+      card: nextMealCard(status),
+      hero: nextMealHero(status),
       daily: beansCard(this.day.daily),
     })
     this.stopRefresh()
@@ -117,6 +122,10 @@ Page({
 
   goGarden() {
     wx.switchTab({ url: '/pages/camp/camp' })
+  },
+
+  goCalendar() {
+    wx.navigateTo({ url: '/pages/forest/forest' })
   },
 
   guideHidden() {

@@ -438,7 +438,7 @@ async function record(name, sc, browser) {
   } else if (sc.ui) {
     d.bagOpen = true
   }
-  const hideUi = '<style>.hud-res,.hud-today,.hud-notes,.side,.recenter,.checkin-btn,.tabbar,.bubble,.act-emoji,.status-float,.capsule-float{display:none!important}.frame{width:750px!important;min-height:1472px!important}.content{height:1472px!important}.screen{width:750px!important;height:1472px!important}</style>'
+  const hideUi = '<style>.hud-res,.hud-today,.hud-notes,.side,.recenter,.tabbar,.wx-custom-tab-bar,.bubble,.act-emoji,.status-float,.capsule-float{display:none!important}.frame{width:750px!important;min-height:1472px!important}.content{height:1472px!important}.screen{width:750px!important;height:1472px!important}</style>'
   const file = path.join(OUT, `${name}.html`)
   fs.writeFileSync(file, renderPage({ name: 'camp', data: d, mapSrc, tab: 'camp' }).replace('</head>', `${sc.phone ? '' : hideUi}</head>`).replace('</body>', `${sc.ui ? HIDE_SHEET : ''}</body>`))
   const vdir = path.join(OUT, `${name}-video`)

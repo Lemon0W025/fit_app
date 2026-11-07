@@ -120,10 +120,6 @@
     <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">
       <image class="recenter-icon" src="/images/garden/ui/campfire.png" mode="aspectFit" />
     </view>
-    <view wx:if="{{mode === 'view'}}" class="checkin-btn" bindtap="goCheckin">
-      <image class="checkin-icon" src="/images/garden/ui/camera.png" mode="aspectFit" />
-      <text>拍一拍这一餐</text>
-    </view>
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
       <view class="placing-main">

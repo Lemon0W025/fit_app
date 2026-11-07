@@ -1,7 +1,7 @@
 // 新手导览（components/tour）：第一次进首页、第一次进营地，一步一步圈出要点的地方说一句。看过就记在本地（toursSeen），
 // 「使用说明」页底下能「再看一遍」（清掉记录）；「我的」→「从头再来」清空本地存储，也会重新看。
 // 每一步：selector 圈哪个（页面里的 id / class，找不到就不圈、说明放中间）；scroll 先把它滚到屏幕里；
-// tab 指着底下第几个 tab（原生 tab 栏盖不住，说明贴在最下面、箭头朝下）；done 最后一步按钮上的字
+// tab 指着底下第几格（底栏 5 格、中间是拍照；底栏盖不住，说明贴在最下面、箭头朝下）；done 最后一步按钮上的字
 const { BEANS } = require('./shared/forest')
 const { SPIN_COST } = require('./shared/garden')
 
@@ -15,19 +15,20 @@ const TOURS = {
       text: `早中晚吃饭前，点这个大按钮拍一张。饭点前后一小时内拍算准时，能得 ${BEANS.onTime} 暖豆。`,
     },
     {
+      selector: '#tour-ring',
+      scroll: true,
+      title: '今天吃了多少',
+      text: '大字是今天吃了预算的百分之几，下面写着还能吃多少；预算按你的身高体重算的。',
+    },
+    {
       selector: '#tour-beans',
+      scroll: true,
       title: '暖豆和印章',
       text: `每拍一顿盖一个印章，准时的带「准」字；三顿都准时再加 ${BEANS.allOnTime} 暖豆。`,
     },
     {
-      selector: '#tour-ring',
-      scroll: true,
-      title: '今天吃了多少',
-      text: '圈里是今天已经吃的热量，下面是还能吃多少，按你的身高体重算的。',
-    },
-    {
       tab: 1,
-      tabs: 4,
+      tabs: 5,
       title: '暖豆拿去营地',
       text: '下面第二个「营地」：用暖豆抽好吃的、煮一锅，小动物闻着香味就来住。',
     },

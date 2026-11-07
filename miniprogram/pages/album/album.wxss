@@ -1,19 +1,19 @@
 .empty { padding: 120rpx 0; text-align: center; color: var(--muted); }
 .book { height: 80vh; }
-.leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #ffffff; border-radius: 28rpx; box-shadow: var(--shadow-card); overflow-y: auto; }
+.leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #ffffff; border-radius: 48rpx; box-shadow: var(--shadow-card); overflow-y: auto; }
 .cover-img { width: 240rpx; height: 240rpx; display: block; margin: 40rpx auto 24rpx; }
 /* 12 只都到齐：封面换成全家福 */
 .cover-family { width: 100%; display: block; margin: 8rpx 0 24rpx; border-radius: 20rpx; }
-.cover-title { text-align: center; font-size: 44rpx; font-weight: 700; color: var(--brand); }
-.cover-progress { text-align: center; font-size: 36rpx; font-weight: 600; color: var(--primary); margin: 16rpx 0; }
+.cover-title { text-align: center; font-size: 48rpx; font-weight: 800; }
+.cover-progress { display: table; margin: 16rpx auto; padding: 8rpx 28rpx; border-radius: 999rpx; background: var(--lime-soft); color: var(--lime-ink); font-size: 34rpx; font-weight: 800; }
 .cover-full { text-align: center; color: var(--gold-ink); margin-bottom: 16rpx; }
 .pet-img { width: 320rpx; height: 320rpx; display: block; margin: 0 auto 16rpx; }
 .locked { filter: brightness(0) opacity(0.18); }
-.pet-name { text-align: center; font-size: 42rpx; font-weight: 700; color: var(--brand); }
+.pet-name { text-align: center; font-size: 46rpx; font-weight: 800; }
 .pet-hook { text-align: center; font-size: 30rpx; margin: 8rpx 0; }
 .pet-hint { text-align: center; color: var(--muted); margin-top: 24rpx; }
 .story { margin-top: 24rpx; display: flex; flex-direction: column; gap: 12rpx; }
-.story-line { font-size: 30rpx; line-height: 1.6; padding-left: 20rpx; border-left: 6rpx solid var(--primary); }
+.story-line { font-size: 30rpx; line-height: 1.6; padding-left: 20rpx; border-left: 8rpx solid var(--lime); }
 .story-locked { color: var(--gray); }
 .leaf-title { font-size: 36rpx; font-weight: 600; margin-bottom: 16rpx; }
 .grid { display: flex; flex-wrap: wrap; gap: 16rpx; }

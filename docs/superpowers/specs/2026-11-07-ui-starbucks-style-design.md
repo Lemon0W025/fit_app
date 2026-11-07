@@ -1,5 +1,7 @@
 # 界面美化：照 Starbucks 的设计系统（2026-11-07）
 
+> **已被同一天的 `2026-11-07-ui-bento-design.md`（便当盒风格）取代**：用户觉得这版太简单、没有设计感。
+
 用户让参考 [awesome-design-md](https://github.com/voltagent/awesome-design-md)（80 多个知名产品的 DESIGN.md 设计规范合集）选一个最合适的来美化界面。
 
 ## 为什么选 Starbucks

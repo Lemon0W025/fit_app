@@ -1,6 +1,7 @@
 const api = require('../../utils/api')
 const { calcDailyKcal, ACTIVITY_LABELS } = require('../../utils/shared/nutrition')
 const { MAIN_MEALS, MEAL_WORDS, DEFAULT_MEAL_TIMES, timeOptions, mealTimesOf } = require('../../utils/shared/timing')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const FIELDS = ['nickname', 'sex', 'age', 'heightCm', 'weightKg', 'targetWeightKg', 'activity', 'avoid']
 const NUMBER_FIELDS = ['age', 'heightCm', 'weightKg', 'targetWeightKg']
@@ -72,6 +73,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     // 正在编辑还没保存时，切回来不覆盖用户填的内容
     if (this.dirty) return
     api.call('profile.get')
