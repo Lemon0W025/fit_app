@@ -35,7 +35,7 @@ test('messageFor：按模板字段填，time 类字段用「日期 时间」，t
     time2: { value: '2026-10-29 12:00' },
     thing3: { value: '13:00 前拍还算准时' },
   })
-  assert.deepEqual(messageFor({ fields: { name: 'thing9', nope: 'x1' } }, 'dinner', TIMES, at('18:40')), { thing9: { value: '小暖养生' } })
+  assert.deepEqual(messageFor({ fields: { name: 'thing9', nope: 'x1' } }, 'dinner', TIMES, at('18:40')), { thing9: { value: '小暖自律打卡' } })
   const sent = recordSent({ '2026-10-20': { lunch: 1 }, '2026-10-23': { dinner: 2 }, '2026-10-29': { breakfast: 3 } }, at('12:40'), 'lunch')
   assert.deepEqual(Object.keys(sent).sort(), ['2026-10-23', '2026-10-29'])
   assert.equal(sent['2026-10-29'].breakfast, 3)

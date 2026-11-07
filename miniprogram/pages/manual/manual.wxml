@@ -1,5 +1,5 @@
 <view class="page manual">
-  <view class="manual-lead">小暖养生是这样用的：每顿饭拍张照，小暖帮你算热量；按饭点拍还能得暖豆，拿去营地养小动物。</view>
+  <view class="manual-lead">小暖自律打卡是这样用的：每顿饭拍张照，小暖帮你算热量；按饭点拍还能得暖豆，拿去营地养小动物。</view>
 
   <view wx:for="{{sections}}" wx:key="key" class="card manual-card">
     <view class="manual-head">

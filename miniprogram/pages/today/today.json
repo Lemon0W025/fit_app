@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "小暖养生",
+  "navigationBarTitleText": "小暖自律打卡",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "ring": "/components/ring/ring",

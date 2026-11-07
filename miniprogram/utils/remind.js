@@ -1,7 +1,7 @@
 // 饭点提醒页的展示和手机日历的三个事件（纯函数，有单测）
 const { MAIN_MEALS, MEAL_WORDS, windowText } = require('./shared/timing')
 
-const APP_NAME = '小暖养生'
+const APP_NAME = '小暖自律打卡'
 
 const sameTimes = (a, b) => !!a && !!b && MAIN_MEALS.every((t) => a[t] === b[t])
 
