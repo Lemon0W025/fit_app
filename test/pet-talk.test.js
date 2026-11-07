@@ -22,7 +22,7 @@ test('12 只都有自己的口气和碎碎念；每句都短（气泡里一两�
     const tone = T.TONES[p.id]
     all.push(...T.CHATTER[p.id], ...p.lines.tap, ...T.tipLines(tone, p), ...T.todayLines(tone, TODAY, ['xiaomi']), ...T.HUNGRY[tone], T.leaveLine(p.id), T.backLine(p.id))
     all.push(...T.todayLines(tone, { logged: 3, onTime: 3, allDone: true, allOnTime: true, open: '', streak: 120, kcal: 1500, budget: 1240 }, ['guihuagao']))
-    all.push(...T.CLOSERS[tone], T.VISIT[tone])
+    all.push(...T.CLOSERS[tone], ...T.STAY[tone])
   })
   T.HEALTH_TALKS.forEach((h) => all.push(...h))
   Object.values(T.PERIOD_TALKS).forEach((g) => g.forEach((pair) => all.push(...pair)))
@@ -112,18 +112,20 @@ test('speech：点它说的一段，两三句、同一个话题、每句都短�
   assert.equal(T.TONES.chacha, 'calm')
   assert.ok(T.isMute('（安静地看着你）') && T.isMute('…') && T.isMute('嗯？') && T.isMute('（呆住了）'))
   assert.ok(!T.isMute('嗯，我在听'))
-  // 吃着东西：说吃的那句；客人：闻着什么来的 + 拍正餐就住下
+  // 吃着东西：说吃的那句；常客（没住下的）有时说「喂熟了就住下」，住下的不说
   assert.deepEqual(T.speech('doudou', { action: 'eat' }, rnd), [PETS[0].lines.fed])
-  const v = T.visitorSpeech('sunbao', 'zhusun', seq(2))
-  assert.equal(v.length, 2)
-  assert.ok(/竹笋/.test(v[0]))
-  assert.equal(v[1], '你拍正餐，我就住下！')
+  const said = new Set()
+  for (let i = 0; i < 200; i++) T.speech('sunbao', { period: 'day', level: 1, home: false }, rnd).forEach((l) => said.add(l))
+  assert.ok(T.STAY.cheer.some((l) => said.has(l)), [...said].join(' / '))
+  const homeSaid = new Set()
+  for (let i = 0; i < 200; i++) T.speech('sunbao', { period: 'day', level: 5, home: true }, rnd).forEach((l) => homeSaid.add(l))
+  assert.ok(!T.STAY.cheer.some((l) => homeSaid.has(l)))
 })
 
 test('客人闻着香味说的带着那样食物；走开 / 回来各有一句；todayOf：从营地拿到的印章和吃的算出聊什么', () => {
   assert.ok(T.sniffLine('sunbao', 'zhusun', seq(3)).includes('竹笋') || T.sniffLine('sunbao', 'zhusun', seq(5)).includes('竹笋'))
   assert.ok(/好吃的/.test(T.sniffLine('nuonuo', 'nope', seq(3))) || /好吃的/.test(T.sniffLine('nuonuo', 'nope', seq(4))))
-  assert.equal(T.leaveLine('huahua'), '哼，自己找吃的去')
+  assert.equal(T.leaveLine('huahua'), '哼，没吃的本喵走了')
   assert.equal(T.backLine('doudou'), '闻到香味啦！')
   const daily = {
     stamps: [{ mealType: 'breakfast', state: 'done', onTime: true }, { mealType: 'lunch', state: 'none', onTime: false }, { mealType: 'dinner', state: 'none', onTime: false }],

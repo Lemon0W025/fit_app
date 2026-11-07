@@ -2,7 +2,8 @@
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
 //   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone bag-phone residents-phone（不写全录）
-//   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
+//   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
+//   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -15,7 +16,7 @@ const { createFakeCloud, loadCloudFunction } = require(`${REPO}/test/helpers/fak
 const { createWx, loadPage, loadComponent, settle } = require(`${REPO}/test/helpers/page-harness`)
 const { manualClock } = require(`${REPO}/test/helpers/manual-clock`)
 const { renderPage } = require('./wxml-render')
-const { SCENE } = require(`${REPO}/miniprogram/utils/shared/camp`)
+const { SCENE, POT_STAY_MS } = require(`${REPO}/miniprogram/utils/shared/camp`)
 const { dateKey } = require(`${REPO}/miniprogram/utils/shared/date`)
 const V = require(`${REPO}/miniprogram/utils/camp-view`)
 const { placeProblem } = require(`${REPO}/miniprogram/utils/shared/decor`)
@@ -148,9 +149,9 @@ const SCENARIOS = {
   // 下锅：锅里煮着小米、胡萝卜，豆豆（爱吃小米）跑来吃；闻着胡萝卜来的糯糯（客人）从树林边走到锅边
   'pot-cook': {
     phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12,
-    pets: ['doudou', 'qiqi', 'shushu', 'lianlian'], visitors: [{ id: 'nuonuo', foodId: 'huluobo' }],
-    plan: [[0, 0, 3300, 3600], [0, 4, 2600, 900], [600, 4, 2500, 3150]],
-    events: [[400, (life) => life.cook(['doudou'])]],
+    pets: ['doudou', 'qiqi', 'shushu', 'lianlian'],
+    plan: [[0, 0, 3300, 3600]],
+    events: [[400, (life) => life.cook(['doudou'])], [600, (life) => life.addGuest({ id: 'nuonuo', foodId: 'huluobo' })]],
   },
   // 夜里火着着：全营地本来的颜色（略暗略暖），装饰也是
   'night-lit': { hour: 22, potLevel: 2, focus: [2450, 2950], scale: 0.85, seconds: 8, decor: LAMPS, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'], plan: [[0, 0, 1500, 3450], [0, 1, 3600, 3700], [0, 2, 3200, 2450], [0, 3, 900, 2300], [0, 4, 2000, 3900], [0, 5, 3700, 2600]] },
@@ -197,10 +198,10 @@ const SCENARIOS = {
   },
   // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
   'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
-  // 锅空着、三只出去找吃的了；3 秒时胡萝卜下锅：找吃的回来的和客人排着队、一只一只从屏幕左右两边进来（11/07）
+  // 锅空着、常客都回去了（只有住下的豆豆、糯糯在）；3 秒时节气点心下锅（谁都爱吃）：来过的排着队、一只一只从屏幕左右两边进来（11/07）
   'arrive-phone': {
-    phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 48, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'huahua'], plan: [],
-    bag: { foods: { huluobo: 1 } }, events: [[3000, (life, camp) => camp.cook('huluobo')]],
+    phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 48, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'huahua'], home: ['nuonuo'], plan: [],
+    bag: { foods: { shibing: 1 } }, events: [[3000, (life, camp) => camp.cook('shibing')]],
   },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
@@ -240,12 +241,14 @@ async function build(sc) {
   const fedOf = {}
   sc.pets.forEach((id, i) => (fedOf[id] = [9, 16, 5, 3, 8, 2, 4, 1][i] || 3))
   // 锅里煮着几样：火点没点、锅里的样子、夜里宠物 / 装饰身上的光都跟着它
+  const at = Date.now()
+  const until = sc.potLevel ? at + POT_STAY_MS : 0
   gardens.set('u1', {
     ...doc,
     foods: (sc.bag && sc.bag.foods) || { xiaomi: 2 },
-    pot: { date: dateKey(new Date()), foods: POT_FOODS.slice(0, sc.potLevel) },
-    visitors: (sc.visitors || []).map((v) => ({ ...v, since: '' })),
-    pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
+    pot: { items: POT_FOODS.slice(0, sc.potLevel).map((foodId) => ({ foodId, at, date: dateKey(new Date()) })) },
+    // 第一只（一般是豆豆）住下了；其余常客：锅里有吃的就在，锅空着就不在场（录「回来」的场景用点心叫回来）
+    pets: Object.keys(fedOf).map((id, i) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 }, home: i === 0 || (sc.home || []).indexOf(id) !== -1, until })),
     decor: { owned: (sc.bag && sc.bag.decor) || {}, placed: sc.decor || [] },
     gift: '',
   })
@@ -460,11 +463,26 @@ async function record(name, sc, browser) {
   // 每只宠物的元素按顺序（都没藏起来）
   const apply = async (i, s) => {
     await page.evaluate(({ i, s }) => {
-      const pet = document.querySelector(`.pet[data-index="${i}"]`)
-      if (!pet) return
+      const shadowOf = (el) => {
+        let sh = el.previousElementSibling
+        while (sh && !sh.classList.contains('shadow')) sh = sh.previousElementSibling
+        return sh
+      }
+      let pet = document.querySelector(`.pet[data-index="${i}"]`)
+      // 录的时候新来的（addGuest）：页面上 setData 会新画一个，这里照第一只克隆一份（单张图换成它的）
+      if (!pet) {
+        const proto = document.querySelector('.pet[data-index="0"]')
+        const protoShadow = proto && shadowOf(proto)
+        if (!proto || !protoShadow) return
+        const sh = protoShadow.cloneNode(true)
+        pet = proto.cloneNode(true)
+        pet.setAttribute('data-index', i)
+        pet.querySelectorAll('img').forEach((img) => img.setAttribute('src', s.imageSrc))
+        proto.parentNode.appendChild(sh)
+        proto.parentNode.appendChild(pet)
+      }
       // 影子是宠物前面最近的那个 .shadow（中间可能隔着说话的气泡）
-      let shadow = pet.previousElementSibling
-      while (shadow && !shadow.classList.contains('shadow')) shadow = shadow.previousElementSibling
+      const shadow = shadowOf(pet)
       // 藏起来 / 现身（真机上是 wx:if，重新画的元素没有过渡）
       pet.style.display = s.hidden ? 'none' : ''
       if (shadow) shadow.style.display = s.hidden ? 'none' : ''
@@ -566,7 +584,7 @@ async function record(name, sc, browser) {
       const j = JSON.stringify(now[i])
       if (j !== last[i]) {
         last[i] = j
-        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', faceSrc: mapSrc(now[i].face), swayOn: camp.data.swayOn || {} }
+        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', faceSrc: mapSrc(now[i].face), imageSrc: mapSrc(now[i].image), swayOn: camp.data.swayOn || {} }
         if (process.env.DEBUG_BUBBLE && s.bubble) console.log('bubble', i, s.bubble, Math.round(s.left), Math.round(s.bubbleLeft), Math.round(s.bubbleWidth), JSON.stringify(camp.visibleRange()))
         await apply(i, jump ? { ...s, duration: 0 } : s)
       }

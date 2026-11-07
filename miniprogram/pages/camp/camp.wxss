@@ -802,3 +802,19 @@ button.btn-small {
   text-align: center;
 }
 
+/* 小动物名单里的小标签：住下了 / 常客 */
+.res-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 22rpx;
+  font-weight: 600;
+  vertical-align: 4rpx;
+}
+
+.res-tag-home {
+  background: var(--lime-soft);
+  color: var(--lime-ink);
+}

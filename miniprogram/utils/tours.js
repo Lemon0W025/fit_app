@@ -57,7 +57,7 @@ const TOURS = {
     {
       selector: '#tour-residents',
       title: '小动物',
-      text: '锅里的香味会引来爱吃它的小动物，下次拍正餐它就住下来。点小动物，它会跟你说话。',
+      text: '锅里的香味会引来爱吃它的小动物，锅里有吃的它就待着；喂到最亲就住下。点小动物，它会跟你说话。',
     },
     {
       selector: '#tour-shop',

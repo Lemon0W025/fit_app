@@ -10,11 +10,12 @@
         <view class="muted small">左右翻页，看每一只的故事</view>
       </block>
       <block wx:elif="{{pg.kind === 'pet'}}">
-        <image class="pet-img {{pg.home ? '' : 'locked'}}" src="{{pg.image}}" mode="aspectFit" />
-        <view class="pet-name">{{pg.home ? pg.name : '？？？'}}</view>
-        <block wx:if="{{pg.home}}">
+        <image class="pet-img {{pg.met ? '' : 'locked'}}" src="{{pg.image}}" mode="aspectFit" />
+        <view class="pet-name">{{pg.met ? pg.name : '？？？'}}</view>
+        <block wx:if="{{pg.met}}">
           <view class="pet-hook">{{pg.hook}}</view>
           <view class="muted">{{pg.mood}} · {{pg.foodsText}}</view>
+          <view class="muted small">{{pg.homeText}}</view>
           <view class="muted small">{{pg.sinceText}} · 喂了 {{pg.fed}} 顿 · {{pg.levelText}}</view>
           <view class="story">
             <view wx:for="{{pg.story}}" wx:key="index" wx:for-item="s" class="story-line {{s.open ? '' : 'story-locked'}}">{{s.open ? s.text : '……（再喂熟一点就会告诉你）'}}</view>

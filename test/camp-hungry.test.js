@@ -5,7 +5,7 @@ const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { createWx, loadPage, settle } = require('./helpers/page-harness')
 const { manualClock } = require('./helpers/manual-clock')
 
-test('锅空着：杞杞（1 级）找吃的去了、豆豆（4 级）在；提示条说放点吃的就回来；下锅后提示收掉', async () => {
+test('锅空着：杞杞（常客）回去了、豆豆（住下的）在；提示条说放点它们爱吃的就回来；下锅后提示收掉', async () => {
   const cloud = createFakeCloud()
   const { main } = loadCloudFunction(cloud)
   await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
@@ -22,13 +22,13 @@ test('锅空着：杞杞（1 级）找吃的去了、豆豆（4 级）在；提�
   gardens.set('u1', {
     ...doc,
     foods: { xiaomi: 2 },
-    pets: [{ id: 'doudou', since: '2026-10-20', fed: 20, fedToday: { date: '', n: 0 } }, { id: 'qiqi', since: '2026-10-21', fed: 0, fedToday: { date: '', n: 0 } }],
+    pets: [{ id: 'doudou', since: '2026-10-20', fed: 20, fedToday: { date: '', n: 0 }, home: true, until: 0 }, { id: 'qiqi', since: '2026-10-21', fed: 0, fedToday: { date: '', n: 0 }, home: false, until: Date.now() + 3600000 }],
   })
   camp.life.stop()
   camp.life = null
   camp.onShow()
   await settle()
-  assert.ok(/杞杞找吃的去了，放点吃的就回来/.test(camp.data.hungryText), camp.data.hungryText)
+  assert.ok(/杞杞回去了，放点它们爱吃的就回来/.test(camp.data.hungryText), camp.data.hungryText)
   assert.ok(!/豆豆/.test(camp.data.hungryText))
   camp.cook('xiaomi')
   await settle()

@@ -168,18 +168,18 @@
       </view>
     </sheet>
 
-    <sheet show="{{residentsOpen}}" title="住户（点一下，带你去找它）" bindclose="closeResidents">
+    <sheet show="{{residentsOpen}}" title="小动物（点一下，带你去找它）" bindclose="closeResidents">
       <view wx:if="{{residents.length}}" class="res-list">
         <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
           <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
           <view class="res-body">
-            <view class="res-name">{{item.name}}</view>
+            <view class="res-name">{{item.name}}<text class="res-tag {{item.home ? 'res-tag-home' : ''}}">{{item.home ? '住下了' : '常客'}}</text></view>
             <view class="res-text">{{item.text}}</view>
           </view>
           <text class="res-go">去看看 ›</text>
         </view>
       </view>
-      <view wx:else class="muted small">还没有小动物住进来。把食物放进锅里煮上，闻着香味来的小动物下次拍正餐就住下～</view>
+      <view wx:else class="muted small">这会儿没有小动物在。把它们爱吃的放进锅里煮上，闻着香味就来了；喂到最亲（5 级）就住下，锅空了也不走～</view>
     </sheet>
   </block>
 
@@ -190,7 +190,7 @@
       <view class="welcome-text">豆豆已经在篝火边等你了，送你 {{welcome.beans}} 暖豆。营地这样玩：</view>
       <view class="welcome-steps">
         <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，点锅放进去煮上</view>
-        <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，下次拍正餐就住下</view>
+        <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，锅里有吃的就待着（一样管 8 小时）</view>
         <view class="welcome-step"><text class="welcome-no">3</text>点小动物，它会跟你说话；暖豆还能买家具</view>
       </view>
       <button class="btn-primary" bindtap="closeWelcome">带我看看怎么玩</button>

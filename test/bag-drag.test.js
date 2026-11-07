@@ -51,7 +51,7 @@ test('背包里按住小米往上拖：抽屉收下去、拿在手里、幽灵�
   camp.onBagTouchEnd(touch('xiaomi', potX, potY))
   await settle()
   assert.deepEqual([camp.data.bagOpen, camp.data.bagTuck, camp.data.mode, camp.data.drag], [false, false, 'view', null])
-  assert.deepEqual(cloud.db.collections.get('gardens').get('u1').pot.foods, ['xiaomi'])
+  assert.deepEqual(cloud.db.collections.get('gardens').get('u1').pot.items.map((it) => it.foodId), ['xiaomi'])
   assert.match(wx.log.toasts.pop(), /小米下锅啦/)
   // 松手以后跟着来的 tap 不算（不然又弹「放进锅里 / 拿去喂」）
   camp.pickFood({ currentTarget: { dataset: { id: 'xiaomi' } } })

@@ -162,9 +162,13 @@ const CLOSERS = {
   lazy: ['喵…困了', '我先躺会儿', '…就这样吧', '呼…困了'],
 }
 
-// 客人被点：闻着什么来的 + 拍正餐就住下
-const VISIT = {
-  cheer: '你拍正餐，我就住下！', shy: '你拍正餐…我就留下', calm: '你拍了正餐，我就住下', proud: '拍正餐…本喵就住下', lazy: '你拍正餐…我就不走了',
+// 常客（还没住下）：喂熟了就住下
+const STAY = {
+  cheer: ['再喂我几顿，我就搬来住！', '锅里有吃的我就来！'],
+  shy: ['喂、喂熟了…我就住下来', '锅里有吃的…我就在'],
+  calm: ['常来常往，熟了就住下', '锅里有吃的，我就不走'],
+  proud: ['哼，喂到本喵满意再说住不住', '锅空了本喵可就走了'],
+  lazy: ['喵…再喂几顿我就不走了', '有吃的…就赖着不走'],
 }
 
 // 亲密度 3 级起会撒娇
@@ -186,7 +190,7 @@ const HUNGRY = {
 }
 
 // 饿了走开时说的、闻着香味回来时说的
-const LEAVE = { cheer: '我去找吃的啦！', shy: '我、我去找吃的…', calm: '我去找点吃的', proud: '哼，自己找吃的去', lazy: '喵…找吃的去…' }
+const LEAVE = { cheer: '锅空啦，我先回去！', shy: '没、没吃的了…我回去了', calm: '锅空了，我先回去', proud: '哼，没吃的本喵走了', lazy: '喵…没吃的，回去了…' }
 const BACK = { cheer: '闻到香味啦！', shy: '好、好香…', calm: '嗯，香味来了', proud: '哼，香味还行', lazy: '喵…香醒了' }
 
 // 闻着香味来的客人：{food} 闻着的那样
@@ -309,6 +313,8 @@ function speech(petId, ctx = {}, rnd = Math.random, recent = []) {
     { w: (ctx.level || 1) >= 3 ? 1 : 0, make: () => [fresh(AFFECTION[tone], rnd, seen), fresh(own, rnd, seen)] },
     { w: ctx.period === 'morning' ? 1 : 0, make: () => [pet.lines.morning, fresh(own, rnd, seen)] },
     { w: ctx.hungry ? 14 : 0, make: () => two(HUNGRY[tone], rnd, seen) },
+    // 常客：说说喂熟了就住下
+    { w: ctx.home === false ? 2 : 0, make: () => [fresh(STAY[tone], rnd, seen), fresh(own, rnd, seen)] },
   ].filter((t) => t.w > 0)
   const total = topics.reduce((sum, t) => sum + t.w, 0)
   // 第一句最近没说过才用这个话题（不然换一个）；后面几句说过的去掉
@@ -335,10 +341,6 @@ function talkLine(petId, ctx = {}, rnd = Math.random, recent = []) {
   return speech(petId, ctx, rnd, seen)[0] || ''
 }
 
-// 点了客人：它闻着什么来的 + 你拍正餐它就住下
-function visitorSpeech(petId, foodId, rnd = Math.random) {
-  return [sniffLine(petId, foodId, rnd), VISIT[toneOf(petId)]]
-}
 
 // 营地拿到的今天的情况（camp.get 的 daily：早午晚印章、连续天数、饭点；intake：吃了多少、预算）→ todayLines 用的样子。
 // open：现在正是哪顿的饭点、还没拍（「该吃午饭啦」）；没有 daily 返回 null（小动物就不聊打卡）
@@ -369,6 +371,6 @@ const leaveLine = (petId) => LEAVE[toneOf(petId)]
 const backLine = (petId) => BACK[toneOf(petId)]
 
 module.exports = {
-  MAX_CHARS, TONES, CHATTER, TODAY, HUNGRY, SHORT_TIPS, HEALTH_TALKS, PERIOD_TALKS, CLOSERS, VISIT,
-  speech, talkLine, visitorSpeech, sniffLine, leaveLine, backLine, todayLines, tipLines, todayOf, isMute,
+  MAX_CHARS, TONES, CHATTER, TODAY, HUNGRY, SHORT_TIPS, HEALTH_TALKS, PERIOD_TALKS, CLOSERS,
+  speech, talkLine, sniffLine, leaveLine, backLine, todayLines, tipLines, todayOf, isMute, STAY,
 }

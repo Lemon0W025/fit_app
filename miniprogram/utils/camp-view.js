@@ -149,9 +149,9 @@ function rarityOf(id) {
   return RARITIES.find((r) => r.id === id) || RARITIES[0]
 }
 
-// smell：今天闻着这样食物会来的（今日菜单 menu），住下的和客人显示头像，还没来过的显示剪影（known: false）
-function foodBag(foods, menu, residents, visitors) {
-  const known = (residents || []).concat(visitors || [])
+// smell：今天闻着这样食物会来的（今日菜单 menu），来过的（met）显示头像，还没来过的显示剪影（known: false）
+function foodBag(foods, menu, met) {
+  const known = met || []
   return (foods || [])
     .map(({ id, count }) => {
       const f = foodById(id)
@@ -191,12 +191,12 @@ function tintFor(hour) {
   return ''
 }
 
-// 打卡结果页的横幅：闻着香味来的客人住下了（一只说闻着什么来的，几只一起报名字；图用第一只）
+// 打卡结果页的横幅：这一顿喂到 5 级、住下的（图用第一只）
 function arrivalCard(arrival) {
   const pets = (arrival && arrival.pets) || []
   if (!pets.length) return null
   const first = pets[0]
-  const text = pets.length === 1 && first.foodName ? `${first.name}闻着${first.foodName}的香味，住进营地啦！` : `${pets.map((p) => p.name).join('、')}住进营地啦！`
+  const text = pets.length === 1 ? `${first.name}和你最亲了，住进营地啦，以后不走了！` : `${pets.map((p) => p.name).join('、')}住进营地啦，以后不走了！`
   return { image: petImage(first.id), text }
 }
 
@@ -234,22 +234,29 @@ function potHitView(L) {
 }
 
 // 点锅时说一句：锅里煮着什么
-function potNote(pot) {
+// 点锅时说的：煮着什么、还能煮多久（一样管 8 小时，锅空了常客就回去）
+function potNote(pot, nowMs = Date.now()) {
   const names = ((pot && pot.foods) || []).map((id) => foodById(id)).filter(Boolean).map((f) => f.name)
-  return names.length ? `锅里煮着：${names.join('、')}。爱吃的小动物会过来` : ''
+  if (!names.length) return ''
+  const left = pot.until ? Math.max(0, pot.until - nowMs) : 0
+  const mins = Math.round(left / 60000)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  const time = !left ? '' : h >= 1 ? `还能煮 ${h} 小时${m ? ` ${m} 分` : ''}，` : `还能煮 ${Math.max(1, m)} 分钟，`
+  return `锅里煮着：${names.join('、')}。${time}锅空了没住下的小动物就回去了`
 }
 
-// 顶上的提示条：闻着香味来的客人，下次拍正餐住下
-// 锅空着，不够亲的出去找吃的了：提示放点吃的它们就回来
+// 顶上的提示条：锅空着，没住下的常客回去了：提示放点它们爱吃的就回来
 function hungryNote(names) {
   if (!names || !names.length) return ''
   const who = names.length > 3 ? `${names.slice(0, 3).join('、')}它们` : names.join('、')
-  return `🍲 锅里空空的，${who}找吃的去了，放点吃的就回来`
+  return `🍲 锅里空空的，${who}回去了，放点它们爱吃的就回来`
 }
 
-function visitorNote(visitors) {
-  const names = (visitors || []).map((v) => petById(v.id)).filter(Boolean).map((p) => p.name)
-  return names.length ? `👀 ${names.join('、')}闻着香味来了…下次拍正餐就住下` : ''
+// 顶上的提示条：刚住下的
+function homeNote(ids) {
+  const names = (ids || []).map((id) => petById(id)).filter(Boolean).map((p) => p.name)
+  return names.length ? `🎉 ${names.join('、')}住下啦，以后不走了` : ''
 }
 
 // 前沿折线在 x 处的 y（两头以外按端点）
@@ -317,6 +324,6 @@ function changedPaths(prefix, prev, next) {
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, homeNote, cutoutViews, isNight,
   frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
 }

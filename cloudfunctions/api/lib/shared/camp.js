@@ -104,6 +104,10 @@ const SCENE = {
 
 // 亲密度：喂了几顿 → 几级（1～5）
 const LEVELS = [0, 3, 8, 15, 25]
+// 亲密到这一级就「住下」：锅空了也不走（docs/superpowers/specs/2026-11-07-camp-regulars-design.md）
+const HOME_LEVEL = 5
+// 锅里一样吃的管多久（一天三顿，24 ÷ 3 小时）：最后一样下锅过了这么久，锅就空了、火熄了，没住下的常客就走
+const POT_STAY_MS = 8 * 3600 * 1000
 
 // 远近：画面最下面 1，最上面 0.82
 function scaleAt(y) {
@@ -229,7 +233,7 @@ function giftDue(lastGift, today, hour) {
 
 module.exports = {
   arc,
-  W, H, SCENE, LEVELS,
+  W, H, SCENE, LEVELS, HOME_LEVEL, POT_STAY_MS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass, hiddenAt, nogoPolys,
   levelOf, nextLevelAt, giftDue,
 }
