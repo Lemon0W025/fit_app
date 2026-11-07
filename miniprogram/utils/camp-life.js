@@ -7,7 +7,7 @@
 // 说话：说什么在 pet-talk.js，什么时候能说在 camp-bubbles.js（屏幕上同一时间最多一个气泡）；点它说一段（两三句，一句一句换着显示，
 // 再点一下跳到下一句）；自己开口很少（几分钟一句）
 // 怎么走（绕路、一小段一小段走、走到一半停下）在 camp-walk.js；这里只管去哪、干什么
-// 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
+// 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在水壶炉边喝茶；点家具能叫一只过来。困了多半进大帐篷趴着睡、只露个小脑袋
 
 const { SCENE, scaleAt, inGrass, hiddenAt } = require('./shared/camp')
 const { petById } = require('./shared/pets')
@@ -16,7 +16,7 @@ const { decorById, footRect } = require('./shared/decor')
 const { periodOf, describe, CSS_ACTIONS } = require('./pets')
 const { talkLine, speech, sniffLine, leaveLine, backLine } = require('./pet-talk')
 const { COLS, FOOT, frameFor, stackRow } = require('./anim')
-const { petImage, petFace, zOf, isNight, SWAY_CLASS } = require('./camp-view')
+const { petImage, petFace, zOf, isNight, SWAY_CLASS, cutoutStrips } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
 const { createWalk } = require('./camp-walk')
 const { createBubbles } = require('./camp-bubbles')
@@ -50,23 +50,25 @@ const EDGE_OUT = 140 // 从屏幕边上往外多少（画的像素）出现
 const EDGE_IN = 120 // 离画的左右边至少这么多（草地里）
 const SHOW_MS = 80 // 从外面进来：先在边上现身一帧再迈腿（藏着的元素是重新画的，直接给第一段的终点就从那儿冒出来了）
 const HUNGRY_POT_CHANCE = 0.2 // 住下的饿着时，去锅边坐着等的机会
-// 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
-const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'tea', 'perch']
+// 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑
+const PLAY_ACTIONS = ['play', 'swing', 'sniff', 'sit', 'tea']
 const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
 const SWAY_TIMES = [5, 9]
 const FLOWER_MS = 3000 // 低头闻多久
 const BLOOM_MS = 1800 // 闻完抬头开心多久
-const GATHER = 2 // 那件家具上已经有别的小家伙了：挑它的机会多几倍（两三只一起就是野餐）
-const CLIMB_MS = 1400 // 滑梯：顺着梯子爬上去多久
-const TOP_MS = 500 // 在滑道顶上探头多久
-const SLIDE_MS = 700 // 滑下来多久
-const LAND_MS = 1300 // 落地开心多久
-const LOOK_MS = 2200 // 木梯顶上往一边张望多久（左右各一次）
+const GATHER = 2 // 那件家具上已经有别的小家伙了：挑它的机会多几倍（两只凑一起喝茶、一排花前站两只）
+// 困了去大帐篷里睡（11/07 用户：困了可以去露营的帐篷里睡，露个小脑袋趴着）：有空床位就多半走过去（再远也去），白天也睡得久一点
+const TENT_CHANCE = 0.7
+const TENT_NAP_MS = [45000, 120000] // 白天在帐篷里睡多久（夜里按 NIGHT_NAP）
+const TENT_IN_MS = 600 // 到了门口背对着我们站一下（进去）再趴下
+const TENT_SHOW = 0.42 // 露出身子的多少（从头顶往下算）：只露个小脑袋
 const SIP_MS = 1800 // 水壶炉边：低头喝一口多久
-const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', tea: '喝口热茶去', play: '玩去喽', climb: '我爬上去看看', perch: '我飞上去看看' }
+const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', tea: '喝口热茶去', play: '玩去喽' }
+// 帐篷按 128 宽的条、各按自己那段前沿排前后（camp-view.cutoutStrips）：在帐篷里露头的那只横着跨几条，就排在它们全都前面
+const TENT_STRIPS = cutoutStrips().filter((c) => c.cut === 'tent')
 const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
-const DIR_ACTIONS = ['idle', 'eat', 'sit']
+const DIR_ACTIONS = ['idle', 'eat', 'sit', 'tent'] // 做这些时保持朝向（别的动作回侧面）
 const START_MS = [300, 1500]
 const TAP_MS = 600
 const ROLL_MS = 1200
@@ -107,7 +109,7 @@ const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by)
 // pets：[{ id, level, home }]（home：住下了，锅空了也不走）；saved：上次离开时的 snapshot()（{ id: { x, y, right, action, until, sleepStyle } }）
 function createLife({
   L, pets, decor, saved = null, hour = realHour, lit = () => true, pot = () => [], random = Math.random, clock = realClock, onChange = () => {},
-  // 家具会摆的那层（秋千座位、吊床的布）：{ pivot: 块里的比例 [x, y], kind: 'swing' | 'rock' }（utils/decor-parts.js）；
+  // 家具会摆的那层（秋千座位）：{ pivot: 块里的比例 [x, y], kind: 'swing' }（utils/decor-parts.js）；
   // 没拆（云端高清块没用上）就返回 null，小动物在上面不摆
   sways = () => null,
   // 今天打卡的情况（拍了几顿、吃了多少……，pet-talk.js 的 todayLines），小动物会聊起来；没有就不聊
@@ -174,7 +176,7 @@ function createLife({
     return spots.filter((s) => !taken(s, self))
   }
 
-  // 睡觉的地方，按先后：窝 → 树荫 → 帐篷门口（都只算空着的）；走不到第一个就试下一个
+  // 帐篷以外睡觉的地方，按先后：窝 → 树荫 → 帐篷门口（都只算空着的）；走不到第一个就试下一个
   function sleepSpots(self) {
     const spots = (list) => free(list.map(([x, y]) => ({ x, y, action: 'sleep' })), self)
     return free(decorSpots('sleep'), self).concat(spots(SCENE.shade), spots(SCENE.tent.spots))
@@ -251,7 +253,7 @@ function createLife({
       const bubbleX = hi >= lo ? Math.min(Math.max(x - bubbleWidth / 2, lo), hi) : Math.min(Math.max(x - bubbleWidth / 2, 0), L.width - bubbleWidth)
       a.bubbleDx = bubbleX - (x - width / 2)
     }
-    const shadowW = a.sway ? 0 : width * SHADOW_RATIO // 在秋千上、吊床里：脚下是座位 / 布，影子在家具图里
+    const shadowW = a.sway || a.action === 'tent' ? 0 : width * SHADOW_RATIO // 在秋千上脚下是座位、影子在家具图里；帐篷里的身子在帐篷里
     // 影子的中心对着脚：拼图里脚在格底往上 FOOT，单张图脚就在底边
     const feet = L.height - y + (sh ? width * FOOT : 0)
     // 荡秋千：整只绕秋千的轴摆（和座位那层同一套 keyframes、同一次 setData 开始，一起摆）；轴相对这只的框（宽 = 高 = width，底边在脚下）
@@ -261,19 +263,31 @@ function createLife({
       flip: !a.right, action: a.action, cssAction: CSS_ACTIONS[a.action] || 'act-idle', duration: a.duration, hidden: a.hidden,
       sheet: sh ? sh.sheet : '', anim: sh ? sh.anim : null,
       bubble: a.bubble, bubbleWidth, bubbleLeft: a.bubble ? a.bubbleDx : 0, tailLeft: a.bubble ? Math.min(Math.max(width / 2 - a.bubbleDx, TAIL_EDGE), bubbleWidth - TAIL_EDGE) : 0, bubbleBottom: width * (1 - (sh ? sh.top : 0.05)) + 4,
-      emoji: a.action === 'sleep' ? '💤' : a.emoji, tapping: a.tapping, sway,
+      emoji: a.action === 'sleep' || a.action === 'tent' ? '💤' : a.emoji, tapping: a.tapping, sway,
+      // 在帐篷里：只露头顶往下那一截（内联样式，裁掉下半截、整个往下挪到下巴搁在门槛上）
+      tentStyle: a.action === 'tent' ? tentStyle(sh) : '',
       // 夜里照着画上的光上色（本体调亮度和暖色 + 一层月光版，越冷越浓）；走路时和位置一起慢慢过渡（同一个 duration）
       ...nightLayers(a.x, a.y),
       shadow: { left: x - shadowW / 2, bottom: feet - shadowW / 6, width: shadowW, height: shadowW / 3 },
     }
   }
 
-  // 排前后用的 y：走路时按这一小段的中点；在装饰上玩、睡（吊床、窝、梯子）就排在那件装饰前面（盖在它上面）；其余按脚下
+  // 排前后用的 y：走路时按这一小段的中点；在装饰上玩、睡（窝、秋千）就排在那件装饰前面（盖在它上面）；在帐篷里的排在帐篷前面（depthY）；其余按脚下
   function sortY(a) {
     if (a.depthY != null) return a.depthY
     const spot = a.goal && !a.goal.path && a.goal.spot
     if (spot && spot.baseY != null && Math.hypot(a.x - spot.x, a.y - spot.y) < 1) return Math.max(a.y, spot.baseY + 4)
     return a.y
+  }
+
+  // 在帐篷里露个小脑袋：从头顶（拼图里待机帧头顶在格高的 top 处、脚在格底往上 FOOT；单张图头顶约 0.05、脚在底边）往下只留 TENT_SHOW，
+  // 下面裁掉，再整个往下挪，让裁的那条边正好落在脚那条线上（= 床位的 y，画上帐篷地板的前沿）
+  function tentStyle(sh) {
+    const top = sh ? sh.top : 0.05
+    const foot = sh ? FOOT : 0
+    const cut = Math.round((top + (1 - foot - top) * (1 - TENT_SHOW)) * 100)
+    const shift = cut - Math.round(foot * 100)
+    return `clip-path: inset(0 0 ${cut}% 0); -webkit-clip-path: inset(0 0 ${cut}% 0); transform: translateY(${shift}%)`
   }
 
   function nightLayers(x, y) {
@@ -302,6 +316,7 @@ function createLife({
   // ---------------------------------------------------------------- 走
 
   function walkTo(a, spot, then) {
+    if (leaveTentThen(a, (b) => { if (!walkTo(b, spot, then)) rest(b) })) return true
     const path = walk.route({ x: a.x, y: a.y }, spot)
     if (!path) return false
     a.goal = { spot, then, path }
@@ -327,13 +342,14 @@ function createLife({
     then(a)
   }
 
-  // more.sway：坐在秋千上跟着摆（pivotOf）；more.next：做完接着做什么（不然下一回合重新挑）；more.depthY：排前后用的 y（在滑梯上）
+  // more.sway：坐在秋千上跟着摆（pivotOf）；more.next：做完接着做什么（不然下一回合重新挑）；more.depthY：排前后用的 y（在帐篷里）
   function doFor(a, action, ms, emoji = '', more = {}) {
+    if (action !== 'tent' && leaveTentThen(a, (b) => doFor(b, action, ms, emoji, more))) return
     a.action = action
     a.emoji = emoji
     a.sway = more.sway || null
     a.next = more.next || null
-    if (action !== 'sleep') a.until = 0
+    if (action !== 'sleep' && action !== 'tent') a.until = 0
     if (DIR_ACTIONS.indexOf(action) === -1) a.dir = 'side'
     if (more.depthY != null) a.depthY = more.depthY
     else if (!a.goal || !a.goal.path || !a.goal.path.length) a.depthY = null
@@ -349,7 +365,8 @@ function createLife({
 
   // ---------------------------------------------------------------- 睡
 
-  const asleep = (a) => a.action === 'sleep' || !!(a.goal && a.goal.path && a.goal.spot && a.goal.spot.action === 'sleep')
+  const SLEEPS = ['sleep', 'tent']
+  const asleep = (a) => SLEEPS.indexOf(a.action) !== -1 || !!(a.goal && a.goal.path && a.goal.spot && SLEEPS.indexOf(a.goal.spot.action) !== -1)
   const napRule = () => (isNight(hour()) ? NIGHT_NAP : DAY_NAP)
 
   // 同时最多几只睡着：在场住户的几分之几，至少 1 只
@@ -364,24 +381,79 @@ function createLife({
     return animals.filter((b) => b !== a && asleep(b)).length < napCap()
   }
 
-  // 睡在吊床里：跟着布轻轻晃（站着的点是会摆的家具上的才晃）
   function sleepFor(a, ms) {
     a.until = now() + ms
-    const spot = a.goal && !a.goal.path ? a.goal.spot : null
-    doFor(a, 'sleep', ms, '', { sway: rockOf(spot) })
+    doFor(a, 'sleep', ms)
   }
 
-  function rockOf(spot) {
-    const pv = spot && spot.action === 'sleep' ? pivotOf(spot) : null
-    return pv && pv.cls === SWAY_CLASS.rock ? pv : null
+  // ---------------------------------------------------------------- 帐篷里睡
+
+  // 帐篷里空着的床位（每个床位一只；走的目标是门口那点，bed 记着床位），按离这只的远近
+  function freeBeds(self) {
+    return SCENE.tent.beds
+      .map((bed) => ({ x: bed.door[0], y: bed.door[1], action: 'tent', bed }))
+      .filter((sp) => !taken(sp, self))
+      .sort((p, q) => dist(self.x, self.y, p.x, p.y) - dist(self.x, self.y, q.x, q.y))
   }
 
-  // 困了：走到附近空着的睡觉点（窝、吊床、树荫、帐篷门口），都太远就原地趴下
+  // 露头的这只排在它横着跨到的帐篷条全都前面
+  function tentDepth(a) {
+    const half = (sizeOf(a) * scaleAt(a.y)) / 2
+    const zys = TENT_STRIPS.filter((c) => c.r > a.x - half && c.l < a.x + half).map((c) => c.zy)
+    return Math.max(a.y, ...zys) + 4
+  }
+
+  // 到门口了：背对着我们站一下（进去），然后趴在里面只露个小脑袋（正面那帧裁掉下半截，下巴搁在门槛上），睡 ms 毫秒
+  function goIn(a, bed, ms) {
+    a.dir = 'back'
+    doFor(a, 'idle', TENT_IN_MS, '', {
+      next: (b) => {
+        walk.put(b, bed.at[0], bed.at[1])
+        b.dir = 'front'
+        b.right = true
+        b.until = now() + ms
+        doFor(b, 'tent', ms, '', { depthY: tentDepth(b) })
+      },
+    })
+  }
+
+  // 从帐篷里出来：床位在禁区里走不了路，站回门口、面朝我们
+  function outOfTent(a) {
+    const spot = a.goal && a.goal.spot
+    const bed = (spot && spot.bed) || SCENE.tent.beds.slice().sort((p, q) => dist(a.x, a.y, p.at[0], p.at[1]) - dist(a.x, a.y, q.at[0], q.at[1]))[0]
+    walk.put(a, bed.door[0], bed.door[1])
+    a.dir = 'front'
+    a.depthY = null
+    a.action = 'idle'
+  }
+
+  // 在帐篷里睡着的要去干别的（醒了、被点、被叫、要走）：先出来站在门口（这一帧不带过渡），下一拍再做 then——
+  // 不然从床位直接过渡到第一个拐点，会从帐篷里滑出来穿过帐篷布。不在帐篷里返回 false
+  function leaveTentThen(a, then) {
+    if (a.action !== 'tent') return false
+    outOfTent(a)
+    emit(a)
+    a.next = then
+    schedule(a, SHOW_MS)
+    return true
+  }
+
+  function bedAt(x, y) {
+    return SCENE.tent.beds.find((b) => dist(b.at[0], b.at[1], x, y) < 2) || null
+  }
+
+  // 困了：先想着大帐篷（有空床位就多半走过去，再远也去）；不然走到附近空着的睡觉点（窝、树荫、帐篷门口），都太远就原地趴下
   function nap(a) {
     const ms = between(napRule().ms)
     const lieDown = (b) => {
       b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'
       sleepFor(b, ms)
+    }
+    if (random() < TENT_CHANCE) {
+      const stay = between(isNight(hour()) ? NIGHT_NAP.ms : TENT_NAP_MS)
+      for (const spot of freeBeds(a)) {
+        if (walkTo(a, spot, (b) => goIn(b, spot.bed, stay))) return
+      }
     }
     const near = sleepSpots(a)
       .map((spot) => ({ spot, d: dist(a.x, a.y, spot.x, spot.y) }))
@@ -483,7 +555,7 @@ function createLife({
       emit(a)
       return schedule(a, SHOW_MS)
     }
-    if (a.action === 'sleep') {
+    if (SLEEPS.indexOf(a.action) !== -1) {
       if (a.until > now() + 50) return schedule(a, a.until - now())
       return wake(a, false)
     }
@@ -548,9 +620,9 @@ function createLife({
 
   // ---------------------------------------------------------------- 和家具玩
 
-  // 能去的点：空着的；稻草人头上只有会飞的去
+  // 能去的点：空着的
   function playSpots(a, uid) {
-    return free(decorSpots(PLAY_ACTIONS), a).filter((sp) => (!uid || sp.uid === uid) && (sp.action !== 'perch' || a.pet.gait === 'fly'))
+    return free(decorSpots(PLAY_ACTIONS), a).filter((sp) => !uid || sp.uid === uid)
   }
 
   // 挑一个：那件家具上已经有别的小家伙了，机会多几倍
@@ -583,12 +655,11 @@ function createLife({
       b.dir = 'back'
       doFor(b, 'eat', FLOWER_MS, '', { next: (c) => doFor(c, 'happy', BLOOM_MS, random() < 0.3 ? '🦋' : '🌸') })
     },
-    // 坐着歇会儿；野餐垫上的多半在吃篮子里的点心
-    sit(b, spot) {
+    // 坐着歇会儿
+    sit(b) {
       b.right = random() < 0.5
       b.dir = 'side'
-      const munch = spot.id === 'picnic' && random() < 0.6
-      doFor(b, munch ? 'eat' : 'sit', between(DO_MS), munch ? '😋' : '')
+      doFor(b, 'sit', between(DO_MS))
     },
     play(b, spot) {
       doFor(b, spot.action, between(DO_MS), '🎵')
@@ -601,66 +672,10 @@ function createLife({
       const sip = (c, then) => doFor(c, 'eat', SIP_MS, '🍵', { next: then })
       doFor(b, 'sit', between(REST_MS), '', { next: (c) => sip(c, (d) => doFor(d, 'sit', between(DO_MS), '', { next: (e) => sip(e, (f) => rest(f)) })) })
     },
-    // 木梯：背影爬到顶上的平台，左右张望，再面朝我们爬下来
-    climb(b, spot) {
-      const [top] = ridePoints(spot)
-      if (!top) return doFor(b, 'climb', between(DO_MS), '🎵')
-      const front = spot.baseY + 4
-      const foot = { x: b.x, y: b.y }
-      glide(b, top, CLIMB_MS, 'walk', 'back', front, (c) => {
-        c.dir = 'side'
-        doFor(c, 'idle', LOOK_MS, '👀', {
-          depthY: front,
-          next: (d) => {
-            d.right = !d.right
-            doFor(d, 'idle', LOOK_MS, '👀', { depthY: front, next: (e) => glide(e, foot, CLIMB_MS, 'walk', 'front', front, (f) => rest(f)) })
-          },
-        })
-      })
-    },
-    perch(b) {
-      doFor(b, 'perch', between(DO_MS))
-    },
-    // 滑梯：顺着梯子爬上去（背影走那行），在顶上探个头，坐着滑到出口，落地蹦一下
-    slide(b, spot) {
-      const [top, exit] = ridePoints(spot)
-      if (!exit) return doFor(b, 'play', between(DO_MS), '🎵')
-      const front = spot.baseY + 4 // 一路都排在滑梯前面
-      glide(b, top, CLIMB_MS, 'walk', 'back', front, (c) => {
-        c.right = exit.x > c.x
-        doFor(c, 'idle', TOP_MS, '😆', { depthY: front, next: (d) => glide(d, exit, SLIDE_MS, 'sit', 'side', front, (e) => doFor(e, 'happy', LAND_MS, '🎵')) })
-      })
-    },
     sleep(b) {
       b.sleepStyle = b.level >= 2 && random() < 0.5 ? 'B' : 'A'
       sleepFor(b, between(DAY_NAP.ms))
     },
-  }
-
-  // 家具上的几个点（画的像素）：滑梯是滑道顶、出口，木梯是顶上的平台
-  function ridePoints(spot) {
-    const p = placed.find((q) => q.uid === spot.uid)
-    const d = p && decorById(p.id)
-    if (!d || !d.ride || !d.ride.length) return []
-    const s = scaleAt(p.y)
-    return d.ride.map((r) => ({ x: p.x + (r.x - d.anchor.x) * s, y: p.y + (r.y - d.anchor.y) * s }))
-  }
-
-  // 不走路网，直接挪到 to（爬梯子、滑下来）：用 action 那行动作、ms 毫秒，排前后固定在 depthY；到了接着 then
-  function glide(a, to, ms, action, dir, depthY, then) {
-    a.right = to.x === a.x ? a.right : to.x > a.x
-    a.dir = dir
-    a.action = action
-    a.emoji = ''
-    a.sway = null
-    walk.go(a, to, ms)
-    a.depthY = depthY
-    a.next = (b) => {
-      walk.land(b)
-      then(b)
-    }
-    emit(a)
-    schedule(a, ms)
   }
 
   // ---------------------------------------------------------------- 锅里空着
@@ -785,7 +800,7 @@ function createLife({
     a.goal = { spot, then, path: walk.route({ x: a.x, y: a.y }, spot) || [spot] }
   }
 
-  // 站在装饰上的点（吊床、窝、梯子）的那件装饰：回来时接着在上面，排前后按那件装饰
+  // 站在装饰上的点（窝、秋千）的那件装饰：回来时接着在上面，排前后按那件装饰
   function decorSpotAt(x, y) {
     return decorSpots(['sleep'].concat(PLAY_ACTIONS)).find((sp) => dist(sp.x, sp.y, x, y) < 2) || null
   }
@@ -799,19 +814,35 @@ function createLife({
   }
 
   // 上次离开时它在哪：站得住（草地上、不在装饰脚下——除非就在那件装饰上的点）就站回去；没睡完的接着睡（不超过上限）。
-  // 正好走到锅后面（路过可以、停不行的地方）也站回去，下一回合先走出来（turn 里），不然回来就瞬移到火边
+  // 正好走到锅后面（路过可以、停不行的地方）也站回去，下一回合先走出来（turn 里），不然回来就瞬移到火边。
+  // 在帐篷里睡的：没睡完接着睡在里面，睡完了站在门口
   function restore(a, s) {
-    if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.y) || !inGrass(s.x, s.y)) return false
+    if (!s || !Number.isFinite(s.x) || !Number.isFinite(s.y)) return false
+    // 床位在帐篷的禁区里（不算草地），先认它
+    if (s.action === 'tent') {
+      const bed = bedAt(s.x, s.y)
+      if (!bed) return false
+      a.right = true
+      a.dir = 'front'
+      if (s.until > now() && animals.filter((b) => asleep(b)).length < napCap()) {
+        walk.put(a, bed.at[0], bed.at[1])
+        a.goal = { spot: { x: bed.door[0], y: bed.door[1], action: 'tent', bed } }
+        a.action = 'tent'
+        a.until = s.until
+        a.depthY = tentDepth(a)
+      } else walk.put(a, bed.door[0], bed.door[1])
+      return true
+    }
+    if (!inGrass(s.x, s.y)) return false
     const spot = decorSpotAt(s.x, s.y)
     if (!spot && inDecorFoot(s.x, s.y)) return false
     walk.put(a, s.x, s.y)
     a.right = s.right !== false
     a.sleepStyle = s.sleepStyle === 'B' ? 'B' : 'A'
     if (spot) a.goal = { spot }
-    if (s.action === 'sleep' && s.until > now() && animals.filter((b) => b.action === 'sleep').length < napCap()) {
+    if (s.action === 'sleep' && s.until > now() && animals.filter((b) => asleep(b)).length < napCap()) {
       a.action = 'sleep'
       a.until = s.until
-      a.sway = rockOf(spot)
     }
     return true
   }
@@ -845,7 +876,7 @@ function createLife({
     return { action: a.hidden && a.why === 'hungry' ? 'hungry' : a.action, decorName: spot && spot.name ? spot.name : '', spot: spot && spot.name && !a.goal.path ? spot.action : '' }
   }
 
-  return {
+  const api = {
     sprites: () => animals.map(sprite),
 
     start() {
@@ -909,13 +940,13 @@ function createLife({
       })
     },
 
-    // 点一下：睡着的醒过来；客人说它闻着什么来的、你拍正餐它就住下；住户说一段（两三句，一句一句换）。
+    // 点一下：睡着的醒过来（帐篷里的出来）；住户说一段（两三句，一句一句换）。
     // 正说着再点：直接跳到下一句；说完了再点：换一段。别的气泡收起来。都冒个爱心
     tap(i) {
       const a = animals[i]
       if (!a || a.hidden) return
       heart(a)
-      if (a.action === 'sleep' && !a.holdGift) return wake(a, true)
+      if (SLEEPS.indexOf(a.action) !== -1 && !a.holdGift) return wake(a, true)
       if (bubbles.next(a)) return
       const ms = bubbles.take(a, speechOf(a))
       // 站着的听你说话：说完前先别走开
@@ -967,7 +998,7 @@ function createLife({
       const near = awake.filter((a) => !using(a)).sort((p, q) => busyElse(p) - busyElse(q) || dist(p.x, p.y, ref.x, ref.y) - dist(q.x, q.y, ref.x, ref.y))
       let busy = true
       for (const a of near) {
-        const spots = free(all, a).filter((sp) => sp.action !== 'perch' || a.pet.gait === 'fly')
+        const spots = free(all, a)
         if (!spots.length) continue
         busy = false
         const spot = spots[0]
@@ -997,6 +1028,7 @@ function createLife({
     gift(i) {
       const a = animals[i]
       if (!a || a.hidden) return false
+      if (leaveTentThen(a, () => api.gift(i))) return true
       a.holdGift = true
       a.goal = null
       const spot = { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'gift' }
@@ -1079,7 +1111,7 @@ function createLife({
         if (a.hidden || !walk.halt(a)) return
         a.next = null
         if (a.goal && a.goal.path) a.goal = null
-        if (['walk', 'fly', 'gift', 'slide', 'climb'].indexOf(a.action) !== -1) a.action = 'idle'
+        if (['walk', 'fly', 'gift'].indexOf(a.action) !== -1) a.action = 'idle'
         if (a.holdGift && a.action === 'idle') a.action = 'gift'
         emit(a)
       })
@@ -1093,8 +1125,8 @@ function createLife({
           if (a.why === 'smell') out[a.id] = { hidden: true, why: 'smell', foodId: a.foodId || '', backAt: a.backAt || 0 }
           return
         }
-        const sleeping = a.action === 'sleep' && !a.holdGift
-        out[a.id] = { x: a.x, y: a.y, right: a.right, action: sleeping ? 'sleep' : 'idle', until: sleeping ? a.until : 0, sleepStyle: a.sleepStyle }
+        const sleeping = SLEEPS.indexOf(a.action) !== -1 && !a.holdGift
+        out[a.id] = { x: a.x, y: a.y, right: a.right, action: sleeping ? a.action : 'idle', until: sleeping ? a.until : 0, sleepStyle: a.sleepStyle }
       })
       return out
     },
@@ -1111,6 +1143,7 @@ function createLife({
       this.refresh(id)
     },
   }
+  return api
 
   // 叼礼物走路：和普通走路一样，但 holdGift 期间 turn 不接管，所以自己串
   function stepAlongGift(a) {

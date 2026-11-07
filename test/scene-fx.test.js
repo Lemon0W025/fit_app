@@ -67,7 +67,7 @@ test('锅是空的（今天还没打卡）：火不烧，没有火苗、火光�
 })
 
 test('夜里：夜版火苗、大一圈的火光、6 颗火星、萤火虫 8 只、帐篷亮灯；灯串发光；水壶炉冒热气', () => {
-  const placed = [{ uid: 'a', id: 'lights', x: 1500, y: 1800 }, { uid: 'b', id: 'kettle', x: 2000, y: 2000 }, { uid: 'c', id: 'flowerbed', x: 2300, y: 3400 }, { uid: 'd', id: 'ball', x: 900, y: 2200 }]
+  const placed = [{ uid: 'a', id: 'lights', x: 1500, y: 1800 }, { uid: 'b', id: 'kettle', x: 2000, y: 2000 }, { uid: 'c', id: 'sunflowers', x: 2300, y: 3400 }, { uid: 'd', id: 'ball', x: 900, y: 2200 }]
   const night = fxViews(L, 22, placed, 2)
   assert.equal(night.find((f) => f.kind === 'fire').image, '/images/camp/cut/night-fire.jpg')
   assert.equal(night.find((f) => f.kind === 'fireglow').variant, 'fireglow-night')

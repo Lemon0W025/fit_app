@@ -10,7 +10,7 @@ const FED = { date: '', n: 0 }
 
 test('空文档补齐默认值', () => {
   const c = normalizeCamp(null)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   assert.equal(c.welcomed, false)
   assert.deepEqual(c.beans, { earned: {}, bonus: 0, spent: 0 })
   assert.deepEqual(c.gacha, { pulls: 0, sincePity: 0 })
@@ -25,7 +25,7 @@ test('空文档补齐默认值', () => {
 
 test('已经是营地的文档：缺的补上，有的不动', () => {
   const doc = {
-    camp: 5, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 30 }, foods: { xiaomi: 2 },
+    camp: 6, welcomed: true, beans: { earned: { [TODAY]: 60 }, bonus: 60, spent: 30 }, foods: { xiaomi: 2 },
     pot: { items: [{ foodId: 'xiaomi', at: NOW_MS - 1000, date: TODAY }] },
     pets: [{ id: 'doudou', since: TODAY, fed: 4, fedToday: { date: TODAY, n: 1 }, home: true, until: 0 }, { id: 'nuonuo', since: TODAY, fed: 3, fedToday: FED, home: false, until: NOW_MS + 1000 }],
     seq: 3, gift: TODAY,
@@ -49,7 +49,7 @@ test('camp 4 → 5（常客模式）：今天的锅当刚下锅、管 8 小时�
     arrivals: ['qiqi'],
   }
   const c = normalizeCamp(doc, NOW_MS)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   const until = NOW_MS + POT_STAY_MS
   assert.deepEqual(c.pot, { items: [{ foodId: 'xiaomi', at: NOW_MS, date: TODAY }, { foodId: 'huluobo', at: NOW_MS, date: TODAY }] })
   assert.deepEqual(c.pets.map((p) => [p.id, p.home, p.until, p.fed]), [['doudou', true, 0, 1], ['qiqi', false, until, 2], ['hehe', true, 0, 30], ['nuonuo', false, until, 0]])
@@ -70,7 +70,7 @@ test('宅院旧档迁成营地：暖豆退回、住户按原型搬进来、豆�
     arrivals: ['crane'], collected: ['daisy', 'panda'], gacha: { pulls: 12, sincePity: 4 }, grants: ['preview-1'], days: { '2026-10-21': true },
   }
   const c = normalizeCamp(doc)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   assert.deepEqual(c.beans, { earned: { '2026-10-20': 40, '2026-10-21': 60 }, bonus: 60, spent: 0 })
   assert.deepEqual(c.pets.map((p) => p.id), ['sunbao', 'hehe', 'doudou'])
   assert.deepEqual(c.pets[0], { id: 'sunbao', since: '2026-10-21', fed: 0, fedToday: { date: '', n: 0 }, home: false, until: 0 })
@@ -94,7 +94,7 @@ test('没领过新手礼的旧档：不补豆豆、bonus 0；熊猫一家也变�
 test('camp 1 → 2：食盆里的退回背包、张望的（还没住下的）变客人，删掉 bowls / peeking；再读一次不变', () => {
   const doc = { camp: 1, welcomed: true, foods: { xiaomi: 1 }, bowls: ['xiaomi', 'huluobo'], peeking: ['nuonuo', 'doudou'], pets: [{ id: 'doudou', since: '', fed: 0, fedToday: { date: '', n: 0 } }] }
   const c = normalizeCamp(doc)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   assert.deepEqual(c.foods, { xiaomi: 2, huluobo: 1 })
   // 张望的变客人（camp 2），客人再变常客（camp 5）：锅空着，就先不在场
   assert.deepEqual(c.pets.map((p) => [p.id, p.home, p.until]), [['doudou', true, 0], ['nuonuo', false, 0]])
@@ -110,13 +110,13 @@ test('camp 2 → 3：装饰放大了，按摆的先后重新放，挤着的收�
   const placed = [{ uid: 'd1', id: 'lantern', x: 3000, y: 3400 }, { uid: 'd2', id: 'lantern', x: 3150, y: 3400 }, { uid: 'd3', id: 'lantern', x: 1200, y: 3400 }]
   const doc = { camp: 2, welcomed: true, decor: { owned: { lantern: 3 }, placed } }
   const c = normalizeCamp(doc)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   assert.deepEqual(c.decor.owned, { lantern: 3 })
   assert.deepEqual(c.decor.placed.map((p) => p.uid), ['d1', 'd3'])
   assert.equal(migrated(doc, c), true)
   assert.deepEqual(normalizeCamp(c), c)
   // 已经是 3 以上的不再重新放（摆的时候云函数校验过）
-  assert.deepEqual(normalizeCamp({ ...doc, camp: 5 }).decor.placed, placed)
+  assert.deepEqual(normalizeCamp({ ...doc, camp: 6 }).decor.placed, placed)
 })
 
 test('camp 3 → 4：小帐篷、小树下架按原价退暖豆、从草地上收走；金色小帐篷原地换成金色秋千；再读一次不变', () => {
@@ -128,7 +128,7 @@ test('camp 3 → 4：小帐篷、小树下架按原价退暖豆、从草地上�
     },
   }
   const c = normalizeCamp(doc)
-  assert.equal(c.camp, 5)
+  assert.equal(c.camp, 6)
   assert.equal(c.beans.spent, 500 - 120 - 2 * 80)
   assert.deepEqual(c.decor.owned, { ball: 1, gold_swing: 1 })
   assert.deepEqual(c.decor.placed, [{ uid: 'd3', id: 'ball', x: 3400, y: 3900 }, { uid: 'd4', id: 'gold_swing', x: 1300, y: 3900 }])
@@ -136,4 +136,21 @@ test('camp 3 → 4：小帐篷、小树下架按原价退暖豆、从草地上�
   assert.deepEqual(normalizeCamp(c), c)
   // 退的不会让花掉的变成负数
   assert.equal(normalizeCamp({ ...doc, beans: { earned: {}, bonus: 0, spent: 50 } }).beans.spent, 0)
+})
+
+test('camp 5 → 6：吊床、野餐垫、花坛这些会穿模的家具下架，按原价退暖豆、从草地上收走；留下的不动；再读一次不变', () => {
+  const doc = {
+    camp: 5, welcomed: true, beans: { earned: {}, bonus: 0, spent: 1000 }, pot: { items: [] }, pets: [],
+    decor: {
+      owned: { hammock: 1, picnic: 1, flowerbed: 3, slide: 1, swing: 1, sunflower: 2, gold_swing: 1 },
+      placed: [{ uid: 'a', id: 'hammock', x: 3000, y: 3600 }, { uid: 'b', id: 'flowerbed', x: 1200, y: 3600 }, { uid: 'c', id: 'swing', x: 3400, y: 3900 }, { uid: 'd', id: 'sunflower', x: 1300, y: 3900 }],
+    },
+  }
+  const c = normalizeCamp(doc, NOW_MS)
+  assert.equal(c.camp, 6)
+  assert.equal(c.beans.spent, 1000 - 100 - 60 - 3 * 50 - 110)
+  assert.deepEqual(c.decor.owned, { swing: 1, sunflower: 2, gold_swing: 1 })
+  assert.deepEqual(c.decor.placed, [{ uid: 'c', id: 'swing', x: 3400, y: 3900 }, { uid: 'd', id: 'sunflower', x: 1300, y: 3900 }])
+  assert.equal(migrated(doc, c), true)
+  assert.deepEqual(normalizeCamp(c, NOW_MS), c)
 })

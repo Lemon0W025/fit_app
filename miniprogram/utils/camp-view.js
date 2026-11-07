@@ -95,9 +95,9 @@ const foodImage = (id) => `/images/camp/foods/${id}.png`
 const decorImage = (id, base) => `${base && DECOR_ART.indexOf(id) !== -1 ? base : '/images/camp/decor/'}${id}.png`
 const zOf = (y) => Z_DECOR + Math.round(y / 4)
 
-// 用云端高清块、又拆成两层的（秋千、吊床，decor-parts.js）：画架子那张，会摆的那层单独一张，绕 pivot 摆（和块一样大）。
-// 摆的动画类（camp.wxss）：秋千荡 sway-on，吊床轻轻晃 rock-on
-const SWAY_CLASS = { swing: 'sway-on', rock: 'rock-on' }
+// 用云端高清块、又拆成两层的（秋千，decor-parts.js）：画架子那张，会摆的那层单独一张，绕 pivot 摆（和块一样大）。
+// 摆的动画类（camp.wxss）：秋千荡 sway-on
+const SWAY_CLASS = { swing: 'sway-on' }
 const partsOf = (id, base) => (base && DECOR_ART.indexOf(id) !== -1 && DECOR_PARTS[id]) || null
 
 function patchView(d, x, y, L, base) {
@@ -117,7 +117,7 @@ function patchView(d, x, y, L, base) {
 }
 
 // 点家具时菜单第一项「叫一只来……」：按它上面的点是干什么的；没什么好玩的（灯、彩旗）返回 ''
-const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', slide: '叫一只来滑滑梯', tea: '叫一只来喝茶', play: '叫一只来玩', climb: '叫一只爬上去看看', perch: '叫一只飞上去' }
+const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', tea: '叫一只来喝茶', play: '叫一只来玩' }
 function callLabel(decorId) {
   const d = decorById(decorId)
   return (d && d.spots.length && CALL_LABELS[d.spots[0].action]) || ''

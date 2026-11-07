@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night tent-sleep tent-night talk-phone hungry-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
 //   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
@@ -59,19 +59,20 @@ function layout(list, prefix) {
   })
   return placed
 }
-// 第 1 批 B 画好的装饰（小帐篷、小树 10/27 下架了，换成秋千、向日葵），摆在火堆周围的草地上
-const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['picnic', 1300, 3400], ['ball', 3000, 3400],
-  ['flowerbed', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
-// 第 2 批的 17 件
-const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_swing', 3450, 3450],
-  ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
-  ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]], 'e')
+// 留下的家具（11/07 精简：吊床、野餐垫、花坛这些下架了），摆在火堆周围的草地上
+const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['sunflowers', 1300, 3400], ['ball', 3000, 3400],
+  ['lavender', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
+// 全部家具 + 各种花草（花草图没回来之前是占位块）
+const DECOR_2 = layout([['lights', 2850, 2200], ['gold_swing', 3450, 3450], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['sunflower', 1650, 3800],
+  ['stonelamp', 1250, 3850], ['swing', 1050, 2750], ['bunting', 1600, 2400], ['sunflowers', 3700, 2950], ['hydrangea', 3800, 2500], ['tulips', 3850, 3700],
+  ['daisies', 3050, 3750], ['cosmos', 2000, 3700], ['roses', 1500, 3300], ['dandelions', 850, 3450], ['clover', 600, 3050], ['rapeseed', 3350, 2300],
+  ['chrysanthemum', 2300, 2400], ['mint', 1300, 2300], ['poppies', 3000, 3000], ['bluebells', 2700, 2300], ['mushrooms', 1900, 3350]], 'e')
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
 const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
-// 和家具玩：秋千、花坛、向日葵、野餐垫、吊床挨着摆，点家具叫小家伙过来（荡秋千、闻花、野餐、睡吊床）
-const PLAY = layout([['swing', 2300, 3350], ['flowerbed', 3200, 3500], ['picnic', 1500, 3550], ['sunflower', 3050, 2900], ['hammock', 2400, 3900]], 'p')
+// 和家具玩：秋千、薰衣草、一排向日葵、向日葵、草窝挨着摆，点家具叫小家伙过来（荡秋千、闻花、去窝里睡）
+const PLAY = layout([['swing', 2300, 3350], ['lavender', 3200, 3500], ['sunflowers', 1500, 3550], ['sunflower', 3050, 2900], ['strawbed', 2400, 3900]], 'p')
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
@@ -168,19 +169,23 @@ const SCENARIOS = {
       [8500, 0, 2500, 3700], [8700, 1, 2900, 3750], [8900, 2, 3300, 3700], [9100, 3, 3650, 3450]],
     events: [[300, (life) => life.cook(['doudou'])]],
   },
-  // 和家具玩（10/27）：叫一只荡秋千（座位和它一起摆）、两只闻花、两只去野餐垫；夜里火着时金色秋千也能荡
+  // 和家具玩（10/27）：叫一只荡秋千（座位和它一起摆）、两只闻花、两只去一排向日葵前；夜里火着时金色秋千也能荡
   play: {
     hour: 10, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 18, decor: PLAY,
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
   },
-  // 滑梯、木梯：叫两只先后去爬滑梯、一只爬木梯张望（拉近看爬上去、滑下来时一直在前面）
-  slide: {
-    hour: 10, potLevel: 2, focus: [2500, 3500], scale: 1.5, seconds: 16, decor: [{ uid: 's0', id: 'slide', x: 2800, y: 3600 }, { uid: 's1', id: 'ladder', x: 1900, y: 3650 }],
-    pets: ['doudou', 'nuonuo', 'qiqi'],
-    plan: [[0, 0, 2300, 3800], [0, 1, 3100, 3850], [0, 2, 2200, 3300]],
-    events: [[300, (life) => life.callTo('s0')], [600, (life) => life.callTo('s1')], [6500, (life) => life.callTo('s0')]],
+  // 进帐篷睡（11/07）：糯糯、豆豆趴在帐篷里只露个小脑袋（两个床位；白天同时睡的最多四分之一，所以放 8 只）；糯糯 12 秒后睡够了出来站在门口再走开；杞杞在门口溜达
+  'tent-sleep': {
+    hour: 10, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 20, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 12000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: true, action: 'tent', until: 60000 } },
+    plan: [[0, 2, 1500, 1700]],
+  },
+  'tent-night': {
+    hour: 22, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 6, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 60000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: true, action: 'tent', until: 60000 } },
+    plan: [[0, 2, 1500, 1700]],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
@@ -208,7 +213,7 @@ const SCENARIOS = {
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
   'bag-phone': {
     phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 13, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [],
-    bag: { foods: { xiaomi: 2, yumili: 1, huluobo: 3, niangao: 1, lianzi: 1, xiaoyu: 2, shizi: 1 }, decor: { ball: 1, picnic: 1, flowerbed: 1, lantern: 2 } },
+    bag: { foods: { xiaomi: 2, yumili: 1, huluobo: 3, niangao: 1, lianzi: 1, xiaoyu: 2, shizi: 1 }, decor: { ball: 1, sunflowers: 1, lavender: 1, lantern: 2 } },
     ui: [[400, 'open'], [1900, 'tab', 1], [3000, 'tab', 0], [3800, 'tab', 1], [3900, 'tab', 0], [4000, 'tab', 1], [5200, 'drag', 50, 600], [7400, 'flick'], [8800, 'open'], [10200, 'mask']],
   },
   // 住户抽屉（带标题）：12 只多了在抽屉里滚；内容滚着的时候往下拉不拖抽屉，滚回顶上再拉才拖
@@ -253,7 +258,8 @@ async function build(sc) {
     gift: '',
   })
   camp.data.giftShown = true
-  wx.app.globalData.campSpots = null
+  // 上次离开时各自在哪（sc.saved，和 life.snapshot() 一样的格式；until 按录屏的假时钟算，从 0 起）
+  wx.app.globalData.campSpots = sc.saved || null
   camp.life.stop()
   camp.life = null
   camp.onShow()

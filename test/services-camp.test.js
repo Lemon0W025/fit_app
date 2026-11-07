@@ -49,7 +49,7 @@ test('get：第一次进来送 60 暖豆，豆豆住进来，只送一次', asyn
   const second = await service.get('u1')
   assert.equal(second.welcome, null)
   assert.equal((await repo.getGarden('u1')).beans.bonus, 60)
-  assert.equal((await repo.getGarden('u1')).camp, 5)
+  assert.equal((await repo.getGarden('u1')).camp, 6)
 })
 
 test('get：测试福利只送一次', async () => {
@@ -149,7 +149,7 @@ test('测试无限资源（config.testUnlimited）：暖豆和每样食物每次
   assert.equal((await repo.getGarden('u1')).foods.huluobo, 9, '存下来了（首页的暖豆也是满的）')
   const spun = await service.spin('u1')
   assert.equal(spun.beans, 99999)
-  assert.equal((await service.buy('u1', { decorId: 'hammock' })).beans, 99999)
+  assert.equal((await service.buy('u1', { decorId: 'swing' })).beans, 99999)
   const cooked = await service.putFood('u1', { foodId: 'huluobo' })
   assert.equal(cooked.foods.find((f) => f.id === 'huluobo').count, 9)
   const late = setup({ camp: rich(), tests: { testUnlimited: { ...conf, until: '2026-10-21' } } })
@@ -293,13 +293,14 @@ test('buy / place / move / stash：买了进背包，摆到草地上，挪、收
   assert.deepEqual(v.decor.placed, [])
   assert.deepEqual(v.decor.unplaced, [{ id: 'ball', count: 1 }])
   assert.equal((await repo.getGarden('u1')).seq, 1)
-  // 花坛能买三个（先补点豆）
+  // 向日葵能买三个（先补点豆）；下架的买不到
   const stored = await repo.getGarden('u1')
   await repo.saveGarden('u1', { ...stored, beans: { ...stored.beans, bonus: stored.beans.bonus + 500 } })
-  await service.buy('u1', { decorId: 'flowerbed' })
-  await service.buy('u1', { decorId: 'flowerbed' })
-  await service.buy('u1', { decorId: 'flowerbed' })
-  await assert.rejects(service.buy('u1', { decorId: 'flowerbed' }), { code: 'BAD_REQUEST', message: '这件已经买够了' })
+  await service.buy('u1', { decorId: 'sunflower' })
+  await service.buy('u1', { decorId: 'sunflower' })
+  await service.buy('u1', { decorId: 'sunflower' })
+  await assert.rejects(service.buy('u1', { decorId: 'sunflower' }), { code: 'BAD_REQUEST', message: '这件已经买够了' })
+  await assert.rejects(service.buy('u1', { decorId: 'hammock' }), { code: 'BAD_REQUEST' })
 })
 
 test('arrive：正餐打卡后在场的全员 +1（一天最多 3 次），不在场的不加；这一顿升到 5 级的住下、返回名单；没有就 null', async () => {
@@ -380,6 +381,6 @@ test('旧档进营地：迁完存一次，暖豆退回，住户搬来', async ()
   assert.deepEqual([v.pets.map((p) => p.id), v.met], [['doudou'], ['sunbao', 'doudou']])
   assert.equal(v.welcome, null)
   const stored = await repo.getGarden('u1')
-  assert.equal(stored.camp, 5)
+  assert.equal(stored.camp, 6)
   assert.equal(stored.inventory, undefined)
 })

@@ -6,7 +6,7 @@ const { cutoutStrips } = require('../miniprogram/utils/camp-view')
 const { SCENE, inGrass, pointInPoly, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
 const { footRect, patchRect } = require('../miniprogram/utils/shared/decor')
 
-const DECOR = [{ uid: 'd1', id: 'picnic', x: 2900, y: 3600 }, { uid: 'd2', id: 'flowerbed', x: 1700, y: 3400 }, { uid: 'd3', id: 'hammock', x: 3300, y: 2900 }]
+const DECOR = [{ uid: 'd1', id: 'kettle', x: 2900, y: 3600 }, { uid: 'd2', id: 'sunflowers', x: 1700, y: 3400 }, { uid: 'd3', id: 'swing', x: 3300, y: 2900 }]
 const SIZE = 240
 
 function lcg(seed) {
@@ -73,8 +73,8 @@ test('route：直着走得过去就是一段；挡着就绕，路不穿禁区和
       p = q
     })
   }
-  // 躺在吊床上（落脚框里）走下来：不被吊床自己挡住
-  const r = footRect('hammock', 3300, 2900)
+  // 坐在秋千上（落脚框里）走下来：不被秋千自己挡住
+  const r = footRect('swing', 3300, 2900)
   const inside = { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 }
   assert.ok(walk.route(inside, { x: inside.x, y: r.bottom + 300 }))
 })

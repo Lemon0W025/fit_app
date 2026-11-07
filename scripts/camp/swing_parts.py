@@ -27,7 +27,7 @@ SWING = {'poly': [(406, 268), (726, 316), (726, 594), (750, 596), (750, 642), (6
 # 吊床：两头的结和柱子留在架子上，中间的布摆；轴在两个结中间
 HAMMOCK = {'poly': [(292, 490), (864, 520), (864, 600), (832, 692), (650, 778), (470, 772), (330, 705), (292, 610)],
            'pivot': (582, 528), 'kind': 'rock'}
-PARTS = {'swing': SWING, 'gold_swing': SWING, 'hammock': HAMMOCK}
+PARTS = {'swing': SWING, 'gold_swing': SWING}  # 吊床 11/07 下架了（HAMMOCK 留着是记录）
 
 
 def split(img, poly_px):

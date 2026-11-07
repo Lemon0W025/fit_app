@@ -13,7 +13,7 @@ const LEGACY_FIELDS = ['estate', 'opened', 'inventory', 'placed', 'residents', '
 // 4：小帐篷、小树下架（按原价退暖豆），金色小帐篷换成金色秋千；
 // 5：常客模式（specs/2026-11-07-camp-regulars-design.md）：pets 多了 home（住下了：豆豆、5 级）和 until（常客能待到几点），
 //    锅按下锅时间算 8 小时（pot.items），客人（visitors）变成常客，arrivals 不要了
-const CAMP_VERSION = 5
+const CAMP_VERSION = 6
 
 function pet(id, since) {
   return { id, since: since || '', fed: 0, fedToday: { date: '', n: 0 }, home: false, until: 0 }
@@ -69,9 +69,10 @@ function refitDecor(src) {
   return { ...src, decor: { ...src.decor, placed: kept } }
 }
 
-// camp 4 之前：下架的（小帐篷、小树）按原价退暖豆、从草地上收走；金色小帐篷换成金色秋千（原地换，放不下就收回背包）
+// 下架的（RETIRED：camp 4 小帐篷、小树；camp 6 吊床、野餐垫、花坛这些会穿模的和几件杂物）按原价退暖豆、从草地上收走；
+// 金色小帐篷换成金色秋千（原地换，放不下就收回背包）。每次版本号落后都跑一遍（已经退过的 owned 里没有了，不会退两次）
 function retireDecor(src) {
-  if (!src.decor || (src.camp || 0) >= 4) return src
+  if (!src.decor || (src.camp || 0) >= CAMP_VERSION) return src
   const owned = { ...(src.decor.owned || {}) }
   let refund = 0
   Object.keys(RETIRED).forEach((id) => {
