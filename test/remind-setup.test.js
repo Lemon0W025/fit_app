@@ -99,7 +99,7 @@ test('setupTemplate：只认得出一个关键词的模板跳过（微信要 2�
   assert.deepEqual(found.fields, { meal: 'thing1', status: 'phrase2' })
   const { messageFor } = require('../cloudfunctions/api/lib/remind')
   const times = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
-  assert.deepEqual(messageFor(found, 'lunch', times, new Date('2026-11-07T12:40:00+08:00')), { thing1: { value: '午饭还没拍哦' }, phrase2: { value: '还没拍' } })
+  assert.deepEqual(messageFor(found, 'lunch', times, new Date('2026-11-07T12:40:00+08:00')), { thing1: { value: '到饭点啦，拍午饭吧' }, phrase2: { value: '还没拍' } })
 })
 
 test('setupTemplate：加不上（200020）先少加几个关键词再试，还不行换下一个模板；都不行把错误码和试的哪个带出去', async () => {
@@ -133,7 +133,7 @@ test('setupTemplate：新版一次性模板（tid 10000001 起）kidList 传空�
   const { messageFor } = require('../cloudfunctions/api/lib/remind')
   const times = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
   assert.deepEqual(messageFor(found, 'breakfast', times, new Date('2026-11-07T08:00:00+08:00')), {
-    thing1: { value: '早饭还没拍哦' },
+    thing1: { value: '到饭点啦，拍早饭吧' },
     time2: { value: '2026-11-07 07:30' },
     thing4: { value: '8:30 前拍还算准时' },
     thing5: { value: '小暖自律打卡' },
@@ -203,7 +203,7 @@ test('点通知打开她「允许」时用的那个版本：开发版预览 deve
   await service.setNotify('u1', { on: true })
   assert.deepEqual(await service.tick(), { sent: 1 })
   assert.equal(messages[0].miniprogramState, 'developer')
-  assert.deepEqual(messages[0].data, { thing2: { value: '午饭还没拍哦' }, time1: { value: '2026-11-03 12:00' } })
+  assert.deepEqual(messages[0].data, { thing2: { value: '到饭点啦，拍午饭吧' }, time1: { value: '2026-11-03 12:00' } })
   await service.subscribed('u1', { accepted: true, version: 'trial' })
   clock.now = new Date('2026-11-03T18:40:00+08:00')
   await service.tick()
@@ -246,7 +246,7 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   assert.equal(asked, 1)
   assert.equal(page.data.view.notify, true)
   assert.equal(page.data.view.creditsText, '还能提醒 1 次')
-  assert.match(page.data.view.whenText, /午饭 12:30/)
+  assert.match(page.data.view.whenText, /到饭点就提醒：早饭 7:30、午饭 12:00、晚饭 18:00/)
   assert.match(readWxml('remind'), /testSend/)
   // 现在发一条试试：先再要一次「允许」补上，按现在这顿（午饭）发，和真的提醒一样
   page.testSend()
@@ -255,7 +255,7 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   assert.match(wx.log.modals.pop(), /服务通知/)
   assert.equal(cloud.messages.length, 1)
   assert.equal(cloud.messages[0].page, 'pages/checkin/checkin?mealType=lunch&from=remind')
-  assert.deepEqual(cloud.messages[0].data, { thing2: { value: '午饭还没拍哦' }, time1: { value: '2026-11-03 12:00' }, thing3: { value: '13:00 前拍还算准时' } })
+  assert.deepEqual(cloud.messages[0].data, { thing2: { value: '到饭点啦，拍午饭吧' }, time1: { value: '2026-11-03 12:00' }, thing3: { value: '13:00 前拍还算准时' } })
   assert.equal(page.data.view.creditsText, '还能提醒 1 次')
   assert.equal(page.data.view.lastText, '今天 12:10 午饭的试发发出去了')
   // 首页：勾了「总是保持」的，点拍照不弹窗地再攒一次；没勾的不在首页问

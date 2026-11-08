@@ -10,14 +10,15 @@ const TIMES = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
 const at = (hhmm, day = '2026-10-29') => new Date(`${day}T${hhmm}:00+08:00`)
 const TEMPLATE = { id: 'tmpl-1', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
 
-test('planReminders：饭点过了 30 分钟起、窗口结束前，这顿还没拍、今天还没发过才提醒', () => {
+test('planReminders：到了饭点、窗口结束前，这顿还没拍、今天还没发过才提醒', () => {
   const plan = (hhmm, meals = [], sent = {}) => planReminders({ times: TIMES, meals, now: at(hhmm), sent })
-  assert.deepEqual(plan('12:29'), [])
-  assert.deepEqual(plan('12:30'), ['lunch'])
+  assert.deepEqual(plan('11:59'), [])
+  assert.deepEqual(plan('12:00'), ['lunch'])
   assert.deepEqual(plan('13:00'), ['lunch'])
   assert.deepEqual(plan('13:01'), [])
-  assert.deepEqual(plan('08:00'), ['breakfast'])
-  assert.deepEqual(plan('18:45'), ['dinner'])
+  assert.deepEqual(plan('07:30'), ['breakfast'])
+  assert.deepEqual(plan('07:29'), [])
+  assert.deepEqual(plan('18:00'), ['dinner'])
   // 拍过了（什么时候拍的都算）
   assert.deepEqual(plan('12:40', [{ mealType: 'lunch', timing: 'early' }]), [])
   // 加餐不算拍了午饭
@@ -31,7 +32,7 @@ test('planReminders：饭点过了 30 分钟起、窗口结束前，这顿还没
 
 test('messageFor：按模板字段填，time 类字段用「日期 时间」，thing 不超过 20 个字；recordSent 只留 7 天', () => {
   assert.deepEqual(messageFor(TEMPLATE, 'lunch', TIMES, at('12:40')), {
-    thing1: { value: '午饭还没拍哦' },
+    thing1: { value: '到饭点啦，拍午饭吧' },
     time2: { value: '2026-10-29 12:00' },
     thing3: { value: '13:00 前拍还算准时' },
   })
@@ -67,7 +68,7 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
     credits: 0,
     calendar: null,
     mealTimes: TIMES,
-    nudgeAt: { breakfast: '8:00', lunch: '12:30', dinner: '18:30' },
+    nudgeAt: { breakfast: '7:30', lunch: '12:00', dinner: '18:00' },
     lastText: '',
     tickText: '定时检查：还没有记录（每 10 分钟看一次，过一会儿再来看）',
   })
@@ -88,7 +89,7 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
   assert.equal((await service.setNotify('u1', { on: false })).notify, false)
 })
 
-test('tick：开了提醒、有次数、过了饭点 30 分钟还没拍的发一条（点了直接进拍照页、这顿选好），次数减一、这顿记下不再发；拍了的不发；没开的不发', async () => {
+test('tick：开了提醒、有次数、到了饭点这顿还没拍的发一条（点了直接进拍照页、这顿选好），次数减一、这顿记下不再发；拍了的不发；没开的不发', async () => {
   const { repo, service, messages, clock } = setup()
   await service.subscribed('u1', { accepted: true })
   await service.subscribed('u1', { accepted: true })
@@ -98,7 +99,7 @@ test('tick：开了提醒、有次数、过了饭点 30 分钟还没拍的发一
   assert.deepEqual(await service.tick(), { sent: 1 })
   assert.deepEqual(messages[0], {
     touser: 'u1', templateId: 'tmpl-1', page: 'pages/checkin/checkin?mealType=lunch&from=remind', miniprogramState: 'trial',
-    data: { thing1: { value: '午饭还没拍哦' }, time2: { value: '2026-10-29 12:00' }, thing3: { value: '13:00 前拍还算准时' } },
+    data: { thing1: { value: '到饭点啦，拍午饭吧' }, time2: { value: '2026-10-29 12:00' }, thing3: { value: '13:00 前拍还算准时' } },
   })
   assert.equal((await service.get('u1')).credits, 1)
   // 同一顿不再发

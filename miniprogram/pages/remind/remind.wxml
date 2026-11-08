@@ -19,14 +19,14 @@
   <!-- 微信提醒是主力：放在前面。还没开通时一键开通（云函数自己找模板） -->
   <view wx:if="{{!view.wechat}}" class="card fx-rise fx-d2">
     <view class="card-title">💬 微信提醒</view>
-    <view class="text">快过饭点还没拍，微信「服务通知」里提醒你，点开就是拍照页。</view>
+    <view class="text">到了饭点，微信「服务通知」里提醒你拍照，点开就是拍照页。</view>
     <button class="btn-primary" bindtap="setupWechat" disabled="{{working}}">开通微信提醒</button>
   </view>
   <view wx:if="{{view.wechat}}" class="card fx-rise fx-d2">
     <view class="row">
       <view class="row-text">
         <view class="card-title row-title">💬 微信提醒</view>
-        <view class="text">快过饭点还没拍，用微信提醒我</view>
+        <view class="text">到饭点用微信提醒我</view>
       </view>
       <switch-bar checked="{{view.notify}}" disabled="{{working}}" bindchange="toggleNotify" />
     </view>

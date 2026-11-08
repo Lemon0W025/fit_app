@@ -1,4 +1,4 @@
-// 饭点提醒：手机日历闹钟加过没有、微信服务通知开没开、攒了几次「允许」；定时触发器每 10 分钟 tick 一次，快过饭点还没拍的发一条
+// 饭点提醒：手机日历闹钟加过没有、微信服务通知开没开、攒了几次「允许」；定时触发器每 10 分钟 tick 一次，到了饭点这顿还没拍的发一条
 const { AppError, CODES } = require('../lib/errors')
 const { mealTimesOf, MEAL_WORDS } = require('../lib/shared/timing')
 const { dateKey } = require('../lib/shared/date')

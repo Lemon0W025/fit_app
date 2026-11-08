@@ -21,7 +21,7 @@ const rankOf = (title) => {
   return i === -1 ? TITLE_RANK.length : i
 }
 
-// 关键词（{ name, rule, key }）里认出各放什么：meal「午饭还没拍哦」（thing）、mealTime 饭点（time / date）、tip 提示（另一个 thing）、
+// 关键词（{ name, rule, key }）里认出各放什么：meal「到饭点啦，拍午饭吧」（thing）、mealTime 饭点（time / date）、tip 提示（另一个 thing）、
 // status「还没拍」（phrase）、name 小程序名字（再多一个 thing）、endTime 准时截止（再多一个 time / date）。
 // 没有能放「哪顿没拍」的 thing 就不能用（null）
 function rolesOf(words) {

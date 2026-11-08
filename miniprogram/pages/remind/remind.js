@@ -1,4 +1,4 @@
-// 饭点提醒（准时打卡设计第二块）：手机日历里加三个每天重复的饭点闹钟；有微信模板时还能开「快过饭点还没拍，用微信提醒我」。
+// 饭点提醒（准时打卡设计第二块）：手机日历里加三个每天重复的饭点闹钟；有微信模板时还能开「到饭点用微信提醒我」。
 // 第一次建档后自动进来（?first=1），底下「设好了，去拍第一顿」
 const api = require('../../utils/api')
 const { remindView, calendarEvents, appVersion } = require('../../utils/remind')

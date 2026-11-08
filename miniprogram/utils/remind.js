@@ -18,8 +18,8 @@ function remindView(res) {
     wechat: !!res.templateId,
     notify: !!res.notify,
     creditsText: res.credits > 0 ? `还能提醒 ${res.credits} 次` : '次数用完了：拍照打卡时点「允许」就会攒上',
-    // 什么时候会提醒：过了饭点半小时还没拍才发，拍了就不打扰
-    whenText: res.nudgeAt ? `过了饭点半小时还没拍才提醒：${MAIN_MEALS.map((t) => `${MEAL_WORDS[t]} ${res.nudgeAt[t]}`).join('、')} 左右。已经拍了就不打扰。` : '',
+    // 什么时候会提醒：到饭点这顿还没拍就发，提前拍了就不打扰
+    whenText: res.nudgeAt ? `到饭点就提醒：${MAIN_MEALS.map((t) => `${MEAL_WORDS[t]} ${res.nudgeAt[t]}`).join('、')}。提前拍了就不打扰。` : '',
     lastText: res.lastText || '',
     tickText: res.tickText || '',
   }

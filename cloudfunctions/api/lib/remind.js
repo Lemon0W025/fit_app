@@ -3,7 +3,7 @@
 const { MAIN_MEALS, MEAL_WORDS, WINDOW_MINUTES, loggedMeals } = require('./shared/timing')
 const { localMinutes, dateKey, addDays, timeText } = require('./shared/date')
 
-const NUDGE_AFTER_MINUTES = 30 // 饭点过了这么久还没拍才提醒（到窗口结束为止）
+const NUDGE_AFTER_MINUTES = 0 // 到饭点就提醒（这顿还没拍的话；到窗口结束为止，每顿每天一次）。11/08 用户从「过了半小时」改成「到饭点」
 const CREDITS_MAX = 30 // 「允许」攒的次数最多记这么多
 const SENT_DAYS = 7 // 发过的记录留几天
 const THING_MAX = 20 // 订阅消息 thing 类字段最多 20 个字
@@ -19,7 +19,7 @@ function clockText(minutes) {
   return `${h}:${m < 10 ? '0' : ''}${m}`
 }
 
-// 这一刻该提醒的餐次：饭点 + 30 分钟起、窗口结束（饭点 + 1 小时）前，这顿今天还没拍（什么时候拍的都算），今天这顿还没发过
+// 这一刻该提醒的餐次：到了饭点、窗口结束（饭点 + 1 小时）前，这顿今天还没拍（什么时候拍的都算），今天这顿还没发过
 function planReminders({ times, meals, now, sent }) {
   const m = localMinutes(now)
   const today = (sent || {})[dateKey(now)] || {}
@@ -31,12 +31,12 @@ function planReminders({ times, meals, now, sent }) {
 }
 
 // 一条提醒的内容：按模板的字段（config.remindTemplate.fields：{ 我们的说法: 模板字段名 }）填。
-// 我们的说法：meal「午饭还没拍哦」、mealTime「2026-10-29 12:00」（time / date 类字段）、tip「13:00 前拍还算准时」、status「还没拍」（phrase 类字段）、name「小暖自律打卡」、endTime「2026-10-29 13:00」（第二个时间字段）
+// 我们的说法：meal「到饭点啦，拍午饭吧」、mealTime「2026-10-29 12:00」（time / date 类字段）、tip「13:00 前拍还算准时」、status「还没拍」（phrase 类字段）、name「小暖自律打卡」、endTime「2026-10-29 13:00」（第二个时间字段）
 function messageFor(template, mealType, times, now) {
   const word = MEAL_WORDS[mealType]
   const end = clockText(toMinutes(times[mealType]) + WINDOW_MINUTES)
   const values = {
-    meal: `${word}还没拍哦`,
+    meal: `到饭点啦，拍${word}吧`,
     mealTime: `${dateKey(now)} ${times[mealType]}`,
     tip: `${end} 前拍还算准时`,
     status: '还没拍',
@@ -51,7 +51,7 @@ function messageFor(template, mealType, times, now) {
   return data
 }
 
-// 每顿什么时候会提醒（饭点 + 30 分钟，到窗口结束前还没拍才发）：{ breakfast: '8:00', … }
+// 每顿什么时候会提醒（饭点 + NUDGE_AFTER_MINUTES，这顿还没拍才发）：{ breakfast: '7:30', … }
 function nudgeTimes(times) {
   const out = {}
   MAIN_MEALS.forEach((t) => {
