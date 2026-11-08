@@ -1,14 +1,15 @@
 // 饭点提醒：手机日历闹钟加过没有、微信服务通知开没开、攒了几次「允许」；定时触发器每 10 分钟 tick 一次，快过饭点还没拍的发一条
 const { AppError, CODES } = require('../lib/errors')
-const { mealTimesOf } = require('../lib/shared/timing')
+const { mealTimesOf, MEAL_WORDS } = require('../lib/shared/timing')
 const { dateKey } = require('../lib/shared/date')
-const { CREDITS_MAX, planReminders, messageFor, recordSent } = require('../lib/remind')
+const { CREDITS_MAX, planReminders, messageFor, recordSent, nudgeTimes, whenText, mealNow } = require('../lib/remind')
 const { setupTemplate } = require('../lib/remind-template')
 
 const EMPTY = { notify: false, credits: 0, sent: {}, calendar: null }
 // 没有次数 / 用户拒收：次数清零，这顿记为发过（不再重试）
 const REFUSED = [43101]
 const SETTING = 'remindTemplate'
+const TICK = 'remindTick' // 定时检查最近一次跑的时间（提醒页显示，看触发器在不在跑）
 // 点通知打开哪个版本：跟着她「允许」时用的那个（开发版预览 / 体验版 / 正式版）
 const VERSIONS = { develop: 'developer', trial: 'trial', release: 'formal' }
 
@@ -30,18 +31,49 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     await repo.saveReminders(openid, rest)
   }
 
-  function view(doc, profile, t) {
+  // 上次提醒的结果：「今天 18:30 晚饭的提醒发出去了」/「…没发出去（错误码 47003）」
+  function lastText(last) {
+    if (!last || !last.at) return ''
+    const what = `${whenText(last.at, now())} ${MEAL_WORDS[last.mealType] || ''}${last.test ? '的试发' : '的提醒'}`
+    return last.ok ? `${what}发出去了` : `${what}没发出去（错误码 ${last.code || '未知'}）`
+  }
+
+  function view(doc, profile, t, tick) {
+    const times = mealTimesOf(profile)
     return {
       templateId: t ? t.id : '',
       notify: !!doc.notify && !!t,
       credits: doc.credits || 0,
       calendar: doc.calendar || null,
-      mealTimes: mealTimesOf(profile),
+      mealTimes: times,
+      nudgeAt: nudgeTimes(times),
+      lastText: lastText(doc.last),
+      tickText: tick && tick.at ? `定时检查：${whenText(tick.at, now())} 看过一次` : '定时检查：还没有记录（每 10 分钟看一次，过一会儿再来看）',
     }
   }
 
   async function viewOf(openid, doc, profile) {
-    return view(doc, profile === undefined ? await repo.getProfile(openid) : profile, await template())
+    const [p, t, tick] = await Promise.all([profile === undefined ? repo.getProfile(openid) : profile, template(), repo.getSetting(TICK)])
+    return view(doc, p, t, tick)
+  }
+
+  // 发一条：成功用掉一次；失败记下错误码（43101 是没有次数了，清零）
+  async function sendOne(openid, doc, t, mealType, times, at, test) {
+    const next = { ...EMPTY, ...doc }
+    try {
+      // 点通知直接进拍照页，这顿已经选好
+      const page = `pages/checkin/checkin?mealType=${mealType}&from=remind`
+      await send({ touser: openid, templateId: t.id, page, data: messageFor(t, mealType, times, at), miniprogramState: doc.version || t.state || 'trial' })
+      next.credits = Math.max(0, (doc.credits || 0) - 1)
+      next.last = { at: at.getTime(), mealType, ok: true, test: !!test }
+      return { next, ok: true }
+    } catch (e) {
+      const code = e && (e.errCode || e.code)
+      log('remind send failed', code, e && e.message)
+      next.last = { at: at.getTime(), mealType, ok: false, code: code || null, test: !!test }
+      if (REFUSED.indexOf(code) !== -1) next.credits = 0
+      return { next, ok: false, code, refused: REFUSED.indexOf(code) !== -1 }
+    }
   }
 
   // 给一个人看看这一刻要不要发、发了就记下
@@ -55,21 +87,9 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     const due = planReminders({ times, meals, now: at, sent: doc.sent })
     if (!due.length || !(doc.credits > 0)) return 0
     const mealType = due[0]
-    const next = { ...EMPTY, ...doc }
-    let ok = false
-    try {
-      // 点通知直接进拍照页，这顿已经选好
-      const page = `pages/checkin/checkin?mealType=${mealType}&from=remind`
-      await send({ touser: openid, templateId: t.id, page, data: messageFor(t, mealType, times, at), miniprogramState: doc.version || t.state || 'trial' })
-      ok = true
-      next.credits = Math.max(0, (doc.credits || 0) - 1)
-    } catch (e) {
-      const code = e && (e.errCode || e.code)
-      log('remind send failed', code, e && e.message)
-      if (REFUSED.indexOf(code) === -1) return 0
-      next.credits = 0
-    }
-    next.sent = recordSent(doc.sent, at, mealType)
+    const { next, ok, refused } = await sendOne(openid, doc, t, mealType, times, at, false)
+    // 发出去了或者没次数了：这顿记为发过；别的错（比如网络）下次触发器再试，只记下错误码
+    if (ok || refused) next.sent = recordSent(doc.sent, at, mealType)
     await save(openid, next)
     return ok ? 1 : 0
   }
@@ -106,6 +126,23 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       if (VERSIONS[src.version]) doc.version = VERSIONS[src.version]
       await save(openid, doc)
       return viewOf(openid, doc)
+    },
+
+    // 现在发一条试试（提醒页的按钮）：按现在这顿发，和真的提醒长得一样；用掉一次「允许」
+    async test(openid) {
+      const t = await template()
+      if (!t || !send) throw new AppError(CODES.BAD_REQUEST, '微信提醒还没开通')
+      const doc = await load(openid)
+      if (!(doc.credits > 0)) throw new AppError(CODES.BAD_REQUEST, '还没有「允许」次数：弹出来时点「允许」再试')
+      const profile = await repo.getProfile(openid)
+      const times = mealTimesOf(profile)
+      const at = now()
+      const { next, ok, code, refused } = await sendOne(openid, doc, t, mealNow(times, at), times, at, true)
+      await save(openid, next)
+      if (!ok) {
+        throw new AppError(CODES.BAD_REQUEST, refused ? '微信说「允许」次数用完了：弹出来时点「允许」再试' : `没发出去（错误码 ${code || '未知'}），把这句截图发给家里人`)
+      }
+      return viewOf(openid, next, profile)
     },
 
     async setNotify(openid, input) {
@@ -149,6 +186,12 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
         } catch (e) {
           log('remind tick failed', e)
         }
+      }
+      // 记一笔「刚看过」：提醒页能看出定时触发器在不在跑
+      try {
+        await repo.saveSetting(TICK, { at: now().getTime(), people: docs.length, sent })
+      } catch (e) {
+        log('remind tick save failed', e)
       }
       return { sent }
     },

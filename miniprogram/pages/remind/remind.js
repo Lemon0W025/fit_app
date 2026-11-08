@@ -133,6 +133,32 @@ Page({
       })
   },
 
+  // 现在发一条试试：先申请一次「允许」（要在点击里调，正好补上要用掉的那次），再让云函数按现在这顿发一条
+  testSend() {
+    if (this.data.working) return
+    const id = this.remind.templateId
+    this.setData({ working: true })
+    const send = () => api.call('remind.test')
+      .then((res) => {
+        this.setData({ working: false })
+        this.show(res)
+        wx.showModal({ title: '发出去了', content: '看看微信聊天列表里的「服务通知」，点开会直接到拍照页', showCancel: false })
+      })
+      .catch((err) => {
+        this.setData({ working: false })
+        api.showError(err)
+        this.load()
+      })
+    wx.requestSubscribeMessage({
+      tmplIds: [id],
+      success: (res) => {
+        if (res[id] !== 'accept') return send()
+        api.call('remind.subscribed', { accepted: true, version: appVersion() }).then(send, send)
+      },
+      fail: () => send(),
+    })
+  },
+
   editTimes() {
     wx.switchTab({ url: '/pages/profile/profile' })
   },

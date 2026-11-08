@@ -176,7 +176,16 @@ const onlySlide = (n) => () => `<style>.wx-swiper-item{display:none}.wx-swiper-i
 
 // 饭点提醒页（第一次进来）：有微信模板时的样子；templateId 给 '' 是还没开通（最上面「开通微信提醒」）
 async function remindData(templateId = 'tmpl') {
-  const res = { mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }, calendar: null, templateId, notify: !!templateId, credits: 3 }
+  const res = {
+    mealTimes: { breakfast: '07:30', lunch: '12:00', dinner: '18:00' },
+    calendar: null,
+    templateId,
+    notify: !!templateId,
+    credits: 3,
+    nudgeAt: { breakfast: '8:00', lunch: '12:30', dinner: '18:30' },
+    lastText: '今天 12:30 午饭的提醒发出去了',
+    tickText: '定时检查：今天 20:50 看过一次',
+  }
   const page = loadPage('remind', createWx(async (req) => ({ ok: true, data: req.action === 'remind.get' ? res : null })))
   page.onLoad({ first: '1' })
   page.onShow()

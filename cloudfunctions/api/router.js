@@ -30,6 +30,7 @@ const ROUTES = {
   'remind.setNotify': ['remind', 'setNotify'],
   'remind.calendarDone': ['remind', 'calendarDone'],
   'remind.setup': ['remind', 'setup'],
+  'remind.test': ['remind', 'test'],
   'account.info': ['account', 'info'],
   'account.reset': ['account', 'reset'],
 }

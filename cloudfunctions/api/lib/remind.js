@@ -1,7 +1,7 @@
 // 饭点提醒（微信服务通知）的纯函数：这一刻该提醒哪顿、发什么、发过了记一笔（docs/superpowers/specs/2026-10-25-on-time-checkin-design.md 第二块）
 
 const { MAIN_MEALS, MEAL_WORDS, WINDOW_MINUTES, loggedMeals } = require('./shared/timing')
-const { localMinutes, dateKey, addDays } = require('./shared/date')
+const { localMinutes, dateKey, addDays, timeText } = require('./shared/date')
 
 const NUDGE_AFTER_MINUTES = 30 // 饭点过了这么久还没拍才提醒（到窗口结束为止）
 const CREDITS_MAX = 30 // 「允许」攒的次数最多记这么多
@@ -51,6 +51,32 @@ function messageFor(template, mealType, times, now) {
   return data
 }
 
+// 每顿什么时候会提醒（饭点 + 30 分钟，到窗口结束前还没拍才发）：{ breakfast: '8:00', … }
+function nudgeTimes(times) {
+  const out = {}
+  MAIN_MEALS.forEach((t) => {
+    out[t] = clockText(toMinutes(times[t]) + NUDGE_AFTER_MINUTES)
+  })
+  return out
+}
+
+// 「今天 18:30」「昨天 8:00」「11月6日 12:30」
+function whenText(ms, now) {
+  const day = dateKey(new Date(ms))
+  const today = dateKey(now)
+  const [, m, d] = day.split('-').map(Number)
+  const head = day === today ? '今天' : day === addDays(today, -1) ? '昨天' : `${m}月${d}日`
+  return `${head} ${timeText(ms)}`
+}
+
+// 试发一条用哪顿：现在在哪顿的窗口里就是哪顿，不在就是下一顿（都过了是早饭）
+function mealNow(times, now) {
+  const m = localMinutes(now)
+  const inside = MAIN_MEALS.find((t) => Math.abs(m - toMinutes(times[t])) <= WINDOW_MINUTES)
+  if (inside) return inside
+  return MAIN_MEALS.find((t) => toMinutes(times[t]) > m) || MAIN_MEALS[0]
+}
+
 // 发过了记一笔（只留最近 7 天）
 function recordSent(sent, now, mealType) {
   const today = dateKey(now)
@@ -63,4 +89,4 @@ function recordSent(sent, now, mealType) {
   return out
 }
 
-module.exports = { NUDGE_AFTER_MINUTES, CREDITS_MAX, planReminders, messageFor, recordSent }
+module.exports = { NUDGE_AFTER_MINUTES, CREDITS_MAX, planReminders, messageFor, recordSent, nudgeTimes, whenText, mealNow }

@@ -246,6 +246,18 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   assert.equal(asked, 1)
   assert.equal(page.data.view.notify, true)
   assert.equal(page.data.view.creditsText, '还能提醒 1 次')
+  assert.match(page.data.view.whenText, /午饭 12:30/)
+  assert.match(readWxml('remind'), /testSend/)
+  // 现在发一条试试：先再要一次「允许」补上，按现在这顿（午饭）发，和真的提醒一样
+  page.testSend()
+  await settle()
+  assert.equal(asked, 2)
+  assert.match(wx.log.modals.pop(), /服务通知/)
+  assert.equal(cloud.messages.length, 1)
+  assert.equal(cloud.messages[0].page, 'pages/checkin/checkin?mealType=lunch&from=remind')
+  assert.deepEqual(cloud.messages[0].data, { thing2: { value: '午饭还没拍哦' }, time1: { value: '2026-11-03 12:00' }, thing3: { value: '13:00 前拍还算准时' } })
+  assert.equal(page.data.view.creditsText, '还能提醒 1 次')
+  assert.equal(page.data.view.lastText, '今天 12:10 午饭的试发发出去了')
   // 首页：勾了「总是保持」的，点拍照不弹窗地再攒一次；没勾的不在首页问
   wx.subscriptionItems = { 'tmpl-auto': 'accept' }
   const today = loadPage('today', wx)
@@ -254,7 +266,7 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   await settle()
   today.goCheckin(event({ mealType: 'lunch' }))
   await settle()
-  assert.equal(asked, 2)
+  assert.equal(asked, 3)
   assert.equal((await main({ action: 'remind.get' })).data.credits, 2)
   assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/checkin/checkin?mealType=lunch'])
   wx.subscriptionItems = {}
@@ -262,6 +274,6 @@ test('提醒页：没开通时微信提醒在最上面、有「开通微信提�
   await settle()
   today.goCheckin(event({ mealType: 'lunch' }))
   await settle()
-  assert.equal(asked, 2, '没勾「总是保持」：首页不问')
+  assert.equal(asked, 3, '没勾「总是保持」：首页不问')
   today.onHide()
 })

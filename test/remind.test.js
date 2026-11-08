@@ -61,7 +61,16 @@ function setup({ template = TEMPLATE, now = at('12:40'), sendError = null } = {}
 
 test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微信提醒；允许一次攒一次（最多 30）；日历记下当时的饭点', async () => {
   const none = setup({ template: null })
-  assert.deepEqual(await none.service.get('u1'), { templateId: '', notify: false, credits: 0, calendar: null, mealTimes: TIMES })
+  assert.deepEqual(await none.service.get('u1'), {
+    templateId: '',
+    notify: false,
+    credits: 0,
+    calendar: null,
+    mealTimes: TIMES,
+    nudgeAt: { breakfast: '8:00', lunch: '12:30', dinner: '18:30' },
+    lastText: '',
+    tickText: '定时检查：还没有记录（每 10 分钟看一次，过一会儿再来看）',
+  })
   await assert.rejects(none.service.setNotify('u1', { on: true }), { code: 'BAD_REQUEST' })
   assert.equal(await none.service.isSet('u1'), false)
   const done = await none.service.calendarDone('u1', { times: TIMES })
@@ -126,6 +135,49 @@ test('tick：用户拒收（43101）次数清零、这顿记下；别的错误�
 
   const none = setup({ template: null })
   assert.deepEqual(await none.service.tick(), { sent: 0 })
+})
+
+test('提醒页看得出定时检查在不在跑、上次提醒发没发出去；别的错也记下错误码', async () => {
+  const { service, clock } = setup()
+  await service.subscribed('u1', { accepted: true })
+  await service.subscribed('u1', { accepted: true })
+  await service.setNotify('u1', { on: true })
+  await service.tick()
+  let view = await service.get('u1')
+  assert.equal(view.tickText, '定时检查：今天 12:40 看过一次')
+  assert.equal(view.lastText, '今天 12:40 午饭的提醒发出去了')
+  clock.now = at('08:10', '2026-10-30')
+  view = await service.get('u1')
+  assert.equal(view.tickText, '定时检查：昨天 12:40 看过一次')
+
+  const flaky = setup({ sendError: { errCode: 47003, message: 'argument invalid' } })
+  await flaky.service.subscribed('u1', { accepted: true })
+  await flaky.service.setNotify('u1', { on: true })
+  await flaky.service.tick()
+  assert.equal((await flaky.service.get('u1')).lastText, '今天 12:40 午饭的提醒没发出去（错误码 47003）')
+})
+
+test('remind.test：现在发一条试试（按现在这顿，和真的提醒一样），用掉一次；没次数 / 发不出去说清楚', async () => {
+  const { service, messages, clock } = setup()
+  await assert.rejects(service.test('u1'), { code: 'BAD_REQUEST', message: /允许/ })
+  await service.subscribed('u1', { accepted: true, version: 'develop' })
+  clock.now = at('15:00')
+  const view = await service.test('u1')
+  assert.equal(messages.length, 1)
+  // 15:00 不在哪顿的窗口里：按下一顿晚饭发
+  assert.equal(messages[0].page, 'pages/checkin/checkin?mealType=dinner&from=remind')
+  assert.equal(messages[0].miniprogramState, 'developer')
+  assert.equal(view.credits, 0)
+  assert.equal(view.lastText, '今天 15:00 晚饭的试发发出去了')
+
+  const broken = setup({ sendError: { errCode: 47003, message: 'argument invalid' } })
+  await broken.service.subscribed('u1', { accepted: true })
+  await assert.rejects(broken.service.test('u1'), { code: 'BAD_REQUEST', message: /错误码 47003/ })
+  assert.equal((await broken.service.get('u1')).credits, 1)
+  const refused = setup({ sendError: { errCode: 43101, message: 'user refuse' } })
+  await refused.service.subscribed('u1', { accepted: true })
+  await assert.rejects(refused.service.test('u1'), { message: /次数用完/ })
+  assert.equal((await refused.service.get('u1')).credits, 0)
 })
 
 test('云函数：remind.* 走路由；定时触发器（Type: Timer）不走路由、调 tick；day.get 带新手三步和模板 ID', async () => {

@@ -85,6 +85,19 @@
   line-height: 1.6;
 }
 
+.when {
+  margin-top: 16rpx;
+  line-height: 1.6;
+}
+
+.remind-status {
+  margin-top: 8rpx;
+}
+
+.test-btn {
+  margin-top: 20rpx;
+}
+
 .later {
   display: block;
   text-align: center;
