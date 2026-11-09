@@ -1,6 +1,6 @@
 // 饭点提醒：手机日历闹钟加过没有、微信服务通知开没开、攒了几次「允许」；定时触发器每 10 分钟 tick 一次，到了饭点这顿还没拍的发一条
 const { AppError, CODES } = require('../lib/errors')
-const { mealTimesOf, MEAL_WORDS } = require('../lib/shared/timing')
+const { mealTimesOf, MEAL_WORDS, MAIN_MEALS } = require('../lib/shared/timing')
 const { dateKey } = require('../lib/shared/date')
 const { CREDITS_MAX, planReminders, messageFor, recordSent, nudgeTimes, whenText, mealNow } = require('../lib/remind')
 const { setupTemplate } = require('../lib/remind-template')
@@ -31,6 +31,14 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     await repo.saveReminders(openid, rest)
   }
 
+  // 手机日历里加了哪几顿（{ breakfast: '07:30', … }，记的是加的时候的饭点）。
+  // 11/09 以前是一次点击连着加三个，微信只认点击里的第一个（早饭），所以老记录只算早饭加上了
+  function calendarMeals(cal) {
+    if (!cal) return {}
+    if (cal.meals) return cal.meals
+    return cal.times && cal.times.breakfast ? { breakfast: cal.times.breakfast } : {}
+  }
+
   // 上次提醒的结果：「今天 18:30 晚饭的提醒发出去了」/「…没发出去（错误码 47003）」
   function lastText(last) {
     if (!last || !last.at) return ''
@@ -44,7 +52,7 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       templateId: t ? t.id : '',
       notify: !!doc.notify && !!t,
       credits: doc.credits || 0,
-      calendar: doc.calendar || null,
+      calendar: doc.calendar ? { at: doc.calendar.at, times: doc.calendar.times, meals: calendarMeals(doc.calendar) } : null,
       mealTimes: times,
       nudgeAt: nudgeTimes(times),
       lastText: lastText(doc.last),
@@ -153,12 +161,19 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       return viewOf(openid, doc)
     },
 
-    // 手机日历里加好了三个饭点闹钟：记下当时的饭点（饭点改了提示去日历里删旧的）
+    // 手机日历里加好了一顿的闹钟（微信一次点击只能加一个）：记下这顿和当时的饭点（饭点改了提示去日历里删旧的）。
+    // 不带 mealType 的（老版本）当三顿都加了
     async calendarDone(openid, input) {
+      const src = input || {}
       const profile = await repo.getProfile(openid)
-      const times = (input || {}).times || mealTimesOf(profile)
+      const times = mealTimesOf({ mealTimes: src.times || mealTimesOf(profile) })
       const doc = await load(openid)
-      doc.calendar = { at: now().getTime(), times: mealTimesOf({ mealTimes: times }) }
+      const meals = { ...calendarMeals(doc.calendar) }
+      const which = MAIN_MEALS.indexOf(src.mealType) !== -1 ? [src.mealType] : MAIN_MEALS
+      which.forEach((t) => {
+        meals[t] = times[t]
+      })
+      doc.calendar = { at: now().getTime(), times, meals }
       await save(openid, doc)
       return viewOf(openid, doc, profile)
     },

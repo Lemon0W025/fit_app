@@ -1,7 +1,8 @@
 // 饭点提醒（准时打卡设计第二块）：手机日历里加三个每天重复的饭点闹钟；有微信模板时还能开「到饭点用微信提醒我」。
 // 第一次建档后自动进来（?first=1），底下「设好了，去拍第一顿」
 const api = require('../../utils/api')
-const { remindView, calendarEvents, appVersion } = require('../../utils/remind')
+const { remindView, calendarEvent, appVersion } = require('../../utils/remind')
+const { MEAL_WORDS } = require('../../utils/shared/timing')
 
 Page({
   data: {
@@ -33,51 +34,47 @@ Page({
     this.setData({ loading: false, view: remindView(res) })
   },
 
-  // 手机日历：一个一个加（每个微信都会问一下），加完记下当时的饭点
-  addCalendar() {
+  // 手机日历：一顿一个按钮（微信规定一次点击只能加一个，连着加后面的会被拒），加好了记下这顿
+  addCalendar(e) {
     if (this.data.working) return
+    const mealType = e && e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.meal : ''
+    if (!mealType) return
     if (!wx.canIUse || !wx.canIUse('addPhoneRepeatCalendar')) {
       wx.showModal({ title: '加不了日历', content: '微信版本有点旧，升级微信后再来加', showCancel: false })
       return
     }
     const times = this.remind.mealTimes
-    const events = calendarEvents(times, new Date())
     this.setData({ working: true })
-    const next = (i) => {
-      if (i >= events.length) {
-        api.call('remind.calendarDone', { times })
+    wx.addPhoneRepeatCalendar({
+      ...calendarEvent(times, new Date(), mealType),
+      success: () => {
+        api.call('remind.calendarDone', { times, mealType })
           .then((res) => {
             this.setData({ working: false })
             this.show(res)
-            wx.showToast({ title: '三个闹钟加好了', icon: 'success' })
+            wx.showToast({ title: `${MEAL_WORDS[mealType]}闹钟加好了`, icon: 'success' })
           })
           .catch((err) => {
             this.setData({ working: false })
             api.showError(err)
           })
-        return
-      }
-      wx.addPhoneRepeatCalendar({
-        ...events[i],
-        success: () => next(i + 1),
-        fail: (err) => {
-          this.setData({ working: false })
-          const msg = (err && err.errMsg) || ''
-          if (/cancel/.test(msg)) return
-          if (/auth|deny|permission/i.test(msg)) {
-            wx.showModal({
-              title: '要允许加日历',
-              content: '在设置里打开「添加到日历」，再回来点一次',
-              confirmText: '去设置',
-              success: (r) => r.confirm && wx.openSetting(),
-            })
-            return
-          }
-          api.showError(new Error('没加上，稍后再试一次'))
-        },
-      })
-    }
-    next(0)
+      },
+      fail: (err) => {
+        this.setData({ working: false })
+        const msg = (err && err.errMsg) || ''
+        if (/cancel/.test(msg)) return
+        if (/auth|deny|permission/i.test(msg)) {
+          wx.showModal({
+            title: '要允许加日历',
+            content: '在设置里打开「添加到日历」，再回来点一次',
+            confirmText: '去设置',
+            success: (r) => r.confirm && wx.openSetting(),
+          })
+          return
+        }
+        api.showError(new Error('没加上，再点一下按钮试试'))
+      },
+    })
   },
 
   // 微信提醒开关：打开时先申请一次「允许」（要在点击里调），允许了攒一次再打开

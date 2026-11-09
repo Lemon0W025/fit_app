@@ -42,10 +42,13 @@
 
   <view class="card fx-rise fx-d3">
     <view class="card-title">📅 手机闹钟（可选）</view>
-    <view class="muted text">在手机日历里加三个每天重复的提醒（加一次就行，以后每天自己响），到饭点像闹钟一样响一下；点了进不了小程序。</view>
-    <view wx:if="{{view.calendarText}}" class="done">✓ {{view.calendarText}}</view>
-    <view wx:if="{{view.calendarStale}}" class="warn">饭点改过了：手机日历里还有旧的闹钟，要到日历里手动删掉，再点下面加新的。</view>
-    <button class="btn-plain" bindtap="addCalendar" disabled="{{working}}">{{view.calendarButton}}</button>
+    <view class="muted text">在手机日历里加每天重复的闹钟（加一次就行，以后每天自己响），到饭点像闹钟一样响一下；点了进不了小程序。微信规定一次只能加一个，三顿各点一下。</view>
+    <view wx:for="{{view.calendarRows}}" wx:key="mealType" class="cal-row">
+      <view class="cal-word">{{item.word}} {{item.time}}</view>
+      <view wx:if="{{item.added}}" class="done cal-done">已加 ✓</view>
+      <button wx:else class="btn-plain cal-btn" data-meal="{{item.mealType}}" bindtap="addCalendar" disabled="{{working}}">{{item.button}}</button>
+    </view>
+    <view wx:if="{{view.calendarStale}}" class="warn">饭点改过了：手机日历里旧的闹钟要到日历里手动删掉，再点上面「按新饭点加」。</view>
   </view>
 
   <block wx:if="{{first}}">

@@ -77,17 +77,19 @@ test('今日页：刚建档有「新手三步」卡；点「设好饭点提醒�
 
 test('提醒页的样子：饭点、日历加没加、饭点改过要提示删旧的；没模板不显示微信提醒；日历三个事件饭点那一刻响、每天重复', () => {
   const none = remindView({ mealTimes: TIMES, calendar: null, templateId: '', notify: false, credits: 0 })
+  assert.deepEqual(none.calendarRows.map((r) => [r.word, r.time, r.added, r.button]), [['早饭', '07:30', false, '加上'], ['午饭', '12:00', false, '加上'], ['晚饭', '18:00', false, '加上']])
   assert.deepEqual(none.times.map((x) => [x.word, x.time, x.window]), [['早饭', '07:30', '06:30～08:30'], ['午饭', '12:00', '11:00～13:00'], ['晚饭', '18:00', '17:00～19:00']])
-  assert.equal(none.calendarButton, '在手机日历里加三个饭点闹钟')
   assert.equal(none.wechat, false)
-  const done = remindView({ mealTimes: TIMES, calendar: { at: 1, times: TIMES }, templateId: 't', notify: true, credits: 3 })
-  assert.equal(done.calendarText, '已加好（07:30 / 12:00 / 18:00）')
+  const done = remindView({ mealTimes: TIMES, calendar: { at: 1, times: TIMES, meals: TIMES }, templateId: 't', notify: true, credits: 3 })
+  assert.equal(done.calendarAll, true)
   assert.equal(done.calendarStale, false)
+  // 老记录（以前一次点击连着加三个，微信只认第一个）：只算早饭加上了
+  const old = remindView({ mealTimes: TIMES, calendar: { at: 1, times: TIMES }, templateId: '', credits: 0 })
+  assert.deepEqual(old.calendarRows.map((r) => r.added), [true, false, false])
   assert.equal(done.creditsText, '还能提醒 3 次')
-  const stale = remindView({ mealTimes: { ...TIMES, lunch: '12:30' }, calendar: { at: 1, times: TIMES }, templateId: '', credits: 0 })
+  const stale = remindView({ mealTimes: { ...TIMES, lunch: '12:30' }, calendar: { at: 1, times: TIMES, meals: TIMES }, templateId: '', credits: 0 })
   assert.equal(stale.calendarStale, true)
-  assert.equal(stale.calendarText, '')
-  assert.equal(stale.calendarButton, '按新饭点再加一次')
+  assert.deepEqual(stale.calendarRows.map((r) => [r.added, r.button]), [[true, '加上'], [false, '按新饭点加'], [true, '加上']])
   const now = new Date(2026, 9, 29, 12, 30) // 手机本地 12:30
   const events = calendarEvents(TIMES, now)
   assert.deepEqual(events.map((e) => new Date(e.startTime * 1000).toTimeString().slice(0, 5)), ['07:30', '12:00', '18:00'])
@@ -101,7 +103,7 @@ test('提醒页的样子：饭点、日历加没加、饭点改过要提示删�
   assert.ok(nextAt('12:30', now) > now.getTime() / 1000)
 })
 
-test('提醒页：加日历（三个一个个加），加好了记下、显示已加好、新手三步那步打勾；第一次进来「设好了，去拍第一顿」回今日页', async (t) => {
+test('提醒页：加日历（一顿一个按钮，微信一次点击只能加一个），加好了记下那顿、显示已加、新手三步那步打勾；第一次进来「设好了，去拍第一顿」回今日页', async (t) => {
   fixDate(t, '2026-10-29T10:00:00+08:00')
   const { main, wx } = await app()
   await main({ action: 'profile.save', data: PROFILE })
@@ -117,23 +119,31 @@ test('提醒页：加日历（三个一个个加），加好了记下、显示�
   await settle()
   assert.equal(page.data.first, true)
   assert.equal(page.data.view.wechat, false)
-  page.addCalendar()
+  const tap = (meal) => page.addCalendar(event({ meal }))
+  tap('lunch')
+  await settle()
+  assert.deepEqual(added, ['小暖提醒：拍午饭（11:00～13:00 准时）'], '一次点击只加一个')
+  assert.deepEqual(page.data.view.calendarRows.map((r) => r.added), [false, true, false])
+  assert.ok(wx.log.toasts.includes('午饭闹钟加好了'))
+  assert.deepEqual((await main({ action: 'day.get' })).data.guide, { remind: true, meal: false })
+  tap('breakfast')
+  await settle()
+  tap('dinner')
   await settle()
   assert.equal(added.length, 3)
-  assert.equal(page.data.view.calendarText, '已加好（07:30 / 12:00 / 18:00）')
-  assert.ok(wx.log.toasts.includes('三个闹钟加好了'))
-  assert.deepEqual((await main({ action: 'day.get' })).data.guide, { remind: true, meal: false })
+  assert.equal(page.data.view.calendarAll, true)
+  assert.match(readWxml('remind'), /data-meal="\{\{item.mealType\}\}"/)
   page.done()
   assert.deepEqual(wx.log.nav.pop(), ['switchTab', '/pages/today/today'])
   // 拒绝了授权：提示去设置
   wx.addPhoneRepeatCalendar = (o) => o.fail({ errMsg: 'addPhoneRepeatCalendar:fail auth deny' })
-  page.addCalendar()
+  tap('lunch')
   await settle()
   assert.match(wx.log.modals.pop(), /设置里打开/)
   assert.equal(page.data.working, false)
   // 微信太旧
   wx.canIUse = () => false
-  page.addCalendar()
+  tap('lunch')
   assert.match(wx.log.modals.pop(), /升级微信/)
 })
 

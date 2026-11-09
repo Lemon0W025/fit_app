@@ -74,8 +74,17 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
   })
   await assert.rejects(none.service.setNotify('u1', { on: true }), { code: 'BAD_REQUEST' })
   assert.equal(await none.service.isSet('u1'), false)
-  const done = await none.service.calendarDone('u1', { times: TIMES })
+  // 一顿一顿加：记下加了哪顿；不带 mealType 的老版本当三顿都加了
+  let done = await none.service.calendarDone('u1', { times: TIMES, mealType: 'lunch' })
+  assert.deepEqual(done.calendar.meals, { lunch: '12:00' })
+  done = await none.service.calendarDone('u1', { times: TIMES, mealType: 'dinner' })
+  assert.deepEqual(done.calendar.meals, { lunch: '12:00', dinner: '18:00' })
+  done = await none.service.calendarDone('u1', { times: TIMES })
   assert.deepEqual(done.calendar.times, TIMES)
+  assert.deepEqual(done.calendar.meals, TIMES)
+  // 11/09 以前的老记录没有 meals：那时一次点击连着加三个，微信只认第一个，所以只算早饭
+  none.repo.state.reminders.set('u2', { _id: 'u2', calendar: { at: 1, times: TIMES } })
+  assert.deepEqual((await none.service.get('u2')).calendar.meals, { breakfast: '07:30' })
   assert.equal(await none.service.isSet('u1'), true)
 
   const { service } = setup()

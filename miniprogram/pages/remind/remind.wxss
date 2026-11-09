@@ -102,3 +102,30 @@
   display: block;
   text-align: center;
 }
+
+/* 手机闹钟：一顿一行，右边一个小按钮（一次点击只能加一个） */
+.cal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20rpx;
+}
+
+.cal-word {
+  flex: 1;
+  font-size: 32rpx;
+  color: var(--text);
+}
+
+.cal-done {
+  margin-top: 0;
+}
+
+button.btn-plain.cal-btn {
+  flex: none;
+  width: 240rpx !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 30rpx;
+  line-height: 76rpx;
+}

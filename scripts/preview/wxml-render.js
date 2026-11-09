@@ -42,7 +42,8 @@ function evalExpr(expr, scope) {
 
 function interp(str, scope) {
   if (typeof str !== 'string') return str
-  const whole = str.match(/^\{\{([\s\S]*)\}\}$/)
+  // 整段只有一个 {{ }} 才按表达式原样返回（「{{a}} {{b}}」不算，要拼成字符串）
+  const whole = str.match(/^\{\{((?:(?!\}\})[\s\S])*)\}\}$/)
   if (whole) return evalExpr(whole[1], scope)
   return str.replace(/\{\{([\s\S]*?)\}\}/g, (_, e) => {
     const v = evalExpr(e, scope)
