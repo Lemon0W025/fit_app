@@ -11,10 +11,11 @@
 //   npm run wx:preview -- <页面> [参数]   扫码直接打开到这一页，比如模拟点了饭点提醒：
 //                                  npm run wx:preview -- pages/checkin/checkin "mealType=dinner&from=remind"
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器，建完用 wx:check 核对。
-//                                  ⚠️ 11/09 实测：miniprogram-ci 的 BatchCreateTrigger 返回成功但触发器列表还是空的，
-//                                  要在开发者工具里右键 cloudfunctions/api →「上传触发器」才建得上
-//   npm run wx:check               看云函数 api 的状态和定时触发器（饭点提醒靠它每 10 分钟跑一次），只读
+//   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器。
+//                                  稳妥的做法是在开发者工具里右键 cloudfunctions/api →「上传触发器」（11/09 用户点过，提示成功）
+//   npm run wx:check               看云函数 api 的状态（只读）。⚠️ 这条通道读到的触发器列表一直是空的，
+//                                  开发者工具上传触发器成功后也是空的，所以看不出触发器在不在；
+//                                  触发器有没有在跑，以提醒页「定时检查」那行（每次跑都会记一笔）或云函数日志为准
 //   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base-vN/、decor-vN/、anim-vN/、cut-vN/
 
 const fs = require('fs')
@@ -187,11 +188,7 @@ async function main() {
     console.log(`给云函数 api 建定时触发器（${triggers.map((t) => `${t.name} ${t.config}`).join('、')}）→ 环境 ${env}…`)
     const res = await ci.cloud.createTimeTrigger({ project, envId: env, functionName: 'api', triggersConfig: triggers })
     console.log(`  miniprogram-ci 说：${res}`)
-    const info = await functionInfo(project, env)
-    if (!info.triggers.length) {
-      fail('触发器列表还是空的（miniprogram-ci 建不上）：在微信开发者工具里右键 cloudfunctions/api →「上传触发器」，再跑 npm run wx:check 核对')
-    }
-    console.log(`✓ 触发器：${info.triggers.map((t) => `${t.name} ${t.desc}`).join('、')}`)
+    console.log('  这条通道看不出触发器在不在：以提醒页「定时检查」那行为准；稳妥的做法是在开发者工具里右键 cloudfunctions/api →「上传触发器」')
     return
   }
 
@@ -200,9 +197,10 @@ async function main() {
     const info = await functionInfo(project, env)
     console.log(`云函数 api：${info.status}，超时 ${info.timeout} 秒，运行环境 ${info.runtime}`)
     if (!info.triggers.length) {
-      fail('没有定时触发器 → 饭点提醒不会自动发（只有「现在发一条试试」能发）。在微信开发者工具里右键 cloudfunctions/api →「上传触发器」')
+      console.log('  触发器列表：空（这条通道一直读到空，开发者工具上传成功后也是空，不代表没有）。触发器有没有在跑，看提醒页「定时检查」那行或云函数日志')
+    } else {
+      info.triggers.forEach((t) => console.log(`✓ 触发器 ${t.name}：${t.type} ${t.desc}${t.enable === false ? '（停用了）' : ''}`))
     }
-    info.triggers.forEach((t) => console.log(`✓ 触发器 ${t.name}：${t.type} ${t.desc}${t.enable === false ? '（停用了）' : ''}`))
     return
   }
 
