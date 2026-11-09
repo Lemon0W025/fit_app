@@ -54,9 +54,19 @@ const route = createRouter(
   { log },
 )
 
+// 定时触发器叫起来的：事件里有 Type: 'Timer'（大小写都认）或 TriggerName；小程序发来的请求一定带 action
+function isTimer(event, openid) {
+  if (!event) return !openid
+  if (String(event.Type || '').toLowerCase() === 'timer' || event.TriggerName) return true
+  return !event.action && !openid
+}
+
 exports.main = async (event) => {
-  // 定时触发器（config.json 的 remind，每 10 分钟）：没有 OPENID，不走路由
-  if (event && event.Type === 'Timer') return remind.tick()
   const { OPENID } = cloud.getWXContext()
+  // 定时触发器（config.json 的 remind，每 10 分钟）：没有 OPENID，不走路由
+  if (isTimer(event, OPENID)) {
+    console.log('remind timer', JSON.stringify(Object.keys(event || {})), event && event.TriggerName)
+    return remind.tick({ trigger: (event && event.TriggerName) || '' })
+  }
   return route(event, OPENID)
 }

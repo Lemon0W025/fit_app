@@ -172,6 +172,20 @@ test('提醒页看得出定时检查在不在跑、上次提醒发没发出去�
   assert.equal((await flaky.service.get('u1')).lastText, '今天 12:40 午饭的提醒没发出去（错误码 47003）')
 })
 
+test('tick：一进来先记一笔；半路出错也记下错误，提醒页写出来', async () => {
+  const { repo, service } = setup()
+  repo.listReminders = async () => {
+    throw new Error('database timeout')
+  }
+  assert.deepEqual(await service.tick({ trigger: 'remind' }), { sent: 0, error: true })
+  const tick = await repo.getSetting('remindTick')
+  assert.equal(tick.stage, 'error')
+  assert.equal(tick.trigger, 'remind')
+  const view = await service.get('u1')
+  assert.equal(view.tickBad, true)
+  assert.match(view.tickText, /今天 12:40 跑了，但出错了（database timeout）/)
+})
+
 test('remind.test：现在发一条试试（按现在这顿，和真的提醒一样），用掉一次；没次数 / 发不出去说清楚', async () => {
   const { service, messages, clock } = setup()
   await assert.rejects(service.test('u1'), { code: 'BAD_REQUEST', message: /允许/ })
@@ -212,6 +226,14 @@ test('云函数：remind.* 走路由；定时触发器（Type: Timer）不走路
     assert.deepEqual(day.data.remind, { templateId: 'tmpl-1', notify: true })
     const res = await main({ Type: 'Timer', TriggerName: 'remind', Time: new Date().toISOString() })
     assert.ok(typeof res.sent === 'number')
+    // 事件格式稍有不同也认：小写 timer、只有 TriggerName
+    assert.ok(typeof (await main({ Type: 'timer' })).sent === 'number')
+    assert.ok(typeof (await main({ TriggerName: 'remind' })).sent === 'number')
+    // 跑过就记一笔，提醒页能看到
+    assert.match((await main({ action: 'remind.get' })).data.tickText, /^定时检查：今天 /)
+    // 没有 OPENID、也没有 action 的（不是小程序发来的）当定时触发
+    const bare = loadCloudFunction(createFakeCloud({ openid: '' }))
+    assert.ok(typeof (await bare.main({})).sent === 'number')
   } finally {
     config.remindTemplate = null
   }

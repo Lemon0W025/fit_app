@@ -52,6 +52,7 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     if (!tick || !tick.at) return { tickText: '⚠️ 自动检查一次都还没跑过：到饭点不会自动提醒，只能手动试发。告诉家里人', tickBad: true }
     const when = whenText(tick.at, now())
     if (now().getTime() - tick.at > TICK_STALE_MS) return { tickText: `⚠️ 自动检查最后一次是 ${when}，之后停了：到饭点不会自动提醒。告诉家里人`, tickBad: true }
+    if (tick.stage === 'error') return { tickText: `⚠️ 自动检查 ${when} 跑了，但出错了（${tick.error || '不知道什么错'}）。截图给家里人`, tickBad: true }
     return { tickText: `定时检查：${when} 看过一次（每 10 分钟一次）`, tickBad: false }
   }
 
@@ -199,24 +200,41 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     },
 
     // 定时触发器：开了微信提醒、还有次数的人挨个看
-    async tick() {
-      const t = await template()
-      if (!t || !send) return { sent: 0 }
-      const docs = await repo.listReminders()
-      let sent = 0
-      for (const doc of docs) {
+    // 定时触发器每 10 分钟叫一次。一进来先记一笔「看过」（提醒页能看出触发器在不在跑），出错也记下来，
+    // 免得「跑了但半路出错」和「根本没跑」分不清
+    async tick(info) {
+      const at = now().getTime()
+      const mark = async (extra) => {
         try {
-          sent += await remindOne(doc, t)
+          await repo.saveSetting(TICK, { at, trigger: (info && info.trigger) || '', ...extra })
         } catch (e) {
-          log('remind tick failed', e)
+          log('remind tick save failed', e)
         }
       }
-      // 记一笔「刚看过」：提醒页能看出定时触发器在不在跑
+      await mark({ stage: 'start' })
+      let sent = 0
+      let people = 0
       try {
-        await repo.saveSetting(TICK, { at: now().getTime(), people: docs.length, sent })
+        const t = await template()
+        if (!t || !send) {
+          await mark({ stage: 'done', people: 0, sent: 0, note: '还没开通微信提醒' })
+          return { sent: 0 }
+        }
+        const docs = await repo.listReminders()
+        people = docs.length
+        for (const doc of docs) {
+          try {
+            sent += await remindOne(doc, t)
+          } catch (e) {
+            log('remind tick failed', e)
+          }
+        }
       } catch (e) {
-        log('remind tick save failed', e)
+        log('remind tick crashed', e)
+        await mark({ stage: 'error', people, sent, error: String((e && (e.errMsg || e.message)) || e).slice(0, 80) })
+        return { sent, error: true }
       }
+      await mark({ stage: 'done', people, sent })
       return { sent }
     },
 
