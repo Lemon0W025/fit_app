@@ -26,6 +26,7 @@ function remindView(res) {
     whenText: res.nudgeAt ? `到饭点就提醒：${MAIN_MEALS.map((t) => `${MEAL_WORDS[t]} ${res.nudgeAt[t]}`).join('、')}。提前拍了就不打扰。` : '',
     lastText: res.lastText || '',
     tickText: res.tickText || '',
+    tickBad: !!res.tickBad,
   }
 }
 

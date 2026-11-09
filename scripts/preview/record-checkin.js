@@ -184,7 +184,7 @@ async function remindData(templateId = 'tmpl') {
     credits: 3,
     nudgeAt: { breakfast: '7:30', lunch: '12:00', dinner: '18:00' },
     lastText: '今天 12:00 午饭的提醒发出去了',
-    tickText: '定时检查：今天 20:50 看过一次',
+    tickText: '定时检查：今天 20:50 看过一次（每 10 分钟一次）',
   }
   const page = loadPage('remind', createWx(async (req) => ({ ok: true, data: req.action === 'remind.get' ? res : null })))
   page.onLoad({ first: '1' })

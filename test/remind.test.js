@@ -70,7 +70,8 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
     mealTimes: TIMES,
     nudgeAt: { breakfast: '7:30', lunch: '12:00', dinner: '18:00' },
     lastText: '',
-    tickText: '定时检查：还没有记录（每 10 分钟看一次，过一会儿再来看）',
+    tickText: '⚠️ 自动检查一次都还没跑过：到饭点不会自动提醒，只能手动试发。告诉家里人',
+    tickBad: true,
   })
   await assert.rejects(none.service.setNotify('u1', { on: true }), { code: 'BAD_REQUEST' })
   assert.equal(await none.service.isSet('u1'), false)
@@ -154,11 +155,15 @@ test('提醒页看得出定时检查在不在跑、上次提醒发没发出去�
   await service.setNotify('u1', { on: true })
   await service.tick()
   let view = await service.get('u1')
-  assert.equal(view.tickText, '定时检查：今天 12:40 看过一次')
+  assert.equal(view.tickText, '定时检查：今天 12:40 看过一次（每 10 分钟一次）')
+  assert.equal(view.tickBad, false)
+  clock.now = at('13:00')
+  assert.equal((await service.get('u1')).tickBad, false, '20 分钟还算在跑')
   assert.equal(view.lastText, '今天 12:40 午饭的提醒发出去了')
   clock.now = at('08:10', '2026-10-30')
   view = await service.get('u1')
-  assert.equal(view.tickText, '定时检查：昨天 12:40 看过一次')
+  assert.equal(view.tickText, '⚠️ 自动检查最后一次是 昨天 12:40，之后停了：到饭点不会自动提醒。告诉家里人')
+  assert.equal(view.tickBad, true)
 
   const flaky = setup({ sendError: { errCode: 47003, message: 'argument invalid' } })
   await flaky.service.subscribed('u1', { accepted: true })

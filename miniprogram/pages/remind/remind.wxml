@@ -34,7 +34,7 @@
     <view wx:if="{{view.whenText}}" class="text when">{{view.whenText}}</view>
     <block wx:if="{{view.notify}}">
       <view wx:if="{{view.lastText}}" class="muted small remind-status">上次：{{view.lastText}}</view>
-      <view wx:if="{{view.tickText}}" class="muted small remind-status">{{view.tickText}}</view>
+      <view wx:if="{{view.tickText}}" class="{{view.tickBad ? 'warn' : 'muted small remind-status'}}">{{view.tickText}}</view>
       <button class="btn-plain test-btn" bindtap="testSend" disabled="{{working}}">现在发一条试试</button>
     </block>
     <view class="muted small help">微信规定：每点一次「允许」只能提醒一次。每次拍照打卡会顺手攒一次；第一次弹出来时勾上「总是保持以上选择，不再询问」再点「允许」，以后就不用管了。</view>

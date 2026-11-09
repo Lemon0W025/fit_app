@@ -11,7 +11,10 @@
 //   npm run wx:preview -- <页面> [参数]   扫码直接打开到这一页，比如模拟点了饭点提醒：
 //                                  npm run wx:preview -- pages/checkin/checkin "mealType=dinner&from=remind"
 //   npm run wx:upload -- [版本号] [描述]   上传为开发版本（可在后台设为体验版）
-//   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器（饭点提醒每 10 分钟看一次；填了 remindTemplate 再建）
+//   npm run wx:trigger             按 cloudfunctions/api/config.json 的 triggers 给 api 建定时触发器，建完用 wx:check 核对。
+//                                  ⚠️ 11/09 实测：miniprogram-ci 的 BatchCreateTrigger 返回成功但触发器列表还是空的，
+//                                  要在开发者工具里右键 cloudfunctions/api →「上传触发器」才建得上
+//   npm run wx:check               看云函数 api 的状态和定时触发器（饭点提醒靠它每 10 分钟跑一次），只读
 //   npm run wx:art [-- cut]        把 art/camp/ 的底图切块、art/decor/ 的装饰块、art/anim/ 的动画拼图、art/cut/ 的帐篷和锅抠图传到云存储 camp/base-vN/、decor-vN/、anim-vN/、cut-vN/
 
 const fs = require('fs')
@@ -59,6 +62,34 @@ function lastCommitSubject() {
   }
 }
 
+// 云函数 api 的状态和触发器：借 miniprogram-ci 部署时用的 GetFunction 通道读原始返回（它自己的包装会把 Triggers 丢掉）。
+// 只读；不打印任何密钥
+async function functionInfo(project, env) {
+  const cloudapi = require('miniprogram-ci/dist/ci/cloud/cloudapi')
+  const cloudAPI = require('miniprogram-ci/dist/common/cloud-api')
+  const { appid } = JSON.parse(fs.readFileSync(path.join(ROOT, 'project.config.json'), 'utf8'))
+  cloudapi.initCloudAPI(appid)
+  const send = cloudapi.boundTransactRequest(project)
+  let raw = null
+  const request = async (opts) => {
+    const r = await send(opts)
+    raw = typeof r === 'string' ? r : JSON.stringify(r)
+    return r
+  }
+  const codeSecret = await cloudapi.get3rdCloudCodeSecret(project)
+  const info = await cloudAPI.scfGetFunctionInfo({ namespace: env, region: '', functionName: 'api', codeSecret }, { request, transactType: cloudAPI.TransactType.IDE })
+  let triggers = []
+  try {
+    const parsed = JSON.parse(raw)
+    const body = parsed.Response || parsed
+    triggers = (body.Triggers || []).map((t) => ({ name: t.TriggerName, type: t.Type, desc: t.TriggerDesc, enable: t.Enable === undefined ? undefined : t.Enable === 1 || t.Enable === 'OPEN' }))
+  } catch (e) {
+    const m = String(raw || '').match(/"TriggerName"\s*:\s*"([^"]+)"/g)
+    triggers = (m || []).map((x) => ({ name: x.split('"')[3], type: 'timer', desc: '' }))
+  }
+  return { status: info.status, timeout: info.timeout, runtime: info.runtime, triggers }
+}
+
 function loadCi() {
   try {
     return require('miniprogram-ci')
@@ -69,8 +100,8 @@ function loadCi() {
 
 async function main() {
   const [command, ...args] = process.argv.slice(2)
-  if (!['function', 'preview', 'upload', 'art', 'trigger'].includes(command)) {
-    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述] | art | trigger')
+  if (!['function', 'preview', 'upload', 'art', 'trigger', 'check'].includes(command)) {
+    fail('用法：node scripts/wechat.js function | preview | upload [版本号] [描述] | art | trigger | check')
   }
 
   const ci = loadCi()
@@ -155,7 +186,23 @@ async function main() {
     if (!triggers || !triggers.length) fail('cloudfunctions/api/config.json 里没有 triggers')
     console.log(`给云函数 api 建定时触发器（${triggers.map((t) => `${t.name} ${t.config}`).join('、')}）→ 环境 ${env}…`)
     const res = await ci.cloud.createTimeTrigger({ project, envId: env, functionName: 'api', triggersConfig: triggers })
-    console.log(`✓ ${res}`)
+    console.log(`  miniprogram-ci 说：${res}`)
+    const info = await functionInfo(project, env)
+    if (!info.triggers.length) {
+      fail('触发器列表还是空的（miniprogram-ci 建不上）：在微信开发者工具里右键 cloudfunctions/api →「上传触发器」，再跑 npm run wx:check 核对')
+    }
+    console.log(`✓ 触发器：${info.triggers.map((t) => `${t.name} ${t.desc}`).join('、')}`)
+    return
+  }
+
+  if (command === 'check') {
+    const env = envId()
+    const info = await functionInfo(project, env)
+    console.log(`云函数 api：${info.status}，超时 ${info.timeout} 秒，运行环境 ${info.runtime}`)
+    if (!info.triggers.length) {
+      fail('没有定时触发器 → 饭点提醒不会自动发（只有「现在发一条试试」能发）。在微信开发者工具里右键 cloudfunctions/api →「上传触发器」')
+    }
+    info.triggers.forEach((t) => console.log(`✓ 触发器 ${t.name}：${t.type} ${t.desc}${t.enable === false ? '（停用了）' : ''}`))
     return
   }
 

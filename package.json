@@ -9,7 +9,8 @@
     "wx:preview": "node scripts/wechat.js preview",
     "wx:upload": "node scripts/wechat.js upload",
     "wx:art": "node scripts/wechat.js art",
-    "wx:trigger": "node scripts/wechat.js trigger"
+    "wx:trigger": "node scripts/wechat.js trigger",
+    "wx:check": "node scripts/wechat.js check"
   },
   "engines": {
     "node": ">=18"

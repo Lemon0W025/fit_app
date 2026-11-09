@@ -10,6 +10,7 @@ const EMPTY = { notify: false, credits: 0, sent: {}, calendar: null }
 const REFUSED = [43101]
 const SETTING = 'remindTemplate'
 const TICK = 'remindTick' // 定时检查最近一次跑的时间（提醒页显示，看触发器在不在跑）
+const TICK_STALE_MS = 25 * 60 * 1000 // 触发器每 10 分钟一次：25 分钟没跑过就算停了
 // 点通知打开哪个版本：跟着她「允许」时用的那个（开发版预览 / 体验版 / 正式版）
 const VERSIONS = { develop: 'developer', trial: 'trial', release: 'formal' }
 
@@ -46,6 +47,14 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
     return last.ok ? `${what}发出去了` : `${what}没发出去（错误码 ${last.code || '未知'}）`
   }
 
+  // 定时检查（触发器）在不在跑：没跑过 / 停了就标出来，免得以为开着提醒其实发不出去
+  function tickState(tick) {
+    if (!tick || !tick.at) return { tickText: '⚠️ 自动检查一次都还没跑过：到饭点不会自动提醒，只能手动试发。告诉家里人', tickBad: true }
+    const when = whenText(tick.at, now())
+    if (now().getTime() - tick.at > TICK_STALE_MS) return { tickText: `⚠️ 自动检查最后一次是 ${when}，之后停了：到饭点不会自动提醒。告诉家里人`, tickBad: true }
+    return { tickText: `定时检查：${when} 看过一次（每 10 分钟一次）`, tickBad: false }
+  }
+
   function view(doc, profile, t, tick) {
     const times = mealTimesOf(profile)
     return {
@@ -56,7 +65,7 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       mealTimes: times,
       nudgeAt: nudgeTimes(times),
       lastText: lastText(doc.last),
-      tickText: tick && tick.at ? `定时检查：${whenText(tick.at, now())} 看过一次` : '定时检查：还没有记录（每 10 分钟看一次，过一会儿再来看）',
+      ...tickState(tick),
     }
   }
 
