@@ -494,8 +494,10 @@ button.btn-small {
   gap: 24rpx;
 }
 
+/* 左边这列往下放一截：草坪左上角是大帐篷，门洞（小动物进去睡、露个头）在屏幕高度 30%～36% 那一段，别让按钮盖住 */
 .side-left {
   left: 20rpx;
+  top: 47%;
 }
 
 .side-right {
