@@ -3,14 +3,20 @@
 const { WELCOME_BEANS } = require('./shared/garden')
 const { OLD_TO_PET } = require('./shared/pets')
 const { placeProblem, RETIRED, GOLD_SWING } = require('./shared/decor')
+const { levelOf, HOME_LEVEL, POT_STAY_MS } = require('./shared/camp')
+const { dateKey } = require('./shared/date')
 
-const LEGACY_FIELDS = ['estate', 'opened', 'inventory', 'placed', 'residents', 'collected', 'plots', 'unseen', 'currentSpecies', 'unlocked']
+const STARTER_PET = 'doudou'
+
+const LEGACY_FIELDS = ['estate', 'opened', 'inventory', 'placed', 'residents', 'collected', 'plots', 'unseen', 'currentSpecies', 'unlocked', 'visitors', 'arrivals']
 // 2：食物下锅（pot）、闻香来的客人（visitors），去掉两个食盆；3：装饰放大 2.5 倍，摆着放不下的收回背包；
-// 4：小帐篷、小树下架（按原价退暖豆），金色小帐篷换成金色秋千
-const CAMP_VERSION = 4
+// 4：小帐篷、小树下架（按原价退暖豆），金色小帐篷换成金色秋千；
+// 5：常客模式（specs/2026-11-07-camp-regulars-design.md）：pets 多了 home（住下了：豆豆、5 级）和 until（常客能待到几点），
+//    锅按下锅时间算 8 小时（pot.items），客人（visitors）变成常客，arrivals 不要了
+const CAMP_VERSION = 6
 
 function pet(id, since) {
-  return { id, since: since || '', fed: 0, fedToday: { date: '', n: 0 } }
+  return { id, since: since || '', fed: 0, fedToday: { date: '', n: 0 }, home: false, until: 0 }
 }
 
 // 旧档：暖豆按「打卡赚到的全部 + 新手礼」重算（花掉的全退），住户按原型搬进营地，其他全删
@@ -63,9 +69,10 @@ function refitDecor(src) {
   return { ...src, decor: { ...src.decor, placed: kept } }
 }
 
-// camp 4 之前：下架的（小帐篷、小树）按原价退暖豆、从草地上收走；金色小帐篷换成金色秋千（原地换，放不下就收回背包）
+// 下架的（RETIRED：camp 4 小帐篷、小树；camp 6 吊床、野餐垫、花坛这些会穿模的和几件杂物）按原价退暖豆、从草地上收走；
+// 金色小帐篷换成金色秋千（原地换，放不下就收回背包）。每次版本号落后都跑一遍（已经退过的 owned 里没有了，不会退两次）
 function retireDecor(src) {
-  if (!src.decor || (src.camp || 0) >= 4) return src
+  if (!src.decor || (src.camp || 0) >= CAMP_VERSION) return src
   const owned = { ...(src.decor.owned || {}) }
   let refund = 0
   Object.keys(RETIRED).forEach((id) => {
@@ -85,8 +92,29 @@ function retireDecor(src) {
   return { ...src, beans: { ...beans, spent: Math.max(0, (beans.spent || 0) - refund) }, decor: { ...src.decor, owned, placed: kept } }
 }
 
-function normalizeCamp(doc) {
-  const src = retireDecor(refitDecor(dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {}))))
+// camp 5 之前：锅是「今天的」就当刚下锅（从现在起管 8 小时）；老住户豆豆和 5 级的住下，其余是常客（锅空着的话迁移完就不在场）；
+// 客人变成常客；arrivals 不要了
+function adoptRegulars(src, nowMs) {
+  if ((src.camp || 0) >= 5) return src
+  const today = dateKey(new Date(nowMs))
+  const pot = src.pot || {}
+  const items = pot.date === today ? (pot.foods || []).map((foodId) => ({ foodId, at: nowMs, date: today })) : []
+  const until = items.length ? nowMs + POT_STAY_MS : 0
+  const pets = (src.pets || []).map((p) => {
+    const home = p.id === STARTER_PET || levelOf(p.fed || 0) >= HOME_LEVEL
+    return { ...p, home, until: home ? 0 : until }
+  })
+  ;(src.visitors || []).forEach((v) => {
+    if (v && v.id && !pets.some((p) => p.id === v.id)) pets.push({ ...pet(v.id, v.since || today), until })
+  })
+  const out = { ...src, pets, pot: { items } }
+  delete out.visitors
+  delete out.arrivals
+  return out
+}
+
+function normalizeCamp(doc, nowMs = Date.now()) {
+  const src = adoptRegulars(retireDecor(refitDecor(dropBowls(doc && doc.camp ? { ...doc } : adoptCamp(doc || {})))), nowMs)
   LEGACY_FIELDS.forEach((k) => delete src[k])
   const beans = src.beans || {}
   const gacha = src.gacha || {}
@@ -99,12 +127,11 @@ function normalizeCamp(doc) {
     beans: { earned: beans.earned || {}, bonus: beans.bonus || 0, spent: beans.spent || 0 },
     gacha: { pulls: gacha.pulls || 0, sincePity: gacha.sincePity || 0 },
     foods: src.foods || {},
-    // 今天锅里煮着的（date 不是今天就当空锅，半夜自己清空）
-    pot: { date: pot.date || '', foods: pot.foods || [] },
-    visitors: (src.visitors || []).map((v) => ({ id: v.id, foodId: v.foodId || '', since: v.since || '' })),
+    // 锅里的每样吃的：什么时候下的（管 POT_STAY_MS）、哪天下的（一天最多三样）
+    pot: { items: (pot.items || []).filter((it) => it && it.foodId).map((it) => ({ foodId: it.foodId, at: it.at || 0, date: it.date || '' })) },
+    // home：住下了（豆豆、5 级）；until：常客能待到几点（毫秒），在场 = home || until > now；
     // stars：满级后的星星里已经发过暖豆的几颗（services/camp.js 的 settleGoals）
-    pets: (src.pets || []).map((p) => ({ id: p.id, since: p.since || '', fed: p.fed || 0, fedToday: p.fedToday || { date: '', n: 0 }, stars: p.stars || 0 })),
-    arrivals: src.arrivals || [],
+    pets: (src.pets || []).map((p) => ({ id: p.id, since: p.since || '', fed: p.fed || 0, fedToday: p.fedToday || { date: '', n: 0 }, home: !!p.home || p.id === STARTER_PET, until: p.until || 0, stars: p.stars || 0 })),
     decor: { owned: decor.owned || {}, placed: decor.placed || [] },
     seq: src.seq || 0,
     gift: src.gift || '',

@@ -25,7 +25,7 @@
   right: 0;
   bottom: 0;
   z-index: 200;
-  background: rgba(47, 42, 36, 0.45);
+  background: rgba(23, 25, 28, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -38,8 +38,9 @@
   width: 78%;
   margin-top: 120rpx;
   padding: 0 40rpx 48rpx;
-  border-radius: 32rpx;
-  background: #fffdf7;
+  border-radius: 48rpx;
+  background: #17191c;
+  box-shadow: 0 16rpx 40rpx rgba(0, 0, 0, 0.3);
   text-align: center;
   animation: cel-card-in 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) 0.1s backwards;
 }
@@ -55,28 +56,29 @@
 .cel-title {
   margin-top: 12rpx;
   font-size: 48rpx;
-  font-weight: 700;
-  color: var(--orange);
+  font-weight: 800;
+  color: #c4ef5a;
 }
 
 .cel-sub {
   font-size: 28rpx;
-  color: #7a7166;
+  color: rgba(255, 255, 255, 0.78);
 }
 
 .cel-line {
   margin: 20rpx 0 8rpx;
   font-size: 32rpx;
-  color: #2f2a24;
+  color: #ffffff;
 }
 
 .cel-btn {
   width: 100% !important;
   margin-top: 32rpx;
   padding: 20rpx 0;
-  border-radius: 48rpx;
-  background: #4e7d5b;
-  color: #fff;
+  border-radius: 999rpx;
+  background: #c4ef5a;
+  color: #17191c;
+  font-weight: 800;
   font-size: 34rpx;
   font-weight: 600;
 }

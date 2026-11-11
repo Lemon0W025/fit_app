@@ -3,34 +3,45 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const D = require('../cloudfunctions/api/lib/shared/decor')
 
-test('28 件装饰 + 金色秋千：类别、价钱、块和落脚框；小帐篷、小树下架，换成各种花', () => {
-  assert.equal(D.DECOR.length, 29)
-  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 29)
+test('26 件装饰 + 金色秋千：类别、价钱、块和落脚框；会穿模的家具和花坛下架（11/07），草坪上换成各种花', () => {
+  assert.equal(D.DECOR.length, 27)
+  assert.equal(new Set(D.DECOR.map((d) => d.id)).size, 27)
   assert.deepEqual(D.CATEGORIES.map((c) => c.id), ['nest', 'eat', 'play', 'plant', 'mood'])
   const shop = D.DECOR.filter((d) => d.price > 0)
-  assert.equal(shop.length, 28)
-  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 2810)
-  assert.equal(D.decorById('tent'), null)
-  assert.equal(D.decorById('sapling'), null)
-  assert.deepEqual(D.RETIRED, { tent: { name: '小帐篷', price: 120 }, sapling: { name: '小树', price: 80 } })
+  assert.equal(shop.length, 26)
+  assert.equal(shop.reduce((s, d) => s + d.price * d.max, 0), 3010)
+  // 留下的：和草地贴合、小动物不用躺进去 / 爬上去的
+  assert.deepEqual(D.DECOR.filter((d) => d.category !== 'plant').map((d) => d.id), ['strawbed', 'kettle', 'swing', 'ball', 'lights', 'bunting', 'windmill', 'lantern', 'stonelamp', 'fence', 'gold_swing'])
+  ;['tent', 'sapling', 'hammock', 'treehouse', 'picnic', 'table', 'ladder', 'slide', 'flowerbed', 'pumpkins', 'mailbox', 'clothesline', 'scarecrow'].forEach((id) => {
+    assert.equal(D.decorById(id), null, id)
+    assert.ok(D.RETIRED[id] && D.RETIRED[id].price > 0 && D.RETIRED[id].name, id)
+  })
+  assert.equal(Object.keys(D.RETIRED).length, 13)
+  assert.deepEqual(D.RETIRED.hammock, { name: '吊床', price: 100 })
+  assert.deepEqual(D.RETIRED.flowerbed, { name: '花坛', price: 50 })
   D.DECOR.forEach((d) => {
     assert.ok(D.CATEGORIES.some((c) => c.id === d.category), d.id)
     assert.ok(d.patch.w > 0 && d.patch.h > 0 && d.foot.w <= d.patch.w && d.foot.h <= d.patch.h, d.id)
     assert.ok(d.anchor.x >= 0 && d.anchor.x <= d.patch.w && d.anchor.y >= 0 && d.anchor.y <= d.patch.h, d.id)
     assert.ok(d.max >= 1, d.id)
-    d.spots.forEach((s) => assert.ok(['sleep', 'sit', 'swing', 'sniff', 'slide', 'climb', 'tea', 'play', 'perch'].indexOf(s.action) !== -1, `${d.id} ${s.action}`))
+    d.spots.forEach((s) => assert.ok(['sleep', 'sit', 'swing', 'sniff', 'tea', 'play'].indexOf(s.action) !== -1, `${d.id} ${s.action}`))
   })
   // 秋千坐在座位上摆；花前面闻（点在落脚框外面，不用走进花坛里）
   assert.deepEqual(D.decorById('swing').spots.map((s) => s.action), ['swing'])
   assert.deepEqual(D.decorById('gold_swing').spots, D.decorById('swing').spots)
-  ;['flowerbed', 'sunflower', 'lavender', 'hydrangea', 'tulips', 'daisies', 'cosmos', 'roses'].forEach((id) => {
+  // 花草 16 种，都是直接种在草坪上的，都能闻；一排向日葵能站三只
+  const plants = D.DECOR.filter((d) => d.category === 'plant').map((d) => d.id)
+  assert.deepEqual(plants, ['sunflower', 'sunflowers', 'lavender', 'hydrangea', 'tulips', 'daisies', 'cosmos', 'roses', 'dandelions', 'clover', 'rapeseed', 'chrysanthemum', 'mint', 'poppies', 'bluebells', 'mushrooms'])
+  plants.forEach((id) => {
     const d = D.decorById(id)
     assert.ok(d.spots.length && d.spots.every((s) => s.action === 'sniff' && s.y > d.anchor.y), id)
   })
+  assert.equal(D.decorById('sunflowers').spots.length, 3)
+  assert.equal(D.decorById('sunflowers').size, 'l')
   assert.equal(D.decorById('gold_swing').price, 0)
   assert.equal(D.GOLD_SWING, 'gold_swing')
   assert.deepEqual(D.decorById('gold_swing').patch, D.decorById('swing').patch)
-  assert.equal(D.decorById('flowerbed').max, 3)
+  assert.equal(D.decorById('sunflower').max, 3)
   assert.equal(D.decorById('nope'), null)
   // 原来的大小 × 2.5（10/26 放大）
   assert.equal(D.DECOR_SCALE, 2.5)

@@ -37,12 +37,13 @@
               <view class="bubble-tail" style="left: {{item.tailLeft}}px"></view>
             </view>
           </view>
-          <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
+          <!-- 在帐篷里睡（tentClip）：整只裁成门洞的形状，布帘、帐篷布、横木后面的看不见 -->
+          <view wx:if="{{!item.hidden}}" class="pet {{mode === 'view' ? '' : 'ghosted'}} {{item.tentClip ? (item.flip ? 'pet-tent pet-tent-flip' : 'pet-tent') : ''}}" style="transform: translate3d({{item.left}}px, {{0 - item.bottom}}px, 0); width: {{item.width}}px; z-index: {{item.z}}; transition-duration: {{item.duration}}ms" data-index="{{index}}" catchtap="tapPet" bindlongpress="pressPet">
             <view wx:if="{{item.emoji}}" class="act-emoji">{{item.emoji}}</view>
             <image wx:if="{{item.tapping}}" class="heart" src="/images/garden/fx/heart.png" mode="aspectFit" />
-            <view class="pet-sway {{item.sway ? item.sway.cls : (item.bubble ? 'talk-on' : '')}}" style="transform-origin: {{item.sway ? item.sway.ox + 'px ' + item.sway.oy + 'px' : '50% 100%'}}">
+            <view class="pet-sway {{item.sway ? item.sway.cls : (item.bubble ? 'talk-on' : '')}}" style="transform-origin: {{item.sway ? item.sway.ox + 'px ' + item.sway.oy + 'px' : '50% 100%'}}; {{item.tentClip}}">
             <view class="pet-body {{item.flip ? 'flip' : ''}}" style="height: {{item.width}}px">
-              <view wx:if="{{item.sheet}}" class="anim-frame" style="width: {{item.width}}px; height: {{item.width}}px">
+              <view wx:if="{{item.sheet}}" class="anim-frame" style="width: {{item.width}}px; height: {{item.width}}px; {{item.tentShift}}">
                 <image class="anim-strip anim-f{{item.anim.frames}}" src="{{item.sheet}}" mode="scaleToFill" binderror="onAnimError" data-id="{{item.id}}" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms; filter: {{item.light || 'none'}}; transition: filter {{item.duration}}ms linear" />
                 <image wx:if="{{item.night}}" class="anim-strip anim-f{{item.anim.frames}} moon" src="{{item.sheet}}" mode="scaleToFill" style="width: {{item.anim.cols * 100}}%; height: {{item.anim.rows * 100}}%; margin-left: 0; margin-top: -{{item.anim.row * 100}}%; animation-duration: {{item.anim.ms}}ms; filter: {{item.moonLight}}; opacity: {{item.moon}}; transition: filter {{item.duration}}ms linear, opacity {{item.duration}}ms linear" />
               </view>
@@ -120,10 +121,6 @@
     <view wx:if="{{mode === 'view'}}" class="recenter" bindtap="recenter">
       <image class="recenter-icon" src="/images/garden/ui/campfire.png" mode="aspectFit" />
     </view>
-    <view wx:if="{{mode === 'view'}}" class="checkin-btn" bindtap="goCheckin">
-      <image class="checkin-icon" src="/images/garden/ui/camera.png" mode="aspectFit" />
-      <text>拍一拍这一餐</text>
-    </view>
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
       <view class="placing-main">
@@ -138,7 +135,7 @@
       </view>
     </view>
 
-    <sheet show="{{bagOpen}}" bindclose="closeBag">
+    <sheet show="{{bagOpen}}" bindclose="closeBag" tuck="{{bagTuck}}">
       <view slot="head" class="bag-tabs">
         <segmented options="{{bagTabs}}" value="{{bagTab}}" bindchange="switchBag" />
       </view>
@@ -146,7 +143,7 @@
       <view class="bag-panes">
       <view class="bag-pane {{bagTab === 'food' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{foodBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
-          <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood">
+          <view wx:for="{{foodBag}}" wx:key="id" class="bag-item" style="border-color: {{item.rarityColor}}" data-id="{{item.id}}" bindtap="pickFood" bindtouchstart="onBagTouchStart" bindtouchmove="onBagTouchMove" bindtouchend="onBagTouchEnd" bindtouchcancel="onBagTouchEnd">
             <image class="bag-image" src="{{item.image}}" mode="aspectFit" />
             <view class="bag-name">{{item.name}}</view>
             <view wx:if="{{item.count > 1}}" class="bag-count">×{{item.count}}</view>
@@ -156,7 +153,7 @@
           </view>
         </scroll-view>
         <view wx:else class="muted small">没有吃的了，去扭蛋机抽一个吧～</view>
-        <view class="muted small bag-hint">{{bagForPot ? '点一样，放进锅里煮上' : '点一样：放进锅里煮上，或者拿着去喂一只小动物'}}（下面是今天闻着它会来的小动物，黑影是还没来过的）</view>
+        <view class="muted small bag-hint">按住一样往上拖，拖到锅上松手就煮上（拖到小动物身上是喂它）；点一下也行。下面是今天闻着它会来的小动物，黑影是还没来过的</view>
       </view>
       <view class="bag-pane {{bagTab === 'decor' ? 'bag-pane-on' : ''}}">
         <scroll-view wx:if="{{decorBag.length}}" class="bag" scroll-x enhanced show-scrollbar="{{false}}">
@@ -172,37 +169,22 @@
       </view>
     </sheet>
 
-    <sheet show="{{residentsOpen}}" title="住户（点一下，带你去找它）" bindclose="closeResidents">
+    <sheet show="{{residentsOpen}}" title="小动物（点一下，带你去找它）" bindclose="closeResidents">
       <view wx:if="{{residents.length}}" class="res-list">
         <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
           <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
           <view class="res-body">
-            <view class="res-name">{{item.name}}<text wx:if="{{item.stars}}" class="res-stars">{{item.stars}}</text></view>
+            <view class="res-name">{{item.name}}<text class="res-tag {{item.home ? 'res-tag-home' : ''}}">{{item.home ? '住下了' : '常客'}}</text><text wx:if="{{item.stars}}" class="res-stars">{{item.stars}}</text></view>
             <view class="res-text">{{item.text}}</view>
           </view>
           <text class="res-go">去看看 ›</text>
         </view>
       </view>
-      <view wx:else class="muted small">还没有小动物住进来。把食物放进锅里煮上，闻着香味来的小动物下次拍正餐就住下～</view>
+      <view wx:else class="muted small">这会儿没有小动物在。把它们爱吃的放进锅里煮上，闻着香味就来了；喂到最亲（5 级）就住下，锅空了也不走～</view>
     </sheet>
   </block>
 
-  <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">
-    <view class="welcome" catchtap="noop">
-      <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
-      <view class="welcome-title">欢迎来到暖暖营地！</view>
-      <view class="welcome-text">豆豆已经在篝火边等你了，送你 {{welcome.beans}} 暖豆。营地这样玩：</view>
-      <view class="welcome-steps">
-        <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，点锅放进去煮上</view>
-        <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，下次拍正餐就住下</view>
-        <view class="welcome-step"><text class="welcome-no">3</text>点小动物，它会跟你说话；暖豆还能买家具</view>
-      </view>
-      <button class="btn-primary" bindtap="closeWelcome">带我看看怎么玩</button>
-      <view class="link link-muted welcome-later" bindtap="goGacha">直接去扭蛋</view>
-    </view>
-  </view>
-
-  <!-- 庆祝卡：住户到了 4 / 8 / 12 只、满级后又攒够一颗星（云函数的 cheers），一张一张出 -->
+  <!-- 庆祝卡：住下的到了 4 / 8 / 12 只、满级后又攒够一颗星（云函数的 cheers），一张一张出 -->
   <view wx:if="{{cheer && !welcome}}" class="overlay" catchtap="closeCheer">
     <view class="welcome cheer-card" catchtap="noop">
       <image class="cheer-img" src="{{cheer.image}}" mode="aspectFit" />
@@ -211,6 +193,21 @@
       <view class="cheer-text">{{cheer.text}}</view>
       <view class="cheer-more">{{cheer.more}}</view>
       <button class="btn-primary" bindtap="closeCheer">收下</button>
+    </view>
+  </view>
+
+  <view wx:if="{{welcome}}" class="overlay" catchtap="closeWelcome">
+    <view class="welcome" catchtap="noop">
+      <image class="welcome-gift" src="/images/garden/ui/gift.png" mode="aspectFit" />
+      <view class="welcome-title">欢迎来到暖暖营地！</view>
+      <view class="welcome-text">豆豆已经在篝火边等你了，送你 {{welcome.beans}} 暖豆。营地这样玩：</view>
+      <view class="welcome-steps">
+        <view class="welcome-step"><text class="welcome-no">1</text>扭蛋抽吃的，点锅放进去煮上</view>
+        <view class="welcome-step"><text class="welcome-no">2</text>爱吃的小动物闻着香味来，锅里有吃的就待着（一样管 8 小时）</view>
+        <view class="welcome-step"><text class="welcome-no">3</text>点小动物，它会跟你说话；暖豆还能买家具</view>
+      </view>
+      <button class="btn-primary" bindtap="closeWelcome">带我看看怎么玩</button>
+      <view class="link link-muted welcome-later" bindtap="goGacha">直接去扭蛋</view>
     </view>
   </view>
 

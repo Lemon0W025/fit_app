@@ -1,6 +1,6 @@
+/* 今天：奖励卡（金色奶油底 + 金边） */
 .today-card {
   text-align: center;
-  background: linear-gradient(180deg, #fff4e0 0%, #ffffff 70%);
 }
 
 .today-stamps {
@@ -9,9 +9,9 @@
 }
 
 .today-title {
-  font-size: 36rpx;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--bean-ink);
 }
 
 .today-hint {
@@ -42,19 +42,23 @@
 }
 
 .month-label {
-  font-size: 32rpx;
-  font-weight: 700;
+  font-size: 36rpx;
+  font-weight: 800;
 }
 
 .month-arrow {
-  font-size: 48rpx;
-  color: var(--primary);
-  padding: 0 24rpx;
-  line-height: 1;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: var(--chip);
+  font-size: 44rpx;
+  line-height: 64rpx;
+  text-align: center;
+  color: var(--ink);
 }
 
 .month-arrow-off {
-  color: var(--line);
+  color: #c9ccd0;
 }
 
 .weekdays,
@@ -77,8 +81,9 @@
 }
 
 .cell-day {
-  font-size: 26rpx;
-  font-weight: 600;
+  font-family: var(--font-num);
+  font-size: 28rpx;
+  font-weight: 700;
   line-height: 1.2;
 }
 
@@ -88,7 +93,8 @@
 
 .cell-beans {
   font-size: 20rpx;
-  color: var(--orange);
+  font-weight: 600;
+  color: var(--gold-ink);
   min-height: 28rpx;
   line-height: 28rpx;
 }
@@ -119,7 +125,8 @@
 .medal-label {
   margin-top: 4rpx;
   font-size: 26rpx;
-  color: var(--orange);
+  font-weight: 700;
+  color: var(--bean-ink);
 }
 
 .medal-label-off {
@@ -127,10 +134,10 @@
 }
 
 /* 今天那一格 */
+/* 今天那一格：柠檬绿圆角块 */
 .cell-today {
-  border-radius: 16rpx;
-  background: var(--primary-soft);
-  box-shadow: inset 0 0 0 3rpx rgba(78, 125, 91, 0.35);
+  border-radius: 20rpx;
+  background: var(--lime-soft);
 }
 
 /* 每周小结的入口 */

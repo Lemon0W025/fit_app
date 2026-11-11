@@ -1,8 +1,9 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide tea talk-phone hungry-phone dusk-all-phone celebrate-phone feast-phone cheer-phone bag-phone residents-phone（不写全录）
-//   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night tent-sleep tent-sleep-night talk-phone hungry-phone bag-phone residents-phone（不写全录）
+//   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
+//   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
 //   home-phone*：按手机屏（375×736 + 底部 tab）带着界面录，看一进来的样子（画要盖满屏幕、篝火在正中）
@@ -15,7 +16,7 @@ const { createFakeCloud, loadCloudFunction } = require(`${REPO}/test/helpers/fak
 const { createWx, loadPage, loadComponent, settle } = require(`${REPO}/test/helpers/page-harness`)
 const { manualClock } = require(`${REPO}/test/helpers/manual-clock`)
 const { renderPage } = require('./wxml-render')
-const { SCENE } = require(`${REPO}/miniprogram/utils/shared/camp`)
+const { SCENE, POT_STAY_MS } = require(`${REPO}/miniprogram/utils/shared/camp`)
 const { dateKey } = require(`${REPO}/miniprogram/utils/shared/date`)
 const V = require(`${REPO}/miniprogram/utils/camp-view`)
 const { placeProblem } = require(`${REPO}/miniprogram/utils/shared/decor`)
@@ -58,20 +59,20 @@ function layout(list, prefix) {
   })
   return placed
 }
-// 第 1 批 B 画好的装饰（小帐篷、小树 10/27 下架了，换成秋千、向日葵），摆在火堆周围的草地上
-const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['picnic', 1300, 3400], ['ball', 3000, 3400],
-  ['flowerbed', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
-// 第 2 批的 17 件
-const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['clothesline', 3800, 2500], ['treehouse', 3700, 2950], ['gold_swing', 3450, 3450],
-  ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
-  ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]], 'e')
+// 留下的家具（11/07 精简：吊床、野餐垫、花坛这些下架了），摆在火堆周围的草地上
+const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['sunflowers', 1300, 3400], ['ball', 3000, 3400],
+  ['lavender', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
+// 全部家具 + 各种花草（花草图没回来之前是占位块）
+const DECOR_2 = layout([['lights', 2850, 2200], ['gold_swing', 3450, 3450], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['sunflower', 1650, 3800],
+  ['stonelamp', 1250, 3850], ['swing', 1050, 2750], ['bunting', 1600, 2400], ['sunflowers', 3700, 2950], ['hydrangea', 3800, 2500], ['tulips', 3850, 3700],
+  ['daisies', 3050, 3750], ['cosmos', 2000, 3700], ['roses', 1500, 3300], ['dandelions', 850, 3450], ['clover', 600, 3050], ['rapeseed', 3350, 2300],
+  ['chrysanthemum', 2300, 2400], ['mint', 1300, 2300], ['poppies', 3000, 3000], ['bluebells', 2700, 2300], ['mushrooms', 1900, 3350]], 'e')
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
-const ALL_PETS = require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id)
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
 const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
-// 和家具玩：秋千、花坛、向日葵、野餐垫、吊床挨着摆，点家具叫小家伙过来（荡秋千、闻花、野餐、睡吊床）
-const PLAY = layout([['swing', 2300, 3350], ['flowerbed', 3200, 3500], ['picnic', 1500, 3550], ['sunflower', 3050, 2900], ['hammock', 2400, 3900]], 'p')
+// 和家具玩：秋千、薰衣草、一排向日葵、向日葵、草窝挨着摆，点家具叫小家伙过来（荡秋千、闻花、去窝里睡）
+const PLAY = layout([['swing', 2300, 3350], ['lavender', 3200, 3500], ['sunflowers', 1500, 3550], ['sunflower', 3050, 2900], ['strawbed', 2400, 3900]], 'p')
 const PLAN_2 = [[0, 0, 1300, 3000], [0, 1, 2200, 3500], [0, 2, 3300, 2650], [0, 3, 1800, 3550], [0, 4, 2850, 3500], [0, 5, 1100, 3600], [0, 6, 3550, 3200], [0, 7, 2500, 2300],
   [3000, 0, 2000, 3300], [3000, 2, 2700, 2500], [3000, 4, 3300, 3900], [3000, 6, 1500, 2700], [3000, 7, 3600, 2350]]
 
@@ -143,15 +144,15 @@ const SCENARIOS = {
     plan: [[0, 0, 2250, 3450], [0, 1, 2250, 3700], [3500, 0, 3150, 3450], [3500, 1, 3150, 3700], [7000, 0, 2300, 3460], [7000, 1, 2300, 3710]],
   },
   // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
-  'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: ALL_PETS, plan: [] },
+  'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
   'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
   // 下锅：锅里煮着小米、胡萝卜，豆豆（爱吃小米）跑来吃；闻着胡萝卜来的糯糯（客人）从树林边走到锅边
   'pot-cook': {
     phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12,
-    pets: ['doudou', 'qiqi', 'shushu', 'lianlian'], visitors: [{ id: 'nuonuo', foodId: 'huluobo' }],
-    plan: [[0, 0, 3300, 3600], [0, 4, 2600, 900], [600, 4, 2500, 3150]],
-    events: [[400, (life) => life.cook(['doudou'])]],
+    pets: ['doudou', 'qiqi', 'shushu', 'lianlian'],
+    plan: [[0, 0, 3300, 3600]],
+    events: [[400, (life) => life.cook(['doudou'])], [600, (life) => life.addGuest({ id: 'nuonuo', foodId: 'huluobo' })]],
   },
   // 夜里火着着：全营地本来的颜色（略暗略暖），装饰也是
   'night-lit': { hour: 22, potLevel: 2, focus: [2450, 2950], scale: 0.85, seconds: 8, decor: LAMPS, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'], plan: [[0, 0, 1500, 3450], [0, 1, 3600, 3700], [0, 2, 3200, 2450], [0, 3, 900, 2300], [0, 4, 2000, 3900], [0, 5, 3700, 2600]] },
@@ -168,26 +169,23 @@ const SCENARIOS = {
       [8500, 0, 2500, 3700], [8700, 1, 2900, 3750], [8900, 2, 3300, 3700], [9100, 3, 3650, 3450]],
     events: [[300, (life) => life.cook(['doudou'])]],
   },
-  // 和家具玩（10/27）：叫一只荡秋千（座位和它一起摆）、两只闻花、两只去野餐垫；夜里火着时金色秋千也能荡
+  // 和家具玩（10/27）：叫一只荡秋千（座位和它一起摆）、两只闻花、两只去一排向日葵前；夜里火着时金色秋千也能荡
   play: {
     hour: 10, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 18, decor: PLAY,
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
   },
-  // 滑梯、木梯：叫两只先后去爬滑梯、一只爬木梯张望（拉近看爬上去、滑下来时一直在前面）
-  slide: {
-    hour: 10, potLevel: 2, focus: [2500, 3500], scale: 1.5, seconds: 16, decor: [{ uid: 's0', id: 'slide', x: 2800, y: 3600 }, { uid: 's1', id: 'ladder', x: 1900, y: 3650 }],
-    pets: ['doudou', 'nuonuo', 'qiqi'],
-    plan: [[0, 0, 2300, 3800], [0, 1, 3100, 3850], [0, 2, 2200, 3300]],
-    events: [[300, (life) => life.callTo('s0')], [600, (life) => life.callTo('s1')], [6500, (life) => life.callTo('s0')]],
+  // 进帐篷睡（11/07）：糯糯、豆豆趴在帐篷里（两个床位，身子在布帘后面、头露在门洞里；白天同时睡的最多四分之一，所以放 8 只）；糯糯 12 秒后睡够了出来站在门口再走开；杞杞在门口溜达
+  'tent-sleep': {
+    hour: 10, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 20, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 12000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: false, action: 'tent', until: 60000 } },
+    plan: [],
   },
-  // 水壶炉：叫两只来，各坐一边喝茶（小动物放大以后看坐得下、不压着水壶）
-  tea: {
-    hour: 10, potLevel: 2, focus: [2500, 3500], scale: 1.5, seconds: 12, decor: [{ uid: 'k0', id: 'kettle', x: 2500, y: 3600 }],
-    pets: ['doudou', 'sunbao', 'qiqi'],
-    plan: [[0, 0, 1900, 3800], [0, 1, 3150, 3850], [0, 2, 2200, 3300]],
-    events: [[300, (life) => life.callTo('k0')], [600, (life) => life.callTo('k0')]],
+  'tent-sleep-night': {
+    hour: 22, potLevel: 2, focus: [1200, 1350], scale: 1.6, seconds: 6, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
+    saved: { nuonuo: { x: SCENE.tent.beds[0].at[0], y: SCENE.tent.beds[0].at[1], right: true, action: 'tent', until: 60000 }, doudou: { x: SCENE.tent.beds[1].at[0], y: SCENE.tent.beds[1].at[1], right: false, action: 'tent', until: 60000 } },
+    plan: [],
   },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
@@ -203,25 +201,24 @@ const SCENARIOS = {
     plan: [],
     events: [[500, (life) => life.tap(0)], [10000, (life) => life.tap(1)], [12000, (life) => life.tap(1)], [14000, (life) => life.tap(2)], [22000, (life) => life.tap(0)]],
   },
-  // 锅里空着：大家都留在营地，最亲的三只（糯糯、豆豆、橘团）多半在锅边坐着等开饭、偶尔说一句饿，别的照常玩；提示条说点锅放点吃的
-  'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 30, warm: 30000, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
-  // 小动物放大以后挤不挤（手机上默认视角）：傍晚 11 只围着锅坐两圈；12 只打卡后围着锅蹦；一锅大家都爱吃的点心，全跑来吃
-  'dusk-all-phone': { phone: true, hour: 18, potLevel: 3, focus: null, scale: null, seconds: 6, warm: 90000, pets: ALL_PETS, plan: [] },
-  'celebrate-phone': { phone: true, hour: 8, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.celebrate()]] },
-  'feast-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.cook(ALL_PETS)]] },
-  // 庆祝卡：住下第 4 只，一进营地弹出来（住户里程碑）
-  'cheer-phone': { phone: true, cheer: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'], plan: [] },
+  // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
+  'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
+  // 锅空着、常客都回去了（只有住下的豆豆、糯糯在）；3 秒时节气点心下锅（谁都爱吃）：来过的排着队、一只一只从屏幕左右两边进来（11/07）
+  'arrive-phone': {
+    phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 48, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'huahua'], home: ['nuonuo'], plan: [],
+    bag: { foods: { shibing: 1 } }, events: [[3000, (life, camp) => camp.cook('shibing')]],
+  },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
   'bag-phone': {
     phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 13, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [],
-    bag: { foods: { xiaomi: 2, yumili: 1, huluobo: 3, niangao: 1, lianzi: 1, xiaoyu: 2, shizi: 1 }, decor: { ball: 1, picnic: 1, flowerbed: 1, lantern: 2 } },
+    bag: { foods: { xiaomi: 2, yumili: 1, huluobo: 3, niangao: 1, lianzi: 1, xiaoyu: 2, shizi: 1 }, decor: { ball: 1, sunflowers: 1, lavender: 1, lantern: 2 } },
     ui: [[400, 'open'], [1900, 'tab', 1], [3000, 'tab', 0], [3800, 'tab', 1], [3900, 'tab', 0], [4000, 'tab', 1], [5200, 'drag', 50, 600], [7400, 'flick'], [8800, 'open'], [10200, 'mask']],
   },
   // 住户抽屉（带标题）：12 只多了在抽屉里滚；内容滚着的时候往下拉不拖抽屉，滚回顶上再拉才拖
   'residents-phone': {
-    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 9, pets: ALL_PETS, plan: [],
+    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 9, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [],
     sheet: 'residents',
     ui: [[400, 'open'], [1800, 'scroll', 260], [2600, 'drag-body', 120, 500], [4000, 'scroll', 0], [4800, 'drag-body', 70, 500], [6800, 'flick']],
   },
@@ -231,6 +228,8 @@ async function build(sc) {
   const cloud = createFakeCloud({ replies: [] })
   const { main: fn } = loadCloudFunction(cloud)
   const wx = createWx(fn)
+  // 拼图（art/anim，不进仓库）没生成过的环境：让假的下载失败，宠物退回包里的单张图，不然是一片破图
+  if (!fs.existsSync(path.join(REPO, 'art', 'anim'))) wx.failDownloads = true
   wx.getWindowInfo = () => ({ pixelRatio: 1, windowWidth: winOf(sc).width, windowHeight: winOf(sc).height, statusBarHeight: 20 })
   await fn({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
   const camp = loadPage('camp', wx)
@@ -247,19 +246,20 @@ async function build(sc) {
   const fedOf = {}
   sc.pets.forEach((id, i) => (fedOf[id] = [9, 16, 5, 3, 8, 2, 4, 1][i] || 3))
   // 锅里煮着几样：火点没点、锅里的样子、夜里宠物 / 装饰身上的光都跟着它
+  const at = Date.now()
+  const until = sc.potLevel ? at + POT_STAY_MS : 0
   gardens.set('u1', {
     ...doc,
     foods: (sc.bag && sc.bag.foods) || { xiaomi: 2 },
-    pot: { date: dateKey(new Date()), foods: POT_FOODS.slice(0, sc.potLevel) },
-    visitors: (sc.visitors || []).map((v) => ({ ...v, since: '' })),
-    pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
+    pot: { items: POT_FOODS.slice(0, sc.potLevel).map((foodId) => ({ foodId, at, date: dateKey(new Date()) })) },
+    // 第一只（一般是豆豆）住下了；其余常客：锅里有吃的就在，锅空着就不在场（录「回来」的场景用点心叫回来）
+    pets: Object.keys(fedOf).map((id, i) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 }, home: i === 0 || (sc.home || []).indexOf(id) !== -1, until })),
     decor: { owned: (sc.bag && sc.bag.decor) || {}, placed: sc.decor || [] },
     gift: '',
-    // 住户里程碑当作都领过了（不然 4 只以上一进来先弹庆祝卡，把画面盖住）；sc.cheer 的场景留着看庆祝卡
-    goals: sc.cheer ? [] : [4, 8, 12],
   })
   camp.data.giftShown = true
-  wx.app.globalData.campSpots = null
+  // 上次离开时各自在哪（sc.saved，和 life.snapshot() 一样的格式；until 按录屏的假时钟算，从 0 起）
+  wx.app.globalData.campSpots = sc.saved || null
   camp.life.stop()
   camp.life = null
   camp.onShow()
@@ -438,15 +438,19 @@ async function record(name, sc, browser) {
   const night = V.isNight(sc.hour)
   // 夜里也让它们醒着走（录走路的样子）：先把睡觉的叫起来
   const d = snap(camp)
-  d.cuts = V.cutoutViews(L, sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt, night)
-  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, sc.decor || [], sc.potLevel, require(`${REPO}/miniprogram/config`).cutArt)
+  // 抠图层（帐篷 / 锅 / 木盖 / 提灯）：art/cut 没生成过的环境（云端）用包里的 PNG 兜底（和页面 onCutError 一样），
+  // 不然锅那层是破图、看到的是底图上的锅，摆在锅边的花会盖在锅上（11/07 用户以为是 bug）
+  const cutArt = fs.existsSync(path.join(REPO, 'art', 'cut')) ? require(`${REPO}/miniprogram/config`).cutArt : ''
+  d.cuts = V.cutoutViews(L, sc.potLevel, cutArt, night)
+  d.fx = require(`${REPO}/miniprogram/utils/scene-fx`).fxViews(L, sc.hour, sc.decor || [], sc.potLevel, cutArt)
   const scale = sc.scale === 'min' ? L.minScale : sc.scale === 'max' ? L.maxScale : sc.scale
   d.view = sc.focus ? V.focusOffset(sc.focus[0], sc.focus[1], L, winOf(sc), scale) : V.homeView(L, winOf(sc))
   d.daily = null
   d.termText = ''
   d.peekText = ''
   d.giftReady = false
-  d.pets = life.sprites()
+  // 藏着的（出去找吃的、还没到的客人）也先渲染出元素来，由 apply 用 display 开关（不然回来时没有元素可挪）
+  d.pets = life.sprites().map((s) => ({ ...s, hidden: false }))
   // 抽屉：按开着渲染出 DOM（一加载先藏起来，由 sheetUi 开关）
   if (sc.ui && sc.sheet === 'residents') {
     d.residentsOpen = true
@@ -454,7 +458,7 @@ async function record(name, sc, browser) {
   } else if (sc.ui) {
     d.bagOpen = true
   }
-  const hideUi = '<style>.hud-res,.hud-today,.hud-notes,.side,.recenter,.checkin-btn,.tabbar,.bubble,.act-emoji,.status-float,.capsule-float{display:none!important}.frame{width:750px!important;min-height:1472px!important}.content{height:1472px!important}.screen{width:750px!important;height:1472px!important}</style>'
+  const hideUi = '<style>.hud-res,.hud-today,.hud-notes,.side,.recenter,.tabbar,.wx-custom-tab-bar,.bubble,.act-emoji,.status-float,.capsule-float{display:none!important}.frame{width:750px!important;min-height:1472px!important}.content{height:1472px!important}.screen{width:750px!important;height:1472px!important}</style>'
   const file = path.join(OUT, `${name}.html`)
   fs.writeFileSync(file, renderPage({ name: 'camp', data: d, mapSrc, tab: 'camp' }).replace('</head>', `${sc.phone ? '' : hideUi}</head>`).replace('</body>', `${sc.ui ? HIDE_SHEET : ''}</body>`))
   const vdir = path.join(OUT, `${name}-video`)
@@ -468,11 +472,30 @@ async function record(name, sc, browser) {
   // 每只宠物的元素按顺序（都没藏起来）
   const apply = async (i, s) => {
     await page.evaluate(({ i, s }) => {
-      const pet = document.querySelector(`.pet[data-index="${i}"]`)
-      if (!pet) return
+      const shadowOf = (el) => {
+        let sh = el.previousElementSibling
+        while (sh && !sh.classList.contains('shadow')) sh = sh.previousElementSibling
+        return sh
+      }
+      let pet = document.querySelector(`.pet[data-index="${i}"]`)
+      // 录的时候新来的（addGuest）：页面上 setData 会新画一个，这里照第一只克隆一份（单张图换成它的）
+      if (!pet) {
+        const proto = document.querySelector('.pet[data-index="0"]')
+        const protoShadow = proto && shadowOf(proto)
+        if (!proto || !protoShadow) return
+        const sh = protoShadow.cloneNode(true)
+        pet = proto.cloneNode(true)
+        pet.setAttribute('data-index', i)
+        pet.querySelectorAll('img').forEach((img) => img.setAttribute('src', s.imageSrc))
+        proto.parentNode.appendChild(sh)
+        proto.parentNode.appendChild(pet)
+      }
       // 影子是宠物前面最近的那个 .shadow（中间可能隔着说话的气泡）
-      let shadow = pet.previousElementSibling
-      while (shadow && !shadow.classList.contains('shadow')) shadow = shadow.previousElementSibling
+      const shadow = shadowOf(pet)
+      // 藏起来 / 现身（真机上是 wx:if，重新画的元素没有过渡）
+      pet.style.display = s.hidden ? 'none' : ''
+      if (shadow) shadow.style.display = s.hidden ? 'none' : ''
+      if (s.hidden) return
       pet.style.transitionDuration = `${s.duration}ms`
       pet.style.zIndex = s.z
       pet.style.transform = `translate3d(${s.left}px, ${-s.bottom}px, 0)`
@@ -570,7 +593,7 @@ async function record(name, sc, browser) {
       const j = JSON.stringify(now[i])
       if (j !== last[i]) {
         last[i] = j
-        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', faceSrc: mapSrc(now[i].face), swayOn: camp.data.swayOn || {} }
+        const s = { ...now[i], sheetSrc: now[i].sheet ? mapSrc(now[i].sheet) : '', faceSrc: mapSrc(now[i].face), imageSrc: mapSrc(now[i].image), swayOn: camp.data.swayOn || {} }
         if (process.env.DEBUG_BUBBLE && s.bubble) console.log('bubble', i, s.bubble, Math.round(s.left), Math.round(s.bubbleLeft), Math.round(s.bubbleWidth), JSON.stringify(camp.visibleRange()))
         await apply(i, jump ? { ...s, duration: 0 } : s)
       }
@@ -599,8 +622,6 @@ async function record(name, sc, browser) {
       if (w.action !== 'walk' && Math.hypot(w.x - x, w.y - y) >= 2) life.goTo(Number(i), x, y, 120000)
     })
   }
-  // warm：录之前先让它们自己过这么久（走到坐点、锅边等开饭的坐下），录的是过了这么久以后的样子
-  for (let t = 0; t < (sc.warm || 0); t += 500) camp.clock.advance(500)
   if (!arrivedAll()) console.log(name, '没全走到起点', JSON.stringify(camp.data.pets.map((p, i) => posOf(i)).map((w) => [w.id, w.x | 0, w.y | 0, w.action])))
   // 起点之后都设成 0 时长瞬间到位
   await page.evaluate(() => document.querySelectorAll('.pet,.shadow').forEach((e) => (e.style.transitionDuration = '0ms')))
@@ -613,6 +634,8 @@ async function record(name, sc, browser) {
   let clockMs = 0
   const total = sc.seconds * 1000
   const pending = plan.filter((p) => p[0] > 0).sort((a, b) => a[0] - b[0])
+  // 一开始就藏着的（出去找吃的）先藏起来
+  for (const [i, s] of life.sprites().entries()) if (s.hidden) await apply(i, s)
   const events = (sc.events || []).slice().sort((a, b) => a[0] - b[0])
   const ui = sc.ui ? sheetUi(page, camp, sc) : null
   while (clockMs < total) {
@@ -625,7 +648,7 @@ async function record(name, sc, browser) {
         const ok = life.goTo(i, x, y)
         if (!ok) console.log(name, 'goTo failed', i, x, y)
       }
-      while (events.length && events[0][0] <= now) events.shift()[1](life)
+      while (events.length && events[0][0] <= now) events.shift()[1](life, camp)
       camp.clock.advance(dt)
       clockMs = now
       await sync()

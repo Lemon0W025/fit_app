@@ -81,7 +81,7 @@ Component({
           ? { side: 'up', arrow, style: `left: ${EDGE}px; width: ${width}px; top: ${hole.top + hole.height + GAP}px` }
           : { side: 'down', arrow, style: `left: ${EDGE}px; width: ${width}px; bottom: ${H - hole.top + GAP}px` }
       } else if (step && step.tab != null) {
-        const cx = ((step.tab + 0.5) / (step.tabs || 4)) * W
+        const cx = ((step.tab + 0.5) / (step.tabs || 5)) * W
         const arrow = Math.round(Math.min(Math.max(cx - EDGE - 12, 20), width - 44))
         tip = { side: 'down', arrow, style: `left: ${EDGE}px; width: ${width}px; bottom: ${GAP}px` }
       }

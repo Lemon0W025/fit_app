@@ -69,6 +69,23 @@ function sortMeals(meals) {
   })
 }
 
+// 三大营养素的参照量：按每日预算的能量比例（碳水 50%、蛋白质 20%、脂肪 30%，在《中国居民膳食指南》成年人的范围里，
+// 减重时蛋白质取得偏多一点），碳水和蛋白质每克 4 千卡、脂肪 9 千卡。只给首页的进度条当参照，超过了进度条画满
+const MACRO_SPLIT = [
+  { key: 'carbs', label: '碳水', share: 0.5, kcalPerGram: 4 },
+  { key: 'protein', label: '蛋白质', share: 0.2, kcalPerGram: 4 },
+  { key: 'fat', label: '脂肪', share: 0.3, kcalPerGram: 9 },
+]
+
+function macroBars(totals, dailyKcal) {
+  return MACRO_SPLIT.map((m) => {
+    const goal = Math.round((dailyKcal * m.share) / m.kcalPerGram)
+    const got = Math.round((totals && totals[m.key]) || 0)
+    const percent = goal > 0 ? Math.round((got / goal) * 100) : 0
+    return { key: m.key, label: m.label, got, goal, percent, width: Math.min(100, percent) }
+  })
+}
+
 function buildDayView(day) {
   const dailyKcal = day.dailyKcal || FALLBACK_DAILY_KCAL
   const kcal = day.totals.kcal
@@ -87,6 +104,7 @@ function buildDayView(day) {
     over,
     percent: Math.min(100, Math.round((kcal / dailyKcal) * 100)),
     statusText,
+    macros: macroBars(day.totals, dailyKcal),
     meals: sortMeals(day.meals || []).map(decorateMeal),
     summary: day.summary || null,
     hasProfile: !!day.profile,
@@ -137,6 +155,7 @@ function beansCard(daily) {
   if (!daily) return null
   return {
     title: daily.beansToday > 0 ? `今天得了 ${daily.beansToday} 暖豆` : '今天还没打卡',
+    beans: daily.beansToday || 0,
     hint: daily.hint,
     stamps: stampsView(daily.stamps),
     streakText: streakText(daily),
@@ -174,6 +193,22 @@ function nextMealCard(s) {
     })
   }
   return card
+}
+
+// 首页「下一顿」大卡的版面：kicker 一行小标题、big 超大的时间、pill 右上角的小胶囊、line 时间下面一句、
+// button 按钮上的字（不带 emoji，按钮里另放相机图标）。和 nextMealCard 同一个 mealStatus
+function nextMealHero(s) {
+  if (!s) return null
+  if (s.state === 'allDone') return { kicker: '今天三顿', big: '都拍了', pill: s.allOnTime ? '全部准时' : '', line: '饿了的话，加餐也可以拍', button: '' }
+  if (s.state === 'done') {
+    const head = `${s.word}${s.onTime ? '准时' : ''}拍了 ✓`
+    if (s.next) return { kicker: `下一顿 · ${s.next.word}`, big: s.next.time, pill: head, line: '', button: '' }
+    return { kicker: head, big: s.time, pill: '', line: '', button: '' }
+  }
+  const hero = { kicker: `下一顿 · ${s.word}`, big: s.time, pill: '', line: `${s.window} 拍算准时`, button: `拍${s.word}` }
+  if (s.state === 'open') Object.assign(hero, { kicker: `${s.word}时间到啦`, pill: `还剩 ${leftText(s.minutesLeft)}` })
+  if (s.state === 'missed') Object.assign(hero, { kicker: `${s.word}还没拍`, pill: '过点了', line: `现在补拍也有 ${BEANS.offTime} 暖豆`, button: `补拍${s.word}` })
+  return hero
 }
 
 // 打卡日历：周一开头，firstWeekday 是 1 号的星期（0 = 周日）；没打正餐的日子不画印章，月历看着清爽
@@ -240,6 +275,8 @@ module.exports = {
   streakText,
   beansCard,
   nextMealCard,
+  nextMealHero,
+  macroBars,
   buildCalendarCells,
   milestoneView,
   badgesView,

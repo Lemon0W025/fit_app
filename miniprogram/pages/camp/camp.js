@@ -10,6 +10,7 @@ const { foodById } = require('../../utils/shared/foods')
 const { decorById, placeProblem } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const DOUBLE_TAP_MS = 300
 const HOUR_CHECK_MS = 60000
@@ -18,6 +19,8 @@ const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩�
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
 const SIDE_PAD = 64 // 屏幕两边按钮那一溜多宽（px），说话的气泡让开
 const TOUR_AFTER_MS = 900 // 画面摆好、锅的点击区出来以后再开始导览
+const BAG_SLOP = 10 // 背包里的吃的：手指往上挪过这么多（px）才算拖出来
+const HOME_NOTE_MS = 8000 // 「住下啦」的提示条留多久
 const CHEER_GAP_MS = 200 // 两张庆祝卡之间隔多久
 // 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
 const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
@@ -64,6 +67,7 @@ Page({
     swayOn: {},
     bagOpen: false,
     bagForPot: false, // 点锅打开的背包：点一样就下锅
+    bagTuck: false, // 背包里按住吃的往上拖：抽屉先收下去（不卸）
     bagTab: 'food',
     bagTabs: [
       { label: '食物', value: 'food' },
@@ -77,7 +81,7 @@ Page({
     giftReady: false,
     giftShown: false,
     welcome: null,
-    cheer: null, // 庆祝卡（住户到了 4 / 8 / 12 只、满级后多了一颗星），一张一张出
+    cheer: null, // 庆祝卡（住下的到了 4 / 8 / 12 只、满级后多了一颗星），一张一张出
     tourSteps: TOURS.camp,
     tourShow: false,
     celebrate: false,
@@ -90,6 +94,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     this.cancel()
     this.load()
   },
@@ -113,6 +118,10 @@ Page({
 
   nowHour() {
     return this.hour ? this.hour() : new Date().getHours()
+  },
+
+  nowMs() {
+    return this.now ? this.now().getTime() : Date.now()
   },
 
   load() {
@@ -140,7 +149,7 @@ Page({
     const L = this.L
     this.camp = view
     // 背包里每样吃的下面：今天闻着它会来的（今日菜单），没来过的是剪影
-    const foodBag = V.foodBag(view.foods, view.menu, view.pets.map((p) => p.id), (view.visitors || []).map((v) => v.id))
+    const foodBag = V.foodBag(view.foods, view.menu, view.met || view.pets.map((p) => p.id))
     const decorBag = V.decorBag(view.decor.unplaced)
     const treats = view.term && view.term.treats.length ? view.term.treats.map((id) => foodById(id).name).join('、') : ''
     // 锅里煮着几样就几层；第一样下锅就点火
@@ -163,8 +172,6 @@ Page({
       fx: fxViews(L, this.nowHour(), view.decor.placed, potLevel, this.cutBase()),
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
-      peekText: V.visitorNote(view.visitors),
-      hungryText: V.hungryNote(this.pot, view.pets),
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
       foodBag,
       decorBag,
@@ -196,34 +203,15 @@ Page({
     // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
     if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
+    this.updateHungry()
     // 夜里火刚点着：小动物马上换成火光下的颜色（不等它下一步）
-    if (this.life && !fresh && wasLit !== potLevel > 0) view.pets.concat(view.visitors || []).forEach((p) => this.life.refresh(p.id))
+    if (this.life && !fresh && wasLit !== potLevel > 0) view.pets.forEach((p) => this.life.refresh(p.id))
     if (!this.hourTimer) this.watchHour()
     if (view.testGift) {
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，扭蛋、买装饰随便试试`, showCancel: false, confirmText: '好的' })
     }
     if (view.giftReady && !this.data.giftShown && this.life) this.offerGift(view)
     this.queueCheers(view.cheers)
-  },
-
-  // 庆祝卡：云函数带回来几条就排几张，关了一张再出下一张
-  queueCheers(cheers) {
-    this.cheerQueue = (this.cheerQueue || []).concat((cheers || []).map(V.cheerCard))
-    if (this.cheerQueue.length && !this.data.cheer && !this.cheerTimer) this.nextCheer()
-  },
-
-  nextCheer() {
-    const cheer = (this.cheerQueue || []).shift() || null
-    this.setData({ cheer })
-    if (cheer) wx.vibrateShort && wx.vibrateShort({ type: 'medium' })
-    else this.maybeTour()
-  },
-
-  // 收下：先收起来，隔一下再出下一张（卡片弹出来的动画重新放一遍）
-  closeCheer() {
-    if (!(this.cheerQueue || []).length) return this.nextCheer()
-    this.setData({ cheer: null })
-    this.later('cheerTimer', () => this.nextCheer(), CHEER_GAP_MS)
   },
 
   // 捏着缩放：记下现在几倍（挪镜头前要知道）
@@ -299,6 +287,41 @@ Page({
     })
   },
 
+  // 锅空着出去找吃的那几只：提示条
+  updateHungry() {
+    const text = this.life ? V.hungryNote(this.life.hungryAway()) : ''
+    if (text !== this.data.hungryText) this.setData({ hungryText: text })
+  },
+
+  // 庆祝卡：云函数带回来几条就排几张，关了一张再出下一张
+  queueCheers(cheers) {
+    this.cheerQueue = (this.cheerQueue || []).concat((cheers || []).map(V.cheerCard))
+    if (this.cheerQueue.length && !this.data.cheer && !this.cheerTimer) this.nextCheer()
+  },
+
+  nextCheer() {
+    const cheer = (this.cheerQueue || []).shift() || null
+    this.setData({ cheer })
+    if (cheer) wx.vibrateShort && wx.vibrateShort({ type: 'medium' })
+    else this.maybeTour()
+  },
+
+  // 收下：先收起来，隔一下再出下一张（卡片弹出来的动画重新放一遍）
+  closeCheer() {
+    if (!(this.cheerQueue || []).length) return this.nextCheer()
+    this.setData({ cheer: null })
+    this.later('cheerTimer', () => this.nextCheer(), CHEER_GAP_MS)
+  },
+
+  // 喂到 5 级、住下了：提示一会儿，大家围着火蹦一蹦
+  movedIn(ids) {
+    const text = V.homeNote(ids)
+    if (!text) return
+    this.setData({ peekText: text })
+    this.later('homeTimer', () => this.setData({ peekText: '' }), HOME_NOTE_MS)
+    if (this.life) this.life.celebrate()
+  },
+
   onDecorError() {
     if (!config.decorArt || !this.camp) return
     this.decorFailed = true
@@ -310,10 +333,6 @@ Page({
     if (!id || this.badSheets.has(id)) return
     this.badSheets.add(id)
     if (this.life) this.life.noSheet(id)
-  },
-
-  goCheckin() {
-    wx.navigateTo({ url: '/pages/checkin/checkin' })
   },
 
   // ---------------------------------------------------------------- 宠物
@@ -328,8 +347,6 @@ Page({
       L: this.L,
       pets: view.pets,
       decor: view.decor.placed,
-      arrivals: view.arrivals || [],
-      visitors: view.visitors || [],
       saved: this.savedSpots(),
       hour: this.hour || undefined,
       lit: () => (this.potLevel || 0) > 0,
@@ -364,8 +381,7 @@ Page({
       if (p.sway) swayOn[p.sway.uid] = p.sway.cls
     })
     this.setData({ pets, swayOn })
-    // 住户和客人都要（客人没拼图就退回单张图、按 CSS 一跳一跳地走，还闪）
-    this.loadSheets(view.pets.concat(view.visitors || []).map((p) => p.id))
+    this.loadSheets(view.pets.map((p) => p.id))
     if (this.data.mode === 'view') this.life.start()
   },
 
@@ -437,7 +453,10 @@ Page({
     this.hourTimer = clock.set(() => {
       this.hourTimer = null
       const h = this.nowHour()
-      if (this.camp && (V.isNight(h) !== this.baseNight || V.tintFor(h) !== this.data.tint)) this.render(this.camp)
+      // 锅到期（最后一样下锅 8 小时）：锅清空、火熄掉、重画，没住下的常客就回去了
+      const expired = this.camp && this.pot && this.pot.until && this.nowMs() >= this.pot.until && (this.pot.foods || []).length
+      if (expired) this.camp = { ...this.camp, pot: { foods: [], until: 0 } }
+      if (this.camp && (expired || V.isNight(h) !== this.baseNight || V.tintFor(h) !== this.data.tint)) this.render(this.camp)
       this.watchHour()
     }, HOUR_CHECK_MS)
   },
@@ -517,7 +536,7 @@ Page({
   },
 
   closeBag() {
-    this.setData({ bagOpen: false, bagForPot: false })
+    this.setData({ bagOpen: false, bagForPot: false, bagTuck: false })
   },
 
   // 背包顶上的「食物 / 装饰」（components/segmented）
@@ -525,8 +544,60 @@ Page({
     this.setData({ bagTab: e.detail.value })
   },
 
+  // 背包里的吃的：按住往上拖出来，拖到锅上 / 小动物身上松手（11/07 用户：不想先点一下再点一下）。
+  // 横着划是滚背包、往下拉是拖抽屉，都不算；往上拖过 BAG_SLOP 就拿起来：抽屉收下去（tuck，不卸载，手指按着的元素还在、touchmove 不断），
+  // 进 feed 模式、幽灵图跟着手指，松手按落点处理。点一下照旧问一句
+  onBagTouchStart(e) {
+    const t = e.touches && e.touches[0]
+    this.suppressTap = false
+    this.bagTouch = t ? { id: e.currentTarget.dataset.id, x0: t.clientX, y0: t.clientY, dragging: false } : null
+  },
+
+  onBagTouchMove(e) {
+    const bt = this.bagTouch
+    const t = e.touches && e.touches[0]
+    if (!bt || !t) return
+    if (!bt.dragging) {
+      const dx = t.clientX - bt.x0
+      const dy = t.clientY - bt.y0
+      if (Math.abs(dx) < BAG_SLOP && Math.abs(dy) < BAG_SLOP) return
+      if (-dy <= Math.abs(dx)) {
+        this.bagTouch = null
+        return
+      }
+      bt.dragging = true
+      this.liftFood(bt.id)
+    }
+    this.updateDrag(t.clientX, t.clientY)
+  },
+
+  onBagTouchEnd(e) {
+    const bt = this.bagTouch
+    this.bagTouch = null
+    if (!bt || !bt.dragging) return
+    this.suppressTap = true
+    const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
+    this.setData({ drag: null, bagOpen: false, bagTuck: false, bagForPot: false })
+    if (!t || !this.worldRect) return this.cancel()
+    this.feedAt(V.fromTouch(t.clientX, t.clientY, this.worldRect, this.L), true)
+  },
+
+  // 从背包里拿起来（抽屉收下去、不卸）
+  liftFood(id) {
+    const f = foodById(id)
+    const item = this.data.foodBag.find((x) => x.id === id)
+    this.selected = { type: 'feed', foodId: id }
+    this.setData({ bagTuck: true, mode: 'feed', selectedName: f ? f.name : '', selectedSmell: item ? item.smell : [] })
+    if (this.life) this.life.pause()
+    this.queryWorldRect()
+  },
+
   // 点了背包里一样吃的：点锅打开的，问一句就下锅；背包按钮打开的，问放进锅里还是拿去喂一只（拖拽对长辈难，下锅不用拖）
   pickFood(e) {
+    if (this.suppressTap) {
+      this.suppressTap = false
+      return
+    }
     const { id } = e.currentTarget.dataset
     const f = foodById(id)
     const name = f ? f.name : '它'
@@ -587,7 +658,7 @@ Page({
     const more = foods.length < 3 && this.data.foodBag.length > 0
     wx.showModal({
       title: '暖暖锅',
-      content: V.potNote(this.pot),
+      content: V.potNote(this.pot, this.nowMs()),
       showCancel: more,
       cancelText: '好的',
       confirmText: more ? '再放一样' : '好的',
@@ -684,7 +755,7 @@ Page({
     this.setData({ drag: V.ghostView(sel.decorId, p.x, p.y, this.L, !problem) })
   },
 
-  // 松手时手指在谁身上：住户（外框，客人不能喂）或锅
+  // 松手时手指在谁身上：小动物（外框）或锅
   hitTarget(p) {
     const L = this.L
     const px = p.x * L.k
@@ -692,7 +763,7 @@ Page({
     const pets = this.data.pets
     for (let i = pets.length - 1; i >= 0; i--) {
       const s = pets[i]
-      if (s.hidden || s.visitor) continue
+      if (s.hidden) continue
       const top = L.height - s.bottom - s.width
       if (px >= s.left && px <= s.left + s.width && py >= top && py <= L.height - s.bottom) return { pet: i }
     }
@@ -700,11 +771,13 @@ Page({
     return null
   },
 
-  feedAt(p) {
+  // fromBag：从背包里直接拖出来的，没放到锅上 / 小动物身上就算了（不留在手里）
+  feedAt(p, fromBag = false) {
     const sel = this.selected
     const hit = this.hitTarget(p)
     if (!hit) {
-      wx.showToast({ title: '拖到锅里或者小动物身上松手', icon: 'none' })
+      wx.showToast({ title: fromBag ? '没放进去：拖到锅上再松手' : '拖到锅里或者小动物身上松手', icon: 'none' })
+      if (fromBag) this.cancel()
       return
     }
     if (hit.pot) {
@@ -719,11 +792,12 @@ Page({
         if (this.life) this.life.feed(index, sel.foodId, view.liked)
         this.render(view)
         wx.showToast({ title: view.liked ? `${sprite.name}吃得很开心，亲密 +${view.gain}` : `${sprite.name}不太爱吃，亲密 +${view.gain}`, icon: 'none' })
+        this.movedIn(view.movedIn)
       })
       .catch((err) => api.showError(err))
   },
 
-  // 下锅：火点上；爱吃的住户跑过来吃，闻着香味来的客人从营地边上进来
+  // 下锅：火点上；在场爱吃的跑过来吃，闻着香味来的（云函数说的 comers）排着队从屏幕边上进来
   cook(foodId) {
     if (this.saving) return
     this.saving = true
@@ -732,18 +806,21 @@ Page({
         this.saving = false
         this.cancel()
         this.render(view)
-        const cooked = view.cooked || { eaters: [] }
+        const cooked = view.cooked || { eaters: [], comers: [], movedIn: [] }
+        const comers = cooked.comers || []
         if (this.life) {
-          if (cooked.visitor) {
-            this.life.addVisitor({ id: cooked.visitor, foodId })
-            this.loadSheets([cooked.visitor])
-          }
           this.life.cook(cooked.eaters)
+          comers.forEach((id) => this.life.addGuest({ id, foodId }))
+          if (comers.length) this.loadSheets(comers)
+          this.updateHungry()
         }
         const food = foodById(foodId)
-        const names = cooked.eaters.map((id) => petById(id)).filter(Boolean).map((p) => p.name)
-        const title = cooked.visitor ? `${food.name}下锅啦，香味飘出去了…` : names.length ? `${food.name}下锅啦，${names.slice(0, 3).join('、')}跑来吃` : `${food.name}下锅啦，火点上了`
+        const nameOf = (ids) => ids.map((id) => petById(id)).filter(Boolean).map((p) => p.name)
+        const eating = nameOf(cooked.eaters)
+        const coming = nameOf(comers)
+        const title = coming.length ? `${food.name}下锅啦，${coming.slice(0, 3).join('、')}闻着香味来了…` : eating.length ? `${food.name}下锅啦，${eating.slice(0, 3).join('、')}跑来吃` : `${food.name}下锅啦，火点上了`
         wx.showToast({ title, icon: 'none', duration: 2500 })
+        this.movedIn(cooked.movedIn)
       })
       .catch((err) => {
         this.saving = false

@@ -1,5 +1,5 @@
 <wxs module="drag" src="./sheet.wxs"></wxs>
-<view wx:if="{{rendered}}" class="sheet {{open ? 'sheet-open' : ''}}">
+<view wx:if="{{rendered}}" class="sheet {{open ? 'sheet-open' : ''}} {{tuck ? 'sheet-tuck' : ''}}">
   <!-- 遮罩：点了关；挡住手势，背后的营地拖不动 -->
   <view class="sheet-mask" catchtap="onClose" catchtouchmove="noop">
     <view class="sheet-dim"></view>

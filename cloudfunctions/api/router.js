@@ -20,6 +20,7 @@ const ROUTES = {
   'week.get': ['week', 'get'],
   'camp.get': ['camp', 'get'],
   'camp.spin': ['camp', 'spin'],
+  'camp.spinMany': ['camp', 'spinMany'],
   'camp.putFood': ['camp', 'putFood'],
   'camp.feed': ['camp', 'feed'],
   'camp.buy': ['camp', 'buy'],

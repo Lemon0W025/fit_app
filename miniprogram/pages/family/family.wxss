@@ -30,7 +30,7 @@
 
 .join-note {
   background: var(--yellow-soft);
-  color: var(--amber);
+  color: var(--bean-ink);
   font-size: 30rpx;
 }
 
@@ -59,7 +59,7 @@
 
 .person-streak {
   font-size: 28rpx;
-  color: var(--amber);
+  color: var(--bean-ink);
   font-weight: 600;
 }
 

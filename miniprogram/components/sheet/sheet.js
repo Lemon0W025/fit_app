@@ -1,5 +1,5 @@
 // 弹性抽屉：从下面弹上来（冲过头一点再回弹），遮罩同时淡入；点遮罩、点 ✕、往下拉都发 close，由页面把 show 设成 false。
-// 关的动画放完才真的不渲染（不会一下子没了）。往下拉跟手在 sheet.wxs 里（渲染层直接改样式），这里只管开和关。
+// 关的动画放完才真的不渲染（不会一下子没了）。tuck 是「先收下去但别卸」：营地背包里按住吃的往上拖时用，松手页面再真的关。往下拉跟手在 sheet.wxs 里（渲染层直接改样式），这里只管开和关。
 // 标题用 title；想放别的（比如分段控制器）就用 slot="head"；内容放默认插槽，超过高度在里面滚
 const { clockOf } = require('../../utils/fx')
 
@@ -12,6 +12,8 @@ Component({
   properties: {
     show: { type: Boolean, value: false },
     title: { type: String, value: '' },
+    // 收到屏幕下面去、遮罩也不要，但不卸载（页面要在抽屉里按住一样东西拖到外面去：手指按着的那个元素还得在，卸了 touchmove 就断了）
+    tuck: { type: Boolean, value: false },
   },
 
   data: {

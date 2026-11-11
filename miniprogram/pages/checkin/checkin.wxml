@@ -5,8 +5,8 @@
   <view wx:if="{{timingText}}" class="timing {{timingOn ? 'timing-on' : ''}}">{{timingText}}</view>
 
   <view class="section-title">拍下这一餐</view>
-  <view wx:if="{{!photo}}" class="card photo-picker" bindtap="choosePhoto">
-    <image class="photo-icon" src="/images/icons/camera.svg" mode="aspectFit" />
+  <view wx:if="{{!photo}}" class="card photo-picker" hover-class="fx-press" bindtap="choosePhoto">
+    <view class="photo-cam"><image src="/images/icons/camera-white.svg" mode="aspectFit" /></view>
     <view class="photo-tip">点这里拍照，或从相册选</view>
     <!-- 拍得好，小暖估份量才准 -->
     <view class="tips">
@@ -21,19 +21,29 @@
     </view>
   </view>
 
-  <view class="section-title">几个人一起吃？</view>
-  <people-pick value="{{people}}" bind:change="onPeople" />
-  <block wx:if="{{people > 1}}">
-    <view class="people-tip">一盘一锅大家夹的菜，小暖按 {{people}} 份算你那一份</view>
-    <view class="appetite-title">和大家比，我吃得</view>
-    <segmented options="{{appetites}}" value="{{appetite}}" bindchange="onAppetite" />
-    <view class="people-more">想算得最准：把自己要吃的夹到碗里再拍，上面选「就我」。喝的酒和饮料照片里常拍不到，在下面写一句</view>
-  </block>
+  <view class="card section-card">
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/users.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">几个人一起吃？</text>
+    </view>
+    <people-pick value="{{people}}" bind:change="onPeople" />
+    <block wx:if="{{people > 1}}">
+      <view class="people-tip">一盘一锅大家夹的菜，小暖按 {{people}} 份算你那一份</view>
+      <view class="appetite-title">和大家比，我吃得</view>
+      <segmented options="{{appetites}}" value="{{appetite}}" bindchange="onAppetite" />
+      <view class="people-more">想算得最准：把自己要吃的夹到碗里再拍，上面选「就我」。喝的酒和饮料照片里常拍不到，在下面写一句</view>
+    </block>
+  </view>
 
-  <view class="section-title">想跟小暖说点什么（选填）</view>
-  <!-- textarea 是原生组件，提交时换成普通文字，避免盖住加载层 -->
-  <textarea wx:if="{{!submitting}}" class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：米饭只吃了半碗；喝了一瓶啤酒。没拍照的话，直接写吃了什么也行" />
-  <view wx:else class="note">{{note}}</view>
+  <view class="card">
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/pencil.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">想跟小暖说点什么（选填）</text>
+    </view>
+    <!-- textarea 是原生组件，提交时换成普通文字，避免盖住加载层 -->
+    <textarea wx:if="{{!submitting}}" class="note" value="{{note}}" bindinput="onNote" maxlength="200" auto-height placeholder="比如：米饭只吃了半碗；喝了一瓶啤酒。没拍照的话，直接写吃了什么也行" />
+    <view wx:else class="note">{{note}}</view>
+  </view>
 
   <button class="btn-primary btn-big" bindtap="submit" disabled="{{submitting}}">交给小暖看看</button>
 

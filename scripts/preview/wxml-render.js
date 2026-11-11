@@ -52,7 +52,11 @@ function interp(str, scope) {
 }
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-const rpx = (css) => String(css).replace(/(-?\d*\.?\d+)rpx/g, (_, n) => `${parseFloat(n) / 2}px`)
+// rpx → px（750 宽的设计稿画在 375 宽的屏上）；选择器里的 image 标签换成浏览器里的 img
+const rpx = (css) =>
+  String(css)
+    .replace(/(-?\d*\.?\d+)rpx/g, (_, n) => `${parseFloat(n) / 2}px`)
+    .replace(/(^|[\s,>{}+~])image(?=[\s,.:#[{>+~])/g, '$1img')
 
 function renderChildren(children, scope, ctx) {
   let out = ''
@@ -257,8 +261,8 @@ img { display: inline-block; width: 320px; height: 240px; }
 canvas { display: block; width: 300px; height: 150px; }
 .btn-loading { display: inline-block; width: 14px; height: 14px; margin-right: 8px; vertical-align: -2px; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; }
 .frame { width: 375px; min-height: 812px; display: flex; flex-direction: column; background: var(--bg); }
-.status { height: 24px; background: #F6F1E7; display:flex; justify-content: space-between; padding: 4px 20px 0; font: 600 13px -apple-system, sans-serif; color: #000; box-sizing: border-box; }
-.nav { height: 44px; background: #F6F1E7; display: flex; align-items: center; justify-content: center; position: relative; font-size: 17px; font-weight: 600; color: #000; }
+.status { height: 24px; background: var(--bg); display:flex; justify-content: space-between; padding: 4px 20px 0; font: 600 13px -apple-system, sans-serif; color: #000; box-sizing: border-box; }
+.nav { height: 44px; background: var(--bg); display: flex; align-items: center; justify-content: center; position: relative; font-size: 17px; font-weight: 600; color: #000; }
 .nav .back { position: absolute; left: 12px; font-size: 22px; font-weight: 400; }
 .nav .capsule { position: absolute; right: 8px; width: 87px; height: 32px; border-radius: 16px; border: 1px solid rgba(0,0,0,.12); background: rgba(255,255,255,.6); display:flex; align-items:center; justify-content: space-around; font-size: 14px; }
 .content { flex: 1; }
@@ -279,8 +283,14 @@ function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = f
   const json = JSON.parse(fs.readFileSync(path.join(MP, 'pages', name, `${name}.json`), 'utf8'))
   const components = loadComponents(json.usingComponents)
   const body = renderChildren(parse(wxml).children, data, { mapSrc, components })
-  const tabs = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8')).tabBar.list
-  const tabbar = tab
+  const tabBar = JSON.parse(fs.readFileSync(path.join(MP, 'app.json'), 'utf8')).tabBar
+  const tabs = tabBar.list
+  // 自定义底栏（custom-tab-bar）：和页面一样用真的组件画，按这一页点亮；占底下 76px（和原生的一样）
+  const customBar = tab && tabBar.custom ? loadComponents({ 'custom-tab-bar': '/custom-tab-bar/index' }) : null
+  if (customBar) customBar['custom-tab-bar'].props = { selected: `pages/${tab}/${tab}` }
+  const tabbar = customBar
+    ? `<div class="tabbar tabbar-custom">${renderChildren([{ tag: 'custom-tab-bar', attrs: {}, children: [] }], {}, { mapSrc, components: customBar })}</div>`
+    : tab
     ? `<div class="tabbar">${tabs
         .map((t) => {
           const on = t.pagePath === `pages/${tab}/${tab}`
@@ -297,7 +307,8 @@ function renderPage({ name, data, mapSrc, extraScript = '', tab = null, back = f
   // （translateZ：页面里 position: fixed 的东西——抽屉、弹层——和真机一样只盖页面这块，不盖底部 tab）
   const customCss = custom ? `.frame{position:relative}.content{flex:none;position:relative;height:${812 - (tab ? 76 : 0)}px;overflow:hidden;transform:translateZ(0)}.screen{height:100%!important;width:375px!important}
 .status-float{position:absolute;left:0;right:0;top:0;background:transparent;z-index:999}.capsule-float{position:absolute;top:24px;right:7px;width:87px;height:32px;border-radius:16px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.6);display:flex;align-items:center;justify-content:space-around;font-size:14px;z-index:999}` : ''
-  return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}\n${pageCss(name, components)}\n${customCss}</style></head>
+  const barCss = customBar ? rpx(componentCss(customBar)) + '.tabbar-custom{position:relative;height:76px;padding:0;border:none;background:transparent;display:block;transform:translateZ(0)}.tabbar-custom .tb{height:56px;padding-bottom:20px}' : ''
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}\n${pageCss(name, components)}\n${customCss}\n${barCss}</style></head>
 <body><div class="frame">${head}
 <div class="content">${body}</div>${tabbar}</div>${extraScript}</body></html>`
 }

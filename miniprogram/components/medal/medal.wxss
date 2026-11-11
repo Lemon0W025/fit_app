@@ -80,7 +80,7 @@
 }
 
 .medal-gold .medal-ribbon {
-  background: linear-gradient(180deg, #6f9e7b, #4e7d5b);
+  background: linear-gradient(180deg, #9ed43a, #6fa514);
 }
 
 /* 365 天起：外面一圈慢慢转的光 */

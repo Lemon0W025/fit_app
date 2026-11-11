@@ -5,43 +5,58 @@
 /* 点微信提醒进来的 */
 .remind-hi {
   margin-top: 16rpx;
-  padding: 20rpx 28rpx;
-  border-radius: 20rpx;
-  background: var(--primary-soft);
-  color: var(--primary);
+  padding: 28rpx 32rpx;
+  border-radius: 40rpx;
+  background: var(--ink);
+  color: #fff;
   font-size: 32rpx;
   font-weight: 600;
 }
 
+/* 拍照：柠檬绿大卡，中间一个黑色大圆钮 */
 .photo-picker {
   text-align: center;
-  padding: 64rpx 32rpx;
-  border: 4rpx dashed var(--line);
-  box-shadow: none;
+  padding: 56rpx 32rpx 44rpx;
+  background: var(--lime-soft);
 }
 
-.photo-icon {
-  width: 112rpx;
-  height: 112rpx;
+.photo-cam {
+  width: 168rpx;
+  height: 168rpx;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 16rpx rgba(255, 255, 255, 0.6), var(--shadow-float);
+}
+
+.photo-cam image {
+  width: 76rpx;
+  height: 76rpx;
 }
 
 .photo-tip {
-  font-size: 32rpx;
-  font-weight: 600;
-  margin: 12rpx 0;
+  font-size: 36rpx;
+  font-weight: 800;
+  margin: 36rpx 0 8rpx;
 }
 
 /* 拍照小贴士：左对齐四行大字 */
 .tips {
   display: inline-block;
   margin-top: 16rpx;
+  padding: 20rpx 32rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.7);
   text-align: left;
 }
 
 .tip {
   font-size: 30rpx;
   line-height: 1.8;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .tip-icon {
@@ -58,8 +73,8 @@
 
 .photo {
   width: 100%;
-  height: 480rpx;
-  border-radius: 16rpx;
+  height: 520rpx;
+  border-radius: 28rpx;
   display: block;
 }
 
@@ -75,7 +90,7 @@
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(47, 42, 36, 0.45);
+  background: rgba(23, 25, 28, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,7 +99,7 @@
 
 .overlay-card {
   background: var(--card);
-  border-radius: 24rpx;
+  border-radius: 48rpx;
   padding: 48rpx 56rpx;
   text-align: center;
   width: 70%;
@@ -102,10 +117,10 @@
   width: 280rpx;
   height: 280rpx;
   margin: 0 auto;
-  border-radius: 24rpx;
+  border-radius: 36rpx;
   overflow: hidden;
   background: var(--gray-soft);
-  box-shadow: 0 8rpx 24rpx rgba(80, 60, 30, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 .scan-photo {
@@ -169,12 +184,13 @@
 }
 
 .step-done {
-  color: var(--primary);
+  color: var(--ink);
 }
 
 .step-done .step-dot {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
 }
 
 .step-now {
@@ -188,21 +204,30 @@
 }
 
 .timing {
+  display: inline-block;
+  margin: 20rpx 0 0;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--peach-soft);
+  color: var(--peach-ink);
   font-size: 30rpx;
-  margin: 12rpx 8rpx 0;
-  color: var(--orange);
-}
-
-.timing-on {
-  color: var(--primary);
   font-weight: 700;
 }
 
+.timing-on {
+  background: var(--lime-soft);
+  color: var(--lime-ink);
+}
+
 /* 几个人一起吃 */
+.section-card {
+  margin-top: 40rpx;
+}
+
 .people-tip {
-  margin: 12rpx 8rpx 0;
+  margin: 16rpx 4rpx 0;
   font-size: 28rpx;
-  color: var(--primary);
+  color: var(--muted);
 }
 
 

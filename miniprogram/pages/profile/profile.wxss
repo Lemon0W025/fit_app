@@ -1,16 +1,17 @@
 .welcome {
-  background: var(--primary-soft);
+  background: var(--house);
+  color: #fff;
 }
 
 .welcome-title {
-  font-size: 36rpx;
+  font-size: 38rpx;
   font-weight: 700;
-  color: var(--primary);
+  color: #fff;
   margin-bottom: 12rpx;
 }
 
 .welcome-text {
-  color: var(--text);
+  color: var(--on-dark-soft);
 }
 
 .field-last {
@@ -18,26 +19,23 @@
 }
 
 .budget {
-  text-align: center;
+  text-align: left;
 }
 
 .budget-num {
-  font-size: 72rpx;
-  font-weight: 700;
-  color: var(--primary);
-  line-height: 1.3;
-  margin: 8rpx 0;
+  font-size: 112rpx;
+  margin: 0 0 12rpx;
 }
 
 .budget-unit {
-  font-size: 30rpx;
-  font-weight: 400;
-  color: var(--muted);
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: 0;
 }
 
 .disclaimer {
   font-size: 26rpx;
-  color: var(--gray-text);
+  color: var(--muted);
   line-height: 1.6;
   padding: 0 8rpx;
 }
@@ -47,7 +45,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14rpx 0;
-  border-bottom: 1rpx solid var(--line);
+  border-bottom: 2rpx solid var(--line);
 }
 
 .meal-time-word {
@@ -55,9 +53,9 @@
 }
 
 .meal-time-value {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: var(--primary);
+  font-family: var(--font-num);
+  font-size: 38rpx;
+  font-weight: 800;
 }
 
 /* 饭点提醒入口 */
@@ -71,18 +69,23 @@
 }
 
 .remind-entry-title {
-  font-size: 32rpx;
-  font-weight: 600;
-  margin-bottom: 6rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  margin-bottom: 4rpx;
 }
 
 .remind-entry-arrow {
-  font-size: 40rpx;
-  color: var(--gray);
+  flex-shrink: 0;
+  width: 40rpx;
+  height: 40rpx;
+}
+
+.reset-entry .chip-icon {
+  background: var(--red-soft);
 }
 
 .reset-entry .remind-entry-title {
-  color: var(--red, #d4543c);
+  color: var(--red);
 }
 
 

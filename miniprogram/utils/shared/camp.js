@@ -118,8 +118,19 @@ const SCENE = {
   },
   // 傍晚围着锅坐的点（12 只都在时的样子，白模上画的就是这些；几只就几个见 seatsFor）
   seats: seatsFor(12),
-  // 大帐篷门口的 3 个点：没窝的在这儿睡
-  tent: { spots: [[1000, 1530], [1210, 1460], [1420, 1400]] },
+  // 大帐篷：spots 是门口的 3 个点（没窝、也没进帐篷的在这儿睡）。
+  // hole 是门洞：两片布帘中间露出里面地板的那块（下沿是地板前面那根横木的上沿），在帐篷里睡的只在这块里露出来，
+  //   被布帘、帐篷布、横木挡住的地方看不见（11/07 用户：进帐篷像掉进坑里、整个被帐篷盖住；应该门洞里看得到、布帘后面挡住）。
+  // beds 是帐篷里的两个床位（趴着睡，睡姿头朝右）：at 是脚下（趴在地板上、横木后面一点），在禁区里面、只能「放」过去；
+  //   right 朝哪边躺：左边那个朝右（身子在左布帘后面、头露在门洞里），右边那个朝左（身子在右布帘后面）；
+  //   door 是进去前 / 出来后站的点（禁区外、离帐篷前沿远一点：站在门口的要排在帐篷里睡的前面）
+  tent: {
+    spots: [[1000, 1530], [1210, 1460], [1420, 1400]],
+    hole: [[1116, 798], [1150, 905], [1185, 990], [1225, 1055], [1262, 1110], [1268, 1170], [1266, 1240], [1268, 1290],
+      [1200, 1312], [1100, 1343], [1000, 1372], [978, 1378], [975, 1300], [966, 1262], [975, 1205], [1000, 1158],
+      [1022, 1108], [1046, 1058], [1072, 985], [1100, 885]],
+    beds: [{ at: [960, 1362], right: true, door: [1030, 1450] }, { at: [1282, 1308], right: false, door: [1240, 1440] }],
+  },
   // 站在这儿会被锅身、提灯整个挡住的地方：路过可以，停下来歇着、坐着、睡觉不选这里
   hide: [
     [[1820, 2330], [2420, 2330], [2440, 2560], [1800, 2560]],
@@ -135,6 +146,10 @@ const SCENE = {
 
 // 亲密度：喂了几顿 → 几级（1～5）
 const LEVELS = [0, 3, 8, 15, 25]
+// 亲密到这一级就「住下」：锅空了也不走（docs/superpowers/specs/2026-11-07-camp-regulars-design.md）
+const HOME_LEVEL = 5
+// 锅里一样吃的管多久（一天三顿，24 ÷ 3 小时）：最后一样下锅过了这么久，锅就空了、火熄了，没住下的常客就走
+const POT_STAY_MS = 8 * 3600 * 1000
 
 // 远近：画面最下面 1，最上面 0.82
 function scaleAt(y) {
@@ -286,7 +301,7 @@ function giftDue(lastGift, today, hour) {
 
 module.exports = {
   arc,
-  W, H, SCENE, LEVELS,
+  W, H, SCENE, LEVELS, HOME_LEVEL, POT_STAY_MS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass, hiddenAt, nogoPolys,
   levelOf, nextLevelAt, giftDue, seatsFor,
   RESIDENT_GOALS, STAR_FEEDS, STAR_MAX, STAR_BEANS, starsOf, nextStarAt, nextGoal,

@@ -1,34 +1,34 @@
 .empty { padding: 120rpx 0; text-align: center; color: var(--muted); }
-/* 图册占满页码那一行以上的整屏（swiper 自己裁掉出界的，长故事在那一页里滚）；底下一行页码 + 去扭蛋，高度定死，不会压到故事上 */
-.book { height: calc(100vh - 148rpx); height: calc(100vh - 148rpx - env(safe-area-inset-bottom)); margin-top: 16rpx; }
-.leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #fffdf7; border-radius: 28rpx; box-shadow: 0 8rpx 24rpx rgba(80, 60, 30, 0.12); overflow-y: auto; }
+.book { height: 80vh; }
+.leaf { height: 100%; box-sizing: border-box; margin: 0 8rpx; padding: 40rpx 32rpx; background: #ffffff; border-radius: 48rpx; box-shadow: var(--shadow-card); overflow-y: auto; }
 .cover-img { width: 240rpx; height: 240rpx; display: block; margin: 40rpx auto 24rpx; }
 /* 12 只都到齐：封面换成全家福 */
 .cover-family { width: 100%; display: block; margin: 8rpx 0 24rpx; border-radius: 20rpx; }
-.cover-title { text-align: center; font-size: 44rpx; font-weight: 700; }
-.cover-progress { text-align: center; font-size: 36rpx; color: var(--primary); margin: 16rpx 0; }
-/* 离下一个住户里程碑还差几只 */
-.cover-goal { text-align: center; font-size: 30rpx; color: #9a6b12; margin: -4rpx 0 16rpx; }
-.cover-full { text-align: center; color: #9a6b12; margin-bottom: 16rpx; }
+.cover-title { text-align: center; font-size: 48rpx; font-weight: 800; }
+.cover-progress { display: table; margin: 16rpx auto; padding: 8rpx 28rpx; border-radius: 999rpx; background: var(--lime-soft); color: var(--lime-ink); font-size: 34rpx; font-weight: 800; }
+.cover-full { text-align: center; color: var(--gold-ink); margin-bottom: 16rpx; }
 .pet-img { width: 320rpx; height: 320rpx; display: block; margin: 0 auto 16rpx; }
 .locked { filter: brightness(0) opacity(0.18); }
-.pet-name { text-align: center; font-size: 42rpx; font-weight: 700; }
+.pet-name { text-align: center; font-size: 46rpx; font-weight: 800; }
 .pet-hook { text-align: center; font-size: 30rpx; margin: 8rpx 0; }
-/* 满级后的星星 */
-.pet-stars { margin-top: 8rpx; display: flex; align-items: center; gap: 16rpx; }
-.pet-stars-row { font-size: 34rpx; color: #d99a1e; letter-spacing: 4rpx; }
-.pet-stars-hint { font-size: 28rpx; color: var(--muted); }
 .pet-hint { text-align: center; color: var(--muted); margin-top: 24rpx; }
 .story { margin-top: 24rpx; display: flex; flex-direction: column; gap: 12rpx; }
-.story-line { font-size: 30rpx; line-height: 1.6; padding-left: 20rpx; border-left: 6rpx solid var(--primary-soft); }
-.story-locked { color: var(--gray-text); }
+.story-line { font-size: 30rpx; line-height: 1.6; padding-left: 20rpx; border-left: 8rpx solid var(--lime); }
+.story-locked { color: var(--gray); }
 .leaf-title { font-size: 36rpx; font-weight: 600; margin-bottom: 16rpx; }
 .grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
 .cell { width: calc((100% - 32rpx) / 3); display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
 .cell-image { width: 120rpx; height: 120rpx; }
 .cell-name { font-size: 26rpx; }
-.cell-term { font-size: 24rpx; color: var(--orange); }
+.cell-term { font-size: 24rpx; color: var(--gold-ink); }
 .cell-tip { font-size: 26rpx; color: var(--muted); text-align: center; }
-.foot { height: 116rpx; box-sizing: border-box; display: flex; justify-content: space-between; align-items: center; padding: 0 40rpx; }
-/* 以前挂的 btn-small 只在营地页有定义：在这儿是个撑满一行的大按钮，把页码挤到一边 */
+.foot { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 40rpx; }
+
+/* 离下一个里程碑还差几只住下 */
+.cover-goal { text-align: center; font-size: 30rpx; color: #9a6b12; margin: -4rpx 0 16rpx; }
+/* 满级后的星星 */
+.pet-stars { margin-top: 8rpx; display: flex; align-items: center; gap: 16rpx; }
+.pet-stars-row { font-size: 34rpx; color: #d99a1e; letter-spacing: 4rpx; }
+.pet-stars-hint { font-size: 28rpx; color: var(--muted); }
+/* btn-small 只在营地页有定义：这儿自己写一个小按钮，不然撑满一行把页码挤到一边 */
 button.foot-btn { width: 220rpx !important; margin: 0; padding: 8rpx 0; font-size: 30rpx; }

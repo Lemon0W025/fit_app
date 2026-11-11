@@ -164,20 +164,23 @@ test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后�
   cloud.db.collections.get('gardens').set('u1', { ...doc, foods: { ...doc.foods, huluobo: 1 } })
   const put = await main({ action: 'camp.putFood', data: { foodId: 'huluobo' } })
   assert.equal(put.ok, true, put.message)
-  assert.deepEqual(put.data.pot, { foods: ['huluobo'] })
-  // 客人是今天菜单里胡萝卜那几只中、还没住下的一只
-  const guest = put.data.cooked.visitor
-  assert.ok(put.data.menu.huluobo.includes(guest) && guest !== 'doudou', guest)
-  assert.deepEqual(put.data.visitors, [{ id: guest, foodId: 'huluobo' }])
+  assert.deepEqual(put.data.pot.foods, ['huluobo'])
+  assert.ok(put.data.pot.until > Date.now())
+  // 闻着香味来的：今天菜单里胡萝卜那几只（常客，在场、吃了一顿）
+  const guests = put.data.cooked.comers
+  assert.deepEqual(guests, put.data.menu.huluobo.filter((id) => id !== 'doudou'), '豆豆在场，不算来')
+  assert.deepEqual(put.data.pets.map((p) => p.id), ['doudou'].concat(guests))
+  // 都是常客；本来就爱吃胡萝卜的吃了一顿 +3，菜单里轮换来的 +1
+  assert.ok(put.data.pets.slice(1).every((p) => !p.home && (p.fed === 3 || p.fed === 1)), JSON.stringify(put.data.pets))
+  const fedBefore = Object.fromEntries(put.data.pets.map((p) => [p.id, p.fed]))
   const again = await main({ action: 'camp.putFood', data: { foodId: 'huluobo' } })
   assert.equal(again.ok, false)
 
   const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', note: '米饭青菜' } })
   assert.equal(meal.ok, true, meal.message)
-  assert.deepEqual(meal.data.arrival.pets.map((p) => p.id), [guest])
-  const after = await main({ action: 'camp.get', data: { markSeen: true } })
-  assert.deepEqual(after.data.pets.map((p) => p.id), ['doudou', guest])
-  assert.deepEqual(after.data.arrivals, [guest])
+  assert.equal(meal.data.arrival, null, '没人到 5 级，没人住下')
+  const after = await main({ action: 'camp.get' })
+  assert.deepEqual(after.data.pets.map((p) => [p.id, p.fed]), ['doudou'].concat(guests).map((id) => [id, fedBefore[id] + 1]), '拍正餐在场的都 +1')
   assert.equal(after.data.beans, 50) // 30 + 午饭准时 15 + 绿 5
 
   const buy = await main({ action: 'camp.buy', data: { decorId: 'ball' } })
@@ -192,7 +195,7 @@ test('暖暖营地：新手礼 → 扭蛋抽食物 → 放食盆 → 打卡后�
   assert.deepEqual(stashed.data.decor.unplaced, [{ id: 'ball', count: 1 }])
 
   const album = await main({ action: 'camp.album' })
-  assert.deepEqual(album.data.progress, { pets: 2, total: 12 })
+  assert.deepEqual(album.data.progress, { pets: 1 + guests.length, home: 1, total: 12 }, '来过的都算；住下的只有豆豆')
   const broke = await main({ action: 'camp.spin' })
   assert.deepEqual([broke.ok, broke.code], [false, 'NO_BEANS'])
 })

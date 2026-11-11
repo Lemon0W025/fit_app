@@ -589,7 +589,7 @@ test('图册：12 只都到齐了封面换成全家福', async () => {
   }
 })
 
-test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 → 打卡后住下 → 喂 → 商店买装饰摆放 → 找它', async () => {
+test('暖暖营地首页：欢迎 → 底图 → 下锅点火、闻着香味来的排队进来 → 拍正餐在场的都喂一顿 → 喂 → 商店买装饰摆放 → 找它', async () => {
   const cloud = createFakeCloud({ replies: [analysisJson({ rating: 'green' })] })
   const { main } = loadCloudFunction(cloud)
   const wx = createWx(main)
@@ -629,11 +629,8 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.notEqual(camp.data.view.x, home.x, '排好版后又对准了一次（值加了一点点小数，组件才会动）')
   assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.011 && camp.data.view.scale === 1)
   camp.closeWelcome()
-  // 锅空着：豆豆留在营地（可能在锅边坐着等开饭），顶上提示点锅放点吃的
-  assert.equal(camp.data.hungryText, '🍲 锅里空空的，大家等着开饭呢，点锅放点吃的')
   camp.clock.advance(5000)
-  assert.equal(camp.data.pets[0].hidden, false)
-  assert.ok(['walk', 'idle', 'fidget', 'sit'].indexOf(camp.data.pets[0].action) !== -1)
+  assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
 
   // 锅空着、背包也空：点锅提示去扭蛋；塞一份胡萝卜、一份小米，点锅打开背包
   camp.tapPot()
@@ -655,25 +652,29 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(wx.log.modals.pop(), '把胡萝卜放进锅里煮上，爱吃的小动物会闻着香味来')
   assert.equal(camp.data.bagOpen, false)
   assert.equal(camp.data.mode, 'view')
-  assert.equal(wx.log.toasts.pop(), '胡萝卜下锅啦，香味飘出去了…')
+  assert.match(wx.log.toasts.pop(), /^胡萝卜下锅啦，.+闻着香味来了…$/)
   wx.worldRect = { left: 0, top: 0, width: camp.L.width, height: camp.L.height }
   camp.worldRect = wx.worldRect
   const touchAt = (x, y) => ({ touches: [{ clientX: x, clientY: y }], changedTouches: [{ clientX: x, clientY: y }] })
-  // 火点上了（锅里一层、有火苗、没有熄火的补丁）；今天菜单里胡萝卜那几只中挑了一只闻着香味从营地边上进来当客人
-  const guest = cloud.db.collections.get('gardens').get('u1').visitors[0].id
+  // 火点上了（锅里一层、有火苗、没有熄火的补丁）；今天菜单里胡萝卜那几只闻着香味来了（常客，排着队从屏幕边上进来）
+  const guests = cloud.db.collections.get('gardens').get('u1').pets.filter((p) => !p.home).map((p) => p.id)
+  assert.deepEqual(guests, camp.camp.menu.huluobo.filter((id) => id !== 'doudou'))
+  const guest = guests[0]
   const guestName = petById(guest).name
-  assert.ok(camp.camp.menu.huluobo.includes(guest), guest)
   assert.ok(camp.data.fx.some((f) => f.kind === 'fire'))
   assert.ok(!camp.data.fx.some((f) => f.kind === 'patch'))
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
-  assert.equal(camp.data.peekText, `👀 ${guestName}闻着香味来了…下次拍正餐就住下`)
-  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.visitor]), [['doudou', false], [guest, true]])
-  camp.clock.advance(100)
-  assert.equal(camp.data.pets[1].action, 'walk')
-  // 点锅：说锅里煮着什么，还能再放（确认就打开背包）
+  assert.equal(camp.data.peekText, '')
+  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.home]), [['doudou', true]].concat(guests.map((id) => [id, false])))
+  // 香味飘出去要一会儿：先不在，过几秒才排着队从屏幕边上走进来（camp-life.test.js 测具体时间和位置）
+  assert.ok(camp.data.pets.slice(1).every((p) => p.hidden))
+  camp.clock.advance(12000)
+  assert.equal(camp.data.pets[1].hidden, false)
+  camp.clock.advance(60000)
+  // 点锅：说锅里煮着什么、还能煮多久，还能再放（确认就打开背包）
   camp.closeBag()
   camp.tapPot()
-  assert.equal(wx.log.modals.pop(), '锅里煮着：胡萝卜。爱吃的小动物会过来')
+  assert.match(wx.log.modals.pop(), /^锅里煮着：胡萝卜。还能煮 [78] 小时.*锅空了没住下的小动物就回去了$/)
   assert.equal(camp.data.bagOpen, true)
   camp.closeBag()
   // 背包按钮打开的：点一样问「放进锅里 / 拿去喂」；拿在手里时下面一排是闻着它会来的
@@ -688,25 +689,23 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   camp.onDragStart(potAt)
   await settle()
   assert.equal(camp.data.drag.ok, true)
-  // 客人不能喂：拖到客人身上不算
+  // 常客也能喂：拖到它身上算它
   const nv = camp.data.pets[1]
-  // （客人正好走过豆豆身边时，松手算喂豆豆，也不算客人）
-  const onGuest = camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k })
-  assert.ok(onGuest === null || onGuest.pet === 0, JSON.stringify(onGuest))
+  assert.deepEqual(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), { pet: 1 })
   camp.cancel()
 
   // 切走再回来：小动物都在原地（走到一半的就地停下，记在本地存储里）
   camp.clock.advance(3000)
   camp.onHide()
   const where = wx.storage.campSpots
-  assert.deepEqual(Object.keys(where).sort(), ['doudou', guest].sort())
+  assert.deepEqual(Object.keys(where).sort(), ['doudou'].concat(guests).sort(), '在场的和还在排队的都记着')
   wx.app.globalData.campSpots = null // 重开小程序：内存里的没了，读本地存储
   camp.onShow()
   await settle()
   const back = camp.life.snapshot()
   ;['doudou', guest].forEach((id) => assert.ok(Math.hypot(back[id].x - where[id].x, back[id].y - where[id].y) < 1e-6, id))
 
-  // 打卡 → 糯糯搬来；回到营地先庆祝
+  // 拍正餐 → 在场的都喂一顿（没人到 5 级，没人住下）；回到营地先庆祝
   const checkin = loadPage('checkin', wx)
   checkin.onLoad()
   checkin.pickMealType(event({}, { value: 'lunch' }))
@@ -717,11 +716,14 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   const meal = loadPage('meal', wx)
   meal.onLoad({ id: mealId })
   await settle()
-  assert.equal(meal.data.arrival.text, `${guestName}闻着胡萝卜的香味，住进营地啦！`)
+  assert.equal(meal.data.arrival, null)
+  const fedNow = cloud.db.collections.get('gardens').get('u1').pets.map((p) => [p.id, p.fed])
+  assert.deepEqual(fedNow[0], ['doudou', 1])
+  assert.ok(fedNow.slice(1).every(([, fed]) => fed >= 2), JSON.stringify(fedNow))
   wx.app.globalData.celebrate = true
   camp.onShow()
   await settle()
-  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.visitor]), [['doudou', false], [guest, false]])
+  assert.deepEqual(camp.data.pets.map((p) => [p.id, p.home]), [['doudou', true]].concat(guests.map((id) => [id, false])))
   assert.equal(camp.data.peekText, '')
   // 锅照样煮着（打卡不加层）
   assert.equal(camp.data.cuts.find((c) => c.key === 'pot').image.split('/').pop().split('.')[0], 'pot-1')
@@ -796,7 +798,8 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
 
   // 找它
   camp.openResidents()
-  assert.deepEqual(camp.data.residents.map((r) => r.name), ['豆豆', guestName])
+  assert.deepEqual(camp.data.residents.map((r) => r.name), ['豆豆'].concat(guests.map((id) => petById(id).name)))
+  assert.deepEqual(camp.data.residents.map((r) => r.home), [true].concat(guests.map(() => false)))
   camp.findResident(event({ index: 1 }))
   assert.equal(camp.data.residentsOpen, false)
   const found = camp.data.pets[1]
@@ -842,7 +845,7 @@ test('营地：本地存储用不了也照常（位置只记在内存里）', as
   camp.onUnload()
 })
 
-test('营地：客人也用逐帧拼图（先下到本地），不退回单张图跳着走；下锅新来的客人也下', async () => {
+test('营地：常客也用逐帧拼图（先下到本地），不退回单张图跳着走；下锅新来的也下', async () => {
   const config = require('../miniprogram/config')
   const cloud = createFakeCloud({ replies: [] })
   const { main } = loadCloudFunction(cloud)
@@ -850,7 +853,8 @@ test('营地：客人也用逐帧拼图（先下到本地），不退回单张�
   await main({ action: 'profile.save', data: { nickname: '妈妈', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' } })
   await main({ action: 'camp.get' })
   const gardens = cloud.db.collections.get('gardens')
-  gardens.set('u1', { ...gardens.get('u1'), foods: { kaohongshu: 1 }, visitors: [{ id: 'nuonuo', foodId: 'huluobo', since: '' }] })
+  const doc = gardens.get('u1')
+  gardens.set('u1', { ...doc, foods: { kaohongshu: 1 }, pets: doc.pets.concat({ id: 'nuonuo', since: '', fed: 0, fedToday: { date: '', n: 0 }, home: false, until: Date.now() + 3600000 }) })
   const camp = loadPage('camp', wx)
   camp.clock = manualClock()
   camp.hour = () => 10
@@ -859,17 +863,17 @@ test('营地：客人也用逐帧拼图（先下到本地），不退回单张�
   await settle()
   assert.ok(wx.log.downloads.includes(`${config.animArt}nuonuo.png`), wx.log.downloads.join(' '))
   const bunny = camp.data.pets.find((p) => p.id === 'nuonuo')
-  assert.equal(bunny.visitor, true)
+  assert.equal(bunny.home, false)
   assert.equal(bunny.sheet, 'wxfile://tmp/nuonuo.png')
-  // 烤红薯下锅：今天菜单里闻着它来的那只（杞杞或者别的），它的拼图也下
+  // 烤红薯下锅：今天菜单里闻着它来的（杞杞或者别的），它们的拼图也下
   camp.closeWelcome()
   camp.cook('kaohongshu')
   await settle()
-  const comer = gardens.get('u1').visitors.map((v) => v.id).find((id) => id !== 'nuonuo')
-  assert.ok(comer, '烤红薯没引来客人')
+  const comer = gardens.get('u1').pets.map((p) => p.id).find((id) => id !== 'nuonuo' && id !== 'doudou')
+  assert.ok(comer, '烤红薯没引来谁')
   assert.ok(wx.log.downloads.includes(`${config.animArt}${comer}.png`), wx.log.downloads.join(' '))
   const fox = camp.data.pets.find((p) => p.id === comer)
-  assert.equal(fox.visitor, true)
+  assert.equal(fox.home, false)
   assert.equal(fox.sheet, `wxfile://tmp/${comer}.png`)
   camp.onUnload()
 })

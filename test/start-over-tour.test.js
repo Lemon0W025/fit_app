@@ -173,7 +173,7 @@ test('首页导览：建好档第一次进首页过一会儿开始，圈「下�
   assert.equal(today.data.tourShow, false)
   today.clock.advance(700)
   assert.equal(today.data.tourShow, true)
-  assert.deepEqual(today.data.tourSteps.map((s) => s.selector || (s.tab != null ? `tab${s.tab}` : '')), ['#tour-next', '#tour-beans', '#tour-ring', 'tab1', ''])
+  assert.deepEqual(today.data.tourSteps.map((s) => s.selector || (s.tab != null ? `tab${s.tab}` : '')), ['#tour-next', '#tour-ring', '#tour-beans', 'tab1', ''])
   const wxml = readWxml('today')
   ;['tour-next', 'tour-beans', 'tour-ring'].forEach((id) => assert.match(wxml, new RegExp(`id="${id}"`)))
   assert.match(wxml, /<tour steps="\{\{tourSteps\}\}" show="\{\{tourShow\}\}" bind:done="onTourDone"/)

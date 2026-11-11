@@ -52,12 +52,18 @@
     {
       "file": "art/raw/cut/out-fire-off.png",
       "kind": "painting",
-      "aspect": [1.0, 1.42]
+      "aspect": [
+        1.0,
+        1.42
+      ]
     },
     {
       "file": "art/raw/cut/out-night-fire-off.png",
       "kind": "painting",
-      "aspect": [1.0, 1.25]
+      "aspect": [
+        1.0,
+        1.25
+      ]
     },
     {
       "file": "art/raw/camp/out-sky.png",
@@ -185,6 +191,51 @@
     },
     {
       "file": "art/raw/decor/out-roses.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-sunflowers.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-dandelions.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-clover.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-rapeseed.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-chrysanthemum.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-mint.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-poppies.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-bluebells.png",
+      "kind": "painting",
+      "aspect": 1.0
+    },
+    {
+      "file": "art/raw/decor/out-mushrooms.png",
       "kind": "painting",
       "aspect": 1.0
     },

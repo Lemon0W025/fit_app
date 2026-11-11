@@ -4,11 +4,14 @@
   <view wx:if="{{first}}" class="intro fx-rise">最后一步：到了饭点提醒你拍照，花半分钟设一下。</view>
 
   <view class="card fx-rise fx-d1">
-    <view class="card-title">你的饭点</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/clock.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">你的饭点</text>
+    </view>
     <view class="times">
       <view wx:for="{{view.times}}" wx:key="mealType" class="time">
         <view class="time-word">{{item.word}}</view>
-        <view class="time-at">{{item.time}}</view>
+        <view class="time-at num">{{item.time}}</view>
         <view class="time-window">{{item.window}}</view>
       </view>
     </view>
@@ -18,14 +21,20 @@
 
   <!-- 微信提醒是主力：放在前面。还没开通时一键开通（云函数自己找模板） -->
   <view wx:if="{{!view.wechat}}" class="card fx-rise fx-d2">
-    <view class="card-title"><image class="ic" src="/images/icons/chat.svg" mode="aspectFit" />微信提醒</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/bell.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">微信提醒</text>
+    </view>
     <view class="text">到了饭点，微信「服务通知」里提醒你拍照，点开就是拍照页。</view>
     <button class="btn-primary" bindtap="setupWechat" disabled="{{working}}">开通微信提醒</button>
   </view>
   <view wx:if="{{view.wechat}}" class="card fx-rise fx-d2">
     <view class="row">
       <view class="row-text">
-        <view class="card-title row-title"><image class="ic" src="/images/icons/chat.svg" mode="aspectFit" />微信提醒</view>
+        <view class="card-head row-title">
+          <view class="chip-icon"><image src="/images/icons/bell.svg" mode="aspectFit" /></view>
+          <text class="card-head-title">微信提醒</text>
+        </view>
         <view class="text">到饭点用微信提醒我</view>
       </view>
       <switch-bar checked="{{view.notify}}" disabled="{{working}}" bindchange="toggleNotify" />
@@ -49,7 +58,10 @@
   </view>
 
   <view class="card fx-rise fx-d3">
-    <view class="card-title"><image class="ic" src="/images/icons/calendar.svg" mode="aspectFit" />手机闹钟（可选）</view>
+    <view class="card-head">
+      <view class="chip-icon"><image src="/images/icons/calendar.svg" mode="aspectFit" /></view>
+      <text class="card-head-title">手机闹钟（可选）</text>
+    </view>
     <view class="muted text">在手机日历里加每天重复的闹钟（加一次就行，以后每天自己响），到饭点像闹钟一样响一下；点了进不了小程序。微信规定一次只能加一个，三顿各点一下。</view>
     <view wx:for="{{view.calendarRows}}" wx:key="mealType" class="cal-row">
       <view class="cal-word">{{item.word}} {{item.time}}</view>

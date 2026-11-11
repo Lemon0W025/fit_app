@@ -57,16 +57,18 @@ page {
 .hud-note {
   display: inline-block;
   margin-bottom: 10rpx;
-  padding: 10rpx 20rpx;
+  padding: 10rpx 24rpx;
   font-size: 26rpx;
-  color: var(--orange);
-  background: rgba(255, 244, 224, 0.95);
-  border-radius: 16rpx;
+  font-weight: 600;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 999rpx;
+  box-shadow: var(--shadow-card);
 }
 
 .hud-note-green {
-  color: var(--primary);
-  background: rgba(238, 246, 234, 0.95);
+  color: var(--lime-ink);
+  background: rgba(227, 246, 181, 0.96);
 }
 
 .recenter {
@@ -77,11 +79,11 @@ page {
   width: 88rpx;
   height: 88rpx;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4rpx 12rpx rgba(60, 50, 30, 0.15);
+  box-shadow: var(--shadow-float);
 }
 
 .recenter-icon {
@@ -98,7 +100,7 @@ page {
   line-height: 36rpx;
   padding: 0 8rpx;
   border-radius: 18rpx;
-  background: #e8553b;
+  background: var(--red);
   color: #fff;
   font-size: 22rpx;
   text-align: center;
@@ -114,10 +116,10 @@ page {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #fffbe8;
-  border-radius: 24rpx;
-  padding: 24rpx;
-  box-shadow: 0 6rpx 16rpx rgba(60, 50, 30, 0.16);
+  background: #ffffff;
+  border-radius: 40rpx;
+  padding: 28rpx;
+  box-shadow: var(--shadow-float);
 }
 
 /* 拖动层：摆放 / 移动时盖住地图，幽灵图跟手指走，目标格亮绿或红 */
@@ -171,7 +173,7 @@ page {
 
 .smell-label {
   font-size: 26rpx;
-  color: #8a6a1e;
+  color: var(--muted);
   margin-right: 10rpx;
 }
 
@@ -219,9 +221,9 @@ button.btn-small {
   margin-right: 16rpx;
   padding: 12rpx 0 10rpx;
   text-align: center;
-  border: 3rpx solid var(--line);
-  border-radius: 20rpx;
-  background: var(--gray-soft);
+  border: 3rpx solid transparent;
+  border-radius: 32rpx;
+  background: var(--chip);
   vertical-align: top;
 }
 
@@ -242,8 +244,8 @@ button.btn-small {
   top: 6rpx;
   right: 10rpx;
   font-size: 24rpx;
-  font-weight: 700;
-  color: var(--orange);
+  font-weight: 800;
+  color: var(--ink);
 }
 
 .overlay {
@@ -252,7 +254,7 @@ button.btn-small {
   right: 0;
   top: 0;
   bottom: 0;
-  background: rgba(47, 42, 36, 0.5);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -262,9 +264,10 @@ button.btn-small {
 .welcome {
   width: 78%;
   background: var(--card);
-  border-radius: 32rpx;
+  border-radius: 48rpx;
   padding: 40rpx 40rpx 24rpx;
   text-align: center;
+  box-shadow: var(--shadow-float);
 }
 
 .welcome-gift {
@@ -286,9 +289,9 @@ button.btn-small {
 }
 
 .welcome-title {
-  font-size: 38rpx;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--ink);
   margin: 12rpx 0;
 }
 
@@ -424,10 +427,9 @@ button.btn-small {
   min-width: 200rpx;
   padding: 0 28rpx 0 6rpx;
   box-sizing: border-box;
-  border: 4rpx solid #ffffff;
-  border-radius: 40rpx;
-  background: linear-gradient(180deg, #3577c0 0%, #1d4f8a 100%);
-  box-shadow: 0 6rpx 0 rgba(20, 50, 90, 0.35);
+  border-radius: 999rpx;
+  background: #ffffff;
+  box-shadow: var(--shadow-float);
 }
 
 .res-icon {
@@ -438,9 +440,10 @@ button.btn-small {
 .res-num {
   flex: 1;
   text-align: center;
-  font-size: 38rpx;
+  font-family: var(--font-num);
+  font-size: 40rpx;
   font-weight: 800;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .hud-today {
@@ -451,14 +454,15 @@ button.btn-small {
   align-items: center;
   gap: 10rpx;
   padding: 6rpx 16rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 255, 255, 0.92);
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-card);
 }
 
 .hud-today-text {
   font-size: 26rpx;
   font-weight: 700;
-  color: var(--orange);
+  color: var(--bean-ink);
 }
 
 .stamps-mini {
@@ -473,7 +477,7 @@ button.btn-small {
 }
 
 .stamps-mini .stamp-on {
-  box-shadow: 0 0 0 4rpx #f0b429;
+  box-shadow: 0 0 0 4rpx var(--gold);
 }
 
 .stamps-mini .stamp-on::after {
@@ -503,13 +507,12 @@ button.btn-small {
   width: 120rpx;
   height: 120rpx;
   border-radius: 50%;
-  border: 4rpx solid #ffffff;
-  background: linear-gradient(180deg, #fff8ec 0%, #ffe9c7 100%);
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6rpx 0 rgba(150, 100, 40, 0.25);
+  box-shadow: var(--shadow-float);
 }
 
 .side-icon {
@@ -519,8 +522,8 @@ button.btn-small {
 
 .side-label {
   font-size: 24rpx;
-  font-weight: 800;
-  color: #8a4f1a;
+  font-weight: 700;
+  color: var(--ink);
   margin-top: -4rpx;
 }
 
@@ -531,35 +534,8 @@ button.btn-small {
   width: 22rpx;
   height: 22rpx;
   border-radius: 50%;
-  background: #e8553b;
+  background: var(--red);
   border: 3rpx solid #ffffff;
-}
-
-/* 底部大打卡按钮 */
-.checkin-btn {
-  position: absolute;
-  left: 50%;
-  bottom: 36rpx;
-  z-index: 50;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  padding: 26rpx 56rpx;
-  border-radius: 60rpx;
-  border: 5rpx solid #ffffff;
-  background: linear-gradient(180deg, #6fcf5a 0%, #3e9a3a 100%);
-  box-shadow: 0 8rpx 0 #2c6e2a;
-  color: #ffffff;
-  font-size: 40rpx;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.checkin-icon {
-  width: 52rpx;
-  height: 52rpx;
-  margin-right: 10rpx;
 }
 
 /* 物件、小动物脚下的影子 */
@@ -618,7 +594,7 @@ button.btn-small {
   align-items: center;
   gap: 20rpx;
   padding: 16rpx 8rpx;
-  border-bottom: 2rpx solid rgba(0, 0, 0, 0.05);
+  border-bottom: 2rpx solid var(--line);
 }
 
 .res-avatar {
@@ -635,15 +611,6 @@ button.btn-small {
   font-weight: 700;
 }
 
-/* 满级后的星星：金色实心是有的，空心是还没有的 */
-.res-stars {
-  margin-left: 12rpx;
-  font-size: 26rpx;
-  font-weight: 400;
-  color: #d99a1e;
-  letter-spacing: 2rpx;
-}
-
 .res-text {
   font-size: 26rpx;
   color: var(--muted);
@@ -651,8 +618,12 @@ button.btn-small {
 }
 
 .res-go {
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--ink);
+  color: #fff;
   font-size: 28rpx;
-  color: var(--primary);
+  font-weight: 700;
 }
 
 /* ---- 营地专用 ---- */
@@ -670,7 +641,7 @@ button.btn-small {
 .ghosted { opacity: 0.6; }
 /* 点锅的地方：透明，排在锅那层上面、锅前面的宠物下面 */
 .pot-hit { position: absolute; }
-.hud-note-gold { background: rgba(255, 244, 214, 0.95); color: #9a6b12; }
+.hud-note-gold { background: rgba(255, 241, 214, 0.96); color: var(--bean-ink); }
 /* 背包抽屉（components/sheet）顶上的「食物 / 装饰」（components/segmented） */
 .bag-tabs { width: 360rpx; }
 .bag-hint { margin-top: 8rpx; }
@@ -704,13 +675,6 @@ button.btn-small {
   100% { transform: rotate(0deg); }
 }
 /* 吊床：睡在里面的和布一起轻轻晃，慢一点、幅度小 */
-.rock-on { animation: rock 3.2s infinite; will-change: transform; }
-@keyframes rock {
-  0% { transform: rotate(0deg); animation-timing-function: ease-out; }
-  25% { transform: rotate(2.5deg); animation-timing-function: ease-in-out; }
-  75% { transform: rotate(-2.5deg); animation-timing-function: ease-in; }
-  100% { transform: rotate(0deg); }
-}
 .pet-body.flip { transform: scaleX(-1); }
 .pet-img { display: block; width: 100%; transform-origin: 50% 100%; }
 /* 夜里盖在本体上的月光版（同一张图去色染成夜色的蓝白，不透明度跟着站的地方变）：和本体同一套动画，叠得严丝合缝 */
@@ -737,6 +701,9 @@ button.btn-small {
 .act-soak { clip-path: inset(0 0 38% 0); -webkit-clip-path: inset(0 0 38% 0); transform: translateY(38%); animation: bob 2s ease-in-out infinite; }
 @keyframes bob { 0%, 100% { transform: translateY(38%); } 50% { transform: translateY(41%); } }
 .act-dislike { animation: shake 0.4s ease-in-out 3; }
+/* 在帐篷里睡：门洞的形状写在内联样式里（camp-life 的 tentClip）。💤 挨着露出来的脑袋（趴着，头在框的中间偏下、朝右；朝左的翻到左边） */
+.pet-tent .act-emoji { top: 34%; right: 2%; }
+.pet-tent-flip .act-emoji { right: auto; left: 2%; }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6%); } 75% { transform: translateX(6%); } }
 
 /* 拖拽：装饰的幽灵块 + 落脚框 */
@@ -823,14 +790,41 @@ button.btn-small {
   height: 44rpx;
   margin-right: 16rpx;
   border-radius: 50%;
-  background: var(--primary, #4e7d5b);
-  color: #fff;
+  background: var(--lime, #c4ef5a);
+  color: var(--ink, #17191c);
+  font-weight: 800;
   font-size: 26rpx;
   line-height: 44rpx;
   text-align: center;
 }
 
-/* 庆祝卡（住户里程碑、满级后的星星）：沿用欢迎卡的底，图弹一下 */
+/* 小动物名单里的小标签：住下了 / 常客 */
+.res-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 999rpx;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 22rpx;
+  font-weight: 600;
+  vertical-align: 4rpx;
+}
+
+.res-tag-home {
+  background: var(--lime-soft);
+  color: var(--lime-ink);
+}
+
+/* 满级后的星星：金色实心是有的，空心是还没有的 */
+.res-stars {
+  margin-left: 12rpx;
+  font-size: 26rpx;
+  font-weight: 400;
+  color: #d99a1e;
+  letter-spacing: 2rpx;
+}
+
+/* 庆祝卡（住下的里程碑、满级后的星星）：沿用欢迎卡的底，图弹一下 */
 .cheer-card {
   padding-bottom: 36rpx;
   animation: fx-pop 0.35s ease-out backwards;

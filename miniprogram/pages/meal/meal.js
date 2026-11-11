@@ -307,7 +307,7 @@ Page({
       title: '删除这条打卡？',
       content: '删除后不能恢复',
       confirmText: '删除',
-      confirmColor: '#D1543F',
+      confirmColor: '#C82014',
       success: (res) => {
         if (!res.confirm) return
         wx.showLoading({ title: '删除中', mask: true })

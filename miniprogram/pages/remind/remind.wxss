@@ -1,8 +1,12 @@
 .intro {
-  margin: 8rpx 8rpx 24rpx;
+  margin: 8rpx 0 24rpx;
+  padding: 28rpx 32rpx;
+  border-radius: 40rpx;
+  background: var(--ink);
+  color: #fff;
   font-size: 32rpx;
+  font-weight: 600;
   line-height: 1.6;
-  color: var(--primary);
 }
 
 .text {
@@ -18,6 +22,10 @@
 
 .time {
   flex: 1;
+  margin: 0 8rpx;
+  padding: 20rpx 0 18rpx;
+  border-radius: 28rpx;
+  background: var(--lime-wash);
   text-align: center;
 }
 
@@ -28,9 +36,7 @@
 
 .time-at {
   margin: 4rpx 0;
-  font-size: 48rpx;
-  font-weight: 700;
-  color: var(--primary);
+  font-size: 56rpx;
 }
 
 .time-window {
@@ -46,15 +52,16 @@
 .done {
   margin-top: 16rpx;
   font-size: 30rpx;
-  color: var(--green-text);
+  font-weight: 700;
+  color: var(--lime-ink);
 }
 
 .warn {
   margin-top: 16rpx;
-  padding: 16rpx 20rpx;
-  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 28rpx;
   background: var(--yellow-soft);
-  color: var(--amber);
+  color: var(--bean-ink);
   font-size: 28rpx;
   line-height: 1.6;
 }
@@ -71,13 +78,18 @@
 }
 
 .row-title {
-  margin-bottom: 4rpx;
+  margin-bottom: 12rpx;
 }
 
 .credits {
+  display: inline-block;
   margin-top: 16rpx;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--lime-soft);
+  color: var(--lime-ink);
   font-size: 30rpx;
-  color: var(--green-text);
+  font-weight: 700;
 }
 
 .help {

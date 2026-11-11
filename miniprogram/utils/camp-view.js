@@ -95,9 +95,9 @@ const foodImage = (id) => `/images/camp/foods/${id}.png`
 const decorImage = (id, base) => `${base && DECOR_ART.indexOf(id) !== -1 ? base : '/images/camp/decor/'}${id}.png`
 const zOf = (y) => Z_DECOR + Math.round(y / 4)
 
-// 用云端高清块、又拆成两层的（秋千、吊床，decor-parts.js）：画架子那张，会摆的那层单独一张，绕 pivot 摆（和块一样大）。
-// 摆的动画类（camp.wxss）：秋千荡 sway-on，吊床轻轻晃 rock-on
-const SWAY_CLASS = { swing: 'sway-on', rock: 'rock-on' }
+// 用云端高清块、又拆成两层的（秋千，decor-parts.js）：画架子那张，会摆的那层单独一张，绕 pivot 摆（和块一样大）。
+// 摆的动画类（camp.wxss）：秋千荡 sway-on
+const SWAY_CLASS = { swing: 'sway-on' }
 const partsOf = (id, base) => (base && DECOR_ART.indexOf(id) !== -1 && DECOR_PARTS[id]) || null
 
 function patchView(d, x, y, L, base) {
@@ -117,7 +117,7 @@ function patchView(d, x, y, L, base) {
 }
 
 // 点家具时菜单第一项「叫一只来……」：按它上面的点是干什么的；没什么好玩的（灯、彩旗）返回 ''
-const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', slide: '叫一只来滑滑梯', tea: '叫一只来喝茶', play: '叫一只来玩', climb: '叫一只爬上去看看', perch: '叫一只飞上去' }
+const CALL_LABELS = { swing: '叫一只来荡秋千', sniff: '叫一只来闻闻花', sit: '叫一只来坐坐', sleep: '叫一只来歇会儿', tea: '叫一只来喝茶', play: '叫一只来玩' }
 function callLabel(decorId) {
   const d = decorById(decorId)
   return (d && d.spots.length && CALL_LABELS[d.spots[0].action]) || ''
@@ -149,9 +149,9 @@ function rarityOf(id) {
   return RARITIES.find((r) => r.id === id) || RARITIES[0]
 }
 
-// smell：今天闻着这样食物会来的（今日菜单 menu），住下的和客人显示头像，还没来过的显示剪影（known: false）
-function foodBag(foods, menu, residents, visitors) {
-  const known = (residents || []).concat(visitors || [])
+// smell：今天闻着这样食物会来的（今日菜单 menu），来过的（met）显示头像，还没来过的显示剪影（known: false）
+function foodBag(foods, menu, met) {
+  const known = met || []
   return (foods || [])
     .map(({ id, count }) => {
       const f = foodById(id)
@@ -193,12 +193,12 @@ function tintFor(hour) {
   return ''
 }
 
-// 打卡结果页的横幅：闻着香味来的客人住下了（一只说闻着什么来的，几只一起报名字；图用第一只）
+// 打卡结果页的横幅：这一顿喂到 5 级、住下的（图用第一只）
 function arrivalCard(arrival) {
   const pets = (arrival && arrival.pets) || []
   if (!pets.length) return null
   const first = pets[0]
-  const text = pets.length === 1 && first.foodName ? `${first.name}闻着${first.foodName}的香味，住进营地啦！` : `${pets.map((p) => p.name).join('、')}住进营地啦！`
+  const text = pets.length === 1 ? `${first.name}和你最亲了，住进营地啦，以后不走了！` : `${pets.map((p) => p.name).join('、')}住进营地啦，以后不走了！`
   return { image: petImage(first.id), text }
 }
 
@@ -236,9 +236,16 @@ function potHitView(L) {
 }
 
 // 点锅时说一句：锅里煮着什么
-function potNote(pot) {
+// 点锅时说的：煮着什么、还能煮多久（一样管 8 小时，锅空了常客就回去）
+function potNote(pot, nowMs = Date.now()) {
   const names = ((pot && pot.foods) || []).map((id) => foodById(id)).filter(Boolean).map((f) => f.name)
-  return names.length ? `锅里煮着：${names.join('、')}。爱吃的小动物会过来` : ''
+  if (!names.length) return ''
+  const left = pot.until ? Math.max(0, pot.until - nowMs) : 0
+  const mins = Math.round(left / 60000)
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  const time = !left ? '' : h >= 1 ? `还能煮 ${h} 小时${m ? ` ${m} 分` : ''}，` : `还能煮 ${Math.max(1, m)} 分钟，`
+  return `锅里煮着：${names.join('、')}。${time}锅空了没住下的小动物就回去了`
 }
 
 // 满级后的星星：★ 是有的，☆ 是还没有的（一共 STAR_MAX 颗）
@@ -247,12 +254,12 @@ function starText(stars) {
   return '★'.repeat(n) + '☆'.repeat(STAR_MAX - n)
 }
 
-// 图册封面「住户 5 / 12」下面那行：离下一个住户里程碑还差几只（goal 是 camp.album 给的，都到了是 null）
-function goalText(progress, goal) {
-  return goal ? `再来 ${goal.pets - progress.pets} 只领 ${goal.beans} 暖豆` : ''
+// 图册封面下面那行：离下一个里程碑还差几只住下（goal 是 camp.album 给的，都到了是 null；home 是已经住下的只数）
+function goalText(home, goal) {
+  return goal ? `再住下 ${Math.max(1, goal.pets - (home || 0))} 只领 ${goal.beans} 暖豆` : ''
 }
 
-// 营地页的庆祝卡（云函数的 cheers 一条一张）：住户到了 4 / 8 / 12 只；满级后又攒够一颗星
+// 营地页的庆祝卡（云函数的 cheers 一条一张）：住下的到了 4 / 8 / 12 只；满级后又攒够一颗星
 function cheerCard(cheer) {
   if (cheer.kind === 'star') {
     const pet = petById(cheer.petId)
@@ -272,23 +279,24 @@ function cheerCard(cheer) {
   return {
     key: `residents-${cheer.pets}`,
     image: '/images/garden/ui/gift.png',
-    title: next ? `营地住进 ${cheer.pets} 只啦` : `${cheer.pets} 只全到齐啦`,
+    title: next ? `已经有 ${cheer.pets} 只住下啦` : `${cheer.pets} 只全住下啦`,
     stars: '',
     text: `营地越来越热闹，奖励 ${cheer.beans} 暖豆`,
-    more: next ? `住满 ${next.pets} 只，还有 ${next.beans} 暖豆` : '大家都在，天天来看看它们',
+    more: next ? `住下 ${next.pets} 只，还有 ${next.beans} 暖豆` : '大家都住下了，天天来看看它们',
   }
 }
 
-// 顶上的提示条：锅空着（今天还没下锅）、有住户在等开饭
-function hungryNote(pot, pets) {
-  const empty = !((pot && pot.foods) || []).length
-  return empty && (pets || []).length ? '🍲 锅里空空的，大家等着开饭呢，点锅放点吃的' : ''
+// 顶上的提示条：锅空着，没住下的常客回去了：提示放点它们爱吃的就回来
+function hungryNote(names) {
+  if (!names || !names.length) return ''
+  const who = names.length > 3 ? `${names.slice(0, 3).join('、')}它们` : names.join('、')
+  return `🍲 锅里空空的，${who}回去了，放点它们爱吃的就回来`
 }
 
-// 顶上的提示条：闻着香味来的客人，下次拍正餐住下
-function visitorNote(visitors) {
-  const names = (visitors || []).map((v) => petById(v.id)).filter(Boolean).map((p) => p.name)
-  return names.length ? `👀 ${names.join('、')}闻着香味来了…下次拍正餐就住下` : ''
+// 顶上的提示条：刚住下的
+function homeNote(ids) {
+  const names = (ids || []).map((id) => petById(id)).filter(Boolean).map((p) => p.name)
+  return names.length ? `🎉 ${names.join('、')}住下啦，以后不走了` : ''
 }
 
 // 前沿折线在 x 处的 y（两头以外按端点）
@@ -356,7 +364,7 @@ function changedPaths(prefix, prev, next) {
 
 module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
-  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
+  petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, homeNote, cutoutViews, isNight,
   frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
   starText, goalText, cheerCard,
 }

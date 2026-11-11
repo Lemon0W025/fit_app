@@ -9,9 +9,9 @@
 
 .sl-track {
   position: relative;
-  height: 18rpx;
-  border-radius: 9rpx;
-  background: #e8e1d5;
+  height: 28rpx;
+  border-radius: 14rpx;
+  background: var(--chip, #f1f2ee);
   overflow: hidden;
 }
 
@@ -21,7 +21,7 @@
   top: 0;
   width: 100%;
   height: 100%;
-  background: var(--primary, #4e7d5b);
+  background: var(--lime, #c4ef5a);
   transform-origin: 0 50%;
   will-change: transform;
 }
@@ -52,7 +52,7 @@
   height: 60rpx;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 4rpx var(--primary, #4e7d5b), 0 4rpx 12rpx rgba(60, 50, 30, 0.22);
+  box-shadow: 0 0 0 6rpx var(--ink, #17191c), 0 6rpx 14rpx rgba(0, 0, 0, 0.22);
   transition: transform 160ms cubic-bezier(0.3, 1.5, 0.5, 1);
 }
 
@@ -66,8 +66,8 @@
   left: 0;
   bottom: 50rpx;
   padding: 6rpx 18rpx;
-  border-radius: 12rpx;
-  background: var(--primary, #4e7d5b);
+  border-radius: 999rpx;
+  background: var(--ink, #17191c);
   color: #fff;
   font-size: 30rpx;
   font-weight: 700;
@@ -83,7 +83,7 @@
   bottom: 40rpx;
   width: 20rpx;
   height: 20rpx;
-  background: var(--primary, #4e7d5b);
+  background: var(--ink, #17191c);
   transform: rotate(45deg) scale(0.4);
   opacity: 0;
   transition: opacity 120ms ease-out, transform 160ms cubic-bezier(0.3, 1.5, 0.5, 1);

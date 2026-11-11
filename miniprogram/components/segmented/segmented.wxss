@@ -1,13 +1,13 @@
 /* 分段控制器（docs/superpowers/specs/2026-10-27-ui-controls-design.md 第 3 节）。类名都带 seg- 前缀：预览渲染器没有样式隔离。
    胶囊三块（seg-piece）贴在左上角，位置全靠 transform；seg-p1 伸过去（快）、seg-p2 收回来（慢一点、带回弹）、seg-p0 不动画（刚量好、换了选项） */
-/* 底槽带一圈细边：直接放在米色页面上（打卡页）也看得出是一排能点的 */
+/* 底槽是一条白色胶囊（和卡片一样的淡阴影），选中的是黑色胶囊 */
 .seg {
   position: relative;
   display: flex;
   padding: 6rpx;
   border-radius: 999rpx;
-  background: #efe9df;
-  box-shadow: inset 0 0 0 2rpx #e3dacb;
+  background: var(--card, #ffffff);
+  box-shadow: 0 2rpx 4rpx rgba(23, 25, 28, 0.03), 0 12rpx 32rpx rgba(23, 25, 28, 0.05);
 }
 
 .seg-piece {
@@ -16,7 +16,7 @@
   top: 0;
   z-index: 0;
   opacity: 0;
-  background: var(--primary, #4e7d5b);
+  background: var(--primary, #17191c);
   will-change: transform;
 }
 
@@ -46,22 +46,22 @@
   z-index: 1;
   flex: 1 1 auto;
   min-width: 0;
-  height: 80rpx;
+  height: 88rpx;
   padding: 0 20rpx;
   border-radius: 999rpx;
-  line-height: 80rpx;
+  line-height: 88rpx;
   text-align: center;
   white-space: nowrap;
   font-size: 32rpx;
-  color: #5f574d;
+  color: var(--muted, #6b6f76);
   transition: transform 150ms, color 200ms, background-color 200ms;
 }
 
 /* 选中：白字（胶囊伸过来要一拍，晚一点点再变白）。还没量好时选中的那项自己带底色，量好了交给胶囊 */
 .seg-on {
   color: #fff;
-  font-weight: 600;
-  background: var(--primary, #4e7d5b);
+  font-weight: 700;
+  background: var(--primary, #17191c);
   transition: transform 150ms, color 200ms ease 60ms, background-color 200ms;
 }
 
@@ -70,5 +70,5 @@
 }
 
 .seg-press {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }

@@ -81,10 +81,10 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
   assert.equal(V.decorViews([{ uid: 'x', id: 'nope', x: 1, y: 1 }], L, '').length, 0)
   // 云端只有画好了的（utils/decor-art.js 列的）高清块，还没画的用包里的占位（现在都画了，临时从清单里拿掉一件试）
   const art = require('../miniprogram/utils/decor-art')
-  const at = art.indexOf('hammock')
+  const at = art.indexOf('strawbed')
   art.splice(at, 1)
   try {
-    const drawn = V.decorViews([{ uid: 'a', id: 'swing', x: 1000, y: 1500 }, { uid: 'b', id: 'hammock', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
+    const drawn = V.decorViews([{ uid: 'a', id: 'swing', x: 1000, y: 1500 }, { uid: 'b', id: 'strawbed', x: 2000, y: 1500 }], L, 'cloud://x/camp/decor/')
     // 秋千拆成两层（decor-parts.js）：画架子那张，座位那层绕横梁摆，轴按块的大小换算成像素
     const swing = drawn.find((v) => v.id === 'swing')
     assert.equal(swing.image, 'cloud://x/camp/decor/swing-frame.png')
@@ -92,18 +92,19 @@ test('decorViews：按远近缩放、锚点对准落脚点、后面的先画', (
     assert.equal(swing.seat.cls, 'sway-on')
     const pivot = require('../miniprogram/utils/decor-parts').swing.pivot
     assert.ok(Math.abs(swing.seat.ox - pivot[0] * swing.width) < 0.011 && Math.abs(swing.seat.oy - pivot[1] * swing.height) < 0.011)
-    assert.equal(drawn.find((v) => v.id === 'hammock').image, '/images/camp/decor/hammock.png')
-    assert.equal(drawn.find((v) => v.id === 'hammock').seat, null)
+    assert.equal(drawn.find((v) => v.id === 'strawbed').image, '/images/camp/decor/strawbed.png')
+    assert.equal(drawn.find((v) => v.id === 'strawbed').seat, null)
   } finally {
-    art.splice(at, 0, 'hammock')
+    art.splice(at, 0, 'strawbed')
   }
   // 包里的小图不拆（没有座位那层）
   assert.equal(views[0].seat, null)
   // 点家具菜单第一项：按它上面的点
   assert.equal(V.callLabel('swing'), '叫一只来荡秋千')
-  assert.equal(V.callLabel('flowerbed'), '叫一只来闻闻花')
-  assert.equal(V.callLabel('picnic'), '叫一只来坐坐')
-  assert.equal(V.callLabel('hammock'), '叫一只来歇会儿')
+  assert.equal(V.callLabel('sunflowers'), '叫一只来闻闻花')
+  assert.equal(V.callLabel('kettle'), '叫一只来喝茶')
+  assert.equal(V.callLabel('strawbed'), '叫一只来歇会儿')
+  assert.equal(V.callLabel('hammock'), '')
   assert.equal(V.callLabel('lights'), '')
   const ghost = V.ghostView('ball', 1500, 3000, L, false)
   assert.equal(ghost.ok, false)
@@ -114,14 +115,14 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.deepEqual(V.foodBag([{ id: 'xiaomi', count: 2 }, { id: 'jiaozi', count: 1 }]).map((f) => [f.name, f.count, f.rarityLabel, f.term]), [['小米', 2, '普通', ''], ['饺子', 1, '稀有', 'dongzhi']])
   assert.equal(V.foodBag([{ id: 'xiaomi', count: 1 }])[0].image, '/images/camp/foods/xiaomi.png')
   assert.deepEqual(V.decorBag([{ id: 'ball', count: 1 }])[0], { id: 'ball', name: '滚球', count: 1, image: '/images/camp/decor/ball.png', category: 'play' })
-  const groups = V.shopGroups({ ball: 1, flowerbed: 3 }, 50)
+  const groups = V.shopGroups({ ball: 1, sunflower: 3 }, 50)
   assert.deepEqual(groups.map((g) => g.id), ['nest', 'eat', 'play', 'plant', 'mood'])
   const ball = groups[2].items.find((i) => i.id === 'ball')
   assert.deepEqual([ball.have, ball.soldOut, ball.canAfford], [1, true, true])
-  const hammock = groups[0].items.find((i) => i.id === 'hammock')
-  assert.deepEqual([hammock.have, hammock.soldOut, hammock.canAfford], [0, false, false])
-  assert.equal(groups[3].items.find((i) => i.id === 'flowerbed').soldOut, true)
-  assert.ok(!groups.some((g) => g.items.some((i) => ['gold_swing', 'tent', 'sapling'].indexOf(i.id) !== -1)), '奖励、下架的不进商店')
+  const kettle = groups[1].items.find((i) => i.id === 'kettle')
+  assert.deepEqual([kettle.have, kettle.soldOut, kettle.canAfford], [0, false, false])
+  assert.equal(groups[3].items.find((i) => i.id === 'sunflower').soldOut, true)
+  assert.ok(!groups.some((g) => g.items.some((i) => ['gold_swing', 'tent', 'sapling', 'hammock', 'picnic', 'flowerbed'].indexOf(i.id) !== -1)), '奖励、下架的不进商店')
   // 还没有高清图的（新加的花，图没回来）不进商店
   const art = require('../miniprogram/utils/decor-art')
   const at = art.indexOf('ball')
@@ -134,11 +135,10 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.deepEqual([6, 12, 17, 18, 19, 23, 3].map(V.tintFor), ['', '', 'dusk', 'dusk', '', '', ''])
   assert.deepEqual([6, 12, 18, 19, 23, 3, 5].map(V.isNight), [false, false, false, true, true, true, true])
   assert.equal(V.baseTiles(L, 'cloud://x/camp/base/', true)[15].image, 'cloud://x/camp/base/night-t33.jpg')
-  // 打卡结果页的横幅：一只说闻着什么来的，几只一起报名字，图用第一只；旧档迁来的不知道闻着什么来的
-  const nuonuo = { id: 'nuonuo', name: '糯糯', foodId: 'huluobo', foodName: '胡萝卜' }
-  assert.deepEqual(V.arrivalCard({ pets: [nuonuo] }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯闻着胡萝卜的香味，住进营地啦！' })
-  assert.deepEqual(V.arrivalCard({ pets: [nuonuo, { id: 'sunbao', name: '笋宝', foodId: 'zhusun', foodName: '竹笋' }] }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯、笋宝住进营地啦！' })
-  assert.equal(V.arrivalCard({ pets: [{ id: 'hehe', name: '鹤鹤', foodId: '', foodName: '' }] }).text, '鹤鹤住进营地啦！')
+  // 打卡结果页的横幅：这一顿喂到 5 级住下的，几只一起报名字，图用第一只
+  const nuonuo = { id: 'nuonuo', name: '糯糯' }
+  assert.deepEqual(V.arrivalCard({ pets: [nuonuo] }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯和你最亲了，住进营地啦，以后不走了！' })
+  assert.deepEqual(V.arrivalCard({ pets: [nuonuo, { id: 'sunbao', name: '笋宝' }] }), { image: '/images/camp/pets/nuonuo.png', text: '糯糯、笋宝住进营地啦，以后不走了！' })
   assert.equal(V.arrivalCard(null), null)
   assert.equal(V.arrivalCard({ pets: [] }), null)
   // 对准营地画上一点：x / y 是缩放后整个世界的左上角在屏幕上的位置（营地画在世界里往下挪了 top）；推到边上的拉回来
@@ -164,9 +164,9 @@ test('背包、商店、食盆、色调、横幅', () => {
   assert.equal(V.potLevel({ foods: ['a', 'b', 'c', 'd'] }), 3)
 })
 
-test('背包里的吃的：今天闻着它会来的头像，住下的和客人亮着、没来过的是剪影；点心和没有菜单时没有', () => {
+test('背包里的吃的：今天闻着它会来的头像，来过的亮着、没来过的是剪影；点心和没有菜单时没有', () => {
   const menu = { huluobo: ['nuonuo', 'doudou', 'shishi'], xiaomi: ['doudou'] }
-  const bag = V.foodBag([{ id: 'huluobo', count: 2 }, { id: 'xiaomi', count: 1 }, { id: 'shibing', count: 1 }], menu, ['doudou'], ['nuonuo'])
+  const bag = V.foodBag([{ id: 'huluobo', count: 2 }, { id: 'xiaomi', count: 1 }, { id: 'shibing', count: 1 }], menu, ['doudou', 'nuonuo'])
   assert.deepEqual(bag[0].smell, [
     { id: 'nuonuo', face: '/images/camp/pets/nuonuo-face.png', known: true },
     { id: 'doudou', face: '/images/camp/pets/doudou-face.png', known: true },
@@ -177,18 +177,23 @@ test('背包里的吃的：今天闻着它会来的头像，住下的和客人�
   assert.deepEqual(V.foodBag([{ id: 'huluobo', count: 1 }])[0].smell, [])
 })
 
-test('锅：拖到锅身或篝火上算下锅；锅里煮着什么；客人的提示条', () => {
+test('锅：拖到锅身或篝火上算下锅；锅里煮着什么、还能煮多久；住下的提示条', () => {
   assert.equal(V.onPot(SCENE.fire[0], SCENE.fire[1]), true)
   assert.equal(V.onPot(2070, 2300), true) // 锅身
   assert.equal(V.onPot(2070, 1900), true) // 三脚架顶上（抠图轮廓里）
   assert.equal(V.onPot(3500, 3500), false)
   assert.equal(V.onPot(2708, 3082), false) // 以前画上碗的地方
-  assert.equal(V.potNote({ foods: ['huluobo', 'xiaomi'] }), '锅里煮着：胡萝卜、小米。爱吃的小动物会过来')
+  const H = 3600000
+  assert.equal(V.potNote({ foods: ['huluobo', 'xiaomi'], until: 1000 + 8 * H }, 1000), '锅里煮着：胡萝卜、小米。还能煮 8 小时，锅空了没住下的小动物就回去了')
+  assert.equal(V.potNote({ foods: ['huluobo'], until: 1000 + 8 * H }, 1000 + 0.5 * H + 100), '锅里煮着：胡萝卜。还能煮 7 小时 30 分，锅空了没住下的小动物就回去了')
+  assert.equal(V.potNote({ foods: ['huluobo'], until: 1000 + 8 * H }, 1000 + 8 * H - 100), '锅里煮着：胡萝卜。还能煮 1 分钟，锅空了没住下的小动物就回去了')
+  assert.equal(V.potNote({ foods: ['huluobo'] }), '锅里煮着：胡萝卜。锅空了没住下的小动物就回去了')
   assert.equal(V.potNote({ foods: [] }), '')
-  assert.equal(V.visitorNote([{ id: 'nuonuo', foodId: 'huluobo' }]), '👀 糯糯闻着香味来了…下次拍正餐就住下')
-  assert.equal(V.visitorNote([{ id: 'nuonuo' }, { id: 'sunbao' }]), '👀 糯糯、笋宝闻着香味来了…下次拍正餐就住下')
-  assert.equal(V.visitorNote([]), '')
-  assert.equal(V.visitorNote(undefined), '')
+  assert.equal(V.homeNote(['nuonuo']), '🎉 糯糯住下啦，以后不走了')
+  assert.equal(V.homeNote(['nuonuo', 'sunbao']), '🎉 糯糯、笋宝住下啦，以后不走了')
+  assert.equal(V.homeNote([]), '')
+  assert.equal(V.homeNote(undefined), '')
+  assert.equal(V.hungryNote(['糯糯', '杞杞']), '🍲 锅里空空的，糯糯、杞杞回去了，放点它们爱吃的就回来')
 })
 
 test('抠图层：锅按层数换图；云端 WebP、包里 PNG；帐篷竖着切成条，每条按自己那段前沿排', () => {

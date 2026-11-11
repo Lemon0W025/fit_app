@@ -53,11 +53,10 @@ function createTestPerks({ config, now }) {
       testGift = grant.beans
       changed = true
     }
-    // 还没来的宠物一次全放出来（1 级、不弹新住户）
+    // 宠物一次全放出来、都算住下（没来过的 1 级）
     if (once(camp, live('testPets'))) {
       const have = camp.pets.map((p) => p.id)
-      camp.pets = camp.pets.concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 } })))
-      camp.visitors = []
+      camp.pets = camp.pets.map((p) => ({ ...p, home: true, until: 0 })).concat(PETS.filter((p) => have.indexOf(p.id) === -1).map((p) => ({ id: p.id, since: today(), fed: 0, fedToday: { date: '', n: 0 }, home: true, until: 0 })))
       changed = true
     }
     // 补满了就存一次（首页的暖豆也读得到）
@@ -67,13 +66,10 @@ function createTestPerks({ config, now }) {
     if (once(camp, visitors)) {
       const gone = visitors.remove || []
       camp.pets = camp.pets.filter((p) => gone.indexOf(p.id) === -1)
-      camp.arrivals = camp.arrivals.filter((id) => gone.indexOf(id) === -1)
-      camp.visitors = camp.visitors.filter((v) => gone.indexOf(v.id) === -1)
-      const cooking = camp.pot.date === today() ? camp.pot.foods : []
-      cooking.forEach((id) => {
-        camp.foods = { ...camp.foods, [id]: (camp.foods[id] || 0) + 1 }
+      camp.pot.items.filter((it) => it.date === today()).forEach((it) => {
+        camp.foods = { ...camp.foods, [it.foodId]: (camp.foods[it.foodId] || 0) + 1 }
       })
-      camp.pot = { date: '', foods: [] }
+      camp.pot = { items: [] }
       Object.keys(visitors.foods || {}).forEach((id) => {
         if (foodById(id)) camp.foods = { ...camp.foods, [id]: (camp.foods[id] || 0) + visitors.foods[id] }
       })

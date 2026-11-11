@@ -28,7 +28,7 @@
   top: 0;
   right: 0;
   bottom: 0;
-  background: rgba(47, 42, 36, 0.38);
+  background: rgba(23, 25, 28, 0.45);
 }
 
 .sheet-panel {
@@ -58,8 +58,8 @@
 .sheet-move {
   position: relative;
   background: var(--card, #fff);
-  border-radius: 32rpx 32rpx 0 0;
-  box-shadow: 0 -6rpx 24rpx rgba(60, 50, 30, 0.12);
+  border-radius: 48rpx 48rpx 0 0;
+  box-shadow: 0 0 2rpx rgba(0, 0, 0, 0.14), 0 -8rpx 24rpx rgba(0, 0, 0, 0.1);
   padding-bottom: calc(24rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
 }
@@ -85,7 +85,7 @@
   height: 10rpx;
   margin: 0 auto 10rpx;
   border-radius: 5rpx;
-  background: #ddd5c8;
+  background: #d9dbd6;
 }
 
 .sheet-bar {
@@ -100,9 +100,9 @@
 }
 
 .sheet-title {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: var(--text, #2f2a24);
+  font-size: 36rpx;
+  font-weight: 800;
+  color: var(--ink, #17191c);
 }
 
 .sheet-close {
@@ -114,13 +114,13 @@
   line-height: 72rpx;
   text-align: center;
   font-size: 36rpx;
-  color: var(--gray, #a8a095);
+  color: var(--muted, rgba(0, 0, 0, 0.6));
   transition: transform 150ms, background-color 150ms;
 }
 
 .sheet-close-press {
   transform: scale(0.9);
-  background: var(--gray-soft, #f1ede6);
+  background: var(--chip, #f1f2ee);
 }
 
 .sheet-body {
@@ -129,4 +129,16 @@
 
 .sheet-inner {
   padding: 4rpx 32rpx 16rpx;
+}
+
+/* tuck：开着但收到屏幕下面去（页面从抽屉里拖东西出来时）：面板按关的过渡退下去，遮罩淡掉、不挡手势 */
+.sheet-open.sheet-tuck .sheet-panel {
+  transform: translate3d(0, 100%, 0);
+  transition: transform 260ms cubic-bezier(0.55, 0, 1, 0.45);
+}
+
+.sheet-open.sheet-tuck .sheet-mask {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-in;
 }

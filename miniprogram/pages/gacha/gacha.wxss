@@ -13,21 +13,23 @@
 .beans-num {
   font-size: 52rpx;
   font-weight: 700;
-  color: var(--orange);
+  color: var(--gold-ink);
   margin-left: 8rpx;
 }
 
 .beans-unit {
   font-size: 28rpx;
-  color: var(--orange);
+  color: var(--gold-ink);
   margin-left: 8rpx;
 }
 
 .term {
   font-size: 26rpx;
-  color: var(--orange);
-  background: #fff4e0;
-  border-radius: 16rpx;
+  font-weight: 600;
+  color: var(--gold-ink);
+  background: var(--gold-wash);
+  box-shadow: inset 0 0 0 2rpx var(--gold-light);
+  border-radius: 999rpx;
   padding: 12rpx 20rpx;
   text-align: center;
 }
@@ -152,7 +154,7 @@
   position: absolute;
   top: 24rpx;
   right: 24rpx;
-  background: #e8553b;
+  background: var(--red);
   color: #fff;
   font-weight: 700;
   font-size: 28rpx;
@@ -208,4 +210,183 @@
 button.reveal-btn {
   flex: 1;
   margin: 0;
+}
+
+/* ---------------------------------------------------------------- 单抽 / 十连：并排两个大按钮 */
+.pull-row {
+  display: flex;
+  gap: 20rpx;
+  margin: 16rpx 0 8rpx;
+}
+
+.pull {
+  position: relative;
+  flex: 1;
+  min-height: 148rpx;
+  padding: 22rpx 16rpx 20rpx;
+  box-sizing: border-box;
+  border-radius: 36rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 150ms;
+}
+
+.pull-press {
+  transform: scale(0.95);
+}
+
+/* 单抽：白底黑字，一圈细边 */
+.pull-one {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-card), inset 0 0 0 3rpx var(--chip);
+}
+
+/* 十连：黑底，字是柠檬绿，浮起来一点 */
+.pull-ten {
+  background: var(--ink);
+  color: var(--lime);
+  box-shadow: var(--shadow-float);
+}
+
+.pull-title {
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pull-n {
+  font-size: 48rpx;
+  margin: 0 4rpx;
+}
+
+/* 价钱：暖豆小胶囊 */
+.pull-cost {
+  display: flex;
+  align-items: center;
+  margin-top: 12rpx;
+  padding: 4rpx 20rpx 4rpx 8rpx;
+  border-radius: 999rpx;
+  background: var(--bean-soft);
+  color: var(--bean-ink);
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.pull-ten .pull-cost {
+  background: rgba(245, 165, 36, 0.22);
+  color: #ffc864;
+}
+
+/* 暖豆不够：价钱变红（还能点，点了说差多少） */
+.pull-cost.pull-poor {
+  color: var(--red);
+}
+
+.pull-ten .pull-cost.pull-poor {
+  color: #ff8a8f;
+}
+
+.pull-bean {
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 6rpx;
+}
+
+/* 角上斜一点的小条 */
+.pull-ribbon {
+  position: absolute;
+  top: -14rpx;
+  right: -6rpx;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--bean);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 800;
+  transform: rotate(6deg);
+  box-shadow: 0 4rpx 10rpx rgba(138, 83, 0, 0.3);
+}
+
+/* 摇着、扭蛋掉出来的时候：两个都灰一点、点不动 */
+.pull-busy .pull {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.pull-hint {
+  min-height: 36rpx;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--muted);
+  margin: 4rpx 0 20rpx;
+}
+
+.reveal-many {
+  width: 92%;
+  padding: 32rpx 24rpx 20rpx;
+}
+
+.many-title {
+  font-size: 38rpx;
+  font-weight: 800;
+  margin-bottom: 20rpx;
+}
+
+/* 五个一排、两排 */
+.many-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.many-cell {
+  position: relative;
+  width: calc((100% - 48rpx) / 5);
+  padding: 12rpx 4rpx 8rpx;
+  box-sizing: border-box;
+  border-radius: 20rpx;
+  border: 3rpx solid var(--line);
+  background: var(--chip);
+  text-align: center;
+}
+
+.many-image {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.many-name {
+  font-size: 22rpx;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.many-rarity {
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.many-new {
+  position: absolute;
+  top: -10rpx;
+  right: -6rpx;
+  z-index: 1;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: var(--red);
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 30rpx;
+}
+
+.many-sum {
+  margin-top: 20rpx;
+  font-size: 30rpx;
+  font-weight: 600;
 }

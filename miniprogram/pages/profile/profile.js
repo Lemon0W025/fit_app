@@ -2,6 +2,7 @@ const api = require('../../utils/api')
 const { calcDailyKcal, ACTIVITY_LABELS } = require('../../utils/shared/nutrition')
 const { MAIN_MEALS, MEAL_WORDS, DEFAULT_MEAL_TIMES, timeOptions, mealTimesOf } = require('../../utils/shared/timing')
 const { mineView, shareCard } = require('../../utils/family')
+const { syncTabBar } = require('../../utils/tab-bar')
 
 const FIELDS = ['nickname', 'sex', 'age', 'heightCm', 'weightKg', 'targetWeightKg', 'activity', 'avoid']
 const NUMBER_FIELDS = ['age', 'heightCm', 'weightKg', 'targetWeightKg']
@@ -75,6 +76,7 @@ Page({
   },
 
   onShow() {
+    syncTabBar(this)
     this.loadFamily()
     // 正在编辑还没保存时，切回来不覆盖用户填的内容
     if (this.dirty) return
@@ -174,7 +176,7 @@ Page({
       title: '从头再来？',
       content: '会清空你的档案、所有打卡和照片、体重、营地（小动物、暖豆、家具）和提醒，回到第一次打开的样子。清掉就找不回来了。',
       confirmText: '清空',
-      confirmColor: '#d4543c',
+      confirmColor: '#C82014',
       success: (res) => {
         if (res.confirm) this.reset()
       },

@@ -19,7 +19,9 @@ test('两张 6×6：每个动作一行', () => {
   assert.deepEqual(A.frameFor('jump'), { sheet: 'b', row: 4, frames: 6, ms: 600 })
   assert.deepEqual(A.frameFor('special'), { sheet: 'b', row: 5, frames: 6, ms: 1500 })
   // 坐、泡水、晒太阳、玩、爬、停在高处都用发呆帧；不认识的动作也是
-  ;['sit', 'soak', 'sun', 'play', 'climb', 'perch', 'dislike', 'nope'].forEach((a) => assert.equal(A.frameFor(a).row, 1, a))
+  ;['sit', 'soak', 'sun', 'play', 'dislike', 'nope'].forEach((a) => assert.equal(A.frameFor(a).row, 1, a))
+  // 在帐篷里：趴着睡那行（有 C 张也一样）
+  assert.deepEqual([A.frameFor('tent', { c: true }).sheet, A.frameFor('tent', { c: true }).row], ['a', 2])
   assert.equal(A.frameFor('fly').row, 0)
   assert.equal(A.facingFor(5, false), true)
   assert.equal(A.facingFor(-5, true), false)

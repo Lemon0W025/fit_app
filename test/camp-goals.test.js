@@ -8,7 +8,8 @@ const { manualClock } = require('./helpers/manual-clock')
 const V = require('../miniprogram/utils/camp-view')
 
 const PROFILE = { nickname: '小暖', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light' }
-const resident = (id, fed = 0) => ({ id, since: '2026-10-20', fed, fedToday: { date: '', n: 0 } })
+// 住下的（常客模式里 home 才算住下，里程碑按它算）
+const resident = (id, fed = 0) => ({ id, since: '2026-10-20', fed, fedToday: { date: '', n: 0 }, home: true })
 const event = (dataset = {}, detail = {}) => ({ currentTarget: { dataset }, detail })
 
 // 建好档、进过一次营地（领了新手礼、关了欢迎卡），再把营地数据改成想要的样子
@@ -37,8 +38,8 @@ test('营地：住下第 4 只，进营地弹庆祝卡、暖豆到账；收下�
   camp.onShow()
   await settle()
   assert.deepEqual(camp.data.cheer, {
-    key: 'residents-4', image: '/images/garden/ui/gift.png', title: '营地住进 4 只啦', stars: '',
-    text: '营地越来越热闹，奖励 100 暖豆', more: '住满 8 只，还有 200 暖豆',
+    key: 'residents-4', image: '/images/garden/ui/gift.png', title: '已经有 4 只住下啦', stars: '',
+    text: '营地越来越热闹，奖励 100 暖豆', more: '住下 8 只，还有 200 暖豆',
   })
   assert.equal(camp.data.beans, before + 100)
   assert.deepEqual([gardens.get('u1').goals, gardens.get('u1').cheers], [[4], []])
@@ -57,11 +58,11 @@ test('营地：几件事一起到（8 只、12 只全到齐、一颗星）：一
   const { camp } = await open({ goals: [4], pets: ids.map((id, i) => resident(id, i ? 0 : 60)) })
   camp.onShow()
   await settle()
-  assert.equal(camp.data.cheer.title, '营地住进 8 只啦')
+  assert.equal(camp.data.cheer.title, '已经有 8 只住下啦')
   camp.closeCheer()
   assert.equal(camp.data.cheer, null) // 先收起来，隔一下再出下一张
   camp.clock.advance(200)
-  assert.deepEqual([camp.data.cheer.title, camp.data.cheer.more], ['12 只全到齐啦', '大家都在，天天来看看它们'])
+  assert.deepEqual([camp.data.cheer.title, camp.data.cheer.more], ['12 只全住下啦', '大家都住下了，天天来看看它们'])
   camp.closeCheer()
   camp.clock.advance(200)
   assert.deepEqual([camp.data.cheer.title, camp.data.cheer.stars, camp.data.cheer.image], ['豆豆多了一颗星', '★☆☆☆☆', '/images/camp/pets/doudou-face.png'])
@@ -101,9 +102,9 @@ test('庆祝卡和星星的文案：满星、12 只到齐各有说法', () => {
   // 老档里早就喂够的一次补好几颗：说现在有几颗
   assert.equal(V.cheerCard({ kind: 'star', petId: 'huahua', stars: 3, beans: 60 }).title, '花花有 3 颗星啦')
   assert.equal(V.cheerCard({ kind: 'star', petId: 'huahua', stars: 3, beans: 20 }).title, '花花多了一颗星')
-  assert.equal(V.cheerCard({ kind: 'residents', pets: 8, beans: 200 }).more, '住满 12 只，还有 500 暖豆')
-  assert.equal(V.goalText({ pets: 5, total: 12 }, { pets: 8, beans: 200 }), '再来 3 只领 200 暖豆')
-  assert.equal(V.goalText({ pets: 12, total: 12 }, null), '')
+  assert.equal(V.cheerCard({ kind: 'residents', pets: 8, beans: 200 }).more, '住下 12 只，还有 500 暖豆')
+  assert.equal(V.goalText(5, { pets: 8, beans: 200 }), '再住下 3 只领 200 暖豆')
+  assert.equal(V.goalText(12, null), '')
 })
 
 test('图册：封面写离下一个住户里程碑还差几只；满级的那页有星星和下一颗还要喂几顿', async () => {
@@ -112,7 +113,7 @@ test('图册：封面写离下一个住户里程碑还差几只；满级的那�
   album.onShow()
   await settle()
   const [cover, doudou, nuonuo] = album.data.pages
-  assert.deepEqual([cover.progress, cover.goalText], [{ pets: 3, total: 12 }, '再来 1 只领 100 暖豆'])
+  assert.deepEqual([cover.progress, cover.goalText], [{ pets: 3, home: 3, total: 12 }, '再住下 1 只领 100 暖豆'])
   assert.deepEqual([doudou.levelText, doudou.starRow, doudou.starHint], ['亲密 5 级，已经是家人了', '★☆☆☆☆', '再喂 25 顿，多一颗星'])
   assert.deepEqual([nuonuo.starRow, nuonuo.starHint], ['', ''])
   const qiqi = album.data.pages.find((p) => p.key === 'qiqi')

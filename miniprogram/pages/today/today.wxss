@@ -1,82 +1,284 @@
-.greeting {
-  font-size: 40rpx;
-  font-weight: 700;
-  margin: 8rpx 8rpx 24rpx;
+/* 首页「今日」：便当盒风格（docs/superpowers/specs/2026-11-07-ui-bento-design.md） */
+.today {
+  padding-bottom: 48rpx;
 }
 
-.beans-card {
+/* 顶上：问好 + 日期，右边圆钮 */
+.top {
   display: flex;
   align-items: center;
-  padding: 20rpx 24rpx;
-  background: linear-gradient(90deg, #fff4e0 0%, #ffffff 80%);
+  margin: 8rpx 4rpx 32rpx;
 }
 
-.beans-card-icon {
-  width: 110rpx;
-  height: 110rpx;
-  flex-shrink: 0;
-}
-
-.beans-card-body {
+.top-text {
   flex: 1;
-  margin-left: 16rpx;
   min-width: 0;
 }
 
-.beans-card-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: var(--orange);
+.greeting {
+  font-size: 52rpx;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
-.beans-card-streak {
-  font-size: 26rpx;
-  color: var(--muted);
+.top-date {
   margin-top: 4rpx;
+  font-size: 30rpx;
+  color: var(--muted);
 }
 
-.beans-card-arrow {
-  font-size: 44rpx;
-  color: var(--gray);
-  margin-left: 8rpx;
+/* ---------------------------------------------------------------- 下一顿：黑色大卡 */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 36rpx 36rpx 40rpx;
+  background: var(--ink);
+  color: #fff;
+}
+
+/* 右上角一圈淡淡的柠檬绿大圆环，当装饰 */
+.hero::after {
+  content: '';
+  position: absolute;
+  right: -120rpx;
+  top: -140rpx;
+  width: 420rpx;
+  height: 420rpx;
+  border-radius: 50%;
+  border: 56rpx solid rgba(196, 239, 90, 0.1);
+  pointer-events: none;
+}
+
+.hero-warn::after {
+  border-color: rgba(255, 179, 122, 0.14);
 }
 
 .hero-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+
+.hero .chip-icon {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.hero .chip-icon image {
+  filter: invert(1);
+}
+
+.hero-kicker {
+  flex: 1;
+  min-width: 0;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.hero-pill {
+  flex-shrink: 0;
+  padding: 8rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.hero-warn .hero-pill {
+  background: var(--peach);
+}
+
+.hero-big {
+  position: relative;
+  z-index: 1;
+  margin-top: 28rpx;
+  font-size: 148rpx;
+  color: #fff;
+}
+
+.hero-warn .hero-big {
+  color: var(--peach);
+}
+
+.hero-line {
+  margin-top: 12rpx;
+  font-size: 32rpx;
+  color: var(--on-dark-soft);
+}
+
+.hero-reward {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 20rpx;
+  padding: 8rpx 24rpx 8rpx 12rpx;
+  border-radius: 999rpx;
+  background: rgba(245, 165, 36, 0.18);
+  color: #ffc864;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.hero-bean {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 8rpx;
+}
+
+.hero-btn {
+  margin-top: 32rpx !important;
+  margin-bottom: 0 !important;
+}
+
+.hero-link {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 28rpx;
+  padding: 16rpx 32rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.hero-link .btn-icon {
+  width: 40rpx;
+  height: 40rpx;
+  vertical-align: 0;
+}
+
+/* ---------------------------------------------------------------- 今天吃了多少：柠檬绿卡 */
+.intake-body {
+  display: flex;
+  align-items: center;
+}
+
+.intake-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.intake-pct {
+  font-size: 132rpx;
+}
+
+.intake-pct-unit {
+  font-size: 64rpx;
+  margin-left: 4rpx;
+}
+
+.intake-status {
+  margin-top: 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--lime-ink);
+}
+
+.intake-over {
+  color: var(--red);
+}
+
+/* ---------------------------------------------------------------- 三大营养素 */
+.mac + .mac {
+  margin-top: 28rpx;
+}
+
+.mac-top {
   display: flex;
   justify-content: space-between;
-  font-size: 26rpx;
+  align-items: baseline;
+}
+
+.mac-label {
+  font-size: 28rpx;
   color: var(--muted);
 }
 
-/* 热量圆环（components/ring）居中 */
-.hero-ring {
+.mac-val {
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.mac-got {
+  margin-right: 6rpx;
+  font-family: var(--font-num);
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.mac-row {
   display: flex;
-  justify-content: center;
-  margin: 24rpx 0 8rpx;
+  align-items: center;
+  margin-top: 6rpx;
 }
 
-/* 超了才多说一句（还能吃多少圆环里已经写了） */
-.hero-status {
-  margin-top: 16rpx;
+.mac-pct {
+  flex-shrink: 0;
+  width: 132rpx;
+  font-size: 44rpx;
+}
+
+.mac-bar {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------- 今天的暖豆 */
+.beans-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.beans-num {
+  font-size: 96rpx;
+  color: var(--bean-ink);
+}
+
+.beans-num .num-unit {
+  color: var(--bean-ink);
+}
+
+.beans-stamps {
+  gap: 20rpx;
+  margin: 0;
+}
+
+.beans-stamps .stamp {
+  width: 72rpx;
+  height: 72rpx;
   font-size: 30rpx;
-  text-align: center;
 }
 
-.hero-status-over {
-  color: var(--red-text);
+.beans-line {
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  color: var(--bean-ink);
+}
+
+/* ---------------------------------------------------------------- 今天的打卡 */
+.empty-card {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+}
+
+.empty-icon {
+  margin-right: 24rpx;
 }
 
 .meal {
   display: flex;
+  align-items: center;
   padding: 24rpx;
 }
 
 .meal-thumb {
-  width: 160rpx;
-  height: 160rpx;
-  border-radius: 16rpx;
+  width: 152rpx;
+  height: 152rpx;
+  border-radius: 32rpx;
   flex-shrink: 0;
-  background: var(--gray-soft);
+  background: var(--chip);
 }
 
 .meal-thumb-text {
@@ -93,14 +295,14 @@
 }
 
 .meal-kcal {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--primary);
-  margin-top: 4rpx;
+  font-family: var(--font-num);
+  font-size: 40rpx;
+  font-weight: 800;
+  margin-top: 2rpx;
 }
 
 .meal-kcal-failed {
-  color: var(--gray-text);
+  color: var(--gray);
 }
 
 .meal-comment {
@@ -113,199 +315,90 @@
   overflow: hidden;
 }
 
+.meal-side {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  align-self: stretch;
+  margin-left: 12rpx;
+}
+
+.meal-side .badge {
+  margin-left: 0;
+}
+
+.meal-go {
+  width: 36rpx;
+  height: 36rpx;
+  margin-top: auto;
+}
+
 .summary-text {
   white-space: pre-wrap;
   line-height: 1.8;
 }
 
-/* 首页「下一顿」大卡 */
-.next-card {
-  padding: 32rpx 28rpx;
-  background: linear-gradient(135deg, #eaf5ec 0%, #ffffff 85%);
+/* ---------------------------------------------------------------- 新手三步 */
+.guide {
+  background: var(--lime-wash);
+  box-shadow: var(--shadow-card), inset 0 0 0 3rpx var(--lime);
 }
 
-.next-card-warn {
-  background: linear-gradient(135deg, #fff1e0 0%, #ffffff 85%);
+.guide .chip-icon {
+  background: #fff;
 }
 
-.next-title {
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.next-card-warn .next-title {
-  color: var(--orange);
-}
-
-.next-sub {
-  font-size: 32rpx;
-  margin-top: 8rpx;
+.guide-hide {
+  padding: 8rpx 12rpx;
+  font-size: 28rpx;
   color: var(--muted);
 }
 
-.next-reward {
-  font-size: 30rpx;
-  margin-top: 6rpx;
-  color: var(--amber);
-}
-
-.next-btn {
-  margin-top: 24rpx;
-}
-
-.next-link {
-  margin-top: 16rpx;
-  font-size: 30rpx;
-  color: var(--primary);
-}
-
-/* 新手三步：一行（做完几步 · 下一步 · 去做 · 不用了） */
-.guide {
+.guide-step {
   display: flex;
   align-items: center;
-  padding-top: 20rpx;
-  padding-bottom: 20rpx;
-  border: 3rpx solid var(--primary);
+  min-height: 100rpx;
+  border-radius: 24rpx;
   transition: transform 150ms;
 }
 
 .guide-mark {
   flex-shrink: 0;
-  width: 76rpx;
-  height: 76rpx;
+  width: 56rpx;
+  height: 56rpx;
   margin-right: 20rpx;
   border-radius: 50%;
-  background: var(--primary);
-  color: #fff;
+  background: #fff;
+  color: var(--ink);
   font-size: 28rpx;
-  font-weight: 700;
-  line-height: 76rpx;
+  font-weight: 800;
+  line-height: 56rpx;
   text-align: center;
 }
 
-.guide-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.guide-title {
-  font-size: 26rpx;
-  color: var(--muted);
-}
-
 .guide-label {
-  font-size: 32rpx;
-  font-weight: 700;
-  color: var(--primary);
+  flex: 1;
+  font-size: 34rpx;
+  font-weight: 600;
 }
 
 .guide-go {
-  flex-shrink: 0;
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--primary);
-}
-
-.guide-hide {
-  flex-shrink: 0;
-  margin-left: 12rpx;
-  padding: 16rpx 0 16rpx 16rpx;
-  font-size: 26rpx;
-  color: var(--muted);
-}
-
-
-/* 亲友看板：亲友的赞 */
-.likes-note {
-  padding: 24rpx 32rpx;
-  background: var(--red-soft);
-  color: var(--red-text);
-  font-size: 30rpx;
-  font-weight: 600;
-}
-
-.meal-likes {
-  margin-top: 6rpx;
-  font-size: 26rpx;
-  color: var(--red-text);
-}
-
-/* 补签卡 */
-.patch {
-  border: 2rpx solid #f0c98a;
-  background: #fff8ea;
-}
-
-.patch-title {
-  font-size: 34rpx;
-  font-weight: 700;
-  color: #a5632a;
-}
-
-.patch-sub {
-  margin-top: 8rpx;
-  font-size: 30rpx;
-  line-height: 1.5;
-}
-
-.patch-actions {
-  display: flex;
-  align-items: center;
-  margin-top: 20rpx;
-}
-
-button.btn-primary.patch-btn {
-  flex: 1;
-  width: auto !important;
-  margin: 0;
-}
-
-.patch-skip {
-  flex-shrink: 0;
-  padding: 16rpx 8rpx 16rpx 32rpx;
-  font-size: 30rpx;
-  color: var(--muted);
-}
-
-/* 上周的小结 */
-.week-card {
-  display: flex;
-  align-items: center;
-}
-
-.week-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.week-card-title {
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.week-card-sub {
-  margin-top: 4rpx;
+  padding: 10rpx 28rpx;
+  border-radius: 999rpx;
+  background: var(--ink);
+  color: #fff;
   font-size: 28rpx;
+  font-weight: 700;
+}
+
+.guide-done .guide-mark {
+  background: var(--lime);
+}
+
+.guide-done .guide-label {
   color: var(--muted);
-}
-
-.week-card-go {
-  flex-shrink: 0;
-  margin-left: 16rpx;
-  font-size: 30rpx;
-  color: var(--primary);
-}
-
-/* 没拍照、只写了字的那顿：一支笔 */
-.thumb-ic {
-  width: 64rpx;
-  height: 64rpx;
-}
-
-/* 大按钮里的相机 */
-.btn-ic {
-  width: 44rpx;
-  height: 44rpx;
-  margin-right: 12rpx;
-  vertical-align: -9rpx;
+  font-weight: 400;
+  text-decoration: line-through;
 }
