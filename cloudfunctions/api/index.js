@@ -18,6 +18,7 @@ const { createCampService } = require('./services/camp')
 const { createRemindService } = require('./services/remind')
 const { createTestPerks } = require('./lib/test-perks')
 const { createAccountService } = require('./services/account')
+const { createWeekService } = require('./services/week')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
@@ -50,6 +51,7 @@ const route = createRouter(
     camp,
     remind,
     account: createAccountService({ repo, config, now, deleteFile, log }),
+    week: createWeekService({ repo, now }),
   },
   { log },
 )

@@ -5,7 +5,7 @@ const { dateKey, addDays } = require('../lib/shared/date')
 const { dayBeans, mealStamps, beansHint, onTimeCount, streakFrom } = require('../lib/shared/forest')
 const { mealTimesOf } = require('../lib/shared/timing')
 const { beanBalance } = require('../lib/shared/garden')
-const { isMilestone, nextMilestone, milestonesUpTo, badgeLook } = require('../lib/shared/streak')
+const { PATCHED, isMilestone, nextMilestone, milestonesUpTo, badgeLook, patchOffer } = require('../lib/shared/streak')
 
 function daysInMonth(month) {
   const [y, m] = month.split('-').map(Number)
@@ -18,7 +18,7 @@ function shiftMonth(month, n) {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-// 营地里和妈妈最亲的那只：喂得最多的，一样多取先来的；没有宠物为空
+// 营地里最亲的那只：喂得最多的，一样多取先来的；没有宠物为空
 function closestPet(pets) {
   let best = null
   ;(pets || []).forEach((p) => {
@@ -52,7 +52,10 @@ function createForestService({ repo, now }) {
   // 今天的印章、暖豆、一句提示、连续天数、余额、本月准时几顿、饭点
   function todayView(date, meals, garden, profile, monthMeals) {
     const times = mealTimesOf(profile)
-    const streak = streakFrom(garden.days, dateKey(now()))
+    const today = dateKey(now())
+    const streak = streakFrom(garden.days, today)
+    const beans = Math.max(0, beanBalance(garden))
+    const offer = patchOffer(garden.days, today)
     return {
       date,
       stamps: mealStamps(meals),
@@ -60,7 +63,9 @@ function createForestService({ repo, now }) {
       hint: beansHint(meals, times, now()),
       streak,
       nextMilestone: nextMilestone(streak),
-      beans: Math.max(0, beanBalance(garden)),
+      beans,
+      // 昨天漏了、还能用补签卡接上（shared/streak.js 的 patchOffer）；can：暖豆够不够
+      patch: offer ? { ...offer, can: beans >= offer.cost } : null,
       monthOnTime: onTimeCount(monthMeals),
       mealTimes: times,
     }
@@ -77,7 +82,8 @@ function createForestService({ repo, now }) {
       let streakBadges = garden.streakBadges
       let milestone = null
       if (!logged.length) {
-        delete days[date]
+        // 补签的日子留着（本来就没有打卡）
+        if (days[date] !== PATCHED) delete days[date]
         delete earned[date]
       } else {
         const counted = !!days[date]
@@ -93,6 +99,27 @@ function createForestService({ repo, now }) {
       }
       await repo.saveGarden(openid, { ...garden, days, beans: { ...garden.beans, earned }, streakBadges })
       return { beans, milestone }
+    },
+
+    // 补签卡：花暖豆把昨天补上，连续天数接着算。今天已经打过卡、补完正好到里程碑的，纪念章也记上
+    async patch(openid) {
+      const today = dateKey(now())
+      const garden = await load(openid)
+      const offer = patchOffer(garden.days, today)
+      if (!offer) throw new AppError(CODES.BAD_REQUEST, '现在没有可以补的（只能补昨天，一个月最多补两次）')
+      if (beanBalance(garden) < offer.cost) throw new AppError(CODES.BAD_REQUEST, `暖豆不够，补签要 ${offer.cost} 暖豆`)
+      const days = { ...garden.days, [offer.date]: PATCHED }
+      const streak = streakFrom(days, today)
+      let streakBadges = garden.streakBadges
+      let milestone = null
+      if (days[today] && isMilestone(streak) && !streakBadges[streak]) {
+        streakBadges = { ...streakBadges, [streak]: { first: today, last: today, times: 1 } }
+        milestone = { days: streak, times: 1, ...badgeLook(streak), petId: closestPet(garden.pets) }
+      }
+      const beans = { ...garden.beans, spent: (garden.beans.spent || 0) + offer.cost }
+      const next = { ...garden, days, beans, streakBadges }
+      await repo.saveGarden(openid, next)
+      return { date: offer.date, streak, cost: offer.cost, beans: Math.max(0, beanBalance(next)), milestone }
     },
 
     // profile 不传就自己读（营地页调用时手上没有档案）
@@ -140,6 +167,8 @@ function createForestService({ repo, now }) {
           // 记过的日子按当时得的（规则改过以前的日子不变），没记过的按现在的规则算
           beans: future ? 0 : date in earned ? earned[date] : day.beans,
           onTime: future ? 0 : day.onTime.length,
+          // 用补签卡补的
+          patched: garden.days[date] === PATCHED,
           mealsCount: meals.length,
           kcal: sumMeals(meals).kcal,
         })
@@ -162,7 +191,8 @@ function createForestService({ repo, now }) {
           onTime: days.reduce((sum, d) => sum + d.onTime, 0),
         },
         today: todayView(today, todayMeals, garden, profile, todayMonth),
-        totalDays: Object.keys(garden.days).length,
+        // 补签的不算打卡天数
+        totalDays: Object.keys(garden.days).filter((d) => garden.days[d] === true).length,
         badges: badgesOf(garden.streakBadges, streakFrom(garden.days, today)),
       }
     },

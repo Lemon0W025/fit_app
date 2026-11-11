@@ -16,6 +16,8 @@ const ROUTES = {
   'weight.save': ['weight', 'save'],
   'weight.list': ['weight', 'list'],
   'forest.get': ['forest', 'get'],
+  'forest.patch': ['forest', 'patch'],
+  'week.get': ['week', 'get'],
   'camp.get': ['camp', 'get'],
   'camp.spin': ['camp', 'spin'],
   'camp.putFood': ['camp', 'putFood'],

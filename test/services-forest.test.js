@@ -137,6 +137,7 @@ test('get：本月日历，每天的印章、暖豆、准时几顿，未来日�
     ],
     beans: 75,
     onTime: 3,
+    patched: false,
     mealsCount: 3,
     kcal: 1200,
   })
@@ -252,4 +253,74 @@ test('get：纪念章列到下一个为止，已拿的带第一次的日期和�
   ])
   await repo.saveGarden('u1', { camp: 1, days: { [TODAY]: true }, streakBadges: { 3: { first: '2026-09-03', last: '2026-09-03', times: 1 }, 7: { first: '2026-09-07', last: '2026-09-07', times: 1 } } })
   assert.deepEqual((await forest.get('u1', {})).badges.map((b) => [b.days, b.got, b.left]), [[3, true, undefined], [7, true, undefined]])
+})
+
+// ---------------------------------------------------------------- 补签卡
+
+async function streakUntil(repo, forest, last, n) {
+  for (let i = n - 1; i >= 0; i--) {
+    const date = addDays(last, -i)
+    await addMeal(repo, date, 'lunch')
+    await forest.syncDay('u1', date)
+  }
+}
+
+test('patchOffer：昨天漏了、前面连了 2 天以上才能补；一个月最多两次', () => {
+  const { patchOffer, PATCHED } = require('../cloudfunctions/api/lib/shared/streak')
+  const d = (n) => addDays(TODAY, n)
+  assert.equal(patchOffer({}, TODAY), null)
+  assert.equal(patchOffer({ [d(-1)]: true, [d(-2)]: true }, TODAY), null, '昨天打了卡')
+  assert.equal(patchOffer({ [d(-2)]: true }, TODAY), null, '前面只连了 1 天')
+  assert.deepEqual(patchOffer({ [d(-2)]: true, [d(-3)]: true, [d(-4)]: true }, TODAY), { date: d(-1), streak: 3, left: 2, cost: 80 })
+  // 今天已经打了卡也能补
+  assert.equal(patchOffer({ [TODAY]: true, [d(-2)]: true, [d(-3)]: true }, TODAY).streak, 2)
+  // 隔了两天就断了
+  assert.equal(patchOffer({ [d(-3)]: true, [d(-4)]: true }, TODAY), null)
+  // 补过的日子也算连着；这个月补过两次就不能再补
+  const once = { [d(-2)]: true, [d(-3)]: PATCHED, [d(-4)]: true }
+  assert.deepEqual([patchOffer(once, TODAY).streak, patchOffer(once, TODAY).left], [3, 1])
+  assert.equal(patchOffer({ [d(-2)]: true, [d(-3)]: PATCHED, [d(-4)]: true, [d(-5)]: PATCHED, [d(-6)]: true }, TODAY), null)
+})
+
+test('patch：花 80 暖豆把昨天补上，连续天数接上；首页带着能不能补', async () => {
+  const { repo, forest } = setup()
+  await streakUntil(repo, forest, addDays(TODAY, -2), 4)
+  const garden = await repo.getGarden('u1')
+  await repo.saveGarden('u1', { ...garden, beans: { ...garden.beans, bonus: 100 } })
+  const before = await forest.today('u1', TODAY, [], null)
+  assert.equal(before.streak, 0)
+  assert.deepEqual(before.patch, { date: addDays(TODAY, -1), streak: 4, left: 2, cost: 80, can: true })
+
+  const done = await forest.patch('u1')
+  assert.deepEqual(done, { date: addDays(TODAY, -1), streak: 5, cost: 80, beans: 4 * 15 + 100 - 80, milestone: null })
+  const after = await forest.today('u1', TODAY, [], null)
+  assert.equal(after.streak, 5)
+  assert.equal(after.patch, null)
+  assert.equal((await repo.getGarden('u1')).days[addDays(TODAY, -1)], 'patch')
+  await assert.rejects(forest.patch('u1'), { code: 'BAD_REQUEST' })
+
+  // 补的那天没有暖豆、不算打卡天数，日历上标出来；重算那天不会把它去掉
+  await forest.syncDay('u1', addDays(TODAY, -1))
+  const view = await forest.get('u1', {})
+  const cell = view.days.find((x) => x.date === addDays(TODAY, -1))
+  assert.deepEqual([cell.patched, cell.beans], [true, 0])
+  assert.equal(view.totalDays, 4)
+  assert.equal(view.today.streak, 5)
+})
+
+test('patch：暖豆不够补不了；今天打过卡、补完正好到里程碑，纪念章记上', async () => {
+  const { repo, forest } = setup()
+  await streakUntil(repo, forest, addDays(TODAY, -2), 5)
+  await addMeal(repo, TODAY, 'lunch')
+  await forest.syncDay('u1', TODAY)
+  assert.equal((await forest.today('u1', TODAY, [], null)).patch.can, true) // 6 × 15 = 90
+  const poor = await repo.getGarden('u1')
+  await repo.saveGarden('u1', { ...poor, beans: { ...poor.beans, spent: 50 } })
+  assert.equal((await forest.today('u1', TODAY, [], null)).patch.can, false)
+  await assert.rejects(forest.patch('u1'), { code: 'BAD_REQUEST', message: /暖豆不够/ })
+  await repo.saveGarden('u1', poor)
+  const done = await forest.patch('u1')
+  assert.equal(done.streak, 7)
+  assert.equal(done.milestone.days, 7)
+  assert.deepEqual((await repo.getGarden('u1')).streakBadges[7], { first: TODAY, last: TODAY, times: 1 })
 })
