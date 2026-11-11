@@ -8,10 +8,10 @@ function createDayService({ repo, chat, config, now, forest, remind = null, log 
   // 新手三步（设过提醒没有、拍过没有，今天拍过就不用再查）和提醒的状态
   async function remindOf(openid, meals) {
     const [status, meal] = await Promise.all([
-      remind ? remind.status(openid) : { set: false, notify: false, templateId: '' },
+      remind ? remind.status(openid) : { set: false, notify: false, templateId: '', credits: 0 },
       meals.length ? true : repo.hasAnyMeal(openid),
     ])
-    return { guide: { remind: status.set, meal }, remind: { templateId: status.templateId, notify: status.notify } }
+    return { guide: { remind: status.set, meal }, remind: { templateId: status.templateId, notify: status.notify, credits: status.credits || 0 } }
   }
 
   function resolveDate(input) {
@@ -44,6 +44,8 @@ function createDayService({ repo, chat, config, now, forest, remind = null, log 
         ...(profile ? await remindOf(openid, meals) : { guide: null, remind: null }),
         // 没建档、只是来看亲友打卡的：首页先带去亲友页（建了档的不用查）
         following: profile ? 0 : (await repo.listFollowing(openid)).length,
+        // 有几位亲友在看（一位都没有、又连续打卡几天了，首页提一次亲友看板）
+        viewers: profile ? (await repo.listFollowers(openid)).length : 0,
       }
     },
 

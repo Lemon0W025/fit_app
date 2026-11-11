@@ -21,10 +21,35 @@
   line-height: 1.25;
 }
 
+.top-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8rpx;
+}
+
 .top-date {
-  margin-top: 4rpx;
+  margin-right: 16rpx;
   font-size: 30rpx;
   color: var(--muted);
+}
+
+/* 连续打卡几天：暖豆色小胶囊 */
+.streak-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 52rpx;
+  padding: 0 20rpx 0 14rpx;
+  border-radius: 999rpx;
+  background: var(--bean-soft);
+  color: var(--bean-ink);
+  font-size: 28rpx;
+  font-weight: 800;
+  transition: transform 150ms;
+}
+
+.streak-pill .ic {
+  margin-right: 6rpx;
 }
 
 /* ---------------------------------------------------------------- 下一顿：黑色大卡 */
@@ -435,6 +460,54 @@ button.btn-primary.patch-btn {
   padding: 16rpx 8rpx 16rpx 36rpx;
   font-size: 30rpx;
   color: var(--bean-ink);
+}
+
+/* 微信提醒快用完了 */
+.renew {
+  background: var(--peach-soft);
+}
+
+.renew .chip-icon,
+.family-hint .chip-icon {
+  background: #fff;
+}
+
+.renew-sub {
+  font-size: 30rpx;
+  line-height: 1.5;
+  color: var(--peach-ink);
+}
+
+.renew-tip {
+  margin-top: 8rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: var(--peach-ink);
+}
+
+.renew-skip {
+  flex-shrink: 0;
+  padding: 16rpx 8rpx 16rpx 36rpx;
+  font-size: 30rpx;
+  color: var(--peach-ink);
+}
+
+/* 邀请亲友的提示 */
+.family-hint {
+  background: var(--lime-wash);
+}
+
+.family-hint-sub {
+  font-size: 30rpx;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.family-hint-skip {
+  flex-shrink: 0;
+  padding: 16rpx 8rpx 16rpx 36rpx;
+  font-size: 30rpx;
+  color: var(--muted);
 }
 
 /* 上周的小结 */

@@ -21,4 +21,38 @@ function guideCard(guide, hidden) {
   return { steps, title: `新手三步，还差 ${left} 步`, done: steps.length - left, total: steps.length, next: steps.find((s) => !s.done) }
 }
 
-module.exports = { WELCOME_CARDS, guideCard }
+// ---- 首页另外几样跟着状态出现的东西 ----
+const LOW_CREDITS = 1 // 微信提醒的「允许」只剩这么多次（或用完了）就提醒续上
+const FAMILY_HINT_STREAK = 3 // 连续打卡这么多天、还没有亲友在看，提一次亲友看板
+
+// 问好那一行旁边的连续天数（daily 是 day.get 的 daily）；还没连上不显示
+function streakPill(daily) {
+  const n = (daily && daily.streak) || 0
+  return n > 0 ? { days: n, text: `连续 ${n} 天` } : null
+}
+
+// 微信提醒快用完了：一次「允许」只能发一条，开着提醒、只剩 0 / 1 次时提醒续上。
+// remind 是 day.get 的 remind；hidden 是点过「今天不提了」的那天，today 是今天的日期
+function remindLowCard(remind, hidden, today) {
+  if (!remind || !remind.notify || !remind.templateId) return null
+  const n = remind.credits || 0
+  if (n > LOW_CREDITS || (hidden && hidden === today)) return null
+  return {
+    title: n ? `微信提醒只剩 ${n} 次了` : '微信提醒的次数用完了',
+    sub: n ? '用完以后，过了饭点没拍就提醒不到你了。' : '现在过了饭点没拍，提醒不到你。',
+    tip: '点「续上」，弹出来时点「允许」；勾上「总是保持以上选择」，以后每次拍照会自动续上。',
+    button: '续上',
+  }
+}
+
+// 邀请亲友：连续打卡几天了、还没有亲友在看、没点过「不用了」才出现
+function familyHintCard(streak, viewers, hidden) {
+  if (hidden || viewers > 0 || !(streak >= FAMILY_HINT_STREAK)) return null
+  return {
+    title: '让亲友也看看你的坚持',
+    sub: `已经连续打卡 ${streak} 天了。邀请一位亲友：TA 能看到你每顿吃了什么、给你点赞，你过了饭点没拍还能提醒你。`,
+    button: '邀请亲友',
+  }
+}
+
+module.exports = { WELCOME_CARDS, LOW_CREDITS, FAMILY_HINT_STREAK, guideCard, streakPill, remindLowCard, familyHintCard }

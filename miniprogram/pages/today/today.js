@@ -3,16 +3,18 @@ const { buildDayView, greetingText, beansCard, nextMealCard, nextMealHero } = re
 const { localHour } = require('../../utils/shared/date')
 const { mealTimesOf, mealStatus } = require('../../utils/shared/timing')
 const { clockOf } = require('../../utils/fx')
-const { guideCard } = require('../../utils/guide')
+const { guideCard, streakPill, remindLowCard, familyHintCard } = require('../../utils/guide')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
 const { appVersion } = require('../../utils/remind')
-const { likesView, SEEN_LIKES_KEY } = require('../../utils/family')
+const { likesView, shareCard, SEEN_LIKES_KEY } = require('../../utils/family')
 const { patchCard, weekCard } = require('../../utils/week')
 const { syncTabBar } = require('../../utils/tab-bar')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
 const PATCH_HIDDEN_KEY = 'patchHidden' // 补签卡点过「算了」的那一天
 const WEEK_SEEN_KEY = 'weekSeen' // 看过小结的上一周（周一的日期）
+const REMIND_LOW_HIDDEN_KEY = 'remindLowHidden' // 「微信提醒快用完了」点过「今天不提了」/ 续上过的那一天
+const FAMILY_HINT_HIDDEN_KEY = 'familyHintHidden' // 邀请亲友的提示点过「不用了」
 
 // 下一顿大卡和提示跟着时间走（倒计时、过点），每分钟按现在的时间重算一次
 const REFRESH_MS = 60000
@@ -34,6 +36,11 @@ Page({
     patch: null,
     patching: false,
     weekCard: null,
+    // 问好旁边的连续天数；微信提醒快用完了；邀请亲友的提示（utils/guide.js）
+    streak: null,
+    remindLow: null,
+    renewing: false,
+    familyHint: null,
     // 亲友的赞：by 是每顿下面那行，note 是新来的赞的提示（utils/family.js 的 likesView）
     likes: { by: {}, note: '' },
   },
@@ -88,7 +95,10 @@ Page({
           guide: guideCard(day.guide, this.guideHidden()),
           patch: patchCard(day.daily && day.daily.patch, this.stored(PATCH_HIDDEN_KEY)),
           weekCard: weekCard(day.date, this.stored(WEEK_SEEN_KEY), !!(day.guide && day.guide.meal)),
+          streak: streakPill(day.daily),
+          remindLow: remindLowCard(day.remind, this.stored(REMIND_LOW_HIDDEN_KEY), day.date),
         })
+        this.maybeFamilyHint(day)
         this.refresh()
         this.maybeTour()
         this.showLikes(day)
@@ -270,6 +280,87 @@ Page({
 
   goWeek() {
     wx.navigateTo({ url: '/pages/week/week?offset=1' })
+  },
+
+  store(key, value) {
+    try {
+      wx.setStorageSync(key, value)
+    } catch (e) {
+      // 存不了：这次先藏起来，下次进来再提
+    }
+  },
+
+  // 微信提醒续上：一次「允许」攒一次。点了允许今天就不再提（没点允许卡片留着）
+  renewRemind() {
+    const id = this.day && this.day.remind && this.day.remind.templateId
+    if (!id || this.data.renewing) return
+    if (!wx.requestSubscribeMessage) {
+      wx.showToast({ title: '微信版本太旧，续不上', icon: 'none' })
+      return
+    }
+    this.setData({ renewing: true })
+    wx.requestSubscribeMessage({
+      tmplIds: [id],
+      success: (res) => {
+        if (res[id] !== 'accept') {
+          this.setData({ renewing: false })
+          wx.showToast({ title: '没点「允许」，这次没续上', icon: 'none' })
+          return
+        }
+        api.call('remind.subscribed', { accepted: true, version: appVersion() })
+          .then((r) => {
+            this.store(REMIND_LOW_HIDDEN_KEY, this.day.date)
+            this.day.remind = { ...this.day.remind, credits: r.credits }
+            this.setData({ renewing: false, remindLow: null })
+            wx.showToast({ title: `续上了，还能提醒 ${r.credits} 次`, icon: 'none' })
+            this.checkSilent(this.day.remind)
+          })
+          .catch((err) => {
+            this.setData({ renewing: false })
+            api.showError(err)
+          })
+      },
+      fail: () => {
+        this.setData({ renewing: false })
+        wx.showToast({ title: '没续上，去「我的 → 饭点提醒」看看', icon: 'none' })
+      },
+    })
+  },
+
+  hideRemindLow() {
+    this.store(REMIND_LOW_HIDDEN_KEY, this.day ? this.day.date : '')
+    this.setData({ remindLow: null })
+  },
+
+  // 邀请亲友的提示：要先拿到邀请码（分享卡片带着它），拿到了才显示，一次打开只取一次
+  maybeFamilyHint(day) {
+    const card = familyHintCard((day.daily && day.daily.streak) || 0, day.viewers || 0, !!this.stored(FAMILY_HINT_HIDDEN_KEY))
+    if (!card) {
+      if (this.data.familyHint) this.setData({ familyHint: null })
+      return
+    }
+    if (this.familyCode) {
+      this.setData({ familyHint: card })
+      return
+    }
+    api.call('family.mine')
+      .then((mine) => {
+        if (!mine.code) return
+        this.familyCode = mine.code
+        this.setData({ familyHint: card })
+      })
+      .catch(() => {})
+  },
+
+  hideFamilyHint() {
+    this.store(FAMILY_HINT_HIDDEN_KEY, true)
+    this.setData({ familyHint: null })
+  },
+
+  // 「邀请亲友」按钮分享出去的卡片带着邀请码；右上角菜单里的转发只是普通分享
+  onShareAppMessage(res) {
+    if (res && res.from === 'button' && this.familyCode) return shareCard(this.familyCode)
+    return { title: '小暖自律打卡：每顿拍一张，准时吃饭', path: '/pages/today/today' }
   },
 
   // 晚饭拍好了、今天还没有总结：小暖自己写一份（一天只自动试一次，没写出来不打扰，按钮还在）

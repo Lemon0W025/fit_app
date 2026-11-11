@@ -6,7 +6,13 @@
     <view class="top fx-rise">
       <view class="top-text">
         <view class="greeting">{{greeting}}</view>
-        <view class="top-date">{{view.dateLabel}}</view>
+        <view class="top-sub">
+          <text class="top-date">{{view.dateLabel}}</text>
+          <!-- 连续打卡几天：最提气的一个数，放在一打开就看得到的地方（点了去打卡日历） -->
+          <view wx:if="{{streak}}" class="streak-pill" hover-class="fx-press" bindtap="goCalendar">
+            <image class="ic ic-s" src="/images/icons/flame.svg" mode="aspectFit" />{{streak.text}}
+          </view>
+        </view>
       </view>
       <view class="round-btn" hover-class="fx-press" bindtap="goCalendar">
         <image src="/images/icons/calendar.svg" mode="aspectFit" />
@@ -37,6 +43,20 @@
       <view class="patch-actions">
         <button wx:if="{{patch.can}}" class="btn-primary patch-btn" bindtap="usePatch" disabled="{{patching}}">{{patch.button}}</button>
         <text class="patch-skip" bindtap="hidePatch">{{patch.can ? '算了' : '知道了'}}</text>
+      </view>
+    </view>
+
+    <!-- 微信提醒的「允许」快用完了：点一下续上（utils/guide.js 的 remindLowCard） -->
+    <view wx:if="{{remindLow}}" class="card renew fx-rise">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/bell.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">{{remindLow.title}}</text>
+      </view>
+      <view class="renew-sub">{{remindLow.sub}}</view>
+      <view class="renew-tip">{{remindLow.tip}}</view>
+      <view class="patch-actions">
+        <button class="btn-primary patch-btn" bindtap="renewRemind" disabled="{{renewing}}">{{remindLow.button}}</button>
+        <text class="renew-skip" bindtap="hideRemindLow">今天不提了</text>
       </view>
     </view>
 
@@ -127,6 +147,19 @@
         <image class="card-head-go" src="/images/icons/chevron.svg" mode="aspectFit" />
       </view>
       <view class="week-card-sub">{{weekCard.sub}}</view>
+    </view>
+
+    <!-- 连续打卡几天了、还没有亲友在看：提一次亲友看板（按钮分享出去的卡片带着邀请码） -->
+    <view wx:if="{{familyHint}}" class="card family-hint fx-rise">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/users.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">{{familyHint.title}}</text>
+      </view>
+      <view class="family-hint-sub">{{familyHint.sub}}</view>
+      <view class="patch-actions">
+        <button class="btn-primary patch-btn" open-type="share">{{familyHint.button}}</button>
+        <text class="family-hint-skip" bindtap="hideFamilyHint">不用了</text>
+      </view>
     </view>
 
     <!-- 亲友看板：上次看过之后新来的赞，提示一次 -->

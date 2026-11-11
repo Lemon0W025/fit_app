@@ -9,6 +9,7 @@
 //   welcome / remind-first / today-guide / checkin-people / meal-people：新手指引、饭点提醒页、几个人一起吃（10/29）
 //   meal-feast / meal-feast-more / meal-pick：聚餐（饭量、范围、拿不准、吃完了吗、一次点掉几道没吃的）
 //   week / week-more / today-week / today-patch：每周小结页、首页周一的小结卡、补签卡
+//   today-cards / today-cards-more：问好旁边的连续天数、「微信提醒只剩 1 次了」、邀请亲友的提示
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -299,6 +300,29 @@ async function todayWeekData({ patch = false } = {}) {
   return { data }
 }
 
+// 首页跟着状态出现的：问好旁边的连续天数、「微信提醒只剩 1 次了」、邀请亲友（周日来看：上周一到周日天天打卡）
+async function todayCardsData() {
+  const config = require('../../cloudfunctions/api/config')
+  const saved = config.remindTemplate
+  config.remindTemplate = { id: 'tmpl-1', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
+  try {
+    const { clock, main } = await weekApp()
+    clock.set('2026-10-18T19:30:00+08:00')
+    await main({ action: 'remind.subscribed', data: { accepted: true, version: 'trial' } })
+    await main({ action: 'remind.setNotify', data: { on: true } })
+    const page = loadPage('today', createWx(main))
+    page.clock = manualClock()
+    page.onShow()
+    await settle()
+    page.clock.advance(1000)
+    const data = snap(page)
+    page.onHide()
+    return { data }
+  } finally {
+    config.remindTemplate = saved
+  }
+}
+
 // 滚到页面上的某一块再停着
 const scrollTo = (selector, block = 'start') => async (page) => {
   await page.evaluate(([sel, b]) => document.querySelector(sel).scrollIntoView({ block: b }), [selector, block])
@@ -378,6 +402,8 @@ const SCENARIOS = {
   'week-more': { page: 'week', seconds: 1.5, build: weekData, drive: scrollTo('.wk-chart', 'start') },
   'today-week': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayWeekData() },
   'today-patch': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayWeekData({ patch: true }) },
+  'today-cards': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayCardsData() },
+  'today-cards-more': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayCardsData(), drive: scrollTo('.family-hint', 'center') },
   // 聚餐：4 个人、吃得比别人少、给个范围，两道「拿不准」；再往下是「吃完了吗」和「有几道没吃」
   'meal-feast': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less' } }), drive: scrollTo('.big-kcal') },
   'meal-feast-more': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less', left: 'some' } }), drive: scrollTo('.dish', 'start') },

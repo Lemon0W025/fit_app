@@ -189,7 +189,7 @@ test('提醒页：有模板时能开微信提醒（先申请「允许」、允�
   today.onShow()
   await settle()
   today.onHide()
-  assert.deepEqual(wx.app.globalData.remind, { templateId: 'tmpl-1', notify: true })
+  assert.deepEqual(wx.app.globalData.remind, { templateId: 'tmpl-1', notify: true, credits: 2 })
   const checkin = loadPage('checkin', wx)
   checkin.onLoad({})
   checkin.onNote(event({}, { value: '米饭青菜' }))
@@ -223,7 +223,7 @@ test('点微信提醒进来：直接是拍照页、这顿选好、顶上说「�
   // 读到了她自己的饭点（晚饭 19:00，不是默认的 18:00），准不准时按它算
   assert.deepEqual(wx.app.globalData.mealTimes, { ...TIMES, dinner: '19:00' })
   assert.equal(page.data.timingText, '现在拍晚饭：准时 ✓')
-  assert.deepEqual(wx.app.globalData.remind, { templateId: 'tmpl-1', notify: true })
+  assert.deepEqual(wx.app.globalData.remind, { templateId: 'tmpl-1', notify: true, credits: 1 })
   page.onNote(event({}, { value: '米饭青菜' }))
   page.submit()
   await settle()

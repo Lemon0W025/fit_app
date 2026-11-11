@@ -194,10 +194,10 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       return (await this.status(openid)).set
     },
 
-    // 今日页要的：设过没有、微信提醒开没开（开了的话打卡提交时顺手申请一次「允许」）、模板 ID
+    // 今日页要的：设过没有、微信提醒开没开（开了的话打卡提交时顺手申请一次「允许」）、模板 ID、「允许」还剩几次（快用完了首页提醒续上）
     async status(openid) {
       const [doc, t] = await Promise.all([repo.getReminders(openid), template()])
-      return { set: !!(doc && (doc.calendar || doc.notify)), notify: !!(doc && doc.notify && t), templateId: t ? t.id : '' }
+      return { set: !!(doc && (doc.calendar || doc.notify)), notify: !!(doc && doc.notify && t), templateId: t ? t.id : '', credits: (doc && doc.credits) || 0 }
     },
 
     // 定时触发器：开了微信提醒、还有次数的人挨个看
