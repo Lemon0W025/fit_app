@@ -8,7 +8,10 @@
 .cell { width: calc((100% - 40rpx) / 3); display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
 .cell-image { width: 160rpx; height: 130rpx; }
 .cell-name { font-size: 28rpx; text-align: center; }
-.cell-btn { width: 100%; }
+/* 价钱按钮：一格只有两百 rpx 来宽，比全局的主按钮小一号（以前挂的 btn-small 只在营地页有定义，这里不起作用）；
+   买不起的灰着、写「还差 N 暖豆」，字再小一点才放得下 */
+button.cell-btn { margin: 4rpx 0 0; padding: 6rpx 0; font-size: 28rpx; }
+button.cell-btn-short { font-size: 26rpx; font-weight: 500; }
 .card.empty { padding: 64rpx 32rpx; }
 
 /* 标签筛选（docs/superpowers/specs/2026-10-27-ui-controls-design.md 第 4 节）：单选；没选中浅色底，选中主题绿实色白字；

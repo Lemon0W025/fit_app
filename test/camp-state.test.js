@@ -16,6 +16,8 @@ test('空文档补齐默认值', () => {
   assert.deepEqual(c.pets, [])
   assert.deepEqual(c.decor, { owned: {}, placed: [] })
   assert.deepEqual([c.seq, c.gift, c.tasted, c.arrivals, c.grants, c.days], [0, '', [], [], [], {}])
+  // 后期目标：发过的住户里程碑、还没庆祝的，默认都是空的
+  assert.deepEqual([c.goals, c.cheers], [[], []])
   assert.equal(migrated(null, c), true)
 })
 
@@ -25,7 +27,11 @@ test('已经是营地的文档：缺的补上，有的不动', () => {
   assert.equal(c.beans.spent, 30)
   assert.deepEqual(c.pot, doc.pot)
   assert.deepEqual(c.visitors, doc.visitors)
-  assert.deepEqual(c.pets, doc.pets)
+  // 老档里的住户没有 stars（满级后发过暖豆的星星数），补 0；有的不动
+  assert.deepEqual(c.pets, [{ ...doc.pets[0], stars: 0 }])
+  const starred = normalizeCamp({ ...doc, pets: [{ ...doc.pets[0], fed: 90, stars: 2 }], goals: [4], cheers: [{ kind: 'residents', pets: 4, beans: 100 }] })
+  assert.equal(starred.pets[0].stars, 2)
+  assert.deepEqual([starred.goals, starred.cheers], [[4], [{ kind: 'residents', pets: 4, beans: 100 }]])
   assert.equal(c.seq, 3)
   assert.deepEqual(c.decor, { owned: {}, placed: [] })
   assert.equal(migrated(doc, c), false)
@@ -43,7 +49,7 @@ test('宅院旧档迁成营地：暖豆退回、住户按原型搬进来、豆�
   assert.equal(c.camp, 4)
   assert.deepEqual(c.beans, { earned: { '2026-10-20': 40, '2026-10-21': 60 }, bonus: 60, spent: 0 })
   assert.deepEqual(c.pets.map((p) => p.id), ['sunbao', 'hehe', 'doudou'])
-  assert.deepEqual(c.pets[0], { id: 'sunbao', since: '2026-10-21', fed: 0, fedToday: { date: '', n: 0 } })
+  assert.deepEqual(c.pets[0], { id: 'sunbao', since: '2026-10-21', fed: 0, fedToday: { date: '', n: 0 }, stars: 0 })
   assert.deepEqual(c.arrivals, [])
   assert.deepEqual(c.gacha, { pulls: 12, sincePity: 4 })
   assert.deepEqual(c.grants, ['preview-1'])

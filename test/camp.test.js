@@ -128,3 +128,13 @@ test('亲密度等级和礼物时机', () => {
   assert.equal(C.giftDue('2026-10-24', '2026-10-24', 9), false)
   assert.equal(C.giftDue('2026-10-23', '2026-10-24', 4), false)
 })
+
+test('后期目标：住户里程碑 4 / 8 / 12 只；满级后每再喂 30 顿一颗星、最多 5 颗（等级表不动）', () => {
+  assert.deepEqual(C.RESIDENT_GOALS, [{ pets: 4, beans: 100 }, { pets: 8, beans: 200 }, { pets: 12, beans: 500 }])
+  assert.deepEqual([0, 3, 4, 7, 8, 11, 12].map((n) => (C.nextGoal(n) || {}).pets), [4, 4, 8, 8, 12, 12, undefined])
+  assert.deepEqual([C.STAR_FEEDS, C.STAR_MAX, C.STAR_BEANS], [30, 5, 20])
+  // 没满级 0 颗；25 顿满级，55 顿第一颗，每 30 顿一颗，175 顿起 5 颗封顶
+  assert.deepEqual([0, 24, 25, 54, 55, 84, 85, 174, 175, 9999].map(C.starsOf), [0, 0, 0, 0, 1, 1, 2, 4, 5, 5])
+  assert.deepEqual([0, 24, 25, 54, 55, 174, 175, 9999].map(C.nextStarAt), [null, null, 55, 55, 85, 175, null, null])
+  assert.deepEqual(C.LEVELS, [0, 3, 8, 15, 25])
+})

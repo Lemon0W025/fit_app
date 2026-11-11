@@ -1,6 +1,6 @@
 // 营地画面的换算（纯函数，有单测）：画的像素 ↔ 屏幕像素、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 锅和客人的展示数据、色调
 
-const { W, H, scaleAt, pointInPoly } = require('./shared/camp')
+const { W, H, scaleAt, pointInPoly, STAR_MAX, STAR_FEEDS, nextGoal } = require('./shared/camp')
 const { RARITIES } = require('./shared/garden')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
@@ -179,7 +179,9 @@ function shopGroups(owned, beans) {
     label: c.label,
     items: DECOR.filter((d) => d.category === c.id && d.price > 0 && DECOR_ART.indexOf(d.id) !== -1).map((d) => {
       const have = (owned && owned[d.id]) || 0
-      return { id: d.id, name: d.name, price: d.price, image: decorImage(d.id), have, max: d.max, soldOut: have >= d.max, canAfford: beans >= d.price }
+      // 按钮上的字：买得起写价钱，买不起写还差多少（short，灰着点不了）
+      const short = Math.max(0, d.price - beans)
+      return { id: d.id, name: d.name, price: d.price, image: decorImage(d.id), have, max: d.max, soldOut: have >= d.max, canAfford: !short, short, label: short ? `还差 ${short} 暖豆` : `${d.price} 暖豆` }
     }),
   }))
 }
@@ -237,6 +239,42 @@ function potHitView(L) {
 function potNote(pot) {
   const names = ((pot && pot.foods) || []).map((id) => foodById(id)).filter(Boolean).map((f) => f.name)
   return names.length ? `锅里煮着：${names.join('、')}。爱吃的小动物会过来` : ''
+}
+
+// 满级后的星星：★ 是有的，☆ 是还没有的（一共 STAR_MAX 颗）
+function starText(stars) {
+  const n = Math.max(0, Math.min(STAR_MAX, stars || 0))
+  return '★'.repeat(n) + '☆'.repeat(STAR_MAX - n)
+}
+
+// 图册封面「住户 5 / 12」下面那行：离下一个住户里程碑还差几只（goal 是 camp.album 给的，都到了是 null）
+function goalText(progress, goal) {
+  return goal ? `再来 ${goal.pets - progress.pets} 只领 ${goal.beans} 暖豆` : ''
+}
+
+// 营地页的庆祝卡（云函数的 cheers 一条一张）：住户到了 4 / 8 / 12 只；满级后又攒够一颗星
+function cheerCard(cheer) {
+  if (cheer.kind === 'star') {
+    const pet = petById(cheer.petId)
+    const name = pet ? pet.name : '它'
+    return {
+      key: `star-${cheer.petId}-${cheer.stars}`,
+      image: petFace(cheer.petId),
+      title: `${name}多了一颗星`,
+      stars: starText(cheer.stars),
+      text: `满级以后你还一直喂着它，奖励 ${cheer.beans} 暖豆`,
+      more: cheer.stars >= STAR_MAX ? '五颗星集齐啦，它最亲你' : `再喂 ${STAR_FEEDS} 顿，还有下一颗`,
+    }
+  }
+  const next = nextGoal(cheer.pets)
+  return {
+    key: `residents-${cheer.pets}`,
+    image: '/images/garden/ui/gift.png',
+    title: next ? `营地住进 ${cheer.pets} 只啦` : `${cheer.pets} 只全到齐啦`,
+    stars: '',
+    text: `营地越来越热闹，奖励 ${cheer.beans} 暖豆`,
+    more: next ? `住满 ${next.pets} 只，还有 ${next.beans} 暖豆` : '大家都在，天天来看看它们',
+  }
 }
 
 // 顶上的提示条：锅空着（今天还没下锅）、有住户在等开饭
@@ -318,4 +356,5 @@ module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, visitorNote, cutoutViews, isNight,
   frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
+  starText, goalText, cheerCard,
 }

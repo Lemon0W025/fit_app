@@ -253,6 +253,32 @@ function nextLevelAt(fed) {
   return next === undefined ? null : next
 }
 
+// ---------------------------------------------------------------- 后期目标（住了一个月以后还有奔头）
+
+// 住户里程碑：住下这么多只各奖一次暖豆
+const RESIDENT_GOALS = [{ pets: 4, beans: 100 }, { pets: 8, beans: 200 }, { pets: 12, beans: 500 }]
+// 满级之后亲密度接着涨：每再喂 STAR_FEEDS 顿得一颗星，最多 STAR_MAX 颗，每颗星奖一次 STAR_BEANS 暖豆（等级表 LEVELS 不动）
+const STAR_FEEDS = 30
+const STAR_MAX = 5
+const STAR_BEANS = 20
+const TOP_FED = LEVELS[LEVELS.length - 1]
+
+// 喂了几顿 → 几颗星（没满级 0 颗）
+function starsOf(fed) {
+  return fed < TOP_FED ? 0 : Math.min(STAR_MAX, Math.floor((fed - TOP_FED) / STAR_FEEDS))
+}
+
+// 下一颗星要喂到几顿；还没满级、星星满了返回 null
+function nextStarAt(fed) {
+  const stars = starsOf(fed)
+  return fed < TOP_FED || stars >= STAR_MAX ? null : TOP_FED + (stars + 1) * STAR_FEEDS
+}
+
+// 住了 count 只时，下一个住户里程碑；都到了返回 null
+function nextGoal(count) {
+  return RESIDENT_GOALS.find((g) => g.pets > count) || null
+}
+
 // 早上的礼物：当天 5 点以后、今天还没领过
 function giftDue(lastGift, today, hour) {
   return hour >= 5 && lastGift !== today
@@ -263,4 +289,5 @@ module.exports = {
   W, H, SCENE, LEVELS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass, hiddenAt, nogoPolys,
   levelOf, nextLevelAt, giftDue, seatsFor,
+  RESIDENT_GOALS, STAR_FEEDS, STAR_MAX, STAR_BEANS, starsOf, nextStarAt, nextGoal,
 }

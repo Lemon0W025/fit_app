@@ -6,6 +6,7 @@
         <image class="{{pg.full ? 'cover-family' : 'cover-img'}}" src="{{pg.image}}" mode="{{pg.full ? 'widthFix' : 'aspectFit'}}" />
         <view class="cover-title">暖暖营地图册</view>
         <view class="cover-progress">住户 {{pg.progress.pets}} / {{pg.progress.total}}</view>
+        <view wx:if="{{pg.goalText}}" class="cover-goal">{{pg.goalText}}</view>
         <view wx:if="{{pg.full}}" class="cover-full">🎉 全员到齐，金色秋千已经送到背包</view>
         <view class="muted small">左右翻页，看每一只的故事</view>
       </block>
@@ -16,6 +17,7 @@
           <view class="pet-hook">{{pg.hook}}</view>
           <view class="muted">{{pg.mood}} · {{pg.foodsText}}</view>
           <view class="muted small">{{pg.sinceText}} · 喂了 {{pg.fed}} 顿 · {{pg.levelText}}</view>
+          <view wx:if="{{pg.starRow}}" class="pet-stars"><text class="pet-stars-row">{{pg.starRow}}</text><text class="pet-stars-hint">{{pg.starHint}}</text></view>
           <view class="story">
             <view wx:for="{{pg.story}}" wx:key="index" wx:for-item="s" class="story-line {{s.open ? '' : 'story-locked'}}">{{s.open ? s.text : '……（再喂熟一点就会告诉你）'}}</view>
           </view>
@@ -47,5 +49,5 @@
 </swiper>
 <view wx:if="{{loaded}}" class="foot">
   <text class="muted small">{{current + 1}} / {{pages.length}}</text>
-  <button class="btn-primary btn-small" bindtap="goGacha">去扭蛋</button>
+  <button class="btn-primary foot-btn" bindtap="goGacha">去扭蛋</button>
 </view>

@@ -15,7 +15,7 @@
         <view wx:for="{{group.items}}" wx:key="id" class="cell">
           <image class="cell-image" src="{{item.image}}" mode="aspectFit" />
           <view class="cell-name">{{item.name}}<text wx:if="{{item.max > 1}}" class="muted small">（{{item.have}}/{{item.max}}）</text></view>
-          <button wx:if="{{!item.soldOut}}" class="btn-primary btn-small cell-btn" disabled="{{!item.canAfford}}" data-id="{{item.id}}" bindtap="buy">{{item.price}} 暖豆</button>
+          <button wx:if="{{!item.soldOut}}" class="btn-primary cell-btn {{item.canAfford ? '' : 'cell-btn-short'}}" disabled="{{!item.canAfford}}" data-id="{{item.id}}" bindtap="buy">{{item.label}}</button>
           <view wx:else class="muted small">已买</view>
         </view>
       </view>
