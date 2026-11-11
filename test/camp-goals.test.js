@@ -98,6 +98,9 @@ test('营地：喂出一颗星当场弹卡；住户列表里名字后面带星�
 test('庆祝卡和星星的文案：满星、12 只到齐各有说法', () => {
   assert.deepEqual([0, 2, 5, 9].map(V.starText), ['☆☆☆☆☆', '★★☆☆☆', '★★★★★', '★★★★★'])
   assert.equal(V.cheerCard({ kind: 'star', petId: 'huahua', stars: 5, beans: 20 }).more, '五颗星集齐啦，它最亲你')
+  // 老档里早就喂够的一次补好几颗：说现在有几颗
+  assert.equal(V.cheerCard({ kind: 'star', petId: 'huahua', stars: 3, beans: 60 }).title, '花花有 3 颗星啦')
+  assert.equal(V.cheerCard({ kind: 'star', petId: 'huahua', stars: 3, beans: 20 }).title, '花花多了一颗星')
   assert.equal(V.cheerCard({ kind: 'residents', pets: 8, beans: 200 }).more, '住满 12 只，还有 500 暖豆')
   assert.equal(V.goalText({ pets: 5, total: 12 }, { pets: 8, beans: 200 }), '再来 3 只领 200 暖豆')
   assert.equal(V.goalText({ pets: 12, total: 12 }, null), '')

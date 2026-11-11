@@ -1,6 +1,6 @@
 // 营地画面的换算（纯函数，有单测）：画的像素 ↔ 屏幕像素、底图切块、装饰块、拖拽幽灵、背包 / 商店 / 锅和客人的展示数据、色调
 
-const { W, H, scaleAt, pointInPoly, STAR_MAX, STAR_FEEDS, nextGoal } = require('./shared/camp')
+const { W, H, scaleAt, pointInPoly, STAR_MAX, STAR_FEEDS, STAR_BEANS, nextGoal } = require('./shared/camp')
 const { RARITIES } = require('./shared/garden')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
@@ -257,10 +257,12 @@ function cheerCard(cheer) {
   if (cheer.kind === 'star') {
     const pet = petById(cheer.petId)
     const name = pet ? pet.name : '它'
+    // 老档里早就喂够的，一次补上好几颗
+    const many = cheer.beans > STAR_BEANS
     return {
       key: `star-${cheer.petId}-${cheer.stars}`,
       image: petFace(cheer.petId),
-      title: `${name}多了一颗星`,
+      title: many ? `${name}有 ${cheer.stars} 颗星啦` : `${name}多了一颗星`,
       stars: starText(cheer.stars),
       text: `满级以后你还一直喂着它，奖励 ${cheer.beans} 暖豆`,
       more: cheer.stars >= STAR_MAX ? '五颗星集齐啦，它最亲你' : `再喂 ${STAR_FEEDS} 顿，还有下一颗`,

@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone dusk-all-phone celebrate-phone feast-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide tea talk-phone hungry-phone dusk-all-phone celebrate-phone feast-phone cheer-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
@@ -182,6 +182,13 @@ const SCENARIOS = {
     plan: [[0, 0, 2300, 3800], [0, 1, 3100, 3850], [0, 2, 2200, 3300]],
     events: [[300, (life) => life.callTo('s0')], [600, (life) => life.callTo('s1')], [6500, (life) => life.callTo('s0')]],
   },
+  // 水壶炉：叫两只来，各坐一边喝茶（小动物放大以后看坐得下、不压着水壶）
+  tea: {
+    hour: 10, potLevel: 2, focus: [2500, 3500], scale: 1.5, seconds: 12, decor: [{ uid: 'k0', id: 'kettle', x: 2500, y: 3600 }],
+    pets: ['doudou', 'sunbao', 'qiqi'],
+    plan: [[0, 0, 1900, 3800], [0, 1, 3150, 3850], [0, 2, 2200, 3300]],
+    events: [[300, (life) => life.callTo('k0')], [600, (life) => life.callTo('k0')]],
+  },
   'play-night': {
     hour: 22, potLevel: 2, focus: [2350, 3000], scale: 1.25, seconds: 12, decor: PLAY.map((p) => (p.id === 'swing' ? { ...p, id: 'gold_swing' } : p)),
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'],
@@ -202,6 +209,8 @@ const SCENARIOS = {
   'dusk-all-phone': { phone: true, hour: 18, potLevel: 3, focus: null, scale: null, seconds: 6, warm: 90000, pets: ALL_PETS, plan: [] },
   'celebrate-phone': { phone: true, hour: 8, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.celebrate()]] },
   'feast-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.cook(ALL_PETS)]] },
+  // 庆祝卡：住下第 4 只，一进营地弹出来（住户里程碑）
+  'cheer-phone': { phone: true, cheer: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 4, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu'], plan: [] },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
@@ -246,6 +255,8 @@ async function build(sc) {
     pets: Object.keys(fedOf).map((id) => ({ id, since: '2026-10-20', fed: fedOf[id], fedToday: { date: '', n: 0 } })),
     decor: { owned: (sc.bag && sc.bag.decor) || {}, placed: sc.decor || [] },
     gift: '',
+    // 住户里程碑当作都领过了（不然 4 只以上一进来先弹庆祝卡，把画面盖住）；sc.cheer 的场景留着看庆祝卡
+    goals: sc.cheer ? [] : [4, 8, 12],
   })
   camp.data.giftShown = true
   wx.app.globalData.campSpots = null
