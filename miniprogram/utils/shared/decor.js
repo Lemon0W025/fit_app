@@ -33,6 +33,8 @@ const GAP = 12
 // 放不下时自动吸到旁边最近能放的地方，最远挪这么多（画的像素，默认视角约 50 多点）；找的时候一圈圈往外、每圈隔这么远
 const SNAP_REACH = 420
 const SNAP_STEP = 30
+// 紧挨着旁边那件、和它对齐的位置，比别处「近」这么多（优先选它）
+const SNAP_PULL = 80
 const GOLD_SWING = 'gold_swing'
 // 下架了的：旧档里买过的按原价退暖豆、草地上的收走（camp-state 迁移）。
 // 10/27 小帐篷（已经有大帐篷）、小树（后面一整片树林）；11/07 会穿模的（躺进去、坐上去、爬上去的）和花坛、几件杂物
@@ -132,7 +134,8 @@ function placeProblem(placed, decorId, x, y, ignoreUid) {
 }
 
 // 想放在 (x, y)：能放就是它自己；放不下就找旁边最近能放的地方（最远挪 SNAP_REACH），找不到返回 null。
-// 先试「紧挨着旁边那件」的几个位置（同一条线上的左右、正前正后）——挨着种一排花、摆一排栅栏时自己就对齐了；再一圈圈往外找。
+// 先看压着了谁：手指偏在它哪一边，就优先靠到那一边紧挨着它（同一条线上的左 / 右，或者正前 / 正后一排）——
+// 挨着种一排花、摆一排栅栏时自己就对齐了（这样的位置比别处「近」SNAP_PULL）；别的再一圈圈往外找。
 // 页面拖的时候拿它定影子落在哪，松手就放在那儿（云函数照样用 placeProblem 校验）
 function nearestSpot(placed, decorId, x, y, ignoreUid) {
   const d = decorById(decorId)
@@ -140,24 +143,31 @@ function nearestSpot(placed, decorId, x, y, ignoreUid) {
   const fits = (px, py) => !placeProblem(placed, decorId, px, py, ignoreUid)
   if (fits(x, y)) return { x, y, moved: false }
   let best = null
-  const consider = (px, py) => {
+  const consider = (px, py, pull = 0) => {
     const cx = Math.round(px)
     const cy = Math.round(py)
     const far = Math.hypot(cx - x, cy - y)
-    if (far > SNAP_REACH || (best && far >= best.far) || !fits(cx, cy)) return
-    best = { x: cx, y: cy, far }
+    const score = far - pull
+    if (far > SNAP_REACH || (best && score >= best.score) || !fits(cx, cy)) return
+    best = { x: cx, y: cy, score }
   }
   ;(placed || []).forEach((p) => {
     const o = decorById(p.id)
     if (p.uid === ignoreUid || !o) return
     const gap = gapOf(d) + gapOf(o) + 1
     const side = (d.foot.w + o.foot.w) / 2 + gap
-    consider(p.x - side, p.y)
-    consider(p.x + side, p.y)
-    consider(x, p.y - o.foot.h - gap)
-    consider(x, p.y + d.foot.h + gap)
+    // 手指相对这件偏了多少：横着按两个占地框的半宽算，竖着按半深算（占地框中心对中心）
+    const nx = (x - p.x) / ((d.foot.w + o.foot.w) / 2)
+    const ny = (y - d.foot.h / 2 - (p.y - o.foot.h / 2)) / ((d.foot.h + o.foot.h) / 2)
+    const sideways = Math.abs(nx) >= Math.abs(ny)
+    const front = p.y + d.foot.h + gap
+    const behind = p.y - o.foot.h - gap
+    consider(p.x + (nx >= 0 ? side : -side), p.y, sideways ? SNAP_PULL : 0)
+    consider(p.x - (nx >= 0 ? side : -side), p.y)
+    consider(x, ny >= 0 ? front : behind, sideways ? 0 : SNAP_PULL)
+    consider(x, ny >= 0 ? behind : front)
   })
-  for (let r = SNAP_STEP; r <= SNAP_REACH && !(best && best.far <= r); r += SNAP_STEP) {
+  for (let r = SNAP_STEP; r <= SNAP_REACH && !(best && best.score <= r); r += SNAP_STEP) {
     const n = Math.max(8, Math.round((2 * Math.PI * r) / (SNAP_STEP * 1.5)))
     for (let i = 0; i < n; i++) {
       const a = (i / n) * 2 * Math.PI

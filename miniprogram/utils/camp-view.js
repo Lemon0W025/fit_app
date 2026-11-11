@@ -134,6 +134,15 @@ function decorViews(placed, L, base, night, lit = true) {
 }
 
 // 拖着走的幽灵：块 + 落脚框（绿能放、红不能）
+// 摆 / 挪装饰时，影子抬到手指上方这么多（屏幕上的点）：手指不挡着它和脚下的占地框
+const DRAG_LIFT = 30
+
+// 摆 / 挪的时候底下那条提示：left 是背包里这种还有几个（连手里这个）
+function placingText(mode, name, left) {
+  if (mode === 'move') return `挪「${name}」：拖到新地方松手，挤的地方它会自己靠到旁边`
+  return `摆「${name}」${left > 1 ? `（还有 ${left} 个）` : ''}：拖到草地上松手，挤的地方它会自己靠到旁边`
+}
+
 function ghostView(decorId, x, y, L, ok) {
   const d = decorById(decorId)
   const foot = footRect(decorId, x, y)
@@ -370,7 +379,7 @@ function changedPaths(prefix, prev, next) {
 }
 
 module.exports = {
-  Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
+  Z_DECOR, DRAG_LIFT, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, placingText, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, homeNote, cutoutViews, isNight,
   frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
   starText, goalText, cheerCard, stayText,

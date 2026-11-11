@@ -124,14 +124,14 @@
 
     <view wx:if="{{mode !== 'view'}}" class="placing">
       <view class="placing-main">
-        <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖进锅里煮上，或者拖到小动物身上喂它' : (mode === 'place' ? '摆放' : '挪动') + '「' + selectedName + '」：拖到草地上松手'}}</view>
+        <view class="placing-text">{{mode === 'feed' ? '拿着「' + selectedName + '」：拖进锅里煮上，或者拖到小动物身上喂它' : placingText}}</view>
         <view wx:if="{{mode === 'feed' && selectedSmell.length}}" class="smell smell-wide">
           <text class="smell-label">今天闻着它会来</text>
           <view wx:for="{{selectedSmell}}" wx:for-item="pet" wx:key="id" class="smell-face"><image class="smell-img {{pet.known ? '' : 'smell-unknown'}}" src="{{pet.face}}" mode="aspectFit" /></view>
         </view>
       </view>
       <view class="placing-btns">
-        <button class="btn-plain btn-small" bindtap="cancel">取消</button>
+        <button class="btn-plain btn-small" bindtap="cancel">{{placingMore ? '好了' : '取消'}}</button>
       </view>
     </view>
 

@@ -764,17 +764,27 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、闻着香味来�
   assert.equal(camp.data.bagTab, 'decor')
   camp.pickDecor(event({ id: 'ball' }))
   assert.equal(camp.data.mode, 'place')
-  const g = (x, y) => touchAt(x * camp.L.k, y * camp.L.k)
-  camp.onDragStart(g(SCENE.fire[0], SCENE.fire[1]))
+  assert.equal(camp.data.placingText, '摆「滚球」：拖到草地上松手，挤的地方它会自己靠到旁边')
+  // 落脚点在手指上方一点（V.DRAG_LIFT）：g(x, y) 是「想让它落在画上的 (x, y)」时手指按的地方
+  const g = (x, y) => touchAt(x * camp.L.k, y * camp.L.k + V.DRAG_LIFT)
+  // 大帐篷正中间：周围都靠不过去，影子是红的，松手说放不下、还拿在手里
+  camp.onDragStart(g(700, 1000))
   await settle()
   assert.equal(camp.data.drag.ok, false)
-  camp.onDragEnd(g(SCENE.fire[0], SCENE.fire[1]))
+  camp.onDragEnd(g(700, 1000))
   await settle()
   assert.equal(wx.log.toasts.pop(), '这儿放不下，挪开一点')
+  assert.equal(camp.data.mode, 'place')
+  // 篝火石圈上：自己靠到石圈外面最近能放的地方，影子是绿的、画在要落下去的那儿
+  camp.onDragStart(g(SCENE.fire[0], SCENE.fire[1] + 200))
+  await settle()
+  assert.equal(camp.data.drag.ok, true)
+  const footBottom = (camp.data.drag.foot.top + camp.data.drag.foot.height) / camp.L.k
+  assert.ok(footBottom > SCENE.fire[1] + 250, '靠到石圈前面去了')
   camp.onDragEnd(g(1500, 1800))
   await settle()
   assert.equal(camp.data.decor.length, 1)
-  assert.equal(camp.data.mode, 'view')
+  assert.equal(camp.data.mode, 'view', '背包里没有第二个滚球，摆完就结束')
   // 点家具：能玩的第一项是叫一只过来（滚球：叫一只来玩），后面挪地方、收回背包
   wx.actionSheetChoice = 2
   camp.tapDecor(event({ uid: camp.data.decor[0].uid }))

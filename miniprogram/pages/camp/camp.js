@@ -7,7 +7,7 @@ const { fxViews } = require('../../utils/scene-fx')
 const { beansCard } = require('../../utils/view')
 const { petById } = require('../../utils/shared/pets')
 const { foodById } = require('../../utils/shared/foods')
-const { decorById, placeProblem } = require('../../utils/shared/decor')
+const { decorById, placeProblem, nearestSpot } = require('../../utils/shared/decor')
 const SHEETS = require('../../utils/anim-sheets')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
 const { syncTabBar } = require('../../utils/tab-bar')
@@ -62,6 +62,9 @@ Page({
     termText: '',
     mode: 'view',
     selectedName: '',
+    // 摆 / 挪装饰时底下那条提示；placingMore：已经摆下一个、手里接着拿着同一种（按钮写「好了」）
+    placingText: '',
+    placingMore: false,
     selectedSmell: [],
     drag: null,
     swayOn: {},
@@ -637,8 +640,9 @@ Page({
   pickDecor(e) {
     const { id } = e.currentTarget.dataset
     const d = decorById(id)
+    const item = this.data.decorBag.find((x) => x.id === id)
     this.selected = { type: 'place', decorId: id }
-    this.setData({ bagOpen: false, mode: 'place', selectedName: d ? d.name : '' })
+    this.setData({ bagOpen: false, mode: 'place', selectedName: d ? d.name : '', placingText: V.placingText('place', d ? d.name : '', item ? item.count : 1), placingMore: false })
     if (this.life) this.life.pause()
     this.queryWorldRect()
   },
@@ -706,7 +710,7 @@ Page({
 
   startMove(d) {
     this.selected = { type: 'move', uid: d.uid, decorId: d.id }
-    this.setData({ mode: 'move', selectedName: d.name })
+    this.setData({ mode: 'move', selectedName: d.name, placingText: V.placingText('move', d.name, 1), placingMore: false })
     if (this.life) this.life.pause()
     this.queryWorldRect()
   },
@@ -737,9 +741,19 @@ Page({
     const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0])
     this.setData({ drag: null })
     if (!t || !this.selected || !this.worldRect) return
-    const p = V.fromTouch(t.clientX, t.clientY, this.worldRect, this.L)
-    if (this.selected.type === 'feed') this.feedAt(p)
-    else this.placeAt(p)
+    if (this.selected.type === 'feed') this.feedAt(V.fromTouch(t.clientX, t.clientY, this.worldRect, this.L))
+    else this.placeAt(this.dropPoint(t.clientX, t.clientY))
+  },
+
+  // 摆 / 挪装饰：落脚点在手指上方一点（V.DRAG_LIFT，手指不挡着它和脚下的占地框）
+  dropPoint(x, y) {
+    return V.fromTouch(x, y - V.DRAG_LIFT, this.worldRect, this.L)
+  },
+
+  // 想放在 p：能放就是那儿；放不下就靠到旁边最近能放的地方（shared/decor.js 的 nearestSpot），太远了才算放不下（null）
+  spotFor(p) {
+    const sel = this.selected
+    return nearestSpot(this.camp.decor.placed, sel.decorId, Math.round(p.x), Math.round(p.y), sel.type === 'move' ? sel.uid : undefined)
   },
 
   updateDrag(x, y) {
@@ -751,8 +765,10 @@ Page({
       this.setData({ drag: { image: V.foodImage(sel.foodId), left: p.x * this.L.k - size / 2, top: p.y * this.L.k - size * 1.6, width: size, height: size, ok: !!this.hitTarget(p), foot: null } })
       return
     }
-    const problem = placeProblem(this.camp.decor.placed, sel.decorId, p.x, p.y, sel.type === 'move' ? sel.uid : undefined)
-    this.setData({ drag: V.ghostView(sel.decorId, p.x, p.y, this.L, !problem) })
+    // 影子画在会落下去的地方：挤的时候已经靠到旁边了（绿的），哪儿都靠不过去才是红的、跟着手指
+    const at = this.dropPoint(x, y)
+    const spot = this.spotFor(at)
+    this.setData({ drag: V.ghostView(sel.decorId, spot ? spot.x : at.x, spot ? spot.y : at.y, this.L, !!spot) })
   },
 
   // 松手时手指在谁身上：小动物（外框）或锅
@@ -830,24 +846,33 @@ Page({
 
   placeAt(p) {
     const sel = this.selected
-    const problem = placeProblem(this.camp.decor.placed, sel.decorId, p.x, p.y, sel.type === 'move' ? sel.uid : undefined)
-    if (problem) {
-      wx.showToast({ title: problem, icon: 'none' })
+    const spot = this.spotFor(p)
+    if (!spot) {
+      const why = placeProblem(this.camp.decor.placed, sel.decorId, p.x, p.y, sel.type === 'move' ? sel.uid : undefined)
+      wx.showToast({ title: why || '这儿放不下，换个地方', icon: 'none' })
       return
     }
-    const x = Math.round(p.x)
-    const y = Math.round(p.y)
-    if (sel.type === 'place') this.save('camp.place', { decorId: sel.decorId, x, y })
-    else this.save('camp.move', { uid: sel.uid, x, y })
+    if (sel.type === 'place') this.save('camp.place', { decorId: sel.decorId, x: spot.x, y: spot.y }, '', (view) => this.moreToPlace(sel.decorId, view))
+    else this.save('camp.move', { uid: sel.uid, x: spot.x, y: spot.y })
   },
 
-  save(action, data, toast) {
+  // 摆好一个，背包里还有同一种：接着拿着下一个（种一排花不用每朵都回背包拿），返回底下那条提示要写的；没有了返回 ''
+  moreToPlace(decorId, view) {
+    const d = decorById(decorId)
+    const more = (view.decor.unplaced || []).find((u) => u.id === decorId)
+    return d && more && more.count > 0 ? V.placingText('place', d.name, more.count) : ''
+  },
+
+  // keep(view)：存好以后要不要接着拿着（返回提示的字就接着，不退出摆放）
+  save(action, data, toast, keep) {
     if (this.saving) return
     this.saving = true
     api.call(action, data)
       .then((view) => {
         this.saving = false
-        this.cancel()
+        const more = keep ? keep(view) : ''
+        if (more) this.setData({ drag: null, placingText: more, placingMore: true })
+        else this.cancel()
         this.render(view)
         if (toast) wx.showToast({ title: toast, icon: 'none' })
       })
@@ -859,7 +884,7 @@ Page({
 
   cancel() {
     this.selected = null
-    this.setData({ mode: 'view', selectedName: '', drag: null })
+    this.setData({ mode: 'view', selectedName: '', drag: null, placingMore: false })
     if (this.life) this.life.resume()
   },
 
