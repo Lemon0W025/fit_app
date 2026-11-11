@@ -42,6 +42,8 @@ function createDayService({ repo, chat, config, now, forest, remind = null, log 
         daily: await forest.today(openid, date, meals, profile),
         // guide：新手三步；remind：微信提醒的模板和开没开（开了的话打卡页提交时顺手申请一次「允许」）
         ...(profile ? await remindOf(openid, meals) : { guide: null, remind: null }),
+        // 没建档、只是来看亲友打卡的：首页先带去亲友页（建了档的不用查）
+        following: profile ? 0 : (await repo.listFollowing(openid)).length,
       }
     },
 

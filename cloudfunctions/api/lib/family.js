@@ -86,11 +86,11 @@ function alertMessage(template, name, mealType, times, now) {
   return data
 }
 
-// 点赞：一个人对一顿只能赞一次；返回 null 表示已经赞过
-function addLike(likes, openid, name, at) {
+// 点赞：一个人对一顿只能赞一次；返回 null 表示已经赞过。key 是点赞的人那段关系的代号（不存账号）
+function addLike(likes, key, name, at) {
   const list = Array.isArray(likes) ? likes : []
-  if (list.some((l) => l.openid === openid)) return null
-  return list.concat([{ openid, name: cleanName(name), at }])
+  if (list.some((l) => l.key === key)) return null
+  return list.concat([{ key, name: cleanName(name), at }])
 }
 
 module.exports = {

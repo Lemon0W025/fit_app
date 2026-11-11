@@ -8,6 +8,9 @@ const { createFakeRepo, PROFILE, analysisJson } = require('./helpers/fake-repo')
 const { createFakeCloud, loadCloudFunction } = require('./helpers/fake-cloud')
 const { fixDate } = require('./helpers/fixed-date')
 
+// 页面拿到的 owner / viewer 不是账号，是这段关系的代号（follow.key）：测试里从库里查出来
+const K = (repo, viewer, owner = 'me') => (repo.state.follows.get(`${viewer}_${owner}`) || {}).key || 'no-such-key'
+
 const TIMES = { breakfast: '07:30', lunch: '12:00', dinner: '18:00' }
 const at = (hhmm, day = '2026-11-10') => new Date(`${day}T${hhmm}:00+08:00`)
 const TEMPLATE = { id: 'tmpl-1', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
@@ -68,7 +71,7 @@ test('alertMessage：「小明的午饭还没拍」不超过 20 个字（名字�
   })
 
   const one = F.addLike(undefined, 'v1', '小红', 5)
-  assert.deepEqual(one, [{ openid: 'v1', name: '小红', at: 5 }])
+  assert.deepEqual(one, [{ key: 'v1', name: '小红', at: 5 }])
   assert.equal(F.addLike(one, 'v1', '小红', 6), null)
   assert.equal(F.addLike(one, 'v2', '', 7).length, 2)
   assert.equal(F.addLike(one, 'v2', '', 7)[1].name, '亲友')
@@ -128,7 +131,7 @@ test('family.invite：建了档才有邀请码；没过期的接着用，快过�
   clock.now = new Date(at('12:40').getTime() + 5.5 * DAY)
   const second = await service.invite('me')
   assert.notEqual(second.code, first.code)
-  assert.equal((await service.accept('v1', { code: first.code })).owner, 'me')
+  assert.equal((await service.accept('v1', { code: first.code })).owner, K(repo, 'v1'))
   // 旧的过期了：不认，下次要邀请码时顺手删掉
   clock.now = new Date(at('12:40').getTime() + 8 * DAY)
   await assert.rejects(service.accept('v2', { code: first.code }), { code: 'NOT_FOUND', message: /邀请过期了/ })
@@ -140,12 +143,15 @@ test('family.accept：建立关注关系，重复点不重复建；不能关注�
   const { repo, service } = setup()
   const { code } = await service.invite('me')
   // 没建档的亲友也能看
-  assert.deepEqual(await service.accept('v2', { code }), { owner: 'me', name: '小明', already: false })
-  assert.deepEqual(repo.state.follows.get('v2_me'), { viewer: 'v2', owner: 'me', name: '亲友', notify: false, sent: {}, createdAt: at('12:40').getTime() })
+  const accepted = await service.accept('v2', { code })
+  // 发给页面的 owner 是这段关系的代号，不是对方的账号
+  assert.ok(F.isCode(accepted.owner) && accepted.owner !== 'me')
+  assert.deepEqual(accepted, { owner: K(repo, 'v2'), name: '小明', already: false })
+  assert.deepEqual(repo.state.follows.get('v2_me'), { viewer: 'v2', owner: 'me', key: accepted.owner, name: '亲友', notify: false, sent: {}, createdAt: at('12:40').getTime() })
   // 建了档的默认用档案里的称呼，填了用填的
   await service.accept('v1', { code })
   assert.equal(repo.state.follows.get('v1_me').name, '小红')
-  assert.deepEqual(await service.accept('v1', { code, name: ' 红红 ' }), { owner: 'me', name: '小明', already: true })
+  assert.deepEqual(await service.accept('v1', { code, name: ' 红红 ' }), { owner: K(repo, 'v1'), name: '小明', already: true })
   assert.equal(repo.state.follows.get('v1_me').name, '红红')
   // 再点一次、不填称呼：还是原来的，关系只有一条，开关不动
   repo.state.follows.get('v1_me').notify = true
@@ -194,12 +200,13 @@ test('family.get：我关注的每一位今天的印章、连续天数、最近 
   repo.state.gardens.set('me', { camp: 4, days: { '2026-11-08': true, '2026-11-09': true, '2026-11-10': true } })
   repo.state.reminders.set('v1', { notify: false, credits: 2 })
   // 别人给这顿点过赞
-  await repo.setMealLikes(lunch, [{ openid: 'someone', name: '老王', at: 1 }])
+  await repo.setMealLikes(lunch, [{ key: 'someone', name: '老王', at: 1 }])
 
   board = await service.get('v1')
   const p = board.people[0]
   assert.equal(board.credits, 2)
-  assert.equal(p.owner, 'me')
+  assert.equal(p.owner, K(repo, 'v1'))
+  assert.equal(JSON.stringify(board).includes('"me"'), false, '看板里没有对方的账号')
   assert.equal(p.streak, 3)
   assert.equal(p.weekOnTime, 2)
   assert.equal(p.notify, false)
@@ -244,8 +251,8 @@ test('谁能看谁：没有关注关系的看不到、赞不了、开不了提�
   const lunch = await addMeal(repo, 'me', 'lunch', '12:10')
   // v1 没接受邀请：看板里没有 me，直接拿 me 的打卡去赞也不行
   assert.deepEqual((await service.get('v1')).people, [])
-  await assert.rejects(service.like('v1', { owner: 'me', mealId: lunch }), { code: 'FORBIDDEN' })
-  await assert.rejects(service.setNotify('v1', { owner: 'me', on: true }), { code: 'FORBIDDEN' })
+  await assert.rejects(service.like('v1', { owner: K(repo, 'v1'), mealId: lunch }), { code: 'FORBIDDEN' })
+  await assert.rejects(service.setNotify('v1', { owner: K(repo, 'v1'), on: true }), { code: 'FORBIDDEN' })
   await assert.rejects(service.like('v1', { mealId: lunch }), { code: 'FORBIDDEN' })
   await assert.rejects(service.like('v1', { owner: { $ne: '' }, mealId: lunch }), { code: 'FORBIDDEN' })
   // 自己不算自己的亲友
@@ -256,26 +263,28 @@ test('谁能看谁：没有关注关系的看不到、赞不了、开不了提�
   // 关注了 me，也只能赞 me 的打卡：别人（v2）的打卡 id 拿来不认
   repo.state.profiles.set('v2', { ...PROFILE, nickname: '小刚' })
   const other = await addMeal(repo, 'v2', 'lunch', '12:20')
-  await assert.rejects(service.like('v1', { owner: 'me', mealId: other }), { code: 'NOT_FOUND' })
+  await assert.rejects(service.like('v1', { owner: K(repo, 'v1'), mealId: other }), { code: 'NOT_FOUND' })
   await assert.rejects(service.like('v1', { owner: 'v2', mealId: other }), { code: 'FORBIDDEN' })
   // 关系是单向的：me 看不到 v1 的
   assert.deepEqual((await service.get('me')).people, [])
 
   // me 把 v1 移除：v1 看不到了，旧邀请也作废，「我的」里换了新的邀请码
-  const mine = await service.remove('me', { viewer: 'v1' })
+  // 拿账号来移除不认（只认代号）
+  assert.equal((await service.remove('me', { viewer: 'v1' })).viewers.length, 1)
+  const mine = await service.remove('me', { viewer: K(repo, 'v1') })
   assert.deepEqual(mine.viewers, [])
   assert.notEqual(mine.code, code)
   assert.deepEqual((await service.get('v1')).people, [])
-  await assert.rejects(service.like('v1', { owner: 'me', mealId: lunch }), { code: 'FORBIDDEN' })
+  await assert.rejects(service.like('v1', { owner: K(repo, 'v1'), mealId: lunch }), { code: 'FORBIDDEN' })
   await assert.rejects(service.accept('v1', { code }), { code: 'NOT_FOUND' })
 
   // 重新邀请，v1 自己点「不看了」
   await service.accept('v1', { code: mine.code })
-  assert.deepEqual(await service.leave('v1', { owner: 'me' }), { left: true })
+  assert.deepEqual(await service.leave('v1', { owner: K(repo, 'v1') }), { left: true })
   assert.deepEqual((await service.get('v1')).people, [])
   assert.deepEqual((await service.mine('me')).viewers, [])
   // 再点一次不报错；没说是谁的不行
-  assert.deepEqual(await service.leave('v1', { owner: 'me' }), { left: true })
+  assert.deepEqual(await service.leave('v1', { owner: K(repo, 'v1') }), { left: true })
   await assert.rejects(service.leave('v1', {}), { code: 'BAD_REQUEST' })
   await assert.rejects(service.remove('me', {}), { code: 'BAD_REQUEST' })
 })
@@ -287,24 +296,24 @@ test('family.like：记在打卡上（称呼 + 时间），重复点不重复记
   await service.accept('v2', { code })
   const lunch = await addMeal(repo, 'me', 'lunch', '12:10')
 
-  assert.deepEqual(await service.like('v1', { owner: 'me', mealId: lunch }), { mealId: lunch, liked: true, likeNames: ['红红'] })
+  assert.deepEqual(await service.like('v1', { owner: K(repo, 'v1'), mealId: lunch }), { mealId: lunch, liked: true, likeNames: ['红红'] })
   clock.now = at('12:50')
-  assert.deepEqual(await service.like('v1', { owner: 'me', mealId: lunch }), { mealId: lunch, liked: true, likeNames: ['红红'] })
-  assert.deepEqual((await service.like('v2', { owner: 'me', mealId: lunch })).likeNames, ['红红', '亲友'])
+  assert.deepEqual(await service.like('v1', { owner: K(repo, 'v1'), mealId: lunch }), { mealId: lunch, liked: true, likeNames: ['红红'] })
+  assert.deepEqual((await service.like('v2', { owner: K(repo, 'v2'), mealId: lunch })).likeNames, ['红红', '亲友'])
   assert.deepEqual((await repo.getMeal('me', lunch)).likes, [
-    { openid: 'v1', name: '红红', at: at('12:40').getTime() },
-    { openid: 'v2', name: '亲友', at: at('12:50').getTime() },
+    { key: K(repo, 'v1'), name: '红红', at: at('12:40').getTime() },
+    { key: K(repo, 'v2'), name: '亲友', at: at('12:50').getTime() },
   ])
   const meal = (await service.get('v1')).people[0].meals[0]
   assert.equal(meal.liked, true)
   assert.deepEqual(meal.likeNames, ['红红', '亲友'])
 
-  await assert.rejects(service.like('v1', { owner: 'me', mealId: 'nope' }), { code: 'NOT_FOUND', message: /不在了/ })
-  await assert.rejects(service.like('v1', { owner: 'me' }), { code: 'NOT_FOUND' })
+  await assert.rejects(service.like('v1', { owner: K(repo, 'v1'), mealId: 'nope' }), { code: 'NOT_FOUND', message: /不在了/ })
+  await assert.rejects(service.like('v1', { owner: K(repo, 'v1') }), { code: 'NOT_FOUND' })
 })
 
 test('family.mine：邀请码、谁在看我（按先后）、我关注了几位；没建档的没有邀请码', async () => {
-  const { service, clock } = setup()
+  const { repo, service, clock } = setup()
   const empty = await service.mine('me')
   assert.ok(F.isCode(empty.code))
   assert.deepEqual(empty.viewers, [])
@@ -315,8 +324,8 @@ test('family.mine：邀请码、谁在看我（按先后）、我关注了几位
   const mine = await service.mine('me')
   assert.equal(mine.code, empty.code)
   assert.deepEqual(mine.viewers, [
-    { viewer: 'v2', name: '亲友', since: at('12:40').getTime() },
-    { viewer: 'v1', name: '小红', since: at('12:50').getTime() },
+    { viewer: K(repo, 'v2'), name: '亲友', since: at('12:40').getTime() },
+    { viewer: K(repo, 'v1'), name: '小红', since: at('12:50').getTime() },
   ])
   assert.deepEqual(await service.mine('v2'), { code: '', viewers: [], following: 1 })
 })
@@ -325,18 +334,18 @@ test('family.setNotify：有关系、开通了微信提醒才能开；关随时�
   const { repo, service } = setup()
   const { code } = await service.invite('me')
   await service.accept('v1', { code })
-  assert.deepEqual(await service.setNotify('v1', { owner: 'me', on: true }), { owner: 'me', notify: true })
+  assert.deepEqual(await service.setNotify('v1', { owner: K(repo, 'v1'), on: true }), { owner: K(repo, 'v1'), notify: true })
   assert.equal(repo.state.follows.get('v1_me').notify, true)
   assert.equal((await service.get('v1')).people[0].notify, true)
-  assert.deepEqual(await service.setNotify('v1', { owner: 'me', on: false }), { owner: 'me', notify: false })
+  assert.deepEqual(await service.setNotify('v1', { owner: K(repo, 'v1'), on: false }), { owner: K(repo, 'v1'), notify: false })
   // 乱传的不算开
-  assert.equal((await service.setNotify('v1', { owner: 'me', on: 'yes' })).notify, false)
+  assert.equal((await service.setNotify('v1', { owner: K(repo, 'v1'), on: 'yes' })).notify, false)
 
   const none = setup({ template: null })
   const invite = await none.service.invite('me')
   await none.service.accept('v1', { code: invite.code })
-  await assert.rejects(none.service.setNotify('v1', { owner: 'me', on: true }), { code: 'BAD_REQUEST', message: /还没开通/ })
-  assert.equal((await none.service.setNotify('v1', { owner: 'me', on: false })).notify, false)
+  await assert.rejects(none.service.setNotify('v1', { owner: K(none.repo, 'v1'), on: true }), { code: 'BAD_REQUEST', message: /还没开通/ })
+  assert.equal((await none.service.setNotify('v1', { owner: K(none.repo, 'v1'), on: false })).notify, false)
 })
 
 // me 的午饭 12:00；v1、v2 关注了 me、开了提醒
@@ -345,8 +354,8 @@ async function alertSetup(opts) {
   const { code } = await s.service.invite('me')
   await s.service.accept('v1', { code })
   await s.service.accept('v2', { code })
-  await s.service.setNotify('v1', { owner: 'me', on: true })
-  await s.service.setNotify('v2', { owner: 'me', on: true })
+  await s.service.setNotify('v1', { owner: K(s.repo, 'v1'), on: true })
+  await s.service.setNotify('v2', { owner: K(s.repo, 'v2'), on: true })
   s.repo.state.reminders.set('v1', { notify: false, credits: 2, version: 'formal' })
   return s
 }
@@ -393,7 +402,7 @@ test('alertFollowers：拍了的不发；关了提醒的不发；过了一小时
   assert.equal(await shot.service.alertFollowers(), 0)
 
   const off = await alertSetup()
-  await off.service.setNotify('v1', { owner: 'me', on: false })
+  await off.service.setNotify('v1', { owner: K(off.repo, 'v1'), on: false })
   assert.equal(await off.service.alertFollowers(), 0)
 
   const late = await alertSetup({ now: at('14:10') })
@@ -477,29 +486,36 @@ test('云函数：family.* 走路由；被赞的人在 day.get / meal.get 里看
 
   // 亲友（没建档）带着邀请码打开 → 接受 → 看板
   assert.deepEqual((await as('v1', 'family.get', { code })).data.invite, { ok: true, mine: false, name: '小明', already: false })
-  assert.deepEqual((await as('v1', 'family.accept', { code, name: '红红' })).data, { owner: 'me', name: '小明', already: false })
+  const accepted = (await as('v1', 'family.accept', { code, name: '红红' })).data
+  const key = accepted.owner
+  assert.deepEqual(accepted, { owner: key, name: '小明', already: false })
+  assert.ok(F.isCode(key) && key !== 'me', '给页面的是代号，不是账号')
   const board = (await as('v1', 'family.get')).data
+  assert.equal(board.people[0].owner, key)
   assert.equal(board.people.length, 1)
   assert.equal(board.people[0].meals[0].photoUrl, 'https://tmp/cloud://env/meals/a.jpg')
   assert.equal(board.people[0].streak, 1)
   assert.equal(board.people[0].weekOnTime, 1)
   // 没关系的人
   assert.equal((await as('v2', 'family.like', { owner: 'me', mealId })).code, 'FORBIDDEN')
+  assert.equal((await as('v2', 'family.like', { owner: key, mealId })).code, 'FORBIDDEN', '别人的代号拿来也没用')
   assert.deepEqual((await as('v2', 'family.get')).data.people, [])
 
   // 点赞：被赞的人在今日页、结果页拿到的打卡上带着
-  assert.deepEqual((await as('v1', 'family.like', { owner: 'me', mealId })).data.likeNames, ['红红'])
+  assert.deepEqual((await as('v1', 'family.like', { owner: key, mealId })).data.likeNames, ['红红'])
   const day = (await as('me', 'day.get')).data
   assert.deepEqual(day.meals[0].likes.map((l) => l.name), ['红红'])
   assert.deepEqual((await as('me', 'meal.get', { mealId })).data.likes.map((l) => l.name), ['红红'])
   // 赞不会把分析结果弄丢
   assert.equal(day.meals[0].analysis.totalKcal, 230)
-  assert.deepEqual((await as('me', 'family.mine')).data.viewers.map((v) => [v.viewer, v.name]), [['v1', '红红']])
+  // 被赞的人、被看的人拿到的也只有代号和称呼
+  assert.equal(JSON.stringify(day.meals[0].likes).includes('v1'), false)
+  assert.deepEqual((await as('me', 'family.mine')).data.viewers.map((v) => [v.viewer, v.name]), [[key, '红红']])
   assert.equal((await as('v1', 'family.mine')).data.following, 1)
 
   // 开提醒：先攒一次「允许」（没建档的亲友也能攒），再开
   assert.equal((await as('v1', 'remind.subscribed', { accepted: true, version: 'trial' })).data.credits, 1)
-  assert.deepEqual((await as('v1', 'family.setNotify', { owner: 'me', on: true })).data, { owner: 'me', notify: true })
+  assert.deepEqual((await as('v1', 'family.setNotify', { owner: key, on: true })).data, { owner: key, notify: true })
   // 晚饭过了饭点没拍：定时触发器告诉 v1
   fixDate(t, '2026-11-10T19:10:00+08:00')
   cloud.setOpenid('')
@@ -520,7 +536,7 @@ test('云函数：family.* 走路由；被赞的人在 day.get / meal.get 里看
   await as('me', 'profile.save', SAVE)
   await as('v2', 'family.accept', { code })
   assert.deepEqual((await as('v1', 'account.reset')).data, { reset: true })
-  assert.deepEqual((await as('me', 'family.mine')).data.viewers.map((v) => v.viewer), ['v2'])
+  assert.deepEqual((await as('me', 'family.mine')).data.viewers.map((v) => v.name), ['亲友'])
   assert.deepEqual((await as('me', 'account.reset')).data, { reset: true })
   assert.equal(cloud.db.collections.get('follows').size, 0)
   assert.equal(cloud.db.collections.get('invites').size, 0)

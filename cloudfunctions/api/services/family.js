@@ -1,5 +1,7 @@
 // 亲友看板：把自己的打卡给亲友看（邀请码 → 关注关系）、亲友点赞、过了饭点没拍告诉亲友。
-// 谁能看谁只认 follows 里的关系：每个读别人打卡、改关系的入口都先核对（requireFollow）
+// 谁能看谁只认 follows 里的关系：每个读别人打卡、改关系的入口都先核对（requireFollow）。
+// 两边的账号（openid）互相看不到：每段关系有一个随机的代号（follow.key），发给页面的 owner / viewer、
+// 存在打卡上的赞（likes[].key）都是这个代号，页面再拿它回来指「哪位亲友」
 const { AppError, CODES } = require('../lib/errors')
 const { normalizeCamp } = require('../lib/camp-state')
 const { dateKey, addDays } = require('../lib/shared/date')
@@ -40,14 +42,26 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
     return code
   }
 
-  async function requireFollow(viewer, owner) {
-    const follow = typeof owner === 'string' && owner ? await repo.getFollow(viewer, owner) : null
+  // 关系上的代号：老的关系没有就补一个
+  async function keyed(follow) {
+    if (follow.key) return follow
+    const next = { ...follow, key: F.newCode() }
+    await repo.saveFollow(follow.viewer, follow.owner, next)
+    return next
+  }
+
+  const following = async (openid) => Promise.all((await repo.listFollowing(openid)).map(keyed))
+  const followers = async (openid) => Promise.all((await repo.listFollowers(openid)).map(keyed))
+
+  // 我关注的哪一位（key：页面拿回来的代号）
+  async function requireFollow(viewer, key) {
+    const follow = typeof key === 'string' && key ? (await following(viewer)).find((f) => f.key === key) : null
     if (!follow) throw new AppError(CODES.FORBIDDEN, '你还没有关注这位亲友，让 TA 再邀请你一次')
     return follow
   }
 
-  // 给亲友看的一顿：不带备注、云存储地址、谁点的赞是哪个账号
-  function mealOf(meal, viewer, urls) {
+  // 给亲友看的一顿：不带备注、云存储地址；谁点的赞只给称呼。key：看的人这段关系的代号（认「我赞过没有」）
+  function mealOf(meal, key, urls) {
     const likes = Array.isArray(meal.likes) ? meal.likes : []
     return {
       _id: meal._id,
@@ -60,7 +74,7 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
       people: meal.people || 1,
       analysis: meal.analysis || null,
       photoUrl: (meal.fileID && urls[meal.fileID]) || '',
-      liked: likes.some((l) => l.openid === viewer),
+      liked: likes.some((l) => l.key === key),
       likeNames: likes.map((l) => l.name),
     }
   }
@@ -82,13 +96,14 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
       log('family photo urls failed', e)
     }
     return {
-      owner,
+      // 这位亲友的代号（不是账号）
+      owner: follow.key,
       name: F.cleanName(profile && profile.nickname),
       stamps: mealStamps(meals),
       streak: streakFrom(normalizeCamp(garden).days, today),
       weekOnTime: onTimeCount(week),
       notify: !!follow.notify,
-      meals: meals.map((m) => mealOf(m, viewer, urls)),
+      meals: meals.map((m) => mealOf(m, follow.key, urls)),
     }
   }
 
@@ -145,22 +160,23 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
       if (owner === openid) throw new AppError(CODES.BAD_REQUEST, '这是你自己发出去的邀请，发给亲友才有用')
       const [existing, mine, theirs] = await Promise.all([repo.getFollow(openid, owner), repo.getProfile(openid), repo.getProfile(owner)])
       if (!existing) {
-        const [followers, following] = await Promise.all([repo.listFollowers(owner), repo.listFollowing(openid)])
-        if (followers.length >= F.FOLLOWS_MAX) throw new AppError(CODES.BAD_REQUEST, `TA 的亲友已经满了（最多 ${F.FOLLOWS_MAX} 位）`)
-        if (following.length >= F.FOLLOWS_MAX) throw new AppError(CODES.BAD_REQUEST, `你关注的亲友已经满了（最多 ${F.FOLLOWS_MAX} 位）`)
+        const [theirFollowers, myFollowing] = await Promise.all([repo.listFollowers(owner), repo.listFollowing(openid)])
+        if (theirFollowers.length >= F.FOLLOWS_MAX) throw new AppError(CODES.BAD_REQUEST, `TA 的亲友已经满了（最多 ${F.FOLLOWS_MAX} 位）`)
+        if (myFollowing.length >= F.FOLLOWS_MAX) throw new AppError(CODES.BAD_REQUEST, `你关注的亲友已经满了（最多 ${F.FOLLOWS_MAX} 位）`)
       }
       // 称呼：这次填的 > 以前填的 > 自己档案里的 > 「亲友」
       const typed = typeof src.name === 'string' ? src.name.trim() : ''
       const name = F.cleanName(typed || (existing && existing.name) || (mine && mine.nickname))
       const base = existing || { notify: false, sent: {}, createdAt: now().getTime() }
-      await repo.saveFollow(openid, owner, { ...base, name })
-      return { owner, name: F.cleanName(theirs && theirs.nickname), already: !!existing }
+      const key = base.key || F.newCode()
+      await repo.saveFollow(openid, owner, { ...base, key, name })
+      return { owner: key, name: F.cleanName(theirs && theirs.nickname), already: !!existing }
     },
 
     // 亲友页：我关注的每一位今天的打卡。带 code 时多一段 invite（这张邀请是谁的）
     async get(openid, input) {
       const code = (input || {}).code
-      const [follows, t, reminders] = await Promise.all([repo.listFollowing(openid), template(), repo.getReminders(openid)])
+      const [follows, t, reminders] = await Promise.all([following(openid), template(), repo.getReminders(openid)])
       const today = dateKey(now())
       const people = []
       for (const f of follows.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))) {
@@ -182,7 +198,7 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
       const follow = await requireFollow(openid, src.owner)
       const meal = typeof src.mealId === 'string' && src.mealId ? await repo.getMeal(follow.owner, src.mealId) : null
       if (!meal) throw new AppError(CODES.NOT_FOUND, '这条打卡已经不在了')
-      const likes = F.addLike(meal.likes, openid, follow.name, now().getTime())
+      const likes = F.addLike(meal.likes, follow.key, follow.name, now().getTime())
       if (likes) await repo.setMealLikes(meal._id, likes)
       return { mealId: meal._id, liked: true, likeNames: (likes || meal.likes).map((l) => l.name) }
     },
@@ -194,35 +210,38 @@ function createFamilyService({ repo, now, template = async () => null, send = nu
       const on = src.on === true
       if (on && !(await template())) throw new AppError(CODES.BAD_REQUEST, '微信提醒还没开通')
       await repo.saveFollow(openid, follow.owner, { ...follow, notify: on })
-      return { owner: follow.owner, notify: on }
+      return { owner: follow.key, notify: on }
     },
 
     // 不看了：我不再关注这位亲友
     async leave(openid, input) {
-      const owner = (input || {}).owner
-      if (typeof owner !== 'string' || !owner) throw new AppError(CODES.BAD_REQUEST, '没说是哪位亲友')
-      await repo.removeFollow(openid, owner)
+      const key = (input || {}).owner
+      if (typeof key !== 'string' || !key) throw new AppError(CODES.BAD_REQUEST, '没说是哪位亲友')
+      const follow = (await following(openid)).find((f) => f.key === key)
+      if (follow) await repo.removeFollow(openid, follow.owner)
       return { left: true }
     },
 
     // 移除：不让这位亲友再看我的打卡。以前发出去的邀请一起作废（不然 TA 点旧卡片又能进来）
     async remove(openid, input) {
-      const viewer = (input || {}).viewer
-      if (typeof viewer !== 'string' || !viewer) throw new AppError(CODES.BAD_REQUEST, '没说是哪位亲友')
-      await repo.removeFollow(viewer, openid)
+      const key = (input || {}).viewer
+      if (typeof key !== 'string' || !key) throw new AppError(CODES.BAD_REQUEST, '没说是哪位亲友')
+      const follow = (await followers(openid)).find((f) => f.key === key)
+      if (follow) await repo.removeFollow(follow.viewer, openid)
       await repo.removeInvites(openid)
       return this.mine(openid)
     },
 
     // 「我的」页：我的邀请码（建了档才有）、谁在看我的打卡、我关注了几位
     async mine(openid) {
-      const [profile, followers, following] = await Promise.all([repo.getProfile(openid), repo.listFollowers(openid), repo.listFollowing(openid)])
+      const [profile, watching, mine] = await Promise.all([repo.getProfile(openid), followers(openid), repo.listFollowing(openid)])
       return {
         code: profile ? await ensureCode(openid) : '',
-        viewers: followers
+        // viewer：这位亲友的代号（不是账号），移除时拿回来
+        viewers: watching
           .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
-          .map((f) => ({ viewer: f.viewer, name: F.cleanName(f.name), since: f.createdAt || 0 })),
-        following: following.length,
+          .map((f) => ({ viewer: f.key, name: F.cleanName(f.name), since: f.createdAt || 0 })),
+        following: mine.length,
       }
     },
 

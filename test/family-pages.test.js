@@ -11,6 +11,9 @@ const { decorateMeal } = require('../miniprogram/utils/view')
 const { MEAL_LABELS } = require('../miniprogram/utils/shared/meal-types')
 
 const config = require('../cloudfunctions/api/config')
+
+// 看板上第一位亲友的代号（页面发给云函数的 owner 是代号，不是账号）
+const who = (page) => page.data.view.people[0].owner
 const PROFILE = { nickname: '小明', sex: 'female', age: 50, heightCm: 160, weightKg: 70, targetWeightKg: 60, activity: 'light', avoid: '' }
 const TEMPLATE = { id: 'tmpl-1', state: 'trial', fields: { meal: 'thing1', mealTime: 'time2', tip: 'thing3' } }
 
@@ -156,12 +159,12 @@ test('亲友页：带着邀请码打开先问称呼，点了才能看；看到�
   assert.equal(page.data.view.wechat, false)
 
   // 点赞：马上变实心、轻震一下，名字跟上；再点不重复记
-  page.like(event({ owner: 'me', id: mealId }))
+  page.like(event({ owner: who(page), id: mealId }))
   assert.equal(page.data.view.people[0].meals[0].liked, true)
   assert.deepEqual(wx.log.vibrations, ['light'])
   await settle()
   assert.equal(page.data.view.people[0].meals[0].likesText, '红红 赞了')
-  page.like(event({ owner: 'me', id: mealId }))
+  page.like(event({ owner: who(page), id: mealId }))
   await settle()
   assert.equal(wx.log.vibrations.length, 1)
   assert.deepEqual((await w.as('me', 'meal.get', { mealId })).data.likes.map((l) => l.name), ['红红'])
@@ -193,7 +196,7 @@ test('亲友页：没记上的赞变回空心并说原因；过期的邀请、�
   assert.deepEqual((await w.as('me', 'family.mine')).data.viewers.map((v) => v.name), ['亲友'])
   // 点赞的时候这顿刚好被删了
   await w.as('me', 'meal.delete', { mealId })
-  page.like(event({ owner: 'me', id: mealId }))
+  page.like(event({ owner: who(page), id: mealId }))
   assert.equal(page.data.view.people[0].meals[0].liked, true)
   await settle()
   assert.equal(page.data.view.people[0].meals[0].liked, false)
@@ -247,14 +250,14 @@ test('亲友页：「TA 过了饭点没拍，提醒我」先要一次「允许�
   assert.equal(page.data.view.people[0].notify, false)
 
   // 没点允许：不开，说清楚
-  page.toggleNotify(event({ owner: 'me' }, { value: true }))
+  page.toggleNotify(event({ owner: who(page) }, { value: true }))
   await settle()
   assert.equal(asked, 1)
   assert.match(wx.log.modals.pop(), /要点「允许」/)
   assert.equal(page.data.view.people[0].notify, false)
 
   answer = 'accept'
-  page.toggleNotify(event({ owner: 'me' }, { value: true }))
+  page.toggleNotify(event({ owner: who(page) }, { value: true }))
   await settle()
   assert.equal(asked, 2)
   assert.equal(page.data.view.people[0].notify, true)
@@ -268,7 +271,7 @@ test('亲友页：「TA 过了饭点没拍，提醒我」先要一次「允许�
   assert.equal(wx.log.toasts.pop(), '攒上了')
 
   // 没勾「总是保持」：点赞不弹窗
-  page.like(event({ owner: 'me', id: mealId }))
+  page.like(event({ owner: who(page), id: mealId }))
   await settle()
   assert.equal(asked, 3)
   // 勾过的：下次进来，点赞时顺手攒一次
@@ -280,13 +283,13 @@ test('亲友页：「TA 过了饭点没拍，提醒我」先要一次「允许�
   await settle()
   const fresh = again.data.view.people[0].meals.find((m) => !m.liked)
   assert.equal(fresh.label, MEAL_LABELS.snack)
-  again.like(event({ owner: 'me', id: fresh._id }))
+  again.like(event({ owner: who(again), id: fresh._id }))
   await settle()
   assert.equal(asked, 4)
   assert.equal(again.data.view.creditsText, '还能提醒 3 次')
 
   // 关掉不用申请
-  again.toggleNotify(event({ owner: 'me' }, { value: false }))
+  again.toggleNotify(event({ owner: who(again) }, { value: false }))
   await settle()
   assert.equal(again.data.view.people[0].notify, false)
   assert.equal(wx.log.toasts.pop(), '关掉了')
@@ -303,7 +306,7 @@ test('亲友页：「不看了」先问一句，确认了就从看板上拿掉',
   page.onShow()
   await settle()
   assert.equal(page.data.view.people.length, 1)
-  page.leave(event({ owner: 'me', name: '小明' }))
+  page.leave(event({ owner: who(page), name: '小明' }))
   await settle()
   assert.match(wx.log.modals.pop(), /再邀请你一次/)
   assert.equal(page.data.view.empty, true)
@@ -330,9 +333,11 @@ test('「我的」页：邀请按钮分享出去的卡片带邀请码（右上�
   await w.as('v1', 'family.accept', { code, name: '红红' })
   page.onShow()
   await settle()
-  assert.deepEqual(page.data.family.viewers, [{ viewer: 'v1', name: '红红' }])
+  const [watcher] = page.data.family.viewers
+  assert.equal(watcher.name, '红红')
+  assert.notEqual(watcher.viewer, 'v1', '拿到的是代号，不是账号')
   // 移除：先问一句；移除后名单空了，邀请码换了新的（旧卡片作废）
-  page.removeViewer(event({ viewer: 'v1', name: '红红' }))
+  page.removeViewer(event({ viewer: watcher.viewer, name: '红红' }))
   await settle()
   assert.match(wx.log.modals.pop(), /以前发出去的邀请也会作废/)
   assert.equal(wx.log.toasts.pop(), '移除了')
@@ -367,8 +372,8 @@ test('被赞的人：今日页每顿下面「❤ 红红 赞了」，新来的赞
   await settle()
   assert.deepEqual(today.data.likes, { by: {}, note: '' })
 
-  await w.as('v1', 'family.accept', { code, name: '红红' })
-  await w.as('v1', 'family.like', { owner: 'me', mealId })
+  const v1 = (await w.as('v1', 'family.accept', { code, name: '红红' })).data.owner
+  await w.as('v1', 'family.like', { owner: v1, mealId })
   today.onShow()
   await settle()
   assert.deepEqual(today.data.likes, { by: { [mealId]: '❤ 红红 赞了' }, note: '红红 给你今天的打卡点了赞 ❤' })
@@ -378,9 +383,9 @@ test('被赞的人：今日页每顿下面「❤ 红红 赞了」，新来的赞
   await settle()
   assert.deepEqual(today.data.likes, { by: { [mealId]: '❤ 红红 赞了' }, note: '' })
   // 又有人赞：只提新来的那位
-  await w.as('v2', 'family.accept', { code })
+  const v2 = (await w.as('v2', 'family.accept', { code })).data.owner
   fixDate(t, '2026-11-10T12:20:00+08:00')
-  await w.as('v2', 'family.like', { owner: 'me', mealId })
+  await w.as('v2', 'family.like', { owner: v2, mealId })
   today.onShow()
   await settle()
   assert.equal(today.data.likes.by[mealId], '❤ 红红、亲友 赞了')
@@ -398,4 +403,29 @@ test('被赞的人：今日页每顿下面「❤ 红红 赞了」，新来的赞
   meal.onLoad({ id: mealId })
   await settle()
   assert.equal(meal.data.likesText, '❤ 红红、亲友 赞了')
+})
+
+test('只是来看亲友打卡的（没建档、关注了别人）：打开小程序先到亲友页；回来再走欢迎页；谁也没关注的照旧先看欢迎页', async (t) => {
+  fixDate(t, '2026-11-10T12:10:00+08:00')
+  const w = await world()
+  const { code } = await ownerWithLunch(w)
+  await w.as('v1', 'family.accept', { code, name: '红红' })
+  const wx = w.phone('v1')
+  const today = loadPage('today', wx)
+  today.clock = manualClock()
+  today.onShow()
+  await settle()
+  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/family/family'])
+  today.onShow()
+  await settle()
+  assert.deepEqual(wx.log.nav.pop(), ['navigateTo', '/pages/welcome/welcome'])
+  today.onHide()
+
+  const fresh = w.phone('v9')
+  const page = loadPage('today', fresh)
+  page.clock = manualClock()
+  page.onShow()
+  await settle()
+  assert.deepEqual(fresh.log.nav.pop(), ['navigateTo', '/pages/welcome/welcome'])
+  page.onHide()
 })

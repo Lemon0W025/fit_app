@@ -57,9 +57,15 @@ Page({
   load() {
     return api.call('day.get')
       .then((day) => {
-        // 第一次使用：先看欢迎页（这次打开只看一次），再去建档
+        // 第一次使用：先看欢迎页（这次打开只看一次），再去建档。
+        // 没建档但关注了亲友的（只是来看亲友打卡）：这次打开先去亲友页，从那儿回来再走欢迎页
         if (!day.profile) {
           const app = getApp()
+          if (day.following > 0 && !app.globalData.familyFirst) {
+            app.globalData.familyFirst = true
+            wx.navigateTo({ url: '/pages/family/family' })
+            return
+          }
           if (!app.globalData.welcomed) wx.navigateTo({ url: '/pages/welcome/welcome' })
           else wx.switchTab({ url: '/pages/profile/profile' })
           return
