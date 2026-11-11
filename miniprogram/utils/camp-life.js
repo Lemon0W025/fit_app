@@ -9,7 +9,7 @@
 // 怎么走（绕路、一小段一小段走、走到一半停下）在 camp-walk.js；这里只管去哪、干什么
 // 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在水壶炉边喝茶；点家具能叫一只过来。困了多半进大帐篷趴着睡、只露个小脑袋
 
-const { SCENE, scaleAt, inGrass, hiddenAt } = require('./shared/camp')
+const { SCENE, scaleAt, inGrass, hiddenAt, seatsFor } = require('./shared/camp')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, footRect } = require('./shared/decor')
@@ -70,7 +70,12 @@ const HOLE_XS = SCENE.tent.hole.map((p) => p[0])
 const TENT_DEPTH = Math.max(...cutoutStrips().filter((c) => c.cut === 'tent' && c.r > Math.min(...HOLE_XS) && c.l < Math.max(...HOLE_XS)).map((c) => c.zy)) + 4
 const BACK_BED_Y = Math.min(...SCENE.tent.beds.map((b) => b.at[1]))
 const bedDepth = (bed) => TENT_DEPTH + (bed.at[1] - BACK_BED_Y) / 6
-const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
+const PET_ZOOM = 1.6 // 小动物整体放大（shared/pets.js 的 size 是原来的大小；10/25 1.3，11/11 用户嫌小 → 1.6）
+// 锅边那一圈（锅的前面和两边）：里沿离石圈（半轴 stones）多远按个头算（body × 身宽）——站在两边的身子不压在石圈上、
+// 站在前面的不把火苗挡住；外沿再往外 band 这么宽
+const RING = { stones: [460, 250], body: [0.4, 0.45], band: [370, 190] }
+const TALL = 1.4 // 两只离多远：竖着的距离多算一点（上下挨着的，前面那只会挡住后面那只）
+const LANTERN = SCENE.cutouts.lantern // 火边树桩上的提灯（box 是它在画上的范围，zy 是灯座落地的 y）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit'] // 做这些时保持朝向（别的动作回侧面）
 const START_MS = [300, 1500]
@@ -186,12 +191,34 @@ function createLife({
     return free(decorSpots('sleep'), self).concat(spots(SCENE.shade), spots(SCENE.tent.spots))
   }
 
+  // 离别的小动物够远：它们站着的地方、正要走去的地方都让开（不然几只先后挑中同一块地方，到了叠在一起）；
+  // 隔多远按两只的平均个头算
   function awayFromOthers(x, y, self) {
-    return animals.every((a) => a === self || a.hidden || dist(a.x, a.y, x, y) > sizeOf(self) * BODY_GAP)
+    return animals.every((a) => {
+      if (a === self || a.hidden) return true
+      const gap = ((sizeOf(self) + sizeOf(a)) / 2) * BODY_GAP
+      const far = (px, py) => Math.hypot(px - x, (py - y) * TALL) > gap
+      const to = a.goal && a.goal.path ? a.goal.spot : null
+      return far(a.x, a.y) && (!to || far(to.x, to.y))
+    })
   }
 
-  // 停下来的地方：草地上、不在锅身 / 提灯正后面（会被整个挡住）、离别人远
-  const restable = (x, y, self) => inGrass(x, y) && !hiddenAt(x, y) && awayFromOthers(x, y, self)
+  // 锅前面、两边挨着石圈的那一圈（这只的里沿以内，比火靠下）：站在这儿身子压在石圈上、把火苗挡住；路过可以，不停
+  function onStones(x, y, self) {
+    if (y <= SCENE.fire[1]) return false
+    const { near } = ringOf(self)
+    return Math.hypot((x - SCENE.fire[0]) / near[0], (y - SCENE.fire[1]) / near[1]) < 0.999
+  }
+
+  // 提灯正前面挨着的地方：个头大了，站在这儿把提灯整个挡住（脚下比灯座靠下不到半个身子、横着在灯的左右一点以内）
+  function coversLantern(x, y, self) {
+    const [l, , r] = LANTERN.box
+    const w = sizeOf(self) * scaleAt(y)
+    return y > LANTERN.zy && y < LANTERN.zy + RING.body[1] * w && x > l - RING.body[0] * w && x < r + RING.body[0] * w
+  }
+
+  // 停下来的地方：草地上、不在锅身 / 提灯正后面（会被整个挡住）、不压着石圈、不挡着提灯、离别人远
+  const restable = (x, y, self) => inGrass(x, y) && !hiddenAt(x, y) && !onStones(x, y, self) && !coversLantern(x, y, self) && awayFromOthers(x, y, self)
 
   // 画面左右两边、火那一排附近的一点：看得到屏幕就在看得到的那段外面一点（像从画面外走进来），看不到就是画的两边；
   // side -1 左 / 1 右；yHint 尽量用这个高度（出去找吃的从自己这一行走出去）。草地外、锅后面不算
@@ -217,16 +244,34 @@ function createLife({
     return null
   }
 
+  // 这只的锅边那一圈：里沿、外沿两个椭圆的半轴（画的像素）
+  function ringOf(self) {
+    const w = sizeOf(self) * scaleAt(SCENE.fire[1] + RING.stones[1])
+    const near = [RING.stones[0] + RING.body[0] * w, RING.stones[1] + RING.body[1] * w]
+    return { near, far: [near[0] + RING.band[0], near[1] + RING.band[1]] }
+  }
+
   // 篝火边：锅的前面和两边（锅后面会被锅挡住）
   function nearFire(self) {
+    const { near } = ringOf(self)
     for (let i = 0; i < 30; i++) {
       const a = (-0.08 + random() * 1.16) * Math.PI
-      const r = 420 + random() * 320
-      const x = SCENE.fire[0] + r * Math.cos(a) * 1.15
-      const y = SCENE.fire[1] + r * Math.sin(a) * 0.6
+      const t = random()
+      const x = SCENE.fire[0] + (near[0] + t * RING.band[0]) * Math.cos(a)
+      const y = SCENE.fire[1] + (near[1] + t * RING.band[1]) * Math.sin(a)
       if (restable(x, y, self)) return { x, y, action: 'idle' }
     }
     return null
+  }
+
+  // 锅正前面（画面中间）、身子不挡火苗的地方：叼着礼物的站这儿等你点
+  function frontOfPot(self, action) {
+    return { x: SCENE.fire[0], y: Math.round(SCENE.fire[1] + ringOf(self).near[1] + 20), action }
+  }
+
+  // 围着锅坐哪儿：一起坐的这几只（group）按先后排，几只就分几个点（6 只以内一圈，多了两圈，shared/camp.js 的 seatsFor）
+  function seatOf(a, group) {
+    return seatsFor(group.length)[Math.max(0, group.indexOf(a))]
   }
 
   // ---------------------------------------------------------------- 画面
@@ -367,7 +412,14 @@ function createLife({
   // ---------------------------------------------------------------- 睡
 
   const SLEEPS = ['sleep', 'tent']
-  const asleep = (a) => SLEEPS.indexOf(a.action) !== -1 || !!(a.goal && a.goal.path && a.goal.spot && SLEEPS.indexOf(a.goal.spot.action) !== -1)
+  // 睡着的、正走去睡的、到了帐篷门口正要进去的（背对着站那一下 a.next 等着）都算：不然门口站着的那一下不算数，
+  // 又有一只困了，同时睡的就多出一只
+  const asleep = (a) => {
+    if (SLEEPS.indexOf(a.action) !== -1) return true
+    const spot = a.goal && a.goal.spot
+    if (!spot) return false
+    return a.goal.path ? SLEEPS.indexOf(spot.action) !== -1 : spot.action === 'tent' && !!a.next
+  }
   const napRule = () => (isNight(hour()) ? NIGHT_NAP : DAY_NAP)
 
   // 同时最多几只睡着：在场住户的几分之几，至少 1 只
@@ -562,7 +614,7 @@ function createLife({
     const fire = lit()
     // 傍晚火着着：围着锅坐
     if (period === 'dusk' && fire) {
-      const [sx, sy] = SCENE.seats[a.index % SCENE.seats.length]
+      const [sx, sy] = seatOf(a, animals.filter((b) => !b.hidden))
       if (a.action === 'sit' && dist(a.x, a.y, sx, sy) < 1) return doFor(a, 'sit', between(DO_MS))
       if (walkTo(a, { x: sx, y: sy, action: 'sit' }, (b) => { facePot(b); doFor(b, 'sit', between(DO_MS)) })) return
       return rest(a)
@@ -754,7 +806,7 @@ function createLife({
     const b = animals.find((o) => o.id === rule.b && !o.hidden && o.action === 'idle' && !o.holdGift)
     if (!b) return false
     const spot = { x: b.x + (sizeOf(a) + sizeOf(b)) * 0.4 * (a.x < b.x ? -1 : 1), y: b.y + 20, action: 'idle' }
-    if (!inGrass(spot.x, spot.y) || hiddenAt(spot.x, spot.y)) return false
+    if (!inGrass(spot.x, spot.y) || hiddenAt(spot.x, spot.y) || onStones(spot.x, spot.y, a) || coversLantern(spot.x, spot.y, a)) return false
     // 只有先开口的那只冒气泡（能说的时候），另一只回个表情：不会两个气泡叠在一起
     return walkTo(a, spot, (me) => {
       me.right = b.x > me.x
@@ -785,7 +837,7 @@ function createLife({
     const [ex, ey] = from ? [from.x, from.y] : pick(SCENE.entries)
     walk.put(a, ex, ey)
     if (!foodId) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
-    const spot = nearFire(a) || { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'idle' }
+    const spot = nearFire(a) || frontOfPot(a, 'idle')
     const then = (b) => {
       facePot(b)
       if (foodId) bubbles.event(b, sniffLine(b.id, foodId, random), SNIFF_MS)
@@ -1012,9 +1064,9 @@ function createLife({
 
     // 打卡成功：全员跑到篝火边蹦一蹦
     celebrate() {
-      animals.forEach((a) => {
-        if (a.hidden || a.holdGift) return
-        const [sx, sy] = SCENE.seats[a.index % SCENE.seats.length]
+      const party = animals.filter((a) => !a.hidden && !a.holdGift)
+      party.forEach((a) => {
+        const [sx, sy] = seatOf(a, party)
         a.goal = null
         if (!walkTo(a, { x: sx, y: sy, action: 'jump' }, (b) => doFor(b, 'jump', JUMP_MS, '🎉'))) doFor(a, 'jump', JUMP_MS, '🎉')
       })
@@ -1027,7 +1079,7 @@ function createLife({
       if (leaveTentThen(a, () => api.gift(i))) return true
       a.holdGift = true
       a.goal = null
-      const spot = { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'gift' }
+      const spot = frontOfPot(a, 'gift')
       a.goal = { spot, then: (b) => { b.action = 'gift'; b.emoji = '🎁'; emit(b) }, path: walk.route({ x: a.x, y: a.y }, spot) || [spot] }
       stepAlongGift(a)
       return true

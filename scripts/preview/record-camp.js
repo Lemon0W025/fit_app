@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night tent-sleep tent-sleep-night talk-phone hungry-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night big-play tent-sleep tent-sleep-night talk-phone hungry-phone arrive-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
 //   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
@@ -100,7 +100,7 @@ const SCENARIOS = {
   'tent-night': {
     hour: 22, potLevel: 1, focus: [1050, 1300], scale: 1.8, seconds: 10,
     pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan'],
-    plan: [[0, 0, 1700, 1750], [0, 1, 800, 1850], [0, 2, 1650, 1450], [500, 0, 1210, 1460], [500, 1, 1000, 1530], [500, 2, 1420, 1400]],
+    plan: [[0, 0, 1700, 1750], [0, 1, 800, 1850], [0, 2, 1650, 1450], [500, 0, 1210, 1470], [500, 1, 960, 1550], [500, 2, 1460, 1420]],
   },
   'overview-day': { hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
   // 锅是空的（今天还没打卡）：火不烧，盖着熄了火的那块；宠物走过火堆前后、夜里火边也只有月光
@@ -145,8 +145,8 @@ const SCENARIOS = {
   },
   // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
   'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
-  // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
-  'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
+  // 傍晚：大家围着锅坐（马蹄形坐点，几只就分几个点），整张画叠一层橙。镜头拉远到看得全那一圈（坐点离锅 860 × 540）
+  'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 3000], scale: 0.85, seconds: 40, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
   // 下锅：锅里煮着小米、胡萝卜，豆豆（爱吃小米）跑来吃；闻着胡萝卜来的糯糯（客人）从树林边走到锅边
   'pot-cook': {
     phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 12,
@@ -175,6 +175,14 @@ const SCENARIOS = {
     pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao'],
     plan: [[0, 0, 2300, 3700], [0, 1, 2700, 3800], [0, 2, 1900, 3800], [0, 3, 3500, 3800], [0, 4, 1300, 3900], [0, 5, 2900, 3300]],
     events: [[300, (life) => life.callTo('p0')], [800, (life) => life.callTo('p1')], [1200, (life) => life.callTo('p2')], [1600, (life) => life.callTo('p2')], [2000, (life) => life.callTo('p3')], [2400, (life) => life.callTo('p4')]],
+  },
+  // 大个子和家具（11/11 小动物放大到 1.6 倍以后核对）：笋宝（最大的一档）荡秋千，茶茶和糯糯在水壶炉两边对坐喝茶——
+  // 身子别把水壶盖住、坐在秋千上还在两根绳子中间
+  'big-play': {
+    hour: 10, potLevel: 2, focus: [2150, 3450], scale: 1.3, seconds: 14, decor: layout([['kettle', 2650, 3550], ['swing', 1750, 3450]], 't'),
+    pets: ['sunbao', 'chacha', 'nuonuo'],
+    plan: [[0, 0, 1750, 3850], [0, 1, 2350, 3850], [0, 2, 3000, 3850]],
+    events: [[300, (life) => life.callTo('t1')], [700, (life) => life.callTo('t0')], [1100, (life) => life.callTo('t0')]],
   },
   // 进帐篷睡（11/07）：糯糯、豆豆趴在帐篷里（两个床位，身子在布帘后面、头露在门洞里；白天同时睡的最多四分之一，所以放 8 只）；糯糯 12 秒后睡够了出来站在门口再走开；杞杞在门口溜达
   'tent-sleep': {
