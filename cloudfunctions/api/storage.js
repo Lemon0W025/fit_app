@@ -18,7 +18,20 @@ function createStorage(cloud, config) {
     await cloud.deleteFile({ fileList: [fileID] })
   }
 
-  return { getImageUrl, deleteFile }
+  // 亲友看板：别人的打卡照片要换成临时链接才看得到（一次最多换 50 个）。返回 { fileID: 链接 }，换不到的没有
+  async function getPhotoUrls(fileIDs) {
+    const out = {}
+    const ids = [...new Set((fileIDs || []).filter(Boolean))]
+    for (let i = 0; i < ids.length; i += 50) {
+      const res = await cloud.getTempFileURL({ fileList: ids.slice(i, i + 50) })
+      ;(res.fileList || []).forEach((f) => {
+        if (f && f.fileID && f.tempFileURL) out[f.fileID] = f.tempFileURL
+      })
+    }
+    return out
+  }
+
+  return { getImageUrl, deleteFile, getPhotoUrls }
 }
 
 module.exports = { createStorage }

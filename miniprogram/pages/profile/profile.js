@@ -1,6 +1,7 @@
 const api = require('../../utils/api')
 const { calcDailyKcal, ACTIVITY_LABELS } = require('../../utils/shared/nutrition')
 const { MAIN_MEALS, MEAL_WORDS, DEFAULT_MEAL_TIMES, timeOptions, mealTimesOf } = require('../../utils/shared/timing')
+const { mineView, shareCard } = require('../../utils/family')
 
 const FIELDS = ['nickname', 'sex', 'age', 'heightCm', 'weightKg', 'targetWeightKg', 'activity', 'avoid']
 const NUMBER_FIELDS = ['age', 'heightCm', 'weightKg', 'targetWeightKg']
@@ -62,6 +63,8 @@ Page({
     activityOptions: Object.keys(ACTIVITY_LABELS).map((value) => ({ value, label: ACTIVITY_LABELS[value] })),
     mealRows: mealRows(EMPTY_FORM),
     canReset: false,
+    // 亲友看板：我的邀请码、谁在看我的打卡、我关注了几位（utils/family.js 的 mineView）
+    family: null,
   },
 
   // 测试期间才有「从头再来」
@@ -72,6 +75,7 @@ Page({
   },
 
   onShow() {
+    this.loadFamily()
     // 正在编辑还没保存时，切回来不覆盖用户填的内容
     if (this.dirty) return
     api.call('profile.get')
@@ -119,6 +123,44 @@ Page({
 
   goManual() {
     wx.navigateTo({ url: '/pages/manual/manual' })
+  },
+
+  // ---- 亲友看板（pages/family）：邀请亲友看我的打卡、谁在看、我关注的亲友 ----
+  loadFamily() {
+    return api.call('family.mine')
+      .then((res) => this.setData({ family: mineView(res) }))
+      .catch(() => {})
+  },
+
+  // 「邀请亲友看我的打卡」按钮分享出去的卡片带着我的邀请码；右上角菜单里的转发只是普通分享，不带
+  onShareAppMessage(res) {
+    const code = this.data.family && this.data.family.code
+    if (res && res.from === 'button' && code) return shareCard(code)
+    return { title: '小暖自律打卡：每顿拍一张，准时吃饭', path: '/pages/today/today' }
+  },
+
+  // 移除一位亲友：先问一句；移除后以前发出去的邀请也作废
+  removeViewer(e) {
+    const { viewer, name } = e.currentTarget.dataset
+    wx.showModal({
+      title: `不让${name}看了？`,
+      content: 'TA 就看不到你的打卡了。以前发出去的邀请也会作废，想再让 TA 看要重新邀请。',
+      confirmText: '移除',
+      confirmColor: '#d4543c',
+      success: (res) => {
+        if (!res.confirm) return
+        api.call('family.remove', { viewer })
+          .then((mine) => {
+            this.setData({ family: mineView(mine) })
+            wx.showToast({ title: '移除了', icon: 'success' })
+          })
+          .catch((err) => api.showError(err))
+      },
+    })
+  },
+
+  goFamily() {
+    wx.navigateTo({ url: '/pages/family/family' })
   },
 
   // 从头再来（测试用）：先问一句，清空云端自己的数据，再清掉手机上存的（新手三步、导览看过没有、小动物在哪），

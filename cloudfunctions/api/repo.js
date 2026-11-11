@@ -10,6 +10,9 @@ const REMINDERS_LIMIT = 100
 const USER_COLLECTIONS = ['users', 'meals', 'summaries', 'weights', 'gardens', 'portions', 'reminders']
 // 大家共用的设置（一键开通的微信提醒模板……），一个 key 一个文档；不属于哪个人，从头再来也不删
 const SETTINGS = 'settings'
+// 亲友看板：一次最多读多少条关注关系（一个人最多 20 位亲友；定时触发器一次看的是所有开了提醒的）
+const FOLLOWS_LIMIT = 100
+const FOLLOW_ALERTS_LIMIT = 1000
 
 function isMissingCollection(e) {
   const msg = String((e && (e.errMsg || e.message)) || '')
@@ -140,6 +143,10 @@ function createRepo(db) {
         await withCollection(name, (c) => c.where({ _openid: openid }).remove())
         await withCollection(name, (c) => c.where({ _id: openid }).remove())
       }
+      // 亲友看板：我发出去的邀请码，和我有关的关注关系（看我的、我看的）
+      await withCollection('invites', (c) => c.where({ owner: openid }).remove())
+      await withCollection('follows', (c) => c.where({ owner: openid }).remove())
+      await withCollection('follows', (c) => c.where({ viewer: openid }).remove())
       return { fileIDs }
     },
 
@@ -150,6 +157,56 @@ function createRepo(db) {
       const res = await withCollection('weights', (c) =>
         c.where({ _openid: openid }).orderBy('date', 'desc').limit(limit).get())
       return res.data.reverse().map((w) => ({ date: w.date, weightKg: w.weightKg }))
+    },
+
+    // ---- 亲友看板（services/family.js）----
+    // 邀请码：_id 就是邀请码，{ owner, createdAt, expiresAt }
+    getInvite(code) {
+      return findOne('invites', { _id: code })
+    },
+    async listInvites(owner) {
+      const res = await withCollection('invites', (c) => c.where({ owner }).limit(FOLLOWS_LIMIT).get())
+      return res.data
+    },
+    async saveInvite(code, doc) {
+      await setDoc('invites', code, doc)
+    },
+    async removeInvite(code) {
+      await withCollection('invites', (c) => c.where({ _id: code }).remove())
+    },
+    async removeInvites(owner) {
+      await withCollection('invites', (c) => c.where({ owner }).remove())
+    },
+
+    // 关注关系：_id = 看的人_被看的人，{ viewer, owner, name, notify, sent, createdAt }
+    getFollow(viewer, owner) {
+      return findOne('follows', { _id: `${viewer}_${owner}` })
+    },
+    async saveFollow(viewer, owner, doc) {
+      await setDoc('follows', `${viewer}_${owner}`, { ...doc, viewer, owner })
+    },
+    async removeFollow(viewer, owner) {
+      await withCollection('follows', (c) => c.where({ _id: `${viewer}_${owner}` }).remove())
+    },
+    // 我在看谁
+    async listFollowing(viewer) {
+      const res = await withCollection('follows', (c) => c.where({ viewer }).limit(FOLLOWS_LIMIT).get())
+      return res.data
+    },
+    // 谁在看我
+    async listFollowers(owner) {
+      const res = await withCollection('follows', (c) => c.where({ owner }).limit(FOLLOWS_LIMIT).get())
+      return res.data
+    },
+    // 开了「TA 过了饭点没拍，提醒我」的（定时触发器挨个看）
+    async listFollowsToNotify() {
+      const res = await withCollection('follows', (c) => c.where({ notify: true }).limit(FOLLOW_ALERTS_LIMIT).get())
+      return res.data
+    },
+
+    // 亲友的赞记在打卡上：[{ openid, name, at }]，整个数组替换
+    async setMealLikes(id, likes) {
+      await withCollection('meals', (c) => c.doc(id).update({ data: { likes: _.set(likes) } }))
     },
   }
 }

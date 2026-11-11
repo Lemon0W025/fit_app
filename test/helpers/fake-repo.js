@@ -14,6 +14,8 @@ function createFakeRepo() {
     portions: new Map(),
     reminders: new Map(),
     settings: new Map(),
+    invites: new Map(),
+    follows: new Map(),
     seq: 0,
   }
 
@@ -109,6 +111,12 @@ function createFakeRepo() {
           if (k.startsWith(`${openid}_`)) map.delete(k)
         })
       })
+      ;[...state.invites.entries()].forEach(([k, d]) => {
+        if (d.owner === openid) state.invites.delete(k)
+      })
+      ;[...state.follows.entries()].forEach(([k, d]) => {
+        if (d.owner === openid || d.viewer === openid) state.follows.delete(k)
+      })
       return { fileIDs }
     },
 
@@ -121,6 +129,52 @@ function createFakeRepo() {
         .sort((a, b) => (a.date < b.date ? -1 : 1))
         .slice(-limit)
         .map((w) => ({ date: w.date, weightKg: w.weightKg }))
+    },
+
+    // 亲友看板
+    async getInvite(code) {
+      const doc = state.invites.get(code)
+      return doc ? { ...clone(doc), _id: code } : null
+    },
+    async listInvites(owner) {
+      return [...state.invites.entries()].filter(([, d]) => d.owner === owner).map(([id, d]) => ({ ...clone(d), _id: id }))
+    },
+    async saveInvite(code, doc) {
+      const { _id, ...rest } = doc
+      state.invites.set(code, clone(rest))
+    },
+    async removeInvite(code) {
+      state.invites.delete(code)
+    },
+    async removeInvites(owner) {
+      ;[...state.invites.entries()].forEach(([k, d]) => {
+        if (d.owner === owner) state.invites.delete(k)
+      })
+    },
+    async getFollow(viewer, owner) {
+      const id = `${viewer}_${owner}`
+      const doc = state.follows.get(id)
+      return doc ? { ...clone(doc), _id: id } : null
+    },
+    async saveFollow(viewer, owner, doc) {
+      const { _id, ...rest } = doc
+      state.follows.set(`${viewer}_${owner}`, { ...clone(rest), viewer, owner })
+    },
+    async removeFollow(viewer, owner) {
+      state.follows.delete(`${viewer}_${owner}`)
+    },
+    async listFollowing(viewer) {
+      return [...state.follows.entries()].filter(([, d]) => d.viewer === viewer).map(([id, d]) => ({ ...clone(d), _id: id }))
+    },
+    async listFollowers(owner) {
+      return [...state.follows.entries()].filter(([, d]) => d.owner === owner).map(([id, d]) => ({ ...clone(d), _id: id }))
+    },
+    async listFollowsToNotify() {
+      return [...state.follows.entries()].filter(([, d]) => d.notify === true).map(([id, d]) => ({ ...clone(d), _id: id }))
+    },
+    async setMealLikes(id, likes) {
+      const meal = state.meals.find((m) => m._id === id)
+      if (meal) meal.likes = clone(likes)
     },
   }
 }

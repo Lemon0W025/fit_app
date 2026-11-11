@@ -15,7 +15,8 @@ const TICK_STALE_MS = 25 * 60 * 1000 // 触发器每 10 分钟一次：25 分钟
 const VERSIONS = { develop: 'developer', trial: 'trial', release: 'formal' }
 
 // wxapi：cloud.openapi.subscribeMessage（一键开通时找模板、加模板用）
-function createRemindService({ repo, now, config, send = null, wxapi = null, log = () => {} }) {
+// alsoTick：定时检查时顺带做的事（亲友看板的「过了饭点没拍」），返回发出去几条
+function createRemindService({ repo, now, config, send = null, wxapi = null, log = () => {}, alsoTick = null }) {
   // 模板：config.remindTemplate 填了用它；没填用「一键开通」存在 settings 里的；都没有就只有日历闹钟
   async function template() {
     if (config && config.remindTemplate && config.remindTemplate.id) return config.remindTemplate
@@ -227,6 +228,14 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
             sent += await remindOne(doc, t)
           } catch (e) {
             log('remind tick failed', e)
+          }
+        }
+        // 亲友看板：谁过了饭点还没拍，告诉开了提醒的亲友（services/family.js 的 alertFollowers）。出错不影响上面的提醒
+        if (alsoTick) {
+          try {
+            sent += (await alsoTick()) || 0
+          } catch (e) {
+            log('remind tick extra failed', e)
           }
         }
       } catch (e) {

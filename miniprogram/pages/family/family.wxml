@@ -1,0 +1,71 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="empty">正在看亲友们今天吃得怎么样…</view>
+
+  <block wx:if="{{view}}">
+    <!-- 带着邀请码打开：先问一句称呼，点了才建立关系 -->
+    <view wx:if="{{view.invite && view.invite.join}}" class="card join fx-rise">
+      <view class="join-title">{{view.invite.title}}</view>
+      <view class="muted join-text">TA 每顿拍了什么、准不准时，你都能看到，还能给 TA 点个赞。</view>
+      <view class="join-label">怎么称呼你（TA 会看到是谁点的赞）</view>
+      <view class="join-input-wrap">
+        <input class="join-input" type="nickname" value="{{name}}" bindinput="onName" bindblur="onName" placeholder="不填就叫「亲友」" maxlength="12" />
+      </view>
+      <button class="btn-primary btn-big" bindtap="accept" loading="{{working}}" disabled="{{working}}">好，看看 TA 今天吃了什么</button>
+    </view>
+    <view wx:if="{{view.invite && !view.invite.join}}" class="card join-note fx-rise">{{view.invite.note}}</view>
+
+    <view wx:if="{{view.empty && !view.invite}}" class="card none fx-rise">
+      <view class="none-title">还没有关注的亲友</view>
+      <view class="muted">让亲友在「我的」里点「邀请亲友看我的打卡」，把卡片发给你，点开就能看到 TA 每天吃了什么。</view>
+    </view>
+
+    <!-- 每位亲友一张卡：今天的印章、连续几天、每一顿 -->
+    <view wx:for="{{view.people}}" wx:key="owner" wx:for-item="person" class="card person fx-rise">
+      <view class="person-head">
+        <text class="person-name">{{person.name}}</text>
+        <text wx:if="{{person.streakText}}" class="person-streak">{{person.streakText}}</text>
+      </view>
+      <view class="person-row">
+        <view class="stamps">
+          <view wx:for="{{person.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
+        </view>
+        <text class="person-week">⏰ {{person.weekText}}</text>
+      </view>
+
+      <view wx:if="{{person.emptyText}}" class="person-empty">{{person.emptyText}}</view>
+      <view wx:for="{{person.meals}}" wx:key="_id" class="fmeal">
+        <image wx:if="{{item.photoUrl}}" class="fmeal-photo" src="{{item.photoUrl}}" mode="aspectFill" lazy-load data-url="{{item.photoUrl}}" bindtap="previewPhoto" />
+        <view wx:else class="fmeal-photo fmeal-photo-text">✍️</view>
+        <view class="fmeal-body">
+          <view class="fmeal-head">
+            <text class="fmeal-label">{{item.label}}</text>
+            <text class="fmeal-time">{{item.timeText}}</text>
+            <text wx:if="{{item.onTime}}" class="fmeal-ontime">准时</text>
+            <text wx:if="{{item.ratingText}}" class="badge badge-{{item.ratingClass}}">{{item.ratingText}}</text>
+          </view>
+          <view class="fmeal-kcal">{{item.kcalText}}</view>
+          <view wx:if="{{item.commentText}}" class="fmeal-comment">{{item.commentText}}</view>
+          <view class="fmeal-foot">
+            <text class="fmeal-likes">{{item.likesText}}</text>
+            <view class="like {{item.liked ? 'like-on' : ''}}" hover-class="{{item.liked ? '' : 'chip-press'}}" hover-stay-time="100" data-owner="{{person.owner}}" data-id="{{item._id}}" bindtap="like">{{item.likeText}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 开通了微信提醒才有 -->
+      <view wx:if="{{view.wechat}}" class="notify">
+        <view class="notify-text">
+          <view class="notify-title">TA 过了饭点没拍，提醒我</view>
+          <view wx:if="{{person.notify}}" class="notify-sub">{{view.creditsText}}<text class="notify-add" bindtap="addCredit">多攒一次 ›</text></view>
+          <view wx:else class="notify-sub">过了饭点一小时还没拍，微信告诉你</view>
+        </view>
+        <switch-bar checked="{{person.notify}}" disabled="{{working}}" data-owner="{{person.owner}}" bindchange="toggleNotify" />
+      </view>
+      <view class="person-foot">
+        <text class="leave" data-owner="{{person.owner}}" data-name="{{person.name}}" bindtap="leave">不看了</text>
+      </view>
+    </view>
+
+    <button class="btn-plain mine-btn" bindtap="goToday">我也要打卡</button>
+  </block>
+</view>

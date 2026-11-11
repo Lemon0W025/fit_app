@@ -55,6 +55,9 @@
     <view wx:if="{{meal.note}}" class="note-line">我的备注：{{meal.note}}</view>
   </view>
 
+  <!-- 亲友看板：亲友给这顿点的赞 -->
+  <view wx:if="{{likesText}}" class="likes-line fx-rise fx-d2">{{likesText}}</view>
+
   <!-- 每道菜一行，点了弹抽屉拖滑杆改份量 -->
   <view wx:if="{{meal.dishes.length}}" class="card fx-rise fx-d3">
     <view class="card-title">吃了哪些</view>

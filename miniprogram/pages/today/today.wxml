@@ -66,6 +66,9 @@
       </view>
     </view>
 
+    <!-- 亲友看板：上次看过之后新来的赞，提示一次 -->
+    <view wx:if="{{likes.note}}" class="card likes-note fx-rise">{{likes.note}}</view>
+
     <view class="section-title">今天的打卡</view>
     <view wx:if="{{view.meals.length === 0}}" class="card empty">还没有打卡哦，吃饭前先拍一张给小暖看看～</view>
     <view wx:for="{{view.meals}}" wx:key="_id" class="card meal fx-rise" hover-class="fx-press" style="animation-delay: {{400 + index * 80}}ms" data-id="{{item._id}}" bindtap="openMeal">
@@ -79,6 +82,7 @@
         </view>
         <view class="meal-kcal {{item.ratingClass === 'failed' ? 'meal-kcal-failed' : ''}}">{{item.kcalText}}</view>
         <view class="meal-comment">{{item.commentText}}</view>
+        <view wx:if="{{likes.by[item._id]}}" class="meal-likes">{{likes.by[item._id]}}</view>
       </view>
     </view>
 

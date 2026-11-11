@@ -85,3 +85,54 @@
   color: var(--red, #d4543c);
 }
 
+
+/* 亲友看板：邀请亲友、谁在看我的打卡、我关注的亲友 */
+button.family-invite {
+  margin: 24rpx 0 0;
+}
+
+.family-list {
+  margin-top: 32rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid var(--line);
+}
+
+.family-list-title {
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.family-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+}
+
+.family-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 32rpx;
+}
+
+.family-remove {
+  flex-shrink: 0;
+  padding: 16rpx 0 16rpx 32rpx;
+  font-size: 30rpx;
+  color: var(--red);
+}
+
+.family-following {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.family-invite + .family-following,
+.family-list + .family-following {
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid var(--line);
+}
