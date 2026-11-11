@@ -7,7 +7,7 @@ const { PETS, petById } = require('../lib/shared/pets')
 const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
 const { dailyMenu } = require('../lib/menu')
 const { DECOR, GOLD_SWING, decorById, placeProblem } = require('../lib/shared/decor')
-const { levelOf, nextLevelAt, giftDue, HOME_LEVEL, POT_STAY_MS, RESIDENT_GOALS, STAR_BEANS, starsOf, nextStarAt, nextGoal } = require('../lib/shared/camp')
+const { levelOf, nextLevelAt, giftDue, homeNeed, POT_STAY_MS, RESIDENT_GOALS, STAR_BEANS, starsOf, nextStarAt, nextGoal } = require('../lib/shared/camp')
 const { sumMeals } = require('../lib/shared/nutrition')
 
 const HIGH_RARITIES = ['epic', 'legendary']
@@ -68,11 +68,14 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
   const isFull = (camp) => PETS.every((p) => metIds(camp).indexOf(p.id) !== -1)
   const giftReady = (camp) => giftDue(camp.gift, today(), hour()) && presentPets(camp).some((p) => levelOf(p.fed) >= GIFT_LEVEL)
 
-  // 亲密到了 HOME_LEVEL 的住下（锅空了也不走）；返回这次住下的 id
+  // 这只喂到几顿住下：按稀有度分档（shared/camp.js 的 HOME_FEEDS：普通 15、稀有 25、珍稀 40、传说 60）
+  const homeAt = (petId) => homeNeed((petById(petId) || {}).rarity)
+
+  // 喂够了的住下（锅空了也不走）；返回这次住下的 id
   function moveIn(camp) {
     const ids = []
     camp.pets = camp.pets.map((p) => {
-      if (p.home || levelOf(p.fed) < HOME_LEVEL) return p
+      if (p.home || p.fed < homeAt(p.id)) return p
       ids.push(p.id)
       return { ...p, home: true, until: 0 }
     })
@@ -87,7 +90,7 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
   const unique = (ids) => ids.filter((id, i) => ids.indexOf(id) === i)
   const homeCount = (camp) => camp.pets.filter((p) => p.home).length
 
-  // 后期目标：住下的（亲密到了 HOME_LEVEL、不走了的）到了 4 / 8 / 12 只、满级后又攒够一颗星，各奖一次暖豆（记在 bonus 里，goals / 每只的 stars 记着发过的）；
+  // 后期目标：住下的（喂够了、不走了的）到了 4 / 8 / 12 只、满级后又攒够一颗星，各奖一次暖豆（记在 bonus 里，goals / 每只的 stars 记着发过的）；
   // 发了的排进 cheers，等营地页拿去庆祝。有新发的返回 true
   function settleGoals(camp) {
     const cheers = []
@@ -138,7 +141,8 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       pot: { foods: potFoods(camp), until: potUntil(camp) },
       menu: dailyMenu(today()),
       // 在场的（住下的 + 还没到走的时候的常客）；met 是来过的（背包里的头像亮不亮）
-      pets: presentPets(camp).map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed), home: !!p.home, stars: starsOf(p.fed), nextStar: nextStarAt(p.fed) })),
+      // homeAt：喂到几顿住下（住下了的也带着，页面只对常客写「再喂 N 顿就住下」）
+      pets: presentPets(camp).map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed), home: !!p.home, homeAt: homeAt(p.id), stars: starsOf(p.fed), nextStar: nextStarAt(p.fed) })),
       met: metIds(camp),
       // 下一个住户里程碑（{ pets, beans }，按住下的只数算，都到了是 null）；cheers 只有营地页自己的请求才带（get + markSeen、下锅、喂）
       goal: nextGoal(homeCount(camp)),
@@ -251,7 +255,7 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
 
     // 下锅：第一样下锅就点火，一样管 8 小时（specs/2026-11-07-camp-regulars-design.md）。
     // 在场、爱吃它的这就过来吃（eaters，亲密 + feedGain）；闻着香味来的（comers）= 今日菜单里这样的（lib/menu.js）∪ 来过、爱吃它的，
-    // 去掉在场的：第一次来的加进 pets（常客）；在场的常客和来的都能待到锅到期。亲密到 5 级的住下（movedIn）
+    // 去掉在场的：第一次来的加进 pets（常客）；在场的常客和来的都能待到锅到期。喂够了的住下（movedIn，按稀有度 15 / 25 / 40 / 60 顿）
     async putFood(openid, input) {
       const foodId = (input || {}).foodId
       const camp = await load(openid)
@@ -283,7 +287,7 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       return view(camp, { cooked: { foodId, eaters, comers, movedIn }, cheers })
     },
 
-    // 直接喂一只在场的：爱吃 +3、不爱吃 +1、点心 +5，不限次；喂到 5 级就住下
+    // 直接喂一只在场的：爱吃 +3、不爱吃 +1、点心 +5，不限次；喂够了就住下
     async feed(openid, input) {
       const { petId, foodId } = input || {}
       const camp = await load(openid)
@@ -371,7 +375,7 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
         const level = levelOf(mine.fed)
         return {
           id: p.id, name: p.name, met: true, home: !!mine.home, here: present(mine), hook: p.hook, mood: p.mood, foods: p.foods.map((id) => foodById(id).name),
-          since: mine.since, fed: mine.fed, level, next: nextLevelAt(mine.fed), stars: starsOf(mine.fed), nextStar: nextStarAt(mine.fed),
+          since: mine.since, fed: mine.fed, level, next: nextLevelAt(mine.fed), homeAt: homeAt(p.id), stars: starsOf(mine.fed), nextStar: nextStarAt(mine.fed),
           story: p.story.map((text, i) => ({ text, open: i < level })),
         }
       })
@@ -387,7 +391,7 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       }
     },
 
-    // 正餐打卡后由 meal 服务调用：在场的全员 +1；这一顿喂到 5 级的住下（结果页横幅）
+    // 正餐打卡后由 meal 服务调用：在场的全员 +1；这一顿喂够了的住下（结果页横幅）
     async arrive(openid) {
       const camp = await load(openid)
       feedAll(camp)

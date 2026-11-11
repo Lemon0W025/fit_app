@@ -273,22 +273,22 @@ test('remove：删掉当天唯一的正餐后，这天不再算种了树', async
   assert.deepEqual(garden.beans.earned, {})
 })
 
-// 在场的常客笋宝 24 顿：这一顿正餐 +1 就 25 级、住下
-const almostCamp = () => ({ camp: 5, welcomed: true, pot: { items: [] }, pets: [{ id: 'sunbao', since: TODAY, fed: 24, fedToday: { date: '', n: 0 }, home: false, until: NOW.getTime() + 3600000 }] })
+// 在场的常客笋宝（珍稀，喂到 40 顿住下）39 顿：这一顿正餐 +1 就住下
+const almostCamp = () => ({ camp: 5, welcomed: true, pot: { items: [] }, pets: [{ id: 'sunbao', since: TODAY, fed: 39, fedToday: { date: '', n: 0 }, home: false, until: NOW.getTime() + 3600000 }] })
 
-test('analyze：正餐打卡后在场的小动物 +1，喂到 5 级的住下', async () => {
+test('analyze：正餐打卡后在场的小动物 +1，喂够了的住下', async () => {
   const { repo, service } = setup({ results: [analysisJson()], garden: almostCamp() })
   const meal = await service.analyze('u1', { mealType: 'lunch', note: '米饭青菜' })
   assert.deepEqual(meal.arrival, { pets: [{ id: 'sunbao', name: '笋宝' }] })
   assert.equal(repo.state.meals.find((m) => m._id === meal._id).arrival, undefined)
-  assert.deepEqual((await repo.getGarden('u1')).pets.map((p) => [p.id, p.fed, p.home]), [['sunbao', 25, true]])
+  assert.deepEqual((await repo.getGarden('u1')).pets.map((p) => [p.id, p.fed, p.home]), [['sunbao', 40, true]])
 })
 
 test('analyze：加餐不喂；AI 失败的正餐照样喂', async () => {
   const snack = setup({ results: [analysisJson()], garden: almostCamp() })
   const s = await snack.service.analyze('u1', { mealType: 'snack', note: '苹果' })
   assert.equal(s.arrival, null)
-  assert.equal((await snack.repo.getGarden('u1')).pets[0].fed, 24)
+  assert.equal((await snack.repo.getGarden('u1')).pets[0].fed, 39)
   const failed = setup({ results: [new Error('down'), new Error('down')], garden: almostCamp() })
   const m = await failed.service.analyze('u1', { mealType: 'dinner', note: '面条' })
   assert.equal(m.status, 'failed')
@@ -301,7 +301,7 @@ test('reanalyze 不喂', async () => {
   repo.state.gardens.set('u1', almostCamp())
   const again = await service.reanalyze('u1', { mealId: meal._id, note: '米饭半碗' })
   assert.equal(again.arrival, undefined)
-  assert.equal((await repo.getGarden('u1')).pets[0].fed, 24)
+  assert.equal((await repo.getGarden('u1')).pets[0].fed, 39)
 })
 test('analyze 正餐：这顿让连续打卡到 3 天，gain 带 milestone；重新分析不带', async () => {
   const { addDays } = require('../cloudfunctions/api/lib/shared/date')

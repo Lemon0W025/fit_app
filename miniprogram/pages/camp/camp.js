@@ -313,7 +313,7 @@ Page({
     this.later('cheerTimer', () => this.nextCheer(), CHEER_GAP_MS)
   },
 
-  // 喂到 5 级、住下了：提示一会儿，大家围着火蹦一蹦
+  // 喂够了、住下了：提示一会儿，大家围着火蹦一蹦
   movedIn(ids) {
     const text = V.homeNote(ids)
     if (!text) return
@@ -868,10 +868,13 @@ Page({
   // 住户列表：在哪、在干什么；满级后有星星的在名字后面带上
   openResidents() {
     const stars = {}
+    const stay = {}
     ;((this.camp && this.camp.pets) || []).forEach((p) => {
       stars[p.id] = p.stars ? V.starText(p.stars) : ''
+      stay[p.id] = V.stayText(p)
     })
-    const residents = this.life ? this.life.whereIs().map((w) => ({ ...w, stars: stars[w.id] || '' })) : []
+    // 常客：在干什么后面带一句「再喂 N 顿就住下」
+    const residents = this.life ? this.life.whereIs().map((w) => ({ ...w, stars: stars[w.id] || '', stay: stay[w.id] || '' })) : []
     this.setData({ residents, residentsOpen: true })
   },
 
