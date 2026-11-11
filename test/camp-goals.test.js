@@ -121,6 +121,31 @@ test('图册：封面写离下一个住户里程碑还差几只；满级的那�
   assert.ok(main)
 })
 
+test('还要喂几顿住下（按稀有度分档）：图册每只那页和「小动物」名单里都写；住下了的不写', async () => {
+  assert.equal(V.stayText({ fed: 4, homeAt: 15, home: false }), '再喂 11 顿就住下')
+  assert.equal(V.stayText({ fed: 15, homeAt: 15, home: false }), '再喂 1 顿就住下') // 够了、下一口才算
+  assert.deepEqual([V.stayText({ fed: 4, homeAt: 15, home: true }), V.stayText({ fed: 4, home: false }), V.stayText(null)], ['', '', ''])
+  // 常客（在场）：糯糯 4 顿（普通 15）、笋宝 30 顿（珍稀 40，已经 5 级还没住下）、鹤鹤 59 顿（传说 60）
+  const here = (id, fed) => ({ ...resident(id, fed), home: false, until: Date.now() + 3600000 })
+  const { camp, wx } = await open({ pot: { items: [] }, pets: [resident('doudou', 16), here('nuonuo', 4), here('sunbao', 30), here('hehe', 59)] })
+  const album = loadPage('album', wx)
+  album.onShow()
+  await settle()
+  const text = (id) => album.data.pages.find((p) => p.key === id).levelText
+  assert.equal(text('doudou'), '亲密 4 级，再喂 9 顿升级') // 住下了：只写升级
+  assert.equal(text('nuonuo'), '亲密 2 级，再喂 4 顿升级；再喂 11 顿就住下')
+  assert.equal(text('sunbao'), '亲密 5 级，再喂 10 顿就住下')
+  assert.equal(text('hehe'), '亲密 5 级，再喂 1 顿就住下')
+  assert.equal(text('qiqi'), '') // 没来过
+  camp.onShow()
+  await settle()
+  camp.openResidents()
+  assert.deepEqual(camp.data.residents.map((r) => [r.name, r.home, r.stay]), [
+    ['豆豆', true, ''], ['糯糯', false, '再喂 11 顿就住下'], ['笋宝', false, '再喂 10 顿就住下'], ['鹤鹤', false, '再喂 1 顿就住下'],
+  ])
+  camp.onUnload()
+})
+
 test('商店：买不起的按钮写「还差 N 暖豆」、点不了；买得起的写价钱', async () => {
   const groups = V.shopGroups({}, 50)
   const items = groups.reduce((all, g) => all.concat(g.items), [])

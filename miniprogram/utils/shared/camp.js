@@ -146,7 +146,15 @@ const SCENE = {
 
 // 亲密度：喂了几顿 → 几级（1～5）
 const LEVELS = [0, 3, 8, 15, 25]
-// 亲密到这一级就「住下」：锅空了也不走（docs/superpowers/specs/2026-11-07-camp-regulars-design.md）
+// 喂熟了就「住下」：锅空了也不走（docs/superpowers/specs/2026-11-07-camp-regulars-design.md）。
+// 住下要喂到几顿按稀有度分档（11/11：以前全是 5 级 = 25 顿，模拟下来第一只要等 9～13 天、40 多天就 12 只全住下了；
+// 分档以后常见的五六天就住下一只，传说级的要两个月）。等级表 LEVELS 不动：五级照旧解锁睡姿、小故事
+const HOME_FEEDS = { common: 15, rare: 25, epic: 40, legendary: 60 }
+// 这个稀有度的小动物喂到几顿住下（不认识的稀有度按稀有算）
+function homeNeed(rarity) {
+  return HOME_FEEDS[rarity] || HOME_FEEDS.rare
+}
+// 老档迁移用（camp 5 之前的住户：到了这一级的算住下，lib/camp-state.js）；新的住下看 homeNeed
 const HOME_LEVEL = 5
 // 锅里一样吃的管多久（一天三顿，24 ÷ 3 小时）：最后一样下锅过了这么久，锅就空了、火熄了，没住下的常客就走
 const POT_STAY_MS = 8 * 3600 * 1000
@@ -301,7 +309,7 @@ function giftDue(lastGift, today, hour) {
 
 module.exports = {
   arc,
-  W, H, SCENE, LEVELS, HOME_LEVEL, POT_STAY_MS,
+  W, H, SCENE, LEVELS, HOME_LEVEL, HOME_FEEDS, homeNeed, POT_STAY_MS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass, hiddenAt, nogoPolys,
   levelOf, nextLevelAt, giftDue, seatsFor,
   RESIDENT_GOALS, STAR_FEEDS, STAR_MAX, STAR_BEANS, starsOf, nextStarAt, nextGoal,

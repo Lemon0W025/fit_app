@@ -193,7 +193,7 @@ function tintFor(hour) {
   return ''
 }
 
-// 打卡结果页的横幅：这一顿喂到 5 级、住下的（图用第一只）
+// 打卡结果页的横幅：这一顿喂够了、住下的（图用第一只）
 function arrivalCard(arrival) {
   const pets = (arrival && arrival.pets) || []
   if (!pets.length) return null
@@ -252,6 +252,13 @@ function potNote(pot, nowMs = Date.now()) {
 function starText(stars) {
   const n = Math.max(0, Math.min(STAR_MAX, stars || 0))
   return '★'.repeat(n) + '☆'.repeat(STAR_MAX - n)
+}
+
+// 常客还要喂几顿就住下：「再喂 6 顿就住下」。pet 是云函数给的（fed 喂了几顿、homeAt 喂到几顿住下，按稀有度分档）；
+// 住下了的、云函数还是老版本没给 homeAt 的不写；喂够了还没来得及住下的（下一口才算）写 1 顿
+function stayText(pet) {
+  if (!pet || pet.home || !(pet.homeAt > 0)) return ''
+  return `再喂 ${Math.max(1, pet.homeAt - (pet.fed || 0))} 顿就住下`
 }
 
 // 图册封面下面那行：离下一个里程碑还差几只住下（goal 是 camp.album 给的，都到了是 null；home 是已经住下的只数）
@@ -366,5 +373,5 @@ module.exports = {
   Z_DECOR, campLayout, toScreen, fromTouch, baseTiles, frameTiles, decorViews, ghostView, zOf,
   petImage, petFace, foodImage, decorImage, rarityOf, foodBag, decorBag, shopGroups, tintFor, arrivalCard, focusOffset, homeView, potLevel, onPot, potHitView, potNote, homeNote, cutoutViews, isNight,
   frontAt, cutoutStrips, backdropImage, LIT_BACKDROP, litTiles, changedPaths, callLabel, DECOR_PARTS, SWAY_CLASS, hungryNote,
-  starText, goalText, cheerCard,
+  starText, goalText, cheerCard, stayText,
 }

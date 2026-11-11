@@ -175,12 +175,12 @@
           <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
           <view class="res-body">
             <view class="res-name">{{item.name}}<text class="res-tag {{item.home ? 'res-tag-home' : ''}}">{{item.home ? '住下了' : '常客'}}</text><text wx:if="{{item.stars}}" class="res-stars">{{item.stars}}</text></view>
-            <view class="res-text">{{item.text}}</view>
+            <view class="res-text">{{item.text}}{{item.stay ? ' · ' + item.stay : ''}}</view>
           </view>
           <text class="res-go">去看看 ›</text>
         </view>
       </view>
-      <view wx:else class="muted small">这会儿没有小动物在。把它们爱吃的放进锅里煮上，闻着香味就来了；喂到最亲（5 级）就住下，锅空了也不走～</view>
+      <view wx:else class="muted small">这会儿没有小动物在。把它们爱吃的放进锅里煮上，闻着香味就来了；喂熟了就住下，锅空了也不走～</view>
     </sheet>
   </block>
 

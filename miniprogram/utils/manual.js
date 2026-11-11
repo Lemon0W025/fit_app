@@ -2,6 +2,7 @@
 const { BEANS } = require('./shared/forest')
 const { SPIN_COST, WELCOME_BEANS } = require('./shared/garden')
 const { PETS } = require('./shared/pets')
+const { HOME_FEEDS } = require('./shared/camp')
 const { MAIN_MEALS, MEAL_WORDS, windowText, mealTimesOf } = require('./shared/timing')
 const { MILESTONES, PATCH } = require('./shared/streak')
 
@@ -71,7 +72,7 @@ function manualSections(times) {
         `「扭蛋」：${SPIN_COST} 暖豆抽一样好吃的，放进背包。`,
         '点营地中间的锅，选一样放进去，火就点起来了。一天最多煮三样。',
         `锅里的香味会引来爱吃它的小动物（一共 ${PETS.length} 只），锅里有吃的它就待着：一样吃的管 8 小时，锅空了没住下的就回去，再煮它爱吃的又来。`,
-        '每来一次、每喂一次都更亲；拍正餐时在营地的小动物也算喂了一顿。亲密到 5 级就住下，锅空了也不走。小鸡豆豆一直陪着你。',
+        `每来一次、每喂一次都更亲；拍正餐时在营地的小动物也算喂了一顿。喂熟了就住下，锅空了也不走：常见的喂 ${HOME_FEEDS.common} 顿，越稀有的要喂越久（稀有 ${HOME_FEEDS.rare} 顿、珍稀 ${HOME_FEEDS.epic} 顿、传说 ${HOME_FEEDS.legendary} 顿），「图册」里写着每只还差几顿。小鸡豆豆一直陪着你。`,
         '每次拍正餐都算喂它们一顿，越喂越亲：会换睡姿、做小动作，「图册」里能看它们的小故事。',
         '点小动物它会跟你说话；早上有时会叼着礼物来，点它收下。',
         '「商店」里用暖豆买秋千、花、小灯笼，拖到草地上摆好，小动物会去玩。',
