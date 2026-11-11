@@ -13,19 +13,19 @@
 .beans-num {
   font-size: 52rpx;
   font-weight: 700;
-  color: #d97a1e;
+  color: var(--orange);
   margin-left: 8rpx;
 }
 
 .beans-unit {
   font-size: 28rpx;
-  color: #b8763a;
+  color: var(--orange);
   margin-left: 8rpx;
 }
 
 .term {
   font-size: 26rpx;
-  color: #b8763a;
+  color: var(--orange);
   background: #fff4e0;
   border-radius: 16rpx;
   padding: 12rpx 20rpx;

@@ -59,7 +59,7 @@ page {
   margin-bottom: 10rpx;
   padding: 10rpx 20rpx;
   font-size: 26rpx;
-  color: #b8763a;
+  color: var(--orange);
   background: rgba(255, 244, 224, 0.95);
   border-radius: 16rpx;
 }
@@ -243,7 +243,7 @@ button.btn-small {
   right: 10rpx;
   font-size: 24rpx;
   font-weight: 700;
-  color: #d97a1e;
+  color: var(--orange);
 }
 
 .overlay {
@@ -458,7 +458,7 @@ button.btn-small {
 .hud-today-text {
   font-size: 26rpx;
   font-weight: 700;
-  color: #b8763a;
+  color: var(--orange);
 }
 
 .stamps-mini {
