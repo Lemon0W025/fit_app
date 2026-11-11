@@ -50,6 +50,19 @@ test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', 
   C.SCENE.seats.forEach(([x, y]) => assert.ok(y > C.SCENE.fire[1] - 120 || Math.abs(x - C.SCENE.fire[0]) > 320, `seat ${x},${y}`))
   // 坐点、树荫、帐篷门口、晒太阳点都是能站的草地
   C.SCENE.seats.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `seat ${x},${y}`))
+  // 几只就几个坐点：6 只以内一圈，多了两圈（里圈不超过 6 个）；都是能站、看得见的草地，没人在锅正后面；
+  // 挨着的两个点隔得开（竖着的距离按 1.5 倍算：上下挨着的，前面那只会挡住后面那只）
+  assert.deepEqual(C.SCENE.seats, C.seatsFor(12))
+  assert.deepEqual(C.seatsFor(1), [[C.SCENE.fire[0], C.SCENE.fire[1] + 540]])
+  for (let n = 1; n <= 12; n++) {
+    const seats = C.seatsFor(n)
+    assert.equal(seats.length, n)
+    seats.forEach(([x, y]) => {
+      assert.ok(C.inGrass(x, y) && !C.hiddenAt(x, y), `${n} 只：${x},${y}`)
+      assert.ok(y > C.SCENE.fire[1] - 120 || Math.abs(x - C.SCENE.fire[0]) > 320, `${n} 只：${x},${y}`)
+    })
+    seats.forEach((p, i) => seats.slice(i + 1).forEach((q) => assert.ok(Math.hypot(p[0] - q[0], (p[1] - q[1]) * 1.5) > 480, `${n} 只：${p} 和 ${q} 太近`)))
+  }
   C.SCENE.shade.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `shade ${x},${y}`))
   C.SCENE.entries.forEach(([x, y]) => assert.ok(C.inGrass(x, y), `entry ${x},${y}`))
   C.SCENE.tent.spots.concat(C.SCENE.sun).forEach(([x, y]) => assert.ok(C.inGrass(x, y), `spot ${x},${y}`))

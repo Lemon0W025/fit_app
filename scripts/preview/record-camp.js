@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night slide talk-phone hungry-phone dusk-all-phone celebrate-phone feast-phone bag-phone residents-phone（不写全录）
 //   potLevel：锅里煮着几样（种进今天的锅里，火点没点、夜里的光都跟着它）；visitors：客人；events：[毫秒, (life) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
 //   输出到 .preview/camp/<场景>.mp4、.gif，开头一帧存成 <场景>.png（.preview 不进仓库）
@@ -66,6 +66,7 @@ const DECOR_2 = layout([['hammock', 3350, 2300], ['lights', 2850, 2200], ['cloth
   ['ladder', 3850, 3700], ['mailbox', 3050, 3750], ['kettle', 2600, 3550], ['fence', 2350, 3950], ['pumpkins', 2000, 3700], ['sunflower', 1650, 3800],
   ['stonelamp', 1250, 3850], ['table', 1500, 3300], ['slide', 850, 3450], ['swing', 1050, 2750], ['scarecrow', 600, 3050], ['bunting', 1600, 2400]], 'e')
 const PETS_2 = ['huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
+const ALL_PETS = require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id)
 // 夜里的灯：两盏小灯笼、一个石灯笼、一串灯，宠物有的站在灯边、有的站得远
 const LAMPS = layout([['lantern', 1500, 3300], ['lantern', 3300, 3500], ['stonelamp', 2700, 3700], ['lights', 3200, 2300]], 'l')
 const POT_FOODS = ['xiaomi', 'huluobo', 'kaohongshu']
@@ -142,7 +143,7 @@ const SCENARIOS = {
     plan: [[0, 0, 2250, 3450], [0, 1, 2250, 3700], [3500, 0, 3150, 3450], [3500, 1, 3150, 3700], [7000, 0, 2300, 3460], [7000, 1, 2300, 3710]],
   },
   // 测试期间 12 只全放出来（config.testPets）：手机上一进来的样子
-  'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [] },
+  'all-pets-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, pets: ALL_PETS, plan: [] },
   // 傍晚：大家围着锅坐（马蹄形坐点），整张画叠一层橙
   'overview-dusk': { hour: 18, potLevel: 3, focus: [SCENE.fire[0], 2900], scale: 1.39, seconds: 8, pets: ['qiqi', 'shushu', 'nuonuo', 'huahua', 'doudou', 'jutuan', 'lianlian', 'guigui'], plan: [] },
   // 下锅：锅里煮着小米、胡萝卜，豆豆（爱吃小米）跑来吃；闻着胡萝卜来的糯糯（客人）从树林边走到锅边
@@ -195,8 +196,12 @@ const SCENARIOS = {
     plan: [],
     events: [[500, (life) => life.tap(0)], [10000, (life) => life.tap(1)], [12000, (life) => life.tap(1)], [14000, (life) => life.tap(2)], [22000, (life) => life.tap(0)]],
   },
-  // 锅里空着（10/28）：不够亲的出去找吃的了，留下来的在锅边喊饿；提示条说放点吃的就回来
-  'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
+  // 锅里空着：大家都留在营地，最亲的三只（糯糯、豆豆、橘团）多半在锅边坐着等开饭、偶尔说一句饿，别的照常玩；提示条说点锅放点吃的
+  'hungry-phone': { phone: true, hour: 10, potLevel: 0, focus: null, scale: null, seconds: 30, warm: 30000, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan'], plan: [] },
+  // 小动物放大以后挤不挤（手机上默认视角）：傍晚 11 只围着锅坐两圈；12 只打卡后围着锅蹦；一锅大家都爱吃的点心，全跑来吃
+  'dusk-all-phone': { phone: true, hour: 18, potLevel: 3, focus: null, scale: null, seconds: 6, warm: 90000, pets: ALL_PETS, plan: [] },
+  'celebrate-phone': { phone: true, hour: 8, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.celebrate()]] },
+  'feast-phone': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 16, pets: ALL_PETS, plan: [], events: [[300, (life) => life.cook(ALL_PETS)]] },
   // 白天随机打盹：8 只各玩各的，录 40 秒，有的趴下睡一会儿（同时最多 2 只）
   naps: { hour: 12, potLevel: 1, focus: [2250, 3000], scale: 0.85, seconds: 40, pets: ['doudou', 'nuonuo', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'lianlian', 'guigui'], plan: [] },
   // 背包抽屉：弹上来、切到装饰（胶囊滑过去）、连着快点、往下拉一点松手弹回、往下一甩关掉、再打开、点遮罩关
@@ -207,7 +212,7 @@ const SCENARIOS = {
   },
   // 住户抽屉（带标题）：12 只多了在抽屉里滚；内容滚着的时候往下拉不拖抽屉，滚回顶上再拉才拖
   'residents-phone': {
-    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 9, pets: require(`${REPO}/miniprogram/utils/shared/pets`).PETS.map((p) => p.id), plan: [],
+    phone: true, hour: 10, potLevel: 1, focus: null, scale: null, seconds: 9, pets: ALL_PETS, plan: [],
     sheet: 'residents',
     ui: [[400, 'open'], [1800, 'scroll', 260], [2600, 'drag-body', 120, 500], [4000, 'scroll', 0], [4800, 'drag-body', 70, 500], [6800, 'flick']],
   },
@@ -583,6 +588,8 @@ async function record(name, sc, browser) {
       if (w.action !== 'walk' && Math.hypot(w.x - x, w.y - y) >= 2) life.goTo(Number(i), x, y, 120000)
     })
   }
+  // warm：录之前先让它们自己过这么久（走到坐点、锅边等开饭的坐下），录的是过了这么久以后的样子
+  for (let t = 0; t < (sc.warm || 0); t += 500) camp.clock.advance(500)
   if (!arrivedAll()) console.log(name, '没全走到起点', JSON.stringify(camp.data.pets.map((p, i) => posOf(i)).map((w) => [w.id, w.x | 0, w.y | 0, w.action])))
   // 起点之后都设成 0 时长瞬间到位
   await page.evaluate(() => document.querySelectorAll('.pet,.shadow').forEach((e) => (e.style.transitionDuration = '0ms')))

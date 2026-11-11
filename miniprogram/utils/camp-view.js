@@ -239,14 +239,13 @@ function potNote(pot) {
   return names.length ? `锅里煮着：${names.join('、')}。爱吃的小动物会过来` : ''
 }
 
-// 顶上的提示条：闻着香味来的客人，下次拍正餐住下
-// 锅空着，不够亲的出去找吃的了：提示放点吃的它们就回来
-function hungryNote(names) {
-  if (!names || !names.length) return ''
-  const who = names.length > 3 ? `${names.slice(0, 3).join('、')}它们` : names.join('、')
-  return `🍲 锅里空空的，${who}找吃的去了，放点吃的就回来`
+// 顶上的提示条：锅空着（今天还没下锅）、有住户在等开饭
+function hungryNote(pot, pets) {
+  const empty = !((pot && pot.foods) || []).length
+  return empty && (pets || []).length ? '🍲 锅里空空的，大家等着开饭呢，点锅放点吃的' : ''
 }
 
+// 顶上的提示条：闻着香味来的客人，下次拍正餐住下
 function visitorNote(visitors) {
   const names = (visitors || []).map((v) => petById(v.id)).filter(Boolean).map((p) => p.name)
   return names.length ? `👀 ${names.join('、')}闻着香味来了…下次拍正餐就住下` : ''

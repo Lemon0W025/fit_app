@@ -176,18 +176,14 @@ const AFFECTION = {
   lazy: ['挨着我晒会儿嘛', '你来了…醒一下'],
 }
 
-// 锅里空着（今天还没下锅）：留下来的几只喊饿
+// 锅里空着（今天还没下锅）：在锅边等开饭的那几只偶尔说一句
 const HUNGRY = {
-  cheer: ['好饿啊，好饿啊！', '锅里空空的…', '什么时候开饭呀？', '肚子咕咕叫了！'],
-  shy: ['（小声）好饿…', '肚子…咕咕叫…', '锅里…没吃的…'],
-  calm: ['锅空着…等等吧', '有点饿了', '等一锅热乎的'],
-  proud: ['哼，本喵饿了', '快放点吃的嘛', '饿了…哼'],
-  lazy: ['喵…饿得不想动', '饿…先睡会儿', '有吃的叫我…'],
+  cheer: ['好饿啊，好饿啊！', '锅里空空的…', '什么时候开饭呀？', '肚子咕咕叫了！', '今天煮什么呀？'],
+  shy: ['（小声）好饿…', '肚子…咕咕叫…', '锅里…没吃的…', '今天…煮什么呢'],
+  calm: ['锅空着…等等吧', '有点饿了', '等一锅热乎的', '今天煮点什么好'],
+  proud: ['哼，本喵饿了', '快放点吃的嘛', '饿了…哼', '今天给本喵煮啥'],
+  lazy: ['喵…饿得不想动', '饿…先睡会儿', '有吃的叫我…', '喵…今天煮啥'],
 }
-
-// 饿了走开时说的、闻着香味回来时说的
-const LEAVE = { cheer: '我去找吃的啦！', shy: '我、我去找吃的…', calm: '我去找点吃的', proud: '哼，自己找吃的去', lazy: '喵…找吃的去…' }
-const BACK = { cheer: '闻到香味啦！', shy: '好、好香…', calm: '嗯，香味来了', proud: '哼，香味还行', lazy: '喵…香醒了' }
 
 // 闻着香味来的客人：{food} 闻着的那样
 const SNIFF = {
@@ -290,7 +286,7 @@ function potSpeech(tone, pot) {
 
 // 点它说的一段（两三句，同一个话题）。ctx = { period, action, level, today, pot, spot, hungry }；rnd 随机数；recent 最近说过的。
 // 话题的分量：碎碎念 3、今天打卡 3、爱吃的 2、养生 2、早中晚 1、锅里煮着的 1、撒娇 1（3 级起）、早上好 1（早上）；
-// 锅里空着（hungry）喊饿占一大半；在锅边吃着东西（不是野餐垫上）说吃的那句。说过的整段都重复了就换个话题，有时加一句收尾
+// 锅里空着、在锅边等开饭的（hungry）三四成说饿；在锅边吃着东西（不是野餐垫上）说吃的那句。说过的整段都重复了就换个话题，有时加一句收尾
 function speech(petId, ctx = {}, rnd = Math.random, recent = []) {
   const pet = petById(petId)
   if (!pet) return []
@@ -308,7 +304,7 @@ function speech(petId, ctx = {}, rnd = Math.random, recent = []) {
     { w: (ctx.pot || []).length ? 1 : 0, make: () => potSpeech(tone, ctx.pot) },
     { w: (ctx.level || 1) >= 3 ? 1 : 0, make: () => [fresh(AFFECTION[tone], rnd, seen), fresh(own, rnd, seen)] },
     { w: ctx.period === 'morning' ? 1 : 0, make: () => [pet.lines.morning, fresh(own, rnd, seen)] },
-    { w: ctx.hungry ? 14 : 0, make: () => two(HUNGRY[tone], rnd, seen) },
+    { w: ctx.hungry ? 6 : 0, make: () => two(HUNGRY[tone], rnd, seen) },
   ].filter((t) => t.w > 0)
   const total = topics.reduce((sum, t) => sum + t.w, 0)
   // 第一句最近没说过才用这个话题（不然换一个）；后面几句说过的去掉
@@ -365,10 +361,12 @@ function sniffLine(petId, foodId, rnd = Math.random) {
   return fill(pickFrom(SNIFF[toneOf(petId)], rnd), { food: food ? food.name : '好吃的' })
 }
 
-const leaveLine = (petId) => LEAVE[toneOf(petId)]
-const backLine = (petId) => BACK[toneOf(petId)]
+// 在锅边等开饭时自己说的一句（最近说过的不挑）
+function hungryLine(petId, rnd = Math.random, recent = []) {
+  return fresh(HUNGRY[toneOf(petId)], rnd, seenIn(recent))
+}
 
 module.exports = {
   MAX_CHARS, TONES, CHATTER, TODAY, HUNGRY, SHORT_TIPS, HEALTH_TALKS, PERIOD_TALKS, CLOSERS, VISIT,
-  speech, talkLine, visitorSpeech, sniffLine, leaveLine, backLine, todayLines, tipLines, todayOf, isMute,
+  speech, talkLine, visitorSpeech, sniffLine, hungryLine, todayLines, tipLines, todayOf, isMute,
 }
