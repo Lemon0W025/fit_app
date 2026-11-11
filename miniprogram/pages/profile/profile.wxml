@@ -8,7 +8,7 @@
     <view class="field">
       <view class="field-label">怎么称呼你</view>
       <view class="input-wrap">
-        <input class="field-input" value="{{form.nickname}}" data-field="nickname" bindinput="onInput" placeholder="比如：妈妈" maxlength="20" />
+        <input class="field-input" value="{{form.nickname}}" data-field="nickname" bindinput="onInput" placeholder="比如：阿芳" maxlength="20" />
       </view>
     </view>
 

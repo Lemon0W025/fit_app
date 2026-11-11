@@ -10,6 +10,7 @@ Page({
     first: false,
     view: null,
     working: false,
+    trouble: false, // 「收不到提醒？」展开没有
   },
 
   onLoad(options) {
@@ -154,6 +155,10 @@ Page({
       },
       fail: () => send(),
     })
+  },
+
+  toggleTrouble() {
+    this.setData({ trouble: !this.data.trouble })
   },
 
   editTimes() {

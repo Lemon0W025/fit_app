@@ -17,7 +17,8 @@ function guideCard(guide, hidden) {
   ]
   const left = steps.filter((s) => !s.done).length
   if (!left) return null
-  return { steps, title: `新手三步，还差 ${left} 步` }
+  // 卡片只占一行：做完几步、下一步是什么（点了去做）
+  return { steps, title: `新手三步，还差 ${left} 步`, done: steps.length - left, total: steps.length, next: steps.find((s) => !s.done) }
 }
 
 module.exports = { WELCOME_CARDS, guideCard }

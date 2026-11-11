@@ -5,16 +5,15 @@
     <view class="greeting fx-rise">{{greeting}}</view>
 
     <!-- 新手三步：做完了就不显示 -->
-    <view wx:if="{{guide}}" class="card guide fx-rise">
-      <view class="guide-head">
-        <text class="guide-title">{{guide.title}}</text>
-        <text class="guide-hide" bindtap="hideGuide">不用了</text>
+    <!-- 新手三步：只占一行，写下一步是什么 -->
+    <view wx:if="{{guide}}" class="card guide fx-rise" hover-class="fx-press" data-action="{{guide.next.action}}" bindtap="guideStep">
+      <view class="guide-mark">{{guide.done}}/{{guide.total}}</view>
+      <view class="guide-body">
+        <view class="guide-title">{{guide.title}}</view>
+        <view class="guide-label">下一步：{{guide.next.label}}</view>
       </view>
-      <view wx:for="{{guide.steps}}" wx:key="key" class="guide-step {{item.done ? 'guide-done' : ''}}" hover-class="{{item.done ? '' : 'fx-press'}}" data-action="{{item.action}}" bindtap="guideStep">
-        <view class="guide-mark">{{item.done ? '✓' : index + 1}}</view>
-        <text class="guide-label">{{item.label}}</text>
-        <text wx:if="{{!item.done}}" class="guide-go">去做 ›</text>
-      </view>
+      <text class="guide-go">去做 ›</text>
+      <text class="guide-hide" catchtap="hideGuide">不用了</text>
     </view>
 
     <view wx:if="{{card}}" class="fx-rise fx-d1">

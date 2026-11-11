@@ -1,7 +1,7 @@
 <view wx:if="{{loading}}" class="empty">加载中…</view>
 
 <view wx:if="{{view}}" class="page">
-  <view wx:if="{{first}}" class="intro fx-rise">最后一步：到了饭点提醒你拍照。家里人陪着一起设一下最好～</view>
+  <view wx:if="{{first}}" class="intro fx-rise">最后一步：到了饭点提醒你拍照，花半分钟设一下。</view>
 
   <view class="card fx-rise fx-d1">
     <view class="card-title">你的饭点</view>
@@ -32,12 +32,20 @@
     </view>
     <view wx:if="{{view.notify}}" class="credits">{{view.creditsText}}</view>
     <view wx:if="{{view.whenText}}" class="text when">{{view.whenText}}</view>
-    <block wx:if="{{view.notify}}">
-      <view wx:if="{{view.lastText}}" class="muted small remind-status">上次：{{view.lastText}}</view>
-      <view wx:if="{{view.tickText}}" class="{{view.tickBad ? 'warn' : 'muted small remind-status'}}">{{view.tickText}}</view>
-      <button class="btn-plain test-btn" bindtap="testSend" disabled="{{working}}">现在发一条试试</button>
-    </block>
     <view class="muted small help">微信规定：每点一次「允许」只能提醒一次。每次拍照打卡会顺手攒一次；第一次弹出来时勾上「总是保持以上选择，不再询问」再点「允许」，以后就不用管了。</view>
+    <!-- 排查用的信息平时收起来；提醒服务没在跑才直接写出来 -->
+    <block wx:if="{{view.notify}}">
+      <view wx:if="{{view.tickBad}}" class="warn">{{view.tickText}}</view>
+      <view class="link trouble-link" bindtap="toggleTrouble">{{trouble ? '收起 ‹' : '收不到提醒？ ›'}}</view>
+      <view wx:if="{{trouble}}" class="trouble">
+        <view class="small trouble-line">1. 上面写「次数用完了」的话，下次拍照打卡弹出来时点「允许」。</view>
+        <view class="small trouble-line">2. 这顿在饭点之前拍过了，就不会再提醒。</view>
+        <view class="small trouble-line">3. 提醒在微信聊天列表的「服务通知」里，不会弹窗。</view>
+        <view wx:if="{{view.lastText}}" class="muted small remind-status">上次：{{view.lastText}}</view>
+        <view wx:if="{{view.tickText && !view.tickBad}}" class="muted small remind-status">{{view.tickText}}</view>
+        <button class="btn-plain test-btn" bindtap="testSend" disabled="{{working}}">现在发一条试试</button>
+      </view>
+    </block>
   </view>
 
   <view class="card fx-rise fx-d3">

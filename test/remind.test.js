@@ -70,7 +70,7 @@ test('remind.get / subscribed / setNotify / calendarDone：没模板时没有微
     mealTimes: TIMES,
     nudgeAt: { breakfast: '7:30', lunch: '12:00', dinner: '18:00' },
     lastText: '',
-    tickText: '⚠️ 自动检查一次都还没跑过：到饭点不会自动提醒，只能手动试发。告诉家里人',
+    tickText: '提醒服务还没有运行过，到饭点可能收不到提醒',
     tickBad: true,
   })
   await assert.rejects(none.service.setNotify('u1', { on: true }), { code: 'BAD_REQUEST' })
@@ -162,7 +162,7 @@ test('提醒页看得出定时检查在不在跑、上次提醒发没发出去�
   assert.equal(view.lastText, '今天 12:40 午饭的提醒发出去了')
   clock.now = at('08:10', '2026-10-30')
   view = await service.get('u1')
-  assert.equal(view.tickText, '⚠️ 自动检查最后一次是 昨天 12:40，之后停了：到饭点不会自动提醒。告诉家里人')
+  assert.equal(view.tickText, '提醒服务从昨天 12:40起没有运行，到饭点可能收不到提醒')
   assert.equal(view.tickBad, true)
 
   const flaky = setup({ sendError: { errCode: 47003, message: 'argument invalid' } })
@@ -183,7 +183,7 @@ test('tick：一进来先记一笔；半路出错也记下错误，提醒页写�
   assert.equal(tick.trigger, 'remind')
   const view = await service.get('u1')
   assert.equal(view.tickBad, true)
-  assert.match(view.tickText, /今天 12:40 跑了，但出错了（database timeout）/)
+  assert.match(view.tickText, /今天 12:40运行出错（database timeout）/)
 })
 
 test('remind.test：现在发一条试试（按现在这顿，和真的提醒一样），用掉一次；没次数 / 发不出去说清楚', async () => {

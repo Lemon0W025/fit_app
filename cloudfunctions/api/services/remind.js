@@ -49,10 +49,10 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
 
   // 定时检查（触发器）在不在跑：没跑过 / 停了就标出来，免得以为开着提醒其实发不出去
   function tickState(tick) {
-    if (!tick || !tick.at) return { tickText: '⚠️ 自动检查一次都还没跑过：到饭点不会自动提醒，只能手动试发。告诉家里人', tickBad: true }
+    if (!tick || !tick.at) return { tickText: '提醒服务还没有运行过，到饭点可能收不到提醒', tickBad: true }
     const when = whenText(tick.at, now())
-    if (now().getTime() - tick.at > TICK_STALE_MS) return { tickText: `⚠️ 自动检查最后一次是 ${when}，之后停了：到饭点不会自动提醒。告诉家里人`, tickBad: true }
-    if (tick.stage === 'error') return { tickText: `⚠️ 自动检查 ${when} 跑了，但出错了（${tick.error || '不知道什么错'}）。截图给家里人`, tickBad: true }
+    if (now().getTime() - tick.at > TICK_STALE_MS) return { tickText: `提醒服务从${when}起没有运行，到饭点可能收不到提醒`, tickBad: true }
+    if (tick.stage === 'error') return { tickText: `提醒服务${when}运行出错（${tick.error || '原因不明'}），到饭点可能收不到提醒`, tickBad: true }
     return { tickText: `定时检查：${when} 看过一次（每 10 分钟一次）`, tickBad: false }
   }
 
@@ -129,7 +129,7 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
           log('remind setup failed', e && (e.errCode || e.code), e && e.message)
           const code = e && (e.errCode || e.code)
           const detail = e && e.detail ? ` · ${e.detail}` : ''
-          throw new AppError(CODES.BAD_REQUEST, code ? `微信提醒没开通成功（错误码 ${code}${detail}），把这句截图发给家里人` : (e && e.message) || '微信提醒没开通成功')
+          throw new AppError(CODES.BAD_REQUEST, code ? `微信提醒没开通成功（错误码 ${code}${detail}），可以截图反馈给我们` : (e && e.message) || '微信提醒没开通成功')
         }
         await repo.saveSetting(SETTING, { id: found.id, title: found.title, fields: found.fields, state: 'trial', at: now().getTime() })
       }
@@ -158,7 +158,7 @@ function createRemindService({ repo, now, config, send = null, wxapi = null, log
       const { next, ok, code, refused } = await sendOne(openid, doc, t, mealNow(times, at), times, at, true)
       await save(openid, next)
       if (!ok) {
-        throw new AppError(CODES.BAD_REQUEST, refused ? '微信说「允许」次数用完了：弹出来时点「允许」再试' : `没发出去（错误码 ${code || '未知'}），把这句截图发给家里人`)
+        throw new AppError(CODES.BAD_REQUEST, refused ? '微信说「允许」次数用完了：弹出来时点「允许」再试' : `没发出去（错误码 ${code || '未知'}），可以截图反馈给我们`)
       }
       return viewOf(openid, next, profile)
     },
