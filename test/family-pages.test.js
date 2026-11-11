@@ -98,7 +98,7 @@ test('boardView：每位亲友一张卡（印章、连续几天、最近 7 天�
   assert.equal(view.creditsText, '还能提醒 2 次')
   assert.equal(view.invite, null)
   const p = view.people[0]
-  assert.equal(p.streakText, '🔥 已连续 5 天')
+  assert.equal(p.streakText, '已连续 5 天')
   assert.equal(p.weekText, '最近 7 天准时 9 顿')
   assert.equal(p.emptyText, '')
   assert.deepEqual(p.stamps.map((s) => s.cls), ['stamp-none', 'stamp-green stamp-on', 'stamp-none'])
@@ -109,8 +109,8 @@ test('boardView：每位亲友一张卡（印章、连续几天、最近 7 天�
   assert.deepEqual([lunch.ratingText, lunch.ratingClass, lunch.kcalText, lunch.photoUrl], [same.ratingText, same.ratingClass, same.kcalText, 'https://tmp/a.jpg'])
   assert.equal(lunch.commentText.length, 44)
   assert.ok(lunch.commentText.endsWith('…'))
-  assert.deepEqual([lunch.liked, lunch.likeText, lunch.likesText], [true, '❤ 赞过了', '红红、老王 赞了'])
-  assert.deepEqual([dinner.kcalText, dinner.commentText, dinner.ratingText, dinner.likeText, dinner.likesText], ['小暖还没算出来', '', '', '🤍 赞一个', ''])
+  assert.deepEqual([lunch.liked, lunch.likeText, lunch.likesText], [true, '赞过了', '红红、老王 赞了'])
+  assert.deepEqual([dinner.kcalText, dinner.commentText, dinner.ratingText, dinner.likeText, dinner.likesText], ['小暖还没算出来', '', '', '赞一个', ''])
 
   // 空的、没开通微信提醒、次数用完
   const empty = V.boardView({ templateId: '', credits: 0, people: [], invite: null })
@@ -147,7 +147,7 @@ test('亲友页：带着邀请码打开先问称呼，点了才能看；看到�
   assert.equal(page.data.view.people.length, 1)
   const person = page.data.view.people[0]
   assert.equal(person.name, '小明')
-  assert.equal(person.streakText, '🔥 已连续 1 天')
+  assert.equal(person.streakText, '已连续 1 天')
   assert.equal(person.weekText, '最近 7 天准时 1 顿')
   assert.deepEqual(person.stamps.map((s) => s.cls), ['stamp-none', 'stamp-green stamp-on', 'stamp-none'])
   assert.equal(person.meals.length, 1)

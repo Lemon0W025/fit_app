@@ -30,9 +30,9 @@
       <view id="tour-next" class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
         <view class="next-title">{{card.title}}</view>
         <view wx:if="{{card.sub}}" class="next-sub">{{card.sub}}</view>
-        <view wx:if="{{card.reward}}" class="next-reward">🫘 {{card.reward}}</view>
+        <view wx:if="{{card.reward}}" class="next-reward"><image class="ic ic-s" src="/images/garden/ui/bean.png" mode="aspectFit" />{{card.reward}}</view>
         <view wx:if="{{!card.small}}" class="{{card.warn || card.state === 'open' ? 'fx-nudge' : ''}}">
-          <button class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}}</button>
+          <button class="btn-primary btn-big next-btn" data-meal-type="{{card.mealType}}" bindtap="goCheckin"><image class="ic btn-ic" src="/images/icons/camera-w.svg" mode="aspectFit" />{{card.button}}</button>
         </view>
         <view wx:else class="next-link" data-meal-type="{{card.mealType}}" bindtap="goCheckin">{{card.button}} ›</view>
       </view>
@@ -45,8 +45,8 @@
         <view class="stamps">
           <view wx:for="{{daily.stamps}}" wx:key="key" class="stamp {{item.cls}} fx-pop" style="animation-delay: {{300 + index * 100}}ms">{{item.label}}</view>
         </view>
-        <view wx:if="{{daily.streakText}}" class="beans-card-streak">{{daily.streakText}}</view>
-        <view wx:if="{{daily.onTimeText}}" class="beans-card-streak">⏰ {{daily.onTimeText}}</view>
+        <view wx:if="{{daily.streakText}}" class="beans-card-streak"><image wx:if="{{daily.streakOn}}" class="ic ic-s" src="/images/icons/flame.svg" mode="aspectFit" />{{daily.streakText}}</view>
+        <view wx:if="{{daily.onTimeText}}" class="beans-card-streak"><image class="ic ic-s" src="/images/icons/clock.svg" mode="aspectFit" />{{daily.onTimeText}}</view>
       </view>
       <text class="beans-card-arrow">›</text>
     </view>
@@ -92,7 +92,7 @@
     <view wx:if="{{view.meals.length === 0}}" class="card empty">还没有打卡哦，吃饭前先拍一张给小暖看看～</view>
     <view wx:for="{{view.meals}}" wx:key="_id" class="card meal fx-rise" hover-class="fx-press" style="animation-delay: {{400 + index * 80}}ms" data-id="{{item._id}}" bindtap="openMeal">
       <image wx:if="{{item.fileID}}" class="meal-thumb" src="{{item.fileID}}" mode="aspectFill" lazy-load />
-      <view wx:else class="meal-thumb meal-thumb-text">✍️</view>
+      <view wx:else class="meal-thumb meal-thumb-text"><image class="thumb-ic" src="/images/icons/pencil.svg" mode="aspectFit" /></view>
       <view class="meal-body">
         <view class="meal-head">
           <text class="meal-label">{{item.label}}</text>

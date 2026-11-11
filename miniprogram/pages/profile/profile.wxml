@@ -86,7 +86,7 @@
 
   <view wx:if="{{!isNew}}" class="card remind-entry" hover-class="fx-press" bindtap="goRemind">
     <view class="remind-entry-body">
-      <view class="remind-entry-title">⏰ 饭点提醒</view>
+      <view class="remind-entry-title"><image class="ic" src="/images/icons/clock.svg" mode="aspectFit" />饭点提醒</view>
       <view class="muted small">手机闹钟、微信提醒，到点提醒你拍照</view>
     </view>
     <text class="remind-entry-arrow">›</text>
@@ -94,7 +94,7 @@
 
   <view wx:if="{{!isNew}}" class="card remind-entry" hover-class="fx-press" bindtap="goWeek">
     <view class="remind-entry-body">
-      <view class="remind-entry-title">📊 每周小结</view>
+      <view class="remind-entry-title"><image class="ic" src="/images/icons/chart.svg" mode="aspectFit" />每周小结</view>
       <view class="muted small">一周打卡几天、准时几顿、吃得怎么样</view>
     </view>
     <text class="remind-entry-arrow">›</text>
@@ -102,7 +102,7 @@
 
   <view class="card remind-entry" hover-class="fx-press" bindtap="goManual">
     <view class="remind-entry-body">
-      <view class="remind-entry-title">📖 使用说明</view>
+      <view class="remind-entry-title"><image class="ic" src="/images/icons/book.svg" mode="aspectFit" />使用说明</view>
       <view class="muted small">怎么拍照打卡、能得到什么、营地怎么玩</view>
     </view>
     <text class="remind-entry-arrow">›</text>
@@ -111,7 +111,7 @@
   <!-- 亲友看板（pages/family）：把打卡分享给亲友看；我关注了别人的话多一行入口 -->
   <view wx:if="{{family && (family.code || family.following)}}" class="card family-card">
     <block wx:if="{{!isNew && family.code}}">
-      <view class="remind-entry-title">👪 亲友看板</view>
+      <view class="remind-entry-title"><image class="ic" src="/images/icons/people.svg" mode="aspectFit" />亲友看板</view>
       <view class="muted small">邀请亲友看你每天的打卡，TA 能给你点赞</view>
       <button class="btn-primary family-invite" open-type="share">邀请亲友看我的打卡</button>
       <view wx:if="{{family.viewers.length}}" class="family-list">
@@ -131,7 +131,7 @@
   <!-- 测试期间（云函数 config.testReset 开着）才有：清空自己的数据，从新手指引重新走一遍 -->
   <view wx:if="{{canReset}}" class="card remind-entry reset-entry" hover-class="fx-press" bindtap="startOver">
     <view class="remind-entry-body">
-      <view class="remind-entry-title">🔄 从头再来（测试用）</view>
+      <view class="remind-entry-title"><image class="ic" src="/images/icons/refresh.svg" mode="aspectFit" />从头再来（测试用）</view>
       <view class="muted small">清空档案、打卡、体重、营地，回到第一次打开的样子</view>
     </view>
     <text class="remind-entry-arrow">›</text>

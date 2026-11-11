@@ -46,7 +46,7 @@
     </view>
 
     <view class="card coach fx-rise fx-d3">
-      <view class="coach-name">🌿 小暖说</view>
+      <view class="coach-name"><image class="ic ic-s" src="/images/icons/leaf.svg" mode="aspectFit" />小暖说</view>
       <view wx:for="{{view.lines}}" wx:key="text" class="wk-line">
         <view class="wk-dot wk-dot-{{item.tone}}"></view>
         <text class="wk-line-text">{{item.text}}</text>

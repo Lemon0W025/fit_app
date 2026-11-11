@@ -26,7 +26,7 @@ function manualSections(times) {
     },
     {
       key: 'time',
-      emoji: '⏰',
+      icon: '/images/icons/clock.svg',
       title: '按饭点拍，算准时',
       lines: [
         `饭点前后一小时内拍算准时：${windows}。`,
@@ -51,7 +51,7 @@ function manualSections(times) {
     },
     {
       key: 'fix',
-      emoji: '✏️',
+      icon: '/images/icons/pencil.svg',
       title: '估得不准怎么办',
       lines: [
         '在结果页点一道菜，拖一拖改成你实际吃的量，热量跟着变。标着「拿不准」的是小暖没看清的，点开看一眼。',
@@ -78,7 +78,7 @@ function manualSections(times) {
     },
     {
       key: 'weight',
-      emoji: '⚖️',
+      icon: '/images/icons/scale.svg',
       title: '体重',
       lines: ['「体重」里隔几天记一次，看曲线是不是往下走。记了新体重，每天建议吃多少也跟着调。'],
     },

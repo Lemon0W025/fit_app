@@ -1,16 +1,16 @@
 <view class="page">
-  <view wx:if="{{remindText}}" class="remind-hi">⏰ {{remindText}}</view>
+  <view wx:if="{{remindText}}" class="remind-hi"><image class="ic" src="/images/icons/clock.svg" mode="aspectFit" />{{remindText}}</view>
   <view class="section-title section-first">这是哪一餐？</view>
   <segmented options="{{mealTypes}}" value="{{mealType}}" bindchange="pickMealType" />
   <view wx:if="{{timingText}}" class="timing {{timingOn ? 'timing-on' : ''}}">{{timingText}}</view>
 
   <view class="section-title">拍下这一餐</view>
   <view wx:if="{{!photo}}" class="card photo-picker" bindtap="choosePhoto">
-    <view class="photo-icon">📷</view>
+    <image class="photo-icon" src="/images/icons/camera.svg" mode="aspectFit" />
     <view class="photo-tip">点这里拍照，或从相册选</view>
     <!-- 拍得好，小暖估份量才准 -->
     <view class="tips">
-      <view wx:for="{{photoTips}}" wx:key="text" class="tip"><text class="tip-icon">{{item.icon}}</text>{{item.text}}</view>
+      <view wx:for="{{photoTips}}" wx:key="text" class="tip"><image class="tip-icon" src="{{item.icon}}" mode="aspectFit" />{{item.text}}</view>
     </view>
   </view>
   <view wx:else class="card photo-box">

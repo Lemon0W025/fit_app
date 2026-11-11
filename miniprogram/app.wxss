@@ -15,6 +15,13 @@ page {
   --red-soft: #fbe6e1;
   --gray: #a8a095;
   --gray-soft: #f1ede6;
+  /* 写字用的颜色：白底、米色底上对比度都够（4.5 左右以上），小字也看得清。
+     上面的 --yellow / --green / --red / --gray 留给底色、边框、印章、箭头 */
+  --amber: #946200;
+  --orange: #a85a0c;
+  --green-text: #3f7a4c;
+  --red-text: #b8432e;
+  --gray-text: #7d756a;
 
   background: var(--bg);
   color: var(--text);
@@ -101,7 +108,7 @@ button.btn-plain {
 }
 
 button.btn-plain[disabled] {
-  color: var(--gray) !important;
+  color: var(--gray-text) !important;
   border-color: var(--line) !important;
   background: transparent !important;
 }
@@ -116,7 +123,7 @@ button.btn-plain[disabled] {
 }
 
 .link-danger {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 /* 选项小块 */
@@ -160,23 +167,23 @@ button.btn-plain[disabled] {
 }
 
 .badge-green {
-  color: var(--green);
+  color: var(--green-text);
   background: var(--green-soft);
 }
 
 .badge-yellow {
-  color: var(--yellow);
+  color: var(--amber);
   background: var(--yellow-soft);
 }
 
 .badge-red {
-  color: var(--red);
+  color: var(--red-text);
   background: var(--red-soft);
 }
 
 .badge-failed,
 .badge-none {
-  color: var(--gray);
+  color: var(--gray-text);
   background: var(--gray-soft);
 }
 
@@ -329,7 +336,7 @@ button.btn-plain[disabled] {
 
 .stamp-none {
   border: 3rpx dashed var(--gray);
-  color: var(--gray);
+  color: var(--gray-text);
 }
 
 /* 准时拍的那顿：金边 + 角上一个「准」 */
@@ -479,4 +486,21 @@ button.button-hover {
 
 .fx-skip .fx-stamp::before {
   display: none;
+}
+
+/* 行内的小图标（images/icons/ 里一套线条图标，和字排在一行）；不用表情符号当图标：各家手机画得不一样 */
+.ic {
+  display: inline-block;
+  width: 40rpx;
+  height: 40rpx;
+  margin-right: 10rpx;
+  vertical-align: -8rpx;
+  flex-shrink: 0;
+}
+
+.ic-s {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 8rpx;
+  vertical-align: -6rpx;
 }

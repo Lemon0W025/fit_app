@@ -85,7 +85,7 @@ test('今日页补签卡：昨天漏了给一张卡，问一句、花暖豆补�
   assert.match(wx.log.modals.at(-1), /花 80 暖豆补上昨天/)
   assert.equal(wx.log.toasts.at(-1), '补上了，已连续 5 天')
   assert.equal(today.data.patch, null)
-  assert.equal(today.data.daily.streakText.startsWith('🔥 已连续 5 天'), true)
+  assert.equal(today.data.daily.streakText.startsWith('已连续 5 天'), true)
   assert.equal(cloud.db.collections.get('gardens').get('u1').days['2026-10-21'], 'patch')
   today.onHide()
   const wxml = readWxml('today')

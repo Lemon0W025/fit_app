@@ -44,3 +44,30 @@ test('主包不超过 2MB', () => {
   walk(path.join(__dirname, '../miniprogram'))
   assert.ok(total < 2 * 1024 * 1024, `miniprogram ${total} 字节`)
 })
+
+test('页面用到的线条图标（images/icons/*.svg）都在；页面模板里不拿表情符号当图标', () => {
+  const MP = path.join(__dirname, '../miniprogram')
+  const files = []
+  const walk = (dir) => fs.readdirSync(dir).forEach((f) => {
+    const p = path.join(dir, f)
+    if (fs.statSync(p).isDirectory()) walk(p)
+    else if (/\.(wxml|js)$/.test(f)) files.push(p)
+  })
+  walk(MP)
+  const used = new Set()
+  files.forEach((p) => {
+    const text = fs.readFileSync(p, 'utf8')
+    for (const m of text.matchAll(/\/images\/icons\/([\w-]+)\.svg/g)) used.add(m[1])
+    // 两个都可能：heart / heart-on 是拼出来的
+    if (/images\/icons\/\{\{/.test(text)) ['heart', 'heart-on'].forEach((n) => used.add(n))
+  })
+  assert.ok(used.size >= 12)
+  used.forEach((name) => assert.ok(exists('icons', `${name}.svg`), name))
+  // 打卡这几页（营地的页面另算）：模板里不再有当图标用的表情符号
+  const EMOJI = /[\u{1F300}-\u{1FAFF}\u{23F0}\u{2696}\u{270D}\u{270F}]/u
+  ;['today', 'checkin', 'meal', 'forest', 'profile', 'remind', 'week', 'family', 'manual', 'weight'].forEach((page) => {
+    const wxml = fs.readFileSync(path.join(MP, 'pages', page, `${page}.wxml`), 'utf8')
+    const hit = wxml.match(EMOJI)
+    assert.ok(!hit || hit[0] === '👋', `${page}.wxml 里还有 ${hit && hit[0]}`)
+  })
+})

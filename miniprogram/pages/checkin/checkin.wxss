@@ -21,8 +21,8 @@
 }
 
 .photo-icon {
-  font-size: 80rpx;
-  line-height: 1.2;
+  width: 112rpx;
+  height: 112rpx;
 }
 
 .photo-tip {
@@ -46,7 +46,10 @@
 
 .tip-icon {
   display: inline-block;
-  width: 52rpx;
+  width: 36rpx;
+  height: 36rpx;
+  margin-right: 16rpx;
+  vertical-align: -6rpx;
 }
 
 .photo-box {
@@ -149,7 +152,7 @@
 .step {
   display: flex;
   align-items: center;
-  color: var(--gray);
+  color: var(--gray-text);
 }
 
 .step-dot {
@@ -187,7 +190,7 @@
 .timing {
   font-size: 30rpx;
   margin: 12rpx 8rpx 0;
-  color: #d9822b;
+  color: var(--orange);
 }
 
 .timing-on {

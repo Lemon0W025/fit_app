@@ -12,10 +12,10 @@ const { appetiteOf } = require('../../utils/shared/dish')
 const COUNT_AFTER_MS = 6000
 // 拍照框里的小贴士：拍得好，小暖估份量才准
 const PHOTO_TIPS = [
-  { icon: '📐', text: '从斜上方拍，像坐着看饭桌' },
-  { icon: '🍽', text: '所有菜都拍进去' },
-  { icon: '🥢', text: '旁边放双筷子或勺子' },
-  { icon: '⏰', text: '吃之前拍' },
+  { icon: '/images/icons/angle.svg', text: '从斜上方拍，像坐着看饭桌' },
+  { icon: '/images/icons/plate.svg', text: '所有菜都拍进去' },
+  { icon: '/images/icons/chopsticks.svg', text: '旁边放双筷子或勺子' },
+  { icon: '/images/icons/clock.svg', text: '吃之前拍' },
 ]
 
 Page({

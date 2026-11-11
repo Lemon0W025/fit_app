@@ -30,7 +30,7 @@
 
 .join-note {
   background: var(--yellow-soft);
-  color: var(--yellow);
+  color: var(--amber);
   font-size: 30rpx;
 }
 
@@ -59,7 +59,7 @@
 
 .person-streak {
   font-size: 28rpx;
-  color: var(--yellow);
+  color: var(--amber);
   font-weight: 600;
 }
 
@@ -188,7 +188,7 @@
 .like-on {
   background: var(--red-soft);
   border-color: var(--red-soft);
-  color: var(--red);
+  color: var(--red-text);
   font-weight: 600;
 }
 
@@ -239,4 +239,9 @@ button.mine-btn {
   margin-top: 40rpx;
   font-size: 34rpx;
   padding: 22rpx 0;
+}
+
+.fmeal-ic {
+  width: 64rpx;
+  height: 64rpx;
 }

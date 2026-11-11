@@ -23,19 +23,19 @@
     <view wx:for="{{view.people}}" wx:key="owner" wx:for-item="person" class="card person fx-rise">
       <view class="person-head">
         <text class="person-name">{{person.name}}</text>
-        <text wx:if="{{person.streakText}}" class="person-streak">{{person.streakText}}</text>
+        <text wx:if="{{person.streakText}}" class="person-streak"><image class="ic ic-s" src="/images/icons/flame.svg" mode="aspectFit" />{{person.streakText}}</text>
       </view>
       <view class="person-row">
         <view class="stamps">
           <view wx:for="{{person.stamps}}" wx:key="key" class="stamp {{item.cls}}">{{item.label}}</view>
         </view>
-        <text class="person-week">⏰ {{person.weekText}}</text>
+        <text class="person-week"><image class="ic ic-s" src="/images/icons/clock.svg" mode="aspectFit" />{{person.weekText}}</text>
       </view>
 
       <view wx:if="{{person.emptyText}}" class="person-empty">{{person.emptyText}}</view>
       <view wx:for="{{person.meals}}" wx:key="_id" class="fmeal">
         <image wx:if="{{item.photoUrl}}" class="fmeal-photo" src="{{item.photoUrl}}" mode="aspectFill" lazy-load data-url="{{item.photoUrl}}" bindtap="previewPhoto" />
-        <view wx:else class="fmeal-photo fmeal-photo-text">✍️</view>
+        <view wx:else class="fmeal-photo fmeal-photo-text"><image class="fmeal-ic" src="/images/icons/pencil.svg" mode="aspectFit" /></view>
         <view class="fmeal-body">
           <view class="fmeal-head">
             <text class="fmeal-label">{{item.label}}</text>
@@ -47,7 +47,7 @@
           <view wx:if="{{item.commentText}}" class="fmeal-comment">{{item.commentText}}</view>
           <view class="fmeal-foot">
             <text class="fmeal-likes">{{item.likesText}}</text>
-            <view class="like {{item.liked ? 'like-on' : ''}}" hover-class="{{item.liked ? '' : 'chip-press'}}" hover-stay-time="100" data-owner="{{person.owner}}" data-id="{{item._id}}" bindtap="like">{{item.likeText}}</view>
+            <view class="like {{item.liked ? 'like-on' : ''}}" hover-class="{{item.liked ? '' : 'chip-press'}}" hover-stay-time="100" data-owner="{{person.owner}}" data-id="{{item._id}}" bindtap="like"><image class="ic ic-s" src="/images/icons/{{item.liked ? 'heart-on' : 'heart'}}.svg" mode="aspectFit" />{{item.likeText}}</view>
           </view>
         </view>
       </view>

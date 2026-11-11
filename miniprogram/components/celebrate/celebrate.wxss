@@ -56,7 +56,7 @@
   margin-top: 12rpx;
   font-size: 48rpx;
   font-weight: 700;
-  color: #b8763a;
+  color: var(--orange);
 }
 
 .cel-sub {

@@ -77,7 +77,7 @@
 
 .tour-count {
   font-size: 26rpx;
-  color: #8a8174;
+  color: #6a6156;
 }
 
 .tour-title {
@@ -106,7 +106,7 @@
   white-space: nowrap;
   padding: 16rpx 28rpx;
   font-size: 30rpx;
-  color: #8a8174;
+  color: #6a6156;
 }
 
 .tour-next {

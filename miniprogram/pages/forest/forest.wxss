@@ -88,7 +88,7 @@
 
 .cell-beans {
   font-size: 20rpx;
-  color: #d97a1e;
+  color: var(--orange);
   min-height: 28rpx;
   line-height: 28rpx;
 }
@@ -119,11 +119,11 @@
 .medal-label {
   margin-top: 4rpx;
   font-size: 26rpx;
-  color: #b8763a;
+  color: var(--orange);
 }
 
 .medal-label-off {
-  color: var(--gray);
+  color: var(--gray-text);
 }
 
 /* 今天那一格 */

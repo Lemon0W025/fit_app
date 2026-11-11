@@ -62,7 +62,7 @@ function mealView(meal) {
     commentText: done ? shorten(v.commentText, COMMENT_MAX) : '',
     photoUrl: meal.photoUrl || '',
     liked: !!meal.liked,
-    likeText: meal.liked ? '❤ 赞过了' : '🤍 赞一个',
+    likeText: meal.liked ? '赞过了' : '赞一个',
     likesText: names ? `${names} 赞了` : '',
   }
 }
@@ -73,7 +73,7 @@ function personView(p) {
     owner: p.owner,
     name: p.name,
     stamps: stampsView(p.stamps),
-    streakText: p.streak > 0 ? `🔥 已连续 ${p.streak} 天` : '',
+    streakText: p.streak > 0 ? `已连续 ${p.streak} 天` : '',
     weekText: `最近 7 天准时 ${p.weekOnTime || 0} 顿`,
     notify: !!p.notify,
     meals,

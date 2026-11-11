@@ -122,7 +122,7 @@ function decorateGain(gain, { fresh = false } = {}) {
 function streakText(daily) {
   const streak = daily.streak || 0
   if (!streak) return '今天拍一顿，开始连续打卡'
-  const head = `🔥 已连续 ${streak} 天`
+  const head = `已连续 ${streak} 天`
   const next = daily.nextMilestone
   if (!next) return head
   if (next.left === 1) {
@@ -140,6 +140,8 @@ function beansCard(daily) {
     hint: daily.hint,
     stamps: stampsView(daily.stamps),
     streakText: streakText(daily),
+    // 连着了才画小火苗
+    streakOn: (daily.streak || 0) > 0,
     onTimeText: daily.monthOnTime > 0 ? `本月准时 ${daily.monthOnTime} 顿` : '',
   }
 }
@@ -158,9 +160,9 @@ function nextMealCard(s) {
   if (s.state === 'allDone') {
     return { state: 'allDone', title: s.allOnTime ? '今天三顿都准时拍了 ✓' : '今天三顿都拍完啦 ✓', sub: '', reward: '', button: '加餐也可以拍', mealType: 'snack', small: true, warn: false }
   }
-  const card = { state: s.state, title: `${s.word} · ${s.time}`, sub: `${s.window} 拍算准时`, reward: `准时拍能得 ${BEANS.onTime} 暖豆`, button: `📷 拍${s.word}`, mealType: s.mealType, small: false, warn: false }
+  const card = { state: s.state, title: `${s.word} · ${s.time}`, sub: `${s.window} 拍算准时`, reward: `准时拍能得 ${BEANS.onTime} 暖豆`, button: `拍${s.word}`, mealType: s.mealType, small: false, warn: false }
   if (s.state === 'open') card.sub = `${s.window} 拍算准时，还剩 ${leftText(s.minutesLeft)}`
-  if (s.state === 'missed') Object.assign(card, { title: `${s.word}还没拍`, sub: `现在补拍也有 ${BEANS.offTime} 暖豆`, reward: '', button: `📷 补拍${s.word}`, warn: true })
+  if (s.state === 'missed') Object.assign(card, { title: `${s.word}还没拍`, sub: `现在补拍也有 ${BEANS.offTime} 暖豆`, reward: '', button: `补拍${s.word}`, warn: true })
   if (s.state === 'done') {
     Object.assign(card, {
       title: s.onTime ? `${s.word}准时拍了 ✓` : `${s.word}拍了 ✓`,

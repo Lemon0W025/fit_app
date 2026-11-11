@@ -26,7 +26,7 @@
 .beans-card-title {
   font-size: 34rpx;
   font-weight: 700;
-  color: #b8763a;
+  color: var(--orange);
 }
 
 .beans-card-streak {
@@ -63,7 +63,7 @@
 }
 
 .hero-status-over {
-  color: var(--red);
+  color: var(--red-text);
 }
 
 .meal {
@@ -100,7 +100,7 @@
 }
 
 .meal-kcal-failed {
-  color: var(--gray);
+  color: var(--gray-text);
 }
 
 .meal-comment {
@@ -134,7 +134,7 @@
 }
 
 .next-card-warn .next-title {
-  color: #d9822b;
+  color: var(--orange);
 }
 
 .next-sub {
@@ -146,7 +146,7 @@
 .next-reward {
   font-size: 30rpx;
   margin-top: 6rpx;
-  color: #b9741f;
+  color: var(--amber);
 }
 
 .next-btn {
@@ -219,7 +219,7 @@
 .likes-note {
   padding: 24rpx 32rpx;
   background: var(--red-soft);
-  color: var(--red);
+  color: var(--red-text);
   font-size: 30rpx;
   font-weight: 600;
 }
@@ -227,7 +227,7 @@
 .meal-likes {
   margin-top: 6rpx;
   font-size: 26rpx;
-  color: var(--red);
+  color: var(--red-text);
 }
 
 /* 补签卡 */
@@ -294,4 +294,18 @@ button.btn-primary.patch-btn {
   margin-left: 16rpx;
   font-size: 30rpx;
   color: var(--primary);
+}
+
+/* 没拍照、只写了字的那顿：一支笔 */
+.thumb-ic {
+  width: 64rpx;
+  height: 64rpx;
+}
+
+/* 大按钮里的相机 */
+.btn-ic {
+  width: 44rpx;
+  height: 44rpx;
+  margin-right: 12rpx;
+  vertical-align: -9rpx;
 }

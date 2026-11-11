@@ -3,8 +3,7 @@
 
   <view wx:for="{{sections}}" wx:key="key" class="card manual-card">
     <view class="manual-head">
-      <image wx:if="{{item.icon}}" class="manual-icon" src="{{item.icon}}" mode="aspectFit" />
-      <text wx:else class="manual-emoji">{{item.emoji}}</text>
+      <image class="manual-icon" src="{{item.icon}}" mode="aspectFit" />
       <text class="manual-title">{{item.title}}</text>
     </view>
     <view wx:for="{{item.lines}}" wx:for-item="line" wx:for-index="n" wx:key="n" class="manual-line">

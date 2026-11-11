@@ -96,7 +96,7 @@
   </view>
 
   <view wx:if="{{meal.analysis}}" class="card coach fx-rise fx-d4">
-    <view class="coach-name">🌿 小暖说</view>
+    <view class="coach-name"><image class="ic ic-s" src="/images/icons/leaf.svg" mode="aspectFit" />小暖说</view>
     <view class="coach-text">{{meal.analysis.comment}}</view>
     <block wx:if="{{meal.analysis.suggestion}}">
       <view class="coach-name coach-name-next">下一餐建议</view>

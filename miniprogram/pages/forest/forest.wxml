@@ -8,9 +8,9 @@
     </view>
     <view class="today-hint">{{daily.hint}}</view>
     <view class="today-stats">
-      <text wx:if="{{daily.streakText}}" class="today-stat">{{daily.streakText}}</text>
-      <text wx:if="{{daily.onTimeText}}" class="today-stat">⏰ {{daily.onTimeText}}</text>
-      <text class="today-stat">📅 累计打卡 {{view.totalDays}} 天</text>
+      <text wx:if="{{daily.streakText}}" class="today-stat"><image wx:if="{{daily.streakOn}}" class="ic ic-s" src="/images/icons/flame.svg" mode="aspectFit" />{{daily.streakText}}</text>
+      <text wx:if="{{daily.onTimeText}}" class="today-stat"><image class="ic ic-s" src="/images/icons/clock.svg" mode="aspectFit" />{{daily.onTimeText}}</text>
+      <text class="today-stat"><image class="ic ic-s" src="/images/icons/calendar.svg" mode="aspectFit" />累计打卡 {{view.totalDays}} 天</text>
     </view>
     <scroll-view wx:if="{{badges.length}}" scroll-x class="medals">
       <view wx:for="{{badges}}" wx:key="days" class="medal-cell" hover-class="fx-press" data-days="{{item.days}}" bindtap="openBadge">
