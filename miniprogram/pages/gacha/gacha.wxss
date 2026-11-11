@@ -304,7 +304,7 @@ button.reveal-btn {
   border-radius: 999rpx;
   background: var(--bean);
   color: #fff;
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 800;
   transform: rotate(6deg);
   box-shadow: 0 4rpx 10rpx rgba(138, 83, 0, 0.3);
@@ -359,7 +359,7 @@ button.reveal-btn {
 }
 
 .many-name {
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 1.3;
   white-space: nowrap;
   overflow: hidden;
@@ -367,7 +367,7 @@ button.reveal-btn {
 }
 
 .many-rarity {
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 700;
 }
 
@@ -380,9 +380,9 @@ button.reveal-btn {
   border-radius: 999rpx;
   background: var(--red);
   color: #fff;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 700;
-  line-height: 30rpx;
+  line-height: 32rpx;
 }
 
 .many-sum {

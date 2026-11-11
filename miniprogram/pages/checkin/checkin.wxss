@@ -177,7 +177,7 @@
   border-radius: 50%;
   border: 3rpx solid var(--line);
   box-sizing: border-box;
-  font-size: 22rpx;
+  font-size: 24rpx;
   line-height: 30rpx;
   text-align: center;
   color: #fff;

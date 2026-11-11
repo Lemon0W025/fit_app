@@ -648,14 +648,14 @@ button.btn-peach {
   position: absolute;
   right: -16rpx;
   top: -16rpx;
-  width: 32rpx;
-  height: 32rpx;
+  width: 36rpx;
+  height: 36rpx;
   border-radius: 50%;
   background: var(--bean);
   color: var(--ink);
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 700;
-  line-height: 32rpx;
+  line-height: 36rpx;
   text-align: center;
 }
 

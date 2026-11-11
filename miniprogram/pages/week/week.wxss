@@ -79,7 +79,7 @@
   min-width: 0;
   height: 40rpx;
   text-align: center;
-  font-size: 24rpx;
+  font-size: 26rpx;
   line-height: 40rpx;
   color: var(--muted);
   white-space: nowrap;

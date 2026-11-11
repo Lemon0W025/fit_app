@@ -92,7 +92,7 @@
 }
 
 .cell-beans {
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   color: var(--gold-ink);
   min-height: 28rpx;

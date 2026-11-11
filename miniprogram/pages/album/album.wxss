@@ -20,7 +20,7 @@
 .cell { width: calc((100% - 32rpx) / 3); display: flex; flex-direction: column; align-items: center; gap: 6rpx; }
 .cell-image { width: 120rpx; height: 120rpx; }
 .cell-name { font-size: 26rpx; }
-.cell-term { font-size: 24rpx; color: var(--gold-ink); }
+.cell-term { font-size: 26rpx; color: var(--gold-ink); }
 .cell-tip { font-size: 26rpx; color: var(--muted); text-align: center; }
 .foot { display: flex; justify-content: space-between; align-items: center; padding: 16rpx 40rpx; }
 

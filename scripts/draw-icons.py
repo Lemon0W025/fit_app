@@ -10,6 +10,7 @@ import os
 ROOT = os.path.join(os.path.dirname(__file__), '..', 'miniprogram', 'images', 'icons')
 INK = '#17191c'
 OFF = '#9a9ea5'
+TAB_OFF = '#6b6f76'  # 底栏没选中的图标：和下面的字一个颜色（字要够深，图标跟着）
 WHITE = '#ffffff'
 
 ICONS = {
@@ -49,10 +50,10 @@ ICONS = {
 
 # 名字 → [(后缀, 颜色)]：tab 的灰色、拍照按钮的白色
 VARIANTS = {
-    'grid': [('-off', OFF)],
-    'tent': [('-off', OFF)],
-    'scale': [('-off', OFF)],
-    'user': [('-off', OFF)],
+    'grid': [('-off', TAB_OFF)],
+    'tent': [('-off', TAB_OFF)],
+    'scale': [('-off', TAB_OFF)],
+    'user': [('-off', TAB_OFF)],
     'camera': [('-white', WHITE)],
     'chevron': [('-off', OFF)],
 }

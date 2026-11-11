@@ -46,9 +46,9 @@
 
 .tb-text {
   margin-top: 4rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
   line-height: 1.2;
-  color: #8a8e95;
+  color: #6b6f76;
 }
 
 .tb-on .tb-text {

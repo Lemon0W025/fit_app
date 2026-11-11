@@ -95,14 +95,14 @@ page {
   position: absolute;
   top: 6rpx;
   right: 10rpx;
-  min-width: 36rpx;
-  height: 36rpx;
-  line-height: 36rpx;
+  min-width: 40rpx;
+  height: 40rpx;
+  line-height: 40rpx;
   padding: 0 8rpx;
-  border-radius: 18rpx;
+  border-radius: 20rpx;
   background: var(--red);
   color: #fff;
-  font-size: 22rpx;
+  font-size: 24rpx;
   text-align: center;
   box-sizing: border-box;
 }
@@ -243,7 +243,7 @@ button.btn-small {
   position: absolute;
   top: 6rpx;
   right: 10rpx;
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: 800;
   color: var(--ink);
 }
@@ -471,9 +471,9 @@ button.btn-small {
 }
 
 .stamps-mini .stamp {
-  width: 36rpx;
-  height: 36rpx;
-  font-size: 20rpx;
+  width: 40rpx;
+  height: 40rpx;
+  font-size: 22rpx;
 }
 
 .stamps-mini .stamp-on {
@@ -521,7 +521,7 @@ button.btn-small {
 }
 
 .side-label {
-  font-size: 24rpx;
+  font-size: 26rpx;
   font-weight: 700;
   color: var(--ink);
   margin-top: -4rpx;
@@ -805,7 +805,7 @@ button.btn-small {
   border-radius: 999rpx;
   background: var(--chip);
   color: var(--muted);
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 600;
   vertical-align: 4rpx;
 }
