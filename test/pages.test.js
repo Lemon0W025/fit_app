@@ -629,8 +629,11 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.notEqual(camp.data.view.x, home.x, '排好版后又对准了一次（值加了一点点小数，组件才会动）')
   assert.ok(Math.abs(camp.data.view.x - home.x) <= 0.011 && camp.data.view.scale === 1)
   camp.closeWelcome()
+  // 锅空着：豆豆留在营地（可能在锅边坐着等开饭），顶上提示点锅放点吃的
+  assert.equal(camp.data.hungryText, '🍲 锅里空空的，大家等着开饭呢，点锅放点吃的')
   camp.clock.advance(5000)
-  assert.ok(['walk', 'idle', 'fidget'].indexOf(camp.data.pets[0].action) !== -1)
+  assert.equal(camp.data.pets[0].hidden, false)
+  assert.ok(['walk', 'idle', 'fidget', 'sit'].indexOf(camp.data.pets[0].action) !== -1)
 
   // 锅空着、背包也空：点锅提示去扭蛋；塞一份胡萝卜、一份小米，点锅打开背包
   camp.tapPot()
@@ -687,7 +690,9 @@ test('暖暖营地首页：欢迎 → 底图 → 下锅点火、客人闻香来 
   assert.equal(camp.data.drag.ok, true)
   // 客人不能喂：拖到客人身上不算
   const nv = camp.data.pets[1]
-  assert.equal(camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k }), null)
+  // （客人正好走过豆豆身边时，松手算喂豆豆，也不算客人）
+  const onGuest = camp.hitTarget({ x: (nv.left + nv.width / 2) / camp.L.k, y: (camp.L.height - nv.bottom - nv.width / 2) / camp.L.k })
+  assert.ok(onGuest === null || onGuest.pet === 0, JSON.stringify(onGuest))
   camp.cancel()
 
   // 切走再回来：小动物都在原地（走到一半的就地停下，记在本地存储里）

@@ -37,6 +37,37 @@ const FIRE = [2130, 2820]
 // 大帐篷占的地：帐篷本身、两头的木桩，连同它身后一直到树林边的那片（走到帐篷后面就整个被挡住，干脆不让去）
 const TENT = [[40, 860], [1480, 860], [1590, 1140], [1590, 1270], [1450, 1300], [780, 1500], [640, 1500], [150, 1230], [40, 1220]]
 
+// 围着锅坐的点：n 只就 n 个，开口朝后的马蹄形，绕开木盖和提灯。SEAT_ROW 只以内坐一圈；多了坐两圈（里外各一半，外圈在前面再远一点），
+// 不然一圈挤 12 只会叠在一起。沿弧均匀分开，竖着的距离多算一点（SEAT_TALL 倍）：上下挨着的两只，前面那只会挡住后面那只
+const SEAT_RINGS = [{ rx: 860, ry: 540, from: -15, to: 195 }, { rx: 1400, ry: 930, from: 25, to: 155 }]
+const SEAT_ROW = 6
+const SEAT_TALL = 1.5
+
+function seatsOn(ring, count) {
+  const N = 200
+  const pts = []
+  const len = [0]
+  for (let i = 0; i <= N; i++) {
+    const a = ((ring.from + ((ring.to - ring.from) * i) / N) * Math.PI) / 180
+    pts.push([FIRE[0] + ring.rx * Math.cos(a), FIRE[1] + ring.ry * Math.sin(a)])
+    if (i) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], (pts[i][1] - pts[i - 1][1]) * SEAT_TALL))
+  }
+  const out = []
+  for (let k = 0; k < count; k++) {
+    const want = (len[N] * (k + 0.5)) / count
+    let i = 1
+    while (i < N && len[i] < want) i++
+    const t = (want - len[i - 1]) / (len[i] - len[i - 1] || 1)
+    out.push([Math.round(pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t), Math.round(pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t)])
+  }
+  return out
+}
+
+function seatsFor(n) {
+  const inner = n <= SEAT_ROW ? n : Math.min(SEAT_ROW, Math.ceil(n / 2))
+  return seatsOn(SEAT_RINGS[0], inner).concat(seatsOn(SEAT_RINGS[1], Math.max(0, n - inner)))
+}
+
 const SCENE = {
   width: W,
   height: H,
@@ -85,8 +116,8 @@ const SCENE = {
     // 锅是空的（今天还没打卡）火就不烧：盖在底图上的「熄了火」补丁的范围（scripts/camp/fire_off.py 算出来的，画换了重跑）
     off: { day: [1772, 2456, 2528, 3088], night: [536, 1636, 3548, 4040] },
   },
-  // 傍晚围着锅坐的 12 个点：开口朝后的马蹄形，绕开木盖和提灯
-  seats: arc(FIRE[0], FIRE[1], 820, 520, -20, 200, 12),
+  // 傍晚围着锅坐的点（12 只都在时的样子，白模上画的就是这些；几只就几个见 seatsFor）
+  seats: seatsFor(12),
   // 大帐篷门口的 3 个点：没窝的在这儿睡
   tent: { spots: [[1000, 1530], [1210, 1460], [1420, 1400]] },
   // 站在这儿会被锅身、提灯整个挡住的地方：路过可以，停下来歇着、坐着、睡觉不选这里
@@ -222,6 +253,32 @@ function nextLevelAt(fed) {
   return next === undefined ? null : next
 }
 
+// ---------------------------------------------------------------- 后期目标（住了一个月以后还有奔头）
+
+// 住户里程碑：住下这么多只各奖一次暖豆
+const RESIDENT_GOALS = [{ pets: 4, beans: 100 }, { pets: 8, beans: 200 }, { pets: 12, beans: 500 }]
+// 满级之后亲密度接着涨：每再喂 STAR_FEEDS 顿得一颗星，最多 STAR_MAX 颗，每颗星奖一次 STAR_BEANS 暖豆（等级表 LEVELS 不动）
+const STAR_FEEDS = 30
+const STAR_MAX = 5
+const STAR_BEANS = 20
+const TOP_FED = LEVELS[LEVELS.length - 1]
+
+// 喂了几顿 → 几颗星（没满级 0 颗）
+function starsOf(fed) {
+  return fed < TOP_FED ? 0 : Math.min(STAR_MAX, Math.floor((fed - TOP_FED) / STAR_FEEDS))
+}
+
+// 下一颗星要喂到几顿；还没满级、星星满了返回 null
+function nextStarAt(fed) {
+  const stars = starsOf(fed)
+  return fed < TOP_FED || stars >= STAR_MAX ? null : TOP_FED + (stars + 1) * STAR_FEEDS
+}
+
+// 住了 count 只时，下一个住户里程碑；都到了返回 null
+function nextGoal(count) {
+  return RESIDENT_GOALS.find((g) => g.pets > count) || null
+}
+
 // 早上的礼物：当天 5 点以后、今天还没领过
 function giftDue(lastGift, today, hour) {
   return hour >= 5 && lastGift !== today
@@ -231,5 +288,6 @@ module.exports = {
   arc,
   W, H, SCENE, LEVELS,
   circle, ellipse, scaleAt, pointInPoly, segmentHitsPoly, polyHitsRect, rectInPoly, expand, hitsNogo, inGrass, hiddenAt, nogoPolys,
-  levelOf, nextLevelAt, giftDue,
+  levelOf, nextLevelAt, giftDue, seatsFor,
+  RESIDENT_GOALS, STAR_FEEDS, STAR_MAX, STAR_BEANS, starsOf, nextStarAt, nextGoal,
 }

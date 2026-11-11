@@ -312,3 +312,76 @@ test('旧档进营地：迁完存一次，暖豆退回，住户搬来', async ()
   assert.equal(stored.camp, 4)
   assert.equal(stored.inventory, undefined)
 })
+
+const residents = (ids, fed = 0) => ids.map((id) => ({ id, since: TODAY, fed, fedToday: { date: '', n: 0 } }))
+const TWELVE = ['doudou', 'nuonuo', 'lianlian', 'shishi', 'huahua', 'guigui', 'qiqi', 'shushu', 'jutuan', 'sunbao', 'chacha', 'hehe']
+
+test('住户里程碑：住下 4 / 8 / 12 只各奖一次暖豆（100 / 200 / 500），get 时发；别的页面来读也发，庆祝留给营地页（markSeen），只弹一次', async () => {
+  const { repo, service } = setup({ camp: rich({ pets: residents(TWELVE.slice(0, 3)) }) })
+  let v = await service.get('u1', { markSeen: true })
+  assert.deepEqual([v.beans, v.cheers, v.goal], [120, [], { pets: 4, beans: 100 }])
+  // 第 4 只住下了；商店页来读（不带 markSeen）：暖豆到账，庆祝先留着
+  const doc = await repo.getGarden('u1')
+  await repo.saveGarden('u1', { ...doc, pets: residents(TWELVE.slice(0, 4)) })
+  v = await service.get('u1')
+  assert.deepEqual([v.beans, v.cheers, v.goal], [220, [], { pets: 8, beans: 200 }])
+  let stored = await repo.getGarden('u1')
+  assert.deepEqual([stored.goals, stored.cheers, stored.beans.bonus], [[4], [{ kind: 'residents', pets: 4, beans: 100 }], 160])
+  // 营地页来读：带上庆祝，读完就清；再读不重复发、不重复弹
+  v = await service.get('u1', { markSeen: true })
+  assert.deepEqual([v.beans, v.cheers], [220, [{ kind: 'residents', pets: 4, beans: 100 }]])
+  v = await service.get('u1', { markSeen: true })
+  assert.deepEqual([v.beans, v.cheers], [220, []])
+  stored = await repo.getGarden('u1')
+  assert.deepEqual([stored.goals, stored.cheers], [[4], []])
+  // 一下子到了 12 只：8 只和 12 只的一起发
+  await repo.saveGarden('u1', { ...stored, pets: residents(TWELVE) })
+  v = await service.get('u1', { markSeen: true })
+  assert.deepEqual([v.beans, v.goal], [920, null])
+  assert.deepEqual(v.cheers, [{ kind: 'residents', pets: 8, beans: 200 }, { kind: 'residents', pets: 12, beans: 500 }])
+  assert.deepEqual((await repo.getGarden('u1')).goals, [4, 8, 12])
+  assert.equal((await service.get('u1', { markSeen: true })).beans, 920)
+})
+
+test('满级之后的星星：每再喂 30 顿一颗、最多 5 颗，每颗奖一次 20 暖豆；喂出来的当场带回去庆祝；老档里早就喂够的一次补齐', async () => {
+  // 豆豆 53 顿（5 级、0 颗星），糯糯老档里已经喂了 120 顿（3 颗星，没发过），莲莲早就满星
+  const pets = residents(['doudou'], 53).concat(residents(['nuonuo'], 120), residents(['lianlian'], 999))
+  const { repo, service } = setup({ camp: rich({ pets, foods: { xiaomi: 3 } }) })
+  let v = await service.get('u1', { markSeen: true })
+  assert.deepEqual(v.pets.map((p) => [p.id, p.level, p.stars, p.nextStar]), [['doudou', 5, 0, 55], ['nuonuo', 5, 3, 145], ['lianlian', 5, 5, null]])
+  assert.deepEqual(v.cheers, [{ kind: 'star', petId: 'nuonuo', stars: 3, beans: 60 }, { kind: 'star', petId: 'lianlian', stars: 5, beans: 100 }])
+  assert.equal(v.beans, 120 + 160)
+  assert.deepEqual((await repo.getGarden('u1')).pets.map((p) => p.stars), [0, 3, 5])
+  // 喂豆豆一口小米（+3 → 56 顿）：第一颗星，当场带回来，暖豆 +20
+  v = await service.feed('u1', { petId: 'doudou', foodId: 'xiaomi' })
+  assert.deepEqual([v.pets[0].fed, v.pets[0].stars, v.pets[0].nextStar], [56, 1, 85])
+  assert.deepEqual(v.cheers, [{ kind: 'star', petId: 'doudou', stars: 1, beans: 20 }])
+  assert.equal(v.beans, 300)
+  // 再喂一口不到下一颗：没有；下次进营地也不重复弹
+  v = await service.feed('u1', { petId: 'doudou', foodId: 'xiaomi' })
+  assert.deepEqual([v.cheers, v.beans], [[], 300])
+  v = await service.get('u1', { markSeen: true })
+  assert.deepEqual([v.cheers, v.beans], [[], 300])
+  // 下锅喂出来的也当场带回来（豆豆爱吃小米 +3 → 62；手动改到 84 再下锅 → 87，第二颗）
+  const doc = await repo.getGarden('u1')
+  await repo.saveGarden('u1', { ...doc, pets: doc.pets.map((p) => (p.id === 'doudou' ? { ...p, fed: 84 } : p)) })
+  v = await service.putFood('u1', { foodId: 'xiaomi' })
+  assert.deepEqual(v.cheers, [{ kind: 'star', petId: 'doudou', stars: 2, beans: 20 }])
+  assert.equal(v.beans, 320)
+  // 打卡喂出来的（arrive 不弹）：下次进营地弹
+  const d2 = await repo.getGarden('u1')
+  await repo.saveGarden('u1', { ...d2, pets: d2.pets.map((p) => (p.id === 'doudou' ? { ...p, fed: 114 } : p)) })
+  await service.arrive('u1')
+  v = await service.get('u1', { markSeen: true })
+  assert.deepEqual(v.cheers, [{ kind: 'star', petId: 'doudou', stars: 3, beans: 20 }])
+  assert.equal(v.beans, 340)
+})
+
+test('album：住下的带星星和下一颗要喂到几顿；封面的下一个住户里程碑', async () => {
+  const { service } = setup({ camp: rich({ pets: residents(['doudou'], 60).concat(residents(['nuonuo'], 4), residents(['qiqi', 'shushu', 'huahua'])) }) })
+  const a = await service.album('u1')
+  const of = (id) => a.pets.find((p) => p.id === id)
+  assert.deepEqual([of('doudou').level, of('doudou').stars, of('doudou').nextStar], [5, 1, 85])
+  assert.deepEqual([of('nuonuo').level, of('nuonuo').stars, of('nuonuo').nextStar], [2, 0, null])
+  assert.deepEqual([a.progress, a.goal], [{ pets: 5, total: 12 }, { pets: 8, beans: 200 }])
+})

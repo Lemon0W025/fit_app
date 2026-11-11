@@ -102,7 +102,8 @@ function normalizeCamp(doc) {
     // 今天锅里煮着的（date 不是今天就当空锅，半夜自己清空）
     pot: { date: pot.date || '', foods: pot.foods || [] },
     visitors: (src.visitors || []).map((v) => ({ id: v.id, foodId: v.foodId || '', since: v.since || '' })),
-    pets: (src.pets || []).map((p) => ({ id: p.id, since: p.since || '', fed: p.fed || 0, fedToday: p.fedToday || { date: '', n: 0 } })),
+    // stars：满级后的星星里已经发过暖豆的几颗（services/camp.js 的 settleGoals）
+    pets: (src.pets || []).map((p) => ({ id: p.id, since: p.since || '', fed: p.fed || 0, fedToday: p.fedToday || { date: '', n: 0 }, stars: p.stars || 0 })),
     arrivals: src.arrivals || [],
     decor: { owned: decor.owned || {}, placed: decor.placed || [] },
     seq: src.seq || 0,
@@ -111,6 +112,9 @@ function normalizeCamp(doc) {
     grants: src.grants || [],
     days: src.days || {},
     streakBadges: src.streakBadges || {},
+    // 后期目标：发过暖豆的住户里程碑（几只）；发了、营地页还没庆祝过的（[{ kind: 'residents', pets, beans } | { kind: 'star', petId, stars, beans }]）
+    goals: src.goals || [],
+    cheers: src.cheers || [],
   }
 }
 

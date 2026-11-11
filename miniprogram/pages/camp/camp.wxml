@@ -177,7 +177,7 @@
         <view wx:for="{{residents}}" wx:key="id" class="res-row" data-index="{{item.index}}" bindtap="findResident">
           <image class="res-avatar" src="{{item.face}}" mode="aspectFit" />
           <view class="res-body">
-            <view class="res-name">{{item.name}}</view>
+            <view class="res-name">{{item.name}}<text wx:if="{{item.stars}}" class="res-stars">{{item.stars}}</text></view>
             <view class="res-text">{{item.text}}</view>
           </view>
           <text class="res-go">去看看 ›</text>
@@ -199,6 +199,18 @@
       </view>
       <button class="btn-primary" bindtap="closeWelcome">带我看看怎么玩</button>
       <view class="link link-muted welcome-later" bindtap="goGacha">直接去扭蛋</view>
+    </view>
+  </view>
+
+  <!-- 庆祝卡：住户到了 4 / 8 / 12 只、满级后又攒够一颗星（云函数的 cheers），一张一张出 -->
+  <view wx:if="{{cheer && !welcome}}" class="overlay" catchtap="closeCheer">
+    <view class="welcome cheer-card" catchtap="noop">
+      <image class="cheer-img" src="{{cheer.image}}" mode="aspectFit" />
+      <view class="welcome-title">{{cheer.title}}</view>
+      <view wx:if="{{cheer.stars}}" class="cheer-stars">{{cheer.stars}}</view>
+      <view class="cheer-text">{{cheer.text}}</view>
+      <view class="cheer-more">{{cheer.more}}</view>
+      <button class="btn-primary" bindtap="closeCheer">收下</button>
     </view>
   </view>
 

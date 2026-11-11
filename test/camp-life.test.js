@@ -3,7 +3,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createLife, PET_ZOOM } = require('../miniprogram/utils/camp-life')
 const { campLayout, cutoutStrips, zOf } = require('../miniprogram/utils/camp-view')
-const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt } = require('../miniprogram/utils/shared/camp')
+const { SCENE, inGrass, pointInPoly, hiddenAt, nogoPolys, segmentHitsPoly, scaleAt, seatsFor } = require('../miniprogram/utils/shared/camp')
 const { petById } = require('../miniprogram/utils/shared/pets')
 const { FOOT } = require('../miniprogram/utils/anim')
 const { manualClock } = require('./helpers/manual-clock')
@@ -20,7 +20,7 @@ function make(opts = {}) {
   const sprites = {}
   const life = createLife({
     L, pets: opts.pets || [{ id: 'doudou', level: 1, fed: 0 }, { id: 'nuonuo', level: 2, fed: 3 }], decor: opts.decor || [], arrivals: opts.arrivals || [],
-    visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || ['xiaomi'], // 默认锅里煮着东西（锅空着时不够亲的会走开，单独测）
+    visitors: opts.visitors || [], saved: opts.saved || null, pot: () => opts.pot || ['xiaomi'], // 默认锅里煮着东西（锅空着时最亲的几只在锅边等开饭，单独测）
     hour: () => (opts.hour === undefined ? 12 : opts.hour), lit: () => opts.lit !== false, random: lcg(opts.seed || 7), clock: opts.clock || clock,
     onChange: (i, s) => { sprites[i] = s }, sheets: opts.sheets || {}, animBase: opts.animBase || '', sheetSrc: opts.sheetSrc, bad: new Set(),
     sways: opts.sways, today: opts.today,
@@ -71,9 +71,24 @@ test('傍晚火着着：全员围着篝火坐；火没着：各玩各的，不�
   dusk.clock.advance(120000)
   dusk.life.whereIs().forEach((w, i) => {
     assert.equal(w.action, 'sit', w.id)
-    const [sx, sy] = SCENE.seats[i]
+    const [sx, sy] = seatsFor(2)[i]
     assert.ok(Math.hypot(w.x - sx, w.y - sy) < 1, `${w.id} 没坐到位 ${w.x},${w.y}`)
   })
+  // 12 只（鹤鹤傍晚不在，11 只）：坐两圈，各坐各的点，身子不叠在一起（挨得最近的两只也隔着大半个身位）
+  const all = make({ hour: 18, pets: ALL.map((id) => ({ id, level: 2 })), seed: 5 })
+  all.life.start()
+  all.clock.advance(180000)
+  const sitting = all.life.whereIs().filter((w) => w.action === 'sit')
+  assert.equal(sitting.length, 11)
+  const seats = seatsFor(11)
+  sitting.forEach((w, i) => assert.ok(Math.hypot(w.x - seats[i][0], w.y - seats[i][1]) < 1, `${w.id} 没坐到位`))
+  const widths = {}
+  all.life.sprites().forEach((sp) => (widths[sp.id] = sp.width / L.k))
+  sitting.forEach((p, i) => sitting.slice(i + 1).forEach((q) => {
+    const gap = Math.hypot(p.x - q.x, (p.y - q.y) * 2)
+    assert.ok(gap > (widths[p.id] + widths[q.id]) * 0.35, `${p.id} 和 ${q.id} 叠在一起了（隔 ${Math.round(gap)}）`)
+  }))
+  all.life.stop()
   const cold = make({ hour: 18, lit: false })
   cold.life.start()
   for (let i = 0; i < 120; i++) {
@@ -218,12 +233,12 @@ test('下锅：爱吃的住户走到锅边吃；白天锅里有它爱吃的会�
   hungry.life.stop()
 })
 
-test('小动物放大 1.3 倍：宽度 = size × 远近 × k × 1.3', () => {
+test('小动物放大 1.6 倍：宽度 = size × 远近 × k × 1.6', () => {
   const { life } = make()
   const s = life.sprites()[0]
   const w = life.whereIs()[0]
-  assert.equal(PET_ZOOM, 1.3)
-  assert.ok(Math.abs(s.width - petById('doudou').size * scaleAt(w.y) * L.k * 1.3) < 1e-9)
+  assert.equal(PET_ZOOM, 1.6)
+  assert.ok(Math.abs(s.width - petById('doudou').size * scaleAt(w.y) * L.k * 1.6) < 1e-9)
 })
 
 test('鹤鹤只在 5～9 点出现', () => {
@@ -805,57 +820,84 @@ test('点它说一段：两三句一句一句换，再点跳到下一句；别�
   life.stop()
 })
 
-test('锅里空着：不到 3 级的出去找吃的（一开始就不在），3 级以上和最亲的那只留下来喊饿；一下锅，走掉的闻着香味回来先去锅边吃', () => {
+test('锅里空着：住户都留在营地（一只都不藏起来）；最亲的三只多半在锅边坐着等开饭、会说饿，别的照常玩；同一时间最多一个气泡', () => {
   const pot = []
-  const pets = [{ id: 'doudou', level: 1 }, { id: 'nuonuo', level: 3 }, { id: 'qiqi', level: 2 }, { id: 'shushu', level: 1 }]
+  const pets = [{ id: 'doudou', level: 1 }, { id: 'nuonuo', level: 3 }, { id: 'qiqi', level: 2 }, { id: 'shushu', level: 1 }, { id: 'huahua', level: 4 }]
   const { life, clock, sprites } = make({ pets, pot, seed: 4 })
-  const where = () => life.whereIs()
-  // 进来时：糯糯（3 级）在，杞杞、豆豆、薯薯找吃的去了
-  assert.deepEqual(where().filter((w) => w.action !== 'away').map((w) => w.id), ['nuonuo'])
-  assert.ok(where().filter((w) => w.id !== 'nuonuo').every((w) => w.text === '锅里空空的，找吃的去了'))
+  // 进来时：五只都在
+  assert.ok(life.sprites().every((s) => !s.hidden))
+  assert.ok(life.whereIs().every((w) => w.action !== 'away'))
   life.start()
-  const hungry = []
-  for (let i = 0; i < 600; i++) {
+  const said = {}
+  const sat = {}
+  let waitText = ''
+  for (let i = 0; i < 1800; i++) {
     clock.advance(1000)
-    if (sprites[1] && sprites[1].bubble && hungry[hungry.length - 1] !== sprites[1].bubble) hungry.push(sprites[1].bubble)
-  }
-  assert.ok(hungry.some((l) => /饿|咕咕|没吃的/.test(l)), `糯糯没喊饿：${hungry.join(' / ')}`)
-  assert.ok(where().filter((w) => w.id !== 'nuonuo').every((w) => w.action === 'away'))
-  // 下锅：陆续回来，说一句、去锅边吃
-  pot.push('xiaomi')
-  life.cook([])
-  const back = new Set()
-  for (let i = 0; i < 60; i++) {
-    clock.advance(500)
-    Object.values(sprites).forEach((sp) => {
-      if (!sp.hidden && sp.id !== 'nuonuo') back.add(sp.id)
+    const list = Object.values(sprites)
+    assert.ok(list.every((sp) => !sp.hidden), '锅空着也不该有谁走掉')
+    assert.ok(list.filter((sp) => sp.bubble).length <= 1, '同时冒了两个气泡')
+    list.forEach((sp) => {
+      if (sp.bubble) (said[sp.id] = said[sp.id] || new Set()).add(sp.bubble)
+      if (sp.action === 'sit') sat[sp.id] = (sat[sp.id] || 0) + 1
     })
+    const w = life.whereIs().find((x) => x.action === 'sit')
+    if (w) waitText = w.text
   }
-  assert.deepEqual([...back].sort(), ['doudou', 'qiqi', 'shushu'])
+  // 最亲的三只（花花 4 级、糯糯 3 级、杞杞 2 级）在锅边坐着等；豆豆、薯薯（1 级）不去坐着等
+  ;['huahua', 'nuonuo', 'qiqi'].forEach((id) => assert.ok(sat[id] > 60, `${id} 只坐了 ${sat[id] || 0} 秒`))
+  ;['doudou', 'shushu'].forEach((id) => assert.ok(!sat[id], `${id} 不该在锅边等`))
+  assert.equal(waitText, '在锅边等开饭')
+  const hungry = /饿|咕咕|没吃的|空空|开饭|空着|热乎|煮|吃的/
+  const lines = ['huahua', 'nuonuo', 'qiqi'].reduce((all, id) => all.concat([...(said[id] || [])]), [])
+  assert.ok(lines.some((l) => hungry.test(l)), `等开饭的没说饿：${lines.join(' / ')}`)
+  // 下锅：不再等了，爱吃的（糯糯爱吃胡萝卜）去锅边吃
+  pot.push('huluobo')
+  life.cook(['nuonuo'])
+  let ate = false
+  for (let i = 0; i < 40; i++) {
+    clock.advance(500)
+    if (sprites[1] && sprites[1].action === 'eat') ate = true
+  }
+  assert.ok(ate, '糯糯没去吃')
+  assert.ok(life.whereIs().every((w) => w.text !== '在锅边等开饭'))
   life.stop()
-  // 全是 1 级：最亲的（最先来的）那只留下来，营地不会空
-  const lonely = make({ pets: [{ id: 'doudou', level: 1 }, { id: 'qiqi', level: 1 }], pot: [], seed: 2 })
-  assert.deepEqual(lonely.life.whereIs().filter((w) => w.action !== 'away').map((w) => w.id), ['doudou'])
 })
 
-test('锅里空着的时候在场的会走开：说一句「找吃的」，走到营地边上藏起来', () => {
-  const pot = ['xiaomi']
-  const { life, clock, sprites } = make({ pets: [{ id: 'doudou', level: 4 }, { id: 'qiqi', level: 1 }], pot, seed: 6 })
-  life.start()
-  clock.advance(3000)
-  assert.equal(sprites[1] ? sprites[1].hidden : false, false)
-  pot.length = 0 // 新的一天，锅空了
-  let left = false
-  let line = ''
-  for (let i = 0; i < 300 && !left; i++) {
-    clock.advance(500)
-    if (sprites[1] && sprites[1].bubble) line = sprites[1].bubble
-    left = !!(sprites[1] && sprites[1].hidden)
+test('锅里空着：只有一只也留着等；鹤鹤不在的钟点不算在等开饭的三只里；夜里不专门去等', () => {
+  const lonely = make({ pets: [{ id: 'doudou', level: 1 }], pot: [], seed: 2 })
+  assert.equal(lonely.life.sprites()[0].hidden, false)
+  lonely.life.start()
+  let sat = 0
+  for (let i = 0; i < 300; i++) {
+    lonely.clock.advance(1000)
+    if (lonely.sprites[0] && lonely.sprites[0].action === 'sit') sat += 1
   }
-  assert.ok(left, '杞杞没走开')
-  assert.ok(/找吃的/.test(line), line)
-  assert.equal(life.whereIs()[1].text, '锅里空空的，找吃的去了')
-  life.stop()
+  lonely.life.stop()
+  assert.ok(sat > 30, `豆豆只坐了 ${sat} 秒`)
+  // 中午鹤鹤不在：5 级的它不占等开饭的位置，另外三只照样等
+  const noon = make({ pets: [{ id: 'hehe', level: 5 }, { id: 'doudou', level: 2 }, { id: 'nuonuo', level: 2 }, { id: 'qiqi', level: 2 }], pot: [], seed: 5 })
+  noon.life.start()
+  const waited = new Set()
+  for (let i = 0; i < 900; i++) {
+    noon.clock.advance(1000)
+    Object.values(noon.sprites).forEach((sp) => {
+      if (sp.action === 'sit') waited.add(sp.id)
+    })
+  }
+  noon.life.stop()
+  assert.deepEqual([...waited].sort(), ['doudou', 'nuonuo', 'qiqi'])
+  // 夜里（火没着）：不坐在锅边等
+  const night = make({ pets: [{ id: 'doudou', level: 3 }, { id: 'nuonuo', level: 2 }], pot: [], lit: false, hour: 23, seed: 3 })
+  night.life.start()
+  let nightSat = 0
+  for (let i = 0; i < 600; i++) {
+    night.clock.advance(1000)
+    Object.values(night.sprites).forEach((sp) => {
+      if (sp.action === 'sit') nightSat += 1
+    })
+  }
+  night.life.stop()
+  assert.equal(nightSat, 0)
 })
 
 test('离开营地前 freeze：走到一半的就地停下（按出发时间算出这会儿在哪、不带过渡、站着），记下的就是那儿；回来不滑（10/29 切回营地全在漂移）', () => {

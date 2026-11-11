@@ -7,7 +7,7 @@ const { PETS, petById } = require('../lib/shared/pets')
 const { FOODS, TREATS, foodById, pickFood, feedGain } = require('../lib/shared/foods')
 const { dailyMenu } = require('../lib/menu')
 const { DECOR, GOLD_SWING, decorById, placeProblem } = require('../lib/shared/decor')
-const { levelOf, nextLevelAt, giftDue } = require('../lib/shared/camp')
+const { levelOf, nextLevelAt, giftDue, RESIDENT_GOALS, STAR_BEANS, starsOf, nextStarAt, nextGoal } = require('../lib/shared/camp')
 const { sumMeals } = require('../lib/shared/nutrition')
 
 const HIGH_RARITIES = ['epic', 'legendary']
@@ -60,6 +60,35 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
   const isFull = (camp) => PETS.every((p) => residentIds(camp).indexOf(p.id) !== -1)
   const giftReady = (camp) => giftDue(camp.gift, today(), hour()) && camp.pets.some((p) => levelOf(p.fed) >= GIFT_LEVEL)
 
+  // 后期目标：住户到了 4 / 8 / 12 只、满级后又攒够一颗星，各奖一次暖豆（记在 bonus 里，goals / 每只的 stars 记着发过的）；
+  // 发了的排进 cheers，等营地页拿去庆祝。有新发的返回 true
+  function settleGoals(camp) {
+    const cheers = []
+    RESIDENT_GOALS.forEach((g) => {
+      if (camp.pets.length < g.pets || camp.goals.indexOf(g.pets) !== -1) return
+      camp.goals = camp.goals.concat(g.pets)
+      cheers.push({ kind: 'residents', pets: g.pets, beans: g.beans })
+    })
+    camp.pets = camp.pets.map((p) => {
+      const stars = starsOf(p.fed)
+      const paid = p.stars || 0
+      if (stars <= paid) return p
+      cheers.push({ kind: 'star', petId: p.id, stars, beans: (stars - paid) * STAR_BEANS })
+      return { ...p, stars }
+    })
+    if (!cheers.length) return false
+    camp.beans = { ...camp.beans, bonus: camp.beans.bonus + cheers.reduce((sum, c) => sum + c.beans, 0) }
+    camp.cheers = camp.cheers.concat(cheers)
+    return true
+  }
+
+  // 营地页拿走还没庆祝过的（拿了就清掉，不会弹第二次）
+  function takeCheers(camp) {
+    const cheers = camp.cheers
+    camp.cheers = []
+    return cheers
+  }
+
   function unplaced(camp) {
     const placedCount = {}
     camp.decor.placed.forEach((p) => {
@@ -80,7 +109,10 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       pot: { foods: potFoods(camp) },
       menu: dailyMenu(today()),
       visitors: camp.visitors.map(({ id, foodId }) => ({ id, foodId })),
-      pets: camp.pets.map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed) })),
+      pets: camp.pets.map((p) => ({ id: p.id, since: p.since, fed: p.fed, level: levelOf(p.fed), next: nextLevelAt(p.fed), stars: starsOf(p.fed), nextStar: nextStarAt(p.fed) })),
+      // 下一个住户里程碑（{ pets, beans }，都到了是 null）；cheers 只有营地页自己的请求才带（get + markSeen、下锅、喂）
+      goal: nextGoal(camp.pets.length),
+      cheers: [],
       arrivals: camp.arrivals,
       decor: { owned: camp.decor.owned, placed: camp.decor.placed, unplaced: unplaced(camp) },
       giftReady: giftReady(camp),
@@ -136,9 +168,13 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       }
       const test = perks.atGet(camp)
       if (test.changed) dirty = true
-      const result = view(camp, { welcome, testGift: test.testGift })
-      if (input && input.markSeen && camp.arrivals.length) {
+      // 谁来读都先把到了的里程碑、星星的暖豆发了；庆祝留给营地页（markSeen）
+      if (settleGoals(camp)) dirty = true
+      const seen = !!(input && input.markSeen)
+      const result = view(camp, { welcome, testGift: test.testGift, cheers: seen ? camp.cheers : [] })
+      if (seen && (camp.arrivals.length || camp.cheers.length)) {
         camp.arrivals = []
+        takeCheers(camp)
         dirty = true
       }
       if (dirty) await save(openid, camp)
@@ -184,8 +220,11 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       const smells = (dailyMenu(today())[foodId] || []).filter((id) => here.indexOf(id) === -1)
       const visitor = smells.length ? smells[Math.min(smells.length - 1, Math.floor(random() * smells.length))] : null
       if (visitor) camp.visitors = camp.visitors.concat({ id: visitor, foodId, since: today() })
+      // 这一口正好喂出一颗星：当场带回去庆祝
+      settleGoals(camp)
+      const cheers = takeCheers(camp)
       await save(openid, camp)
-      return view(camp, { cooked: { foodId, eaters, visitor: visitor || null } })
+      return view(camp, { cooked: { foodId, eaters, visitor: visitor || null }, cheers })
     },
 
     // 直接喂一只：爱吃 +3、不爱吃 +1、点心 +5，不限次
@@ -197,8 +236,10 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
       takeFromBag(camp, foodId)
       const gain = feedGain(petId, foodId)
       camp.pets = camp.pets.map((p) => (p.id === petId ? { ...p, fed: p.fed + gain } : p))
+      settleGoals(camp)
+      const cheers = takeCheers(camp)
       await save(openid, camp)
-      return view(camp, { gain, liked: gain >= 3, petId, foodId })
+      return view(camp, { gain, liked: gain >= 3, petId, foodId, cheers })
     },
 
     async buy(openid, input) {
@@ -273,13 +314,15 @@ function createCampService({ repo, now, random = Math.random, perks = NO_PERKS, 
         const level = levelOf(mine.fed)
         return {
           id: p.id, name: p.name, home: true, hook: p.hook, mood: p.mood, foods: p.foods.map((id) => foodById(id).name),
-          since: mine.since, fed: mine.fed, level, next: nextLevelAt(mine.fed),
+          since: mine.since, fed: mine.fed, level, next: nextLevelAt(mine.fed), stars: starsOf(mine.fed), nextStar: nextStarAt(mine.fed),
           story: p.story.map((text, i) => ({ text, open: i < level })),
         }
       })
       return {
         pets,
         progress: { pets: camp.pets.length, total: PETS.length },
+        // 下一个住户里程碑：封面上写「再来 N 只领 M 暖豆」
+        goal: nextGoal(camp.pets.length),
         full: isFull(camp),
         foods: FOODS.concat(TREATS).map((f) => ({ id: f.id, name: f.name, rarity: f.rarity, term: f.term || '', tip: f.tip, tasted: camp.tasted.indexOf(f.id) !== -1 })),
         decor: DECOR.filter((d) => d.price > 0).map((d) => ({ id: d.id, name: d.name, category: d.category, owned: (camp.decor.owned[d.id] || 0) > 0 })),

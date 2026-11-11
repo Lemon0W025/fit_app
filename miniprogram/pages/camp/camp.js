@@ -18,6 +18,7 @@ const ZOOM_SETTLE_MS = 550 // 缩回 1 倍的弹簧动画大约这么久，缩�
 const SPOTS_KEY = 'campSpots' // 离开营地时小动物各自在哪（本地存储，重开小程序也在原地）
 const SIDE_PAD = 64 // 屏幕两边按钮那一溜多宽（px），说话的气泡让开
 const TOUR_AFTER_MS = 900 // 画面摆好、锅的点击区出来以后再开始导览
+const CHEER_GAP_MS = 200 // 两张庆祝卡之间隔多久
 // 点家具「叫一只来……」叫不来的时候说什么（camp-life 的 callTo）
 const CALL_FAILS = { busy: '上面已经有小家伙了', asleep: '大家都睡着了，等会儿再叫', far: '它们过不去，挪个地方试试', none: '这个没什么好玩的' }
 
@@ -76,6 +77,7 @@ Page({
     giftReady: false,
     giftShown: false,
     welcome: null,
+    cheer: null, // 庆祝卡（住户到了 4 / 8 / 12 只、满级后多了一颗星），一张一张出
     tourSteps: TOURS.camp,
     tourShow: false,
     celebrate: false,
@@ -96,6 +98,7 @@ Page({
     this.stopLife()
     this.later('viewTimer', null)
     this.later('tourTimer', null)
+    this.later('cheerTimer', null) // 两张庆祝卡之间正好切走：剩下的回来接着出（render 里）
   },
 
   onUnload() {
@@ -161,6 +164,7 @@ Page({
       cuts: V.cutoutViews(L, potLevel, this.cutBase(), night),
       tint: V.tintFor(this.nowHour()),
       peekText: V.visitorNote(view.visitors),
+      hungryText: V.hungryNote(this.pot, view.pets),
       termText: treats ? `${view.term.name}限定点心「${treats}」正在扭蛋机里` : '',
       foodBag,
       decorBag,
@@ -192,7 +196,6 @@ Page({
     // 第一次进来：等画面排好版再对准篝火一次（个别机型 movable-view 刚建出来时不认初始 x / y）
     if (first) this.later('viewTimer', () => this.moveView(V.homeView(L, this.win())), VIEW_SETTLE_MS)
     this.syncLife(view, fresh)
-    this.updateHungry()
     // 夜里火刚点着：小动物马上换成火光下的颜色（不等它下一步）
     if (this.life && !fresh && wasLit !== potLevel > 0) view.pets.concat(view.visitors || []).forEach((p) => this.life.refresh(p.id))
     if (!this.hourTimer) this.watchHour()
@@ -200,6 +203,27 @@ Page({
       wx.showModal({ title: '测试福利', content: `送你 ${view.testGift} 暖豆，扭蛋、买装饰随便试试`, showCancel: false, confirmText: '好的' })
     }
     if (view.giftReady && !this.data.giftShown && this.life) this.offerGift(view)
+    this.queueCheers(view.cheers)
+  },
+
+  // 庆祝卡：云函数带回来几条就排几张，关了一张再出下一张
+  queueCheers(cheers) {
+    this.cheerQueue = (this.cheerQueue || []).concat((cheers || []).map(V.cheerCard))
+    if (this.cheerQueue.length && !this.data.cheer && !this.cheerTimer) this.nextCheer()
+  },
+
+  nextCheer() {
+    const cheer = (this.cheerQueue || []).shift() || null
+    this.setData({ cheer })
+    if (cheer) wx.vibrateShort && wx.vibrateShort({ type: 'medium' })
+    else this.maybeTour()
+  },
+
+  // 收下：先收起来，隔一下再出下一张（卡片弹出来的动画重新放一遍）
+  closeCheer() {
+    if (!(this.cheerQueue || []).length) return this.nextCheer()
+    this.setData({ cheer: null })
+    this.later('cheerTimer', () => this.nextCheer(), CHEER_GAP_MS)
   },
 
   // 捏着缩放：记下现在几倍（挪镜头前要知道）
@@ -273,12 +297,6 @@ Page({
       cuts: V.cutoutViews(this.L, this.potLevel || 0, '', this.baseNight),
       fx: fxViews(this.L, this.nowHour(), placed, this.potLevel || 0, ''),
     })
-  },
-
-  // 锅空着出去找吃的那几只：提示条
-  updateHungry() {
-    const text = this.life ? V.hungryNote(this.life.hungryAway()) : ''
-    if (text !== this.data.hungryText) this.setData({ hungryText: text })
   },
 
   onDecorError() {
@@ -721,7 +739,6 @@ Page({
             this.loadSheets([cooked.visitor])
           }
           this.life.cook(cooked.eaters)
-          this.updateHungry()
         }
         const food = foodById(foodId)
         const names = cooked.eaters.map((id) => petById(id)).filter(Boolean).map((p) => p.name)
@@ -771,8 +788,13 @@ Page({
 
   // ---------------------------------------------------------------- 找它
 
+  // 住户列表：在哪、在干什么；满级后有星星的在名字后面带上
   openResidents() {
-    const residents = this.life ? this.life.whereIs() : []
+    const stars = {}
+    ;((this.camp && this.camp.pets) || []).forEach((p) => {
+      stars[p.id] = p.stars ? V.starText(p.stars) : ''
+    })
+    const residents = this.life ? this.life.whereIs().map((w) => ({ ...w, stars: stars[w.id] || '' })) : []
     this.setData({ residents, residentsOpen: true })
   },
 
@@ -796,7 +818,7 @@ Page({
 
   // 第一次进营地：有欢迎卡先看欢迎卡（关了再开始），没有就等画面摆好再开始；看过就不再自动出来
   maybeTour() {
-    if (this.data.welcome || this.data.tourShow || seen('camp')) return
+    if (this.data.welcome || this.data.cheer || this.data.tourShow || seen('camp')) return
     this.later('tourTimer', () => this.setData({ tourShow: true }), TOUR_AFTER_MS)
   },
 

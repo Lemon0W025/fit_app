@@ -7,12 +7,12 @@
 // 怎么走（绕路、一小段一小段走、走到一半停下）在 camp-walk.js；这里只管去哪、干什么
 // 和家具玩：荡秋千（坐在座位上跟着座位一起摆）、凑到花前闻一闻、坐在野餐垫 / 桌椅 / 南瓜上歇着（野餐垫上的会吃点心）；点家具能叫一只过来
 
-const { SCENE, scaleAt, inGrass, hiddenAt } = require('./shared/camp')
+const { SCENE, scaleAt, inGrass, hiddenAt, seatsFor } = require('./shared/camp')
 const { petById } = require('./shared/pets')
 const { foodById } = require('./shared/foods')
 const { decorById, footRect } = require('./shared/decor')
 const { periodOf, describe, CSS_ACTIONS } = require('./pets')
-const { talkLine, speech, visitorSpeech, sniffLine, leaveLine, backLine } = require('./pet-talk')
+const { talkLine, speech, visitorSpeech, sniffLine, hungryLine } = require('./pet-talk')
 const { COLS, FOOT, frameFor, stackRow } = require('./anim')
 const { petImage, petFace, zOf, isNight, SWAY_CLASS } = require('./camp-view')
 const { nightLook, lampsOf } = require('./camp-light')
@@ -34,10 +34,13 @@ const NIGHT_FIRE_CHANCE = 0.3 // 夜里火着着：去火边待会儿
 const SNIFF_MS = 2500
 const CHAT_MS = [240000, 480000] // 隔多久有一只自己开口（10/28 15～28 秒 → 45～90 秒，10/29 用户还嫌勤、一说大家一起说 → 4～8 分钟）
 const CHAT_BUBBLE_MS = 4500 // 自己开口的那句留多久；说话时站着不动，看得出是谁说的
-// 锅里空着（今天还没下锅）：这一级以下的出去找吃的（从营地边上走掉、藏起来），这一级以上的留下来在锅边喊饿；
-// 至少留一只最亲的，营地不会一只都没有；一下锅，走掉的闻着香味回来
-const STAY_LEVEL = 3
-const HUNGRY_POT_CHANCE = 0.3 // 留下来的饿着时，去锅边坐着等的机会
+// 锅里空着（今天还没下锅）：住户都留在营地照常活动；最亲的几只（最多 WAITERS 只）多半在锅边坐着等开饭，偶尔喊一句饿
+const WAITERS = 3
+const WAIT_CHANCE = 0.6 // 等开饭的那几只，轮到它时去锅边坐着等的机会
+// 锅边那一圈（锅的前面和两边）：里沿离石圈（半轴 stones）多远按个头算（body × 身宽）——站在两边的身子不压在石圈上、
+// 站在前面的不把火苗挡住；外沿再往外 band 这么宽
+const RING = { stones: [460, 250], body: [0.4, 0.45], band: [370, 190] }
+const TALL = 1.4 // 两只离多远：竖着的距离多算一点（上下挨着的，前面那只会挡住后面那只）
 // 家具上的点（shared/decor.js 的 spots）：去玩的时候从这些里挑；perch（稻草人头上）只有会飞的去
 const PLAY_ACTIONS = ['play', 'climb', 'swing', 'sniff', 'sit', 'slide', 'tea', 'perch']
 const SWAY_MS = 1600 // 秋千一个来回（camp.wxss 的 sway 也是 1.6 秒）；荡几个整来回，停的时候正好摆回中间
@@ -52,7 +55,7 @@ const LAND_MS = 1300 // 落地开心多久
 const LOOK_MS = 2200 // 木梯顶上往一边张望多久（左右各一次）
 const SIP_MS = 1800 // 水壶炉边：低头喝一口多久
 const CALL_LINES = { swing: '荡秋千去～', sniff: '我去闻闻花', sit: '来啦，坐会儿', sleep: '那我去歇会儿', slide: '滑滑梯去～', tea: '喝口热茶去', play: '玩去喽', climb: '我爬上去看看', perch: '我飞上去看看' }
-const PET_ZOOM = 1.3 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
+const PET_ZOOM = 1.6 // 小动物整体放大（shared/pets.js 的 size 是原来的大小）
 // 朝向（有 C 张的才看得出来）：这几个动作保持走过来时的方向（背影 / 正面），别的动作回到侧面
 const DIR_ACTIONS = ['idle', 'eat', 'sit']
 const START_MS = [300, 1500]
@@ -172,8 +175,15 @@ function createLife({
     return free(decorSpots('sleep'), self).concat(spots(SCENE.shade), spots(SCENE.tent.spots))
   }
 
+  // 离别的小动物够远：它们站着的地方、正要走去的地方都让开（不然几只先后挑中同一块地方，到了叠在一起）
   function awayFromOthers(x, y, self) {
-    return animals.every((a) => a === self || a.hidden || dist(a.x, a.y, x, y) > sizeOf(self) * BODY_GAP)
+    return animals.every((a) => {
+      if (a === self || a.hidden) return true
+      const gap = ((sizeOf(self) + sizeOf(a)) / 2) * BODY_GAP
+      const far = (px, py) => Math.hypot(px - x, (py - y) * TALL) > gap
+      const to = a.goal && a.goal.path ? a.goal.spot : null
+      return far(a.x, a.y) && (!to || far(to.x, to.y))
+    })
   }
 
   // 停下来的地方：草地上、不在锅身 / 提灯正后面（会被整个挡住）、离别人远
@@ -189,16 +199,40 @@ function createLife({
     return null
   }
 
+  // 这只的锅边那一圈：里沿、外沿两个椭圆的半轴（画的像素）
+  function ringOf(self) {
+    const w = sizeOf(self) * scaleAt(SCENE.fire[1] + RING.stones[1])
+    const near = [RING.stones[0] + RING.body[0] * w, RING.stones[1] + RING.body[1] * w]
+    return { near, far: [near[0] + RING.band[0], near[1] + RING.band[1]] }
+  }
+
   // 篝火边：锅的前面和两边（锅后面会被锅挡住）
   function nearFire(self) {
+    const { near } = ringOf(self)
     for (let i = 0; i < 30; i++) {
       const a = (-0.08 + random() * 1.16) * Math.PI
-      const r = 420 + random() * 320
-      const x = SCENE.fire[0] + r * Math.cos(a) * 1.15
-      const y = SCENE.fire[1] + r * Math.sin(a) * 0.6
+      const t = random()
+      const x = SCENE.fire[0] + (near[0] + t * RING.band[0]) * Math.cos(a)
+      const y = SCENE.fire[1] + (near[1] + t * RING.band[1]) * Math.sin(a)
       if (restable(x, y, self)) return { x, y, action: 'idle' }
     }
     return null
+  }
+
+  // 锅正前面（画面中间）、身子不挡火苗的地方：叼着礼物的站这儿等你点
+  function frontOfPot(self, action) {
+    return { x: SCENE.fire[0], y: Math.round(SCENE.fire[1] + ringOf(self).near[1] + 20), action }
+  }
+
+  // 围着锅坐哪儿：一起坐的这几只（group）按先后排，几只就分几个点（6 只以内一圈，多了两圈，shared/camp.js 的 seatsFor）
+  function seatOf(a, group) {
+    return seatsFor(group.length)[Math.max(0, group.indexOf(a))]
+  }
+
+  // 已经在锅边那一圈里了（看得见的地方）
+  function byPot(a) {
+    const { far } = ringOf(a)
+    return Math.hypot((a.x - SCENE.fire[0]) / far[0], (a.y - SCENE.fire[1]) / far[1]) <= 1.03 && !hiddenAt(a.x, a.y)
   }
 
   // ---------------------------------------------------------------- 画面
@@ -440,17 +474,10 @@ function createLife({
       emit(a)
       return schedule(a, between(NIGHT_MS))
     }
-    if (leaving(a)) return findFood(a)
     if (a.hidden) {
       const [ex, ey] = pick(SCENE.entries)
       a.hidden = false
       walk.put(a, ex, ey)
-      // 出去找吃的回来了：闻着锅里的香味，先去锅边吃一口
-      if (a.why === 'hungry') {
-        a.why = ''
-        bubbles.event(a, backLine(a.id))
-        return eatAtPot(a, POT_EAT_MS)
-      }
     }
     if (a.action === 'sleep') {
       if (a.until > now() + 50) return schedule(a, a.until - now())
@@ -466,7 +493,7 @@ function createLife({
     const fire = lit()
     // 傍晚火着着：围着锅坐
     if (period === 'dusk' && fire) {
-      const [sx, sy] = SCENE.seats[a.index % SCENE.seats.length]
+      const [sx, sy] = seatOf(a, animals.filter((b) => !b.visitor && !away(b)))
       if (a.action === 'sit' && dist(a.x, a.y, sx, sy) < 1) return doFor(a, 'sit', between(DO_MS))
       if (walkTo(a, { x: sx, y: sy, action: 'sit' }, (b) => { facePot(b); doFor(b, 'sit', between(DO_MS)) })) return
       return rest(a)
@@ -478,6 +505,17 @@ function createLife({
       if (out && walkTo(a, out, (b) => rest(b))) return
     }
     if (drowsy(a)) return nap(a)
+    // 锅里空着：最亲的几只多半在锅边坐着等开饭，偶尔喊一句饿（说不说由 camp-bubbles 定：屏幕上有别的气泡、刚有谁说过就不说）
+    if (period !== 'night' && waiting(a) && random() < WAIT_CHANCE) {
+      const wait = (b) => {
+        facePot(b)
+        bubbles.auto(b, hungryLine(b.id, random, b.recent || []), CHAT_BUBBLE_MS)
+        doFor(b, 'sit', between(DO_MS), '💭')
+      }
+      if (byPot(a)) return wait(a)
+      const spot = nearFire(a)
+      if (spot && walkTo(a, spot, wait)) return
+    }
     if (period === 'morning') {
       const spot = nearFire(a)
       if (spot && walkTo(a, spot, (b) => rest(b, between(DO_MS)))) return
@@ -485,16 +523,6 @@ function createLife({
     }
     // 白天、夜里、火没着的傍晚：各玩各的
     if (period === 'day' && likesPot(a) && random() < POT_CHANCE) return eatAtPot(a, POT_EAT_MS)
-    // 锅里空着、留下来的：去锅边坐着等，喊饿
-    if (hungry() && period !== 'night' && random() < HUNGRY_POT_CHANCE) {
-      const spot = nearFire(a)
-      const wait = (b) => {
-        facePot(b)
-        bubbles.auto(b, lineOf(b), CHAT_BUBBLE_MS)
-        doFor(b, 'sit', between(DO_MS), '💭')
-      }
-      if (spot && walkTo(a, spot, wait)) return
-    }
     if (random() < PAIR_CHANCE && pair(a)) return
     // 和家具玩：火没着的夜里不去（大家在睡觉）
     if (!(period === 'night' && !fire) && random() < PLAY_CHANCE) {
@@ -636,41 +664,19 @@ function createLife({
 
   const hungry = () => !pot().length
 
-  // 留下来的那只：住户里最亲的（等级最高，一样高的先来的）
-  function keeper() {
-    return animals.filter((a) => !a.visitor).sort((p, q) => q.level - p.level || p.index - q.index)[0] || null
+  // 在锅边等开饭的那几只：这会儿在营地的住户里最亲的（等级高的在前，一样高的先来的在前），最多 WAITERS 只；别的照常玩
+  function waiters() {
+    if (!hungry()) return []
+    return animals.filter((a) => !a.visitor && !away(a)).sort((p, q) => q.level - p.level || p.index - q.index).slice(0, WAITERS)
   }
-
-  // 这只现在该出去找吃的：锅空着、不到 STAY_LEVEL、不是最亲的那只；客人、叼着礼物的、刚搬来的不走
-  function leaving(a) {
-    return hungry() && !a.visitor && !a.holdGift && a.level < STAY_LEVEL && !arriving.has(a.id) && keeper() !== a
-  }
-
-  // 出去找吃的：说一句，走到最近的营地边上，藏起来；过一阵再看看锅里有没有吃的（下锅时 cook() 会马上叫回来）
-  function findFood(a) {
-    if (a.hidden) return schedule(a, between(NIGHT_MS))
-    a.until = 0
-    a.sway = null
-    const [ex, ey] = SCENE.entries.slice().sort((p, q) => dist(a.x, a.y, p[0], p[1]) - dist(a.x, a.y, q[0], q[1]))[0]
-    const gone = (b) => {
-      b.hidden = true
-      b.action = 'away'
-      b.why = 'hungry'
-      b.goal = null
-      bubbles.drop(b)
-      emit(b)
-      schedule(b, between(NIGHT_MS))
-    }
-    bubbles.event(a, leaveLine(a.id))
-    if (!walkTo(a, { x: ex, y: ey, action: 'idle' }, gone)) gone(a)
-  }
+  const waiting = (a) => waiters().indexOf(a) !== -1
 
   // ---------------------------------------------------------------- 说话
 
   // 这只现在说什么（pet-talk.js）：在家具上的、吃着东西的、早上的各有说法；最近说过的不重复
   function talkCtx(a) {
     const spot = a.goal && !a.goal.path && a.goal.spot ? a.goal.spot.action : ''
-    return { period: periodOf(hour()), action: a.action, level: a.level, today: today(), pot: pot(), spot, hungry: hungry() && !a.visitor }
+    return { period: periodOf(hour()), action: a.action, level: a.level, today: today(), pot: pot(), spot, hungry: waiting(a) }
   }
   const lineOf = (a) => talkLine(a.id, talkCtx(a), random, a.recent || [])
   const speechOf = (a) => speech(a.id, talkCtx(a), random, a.recent || [])
@@ -734,7 +740,7 @@ function createLife({
     const [ex, ey] = pick(SCENE.entries)
     walk.put(a, ex, ey)
     if (!a.visitor) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
-    const spot = nearFire(a) || { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'idle' }
+    const spot = nearFire(a) || frontOfPot(a, 'idle')
     const then = a.visitor
       ? (b) => {
           b.right = SCENE.fire[0] > b.x
@@ -783,13 +789,6 @@ function createLife({
   const memory = saved || {}
   animals.forEach((a) => {
     if (away(a)) return settle(a)
-    // 锅空着、不够亲的：出去找吃的了，进来时就不在
-    if (leaving(a)) {
-      a.hidden = true
-      a.action = 'away'
-      a.why = 'hungry'
-      return
-    }
     if (restore(a, memory[a.id])) {
       if (arriving.has(a.id)) bubbles.event(a, a.pet.lines.hello, HELLO_MS)
       return
@@ -800,7 +799,7 @@ function createLife({
 
   function stateOf(a) {
     const spot = a.goal && a.goal.spot
-    return { action: a.hidden && a.why === 'hungry' ? 'hungry' : a.action, decorName: spot && spot.name ? spot.name : '', spot: spot && spot.name && !a.goal.path ? spot.action : '' }
+    return { action: a.action, decorName: spot && spot.name ? spot.name : '', spot: spot && spot.name && !a.goal.path ? spot.action : '', hungry: hungry() }
   }
 
   return {
@@ -943,9 +942,9 @@ function createLife({
 
     // 打卡成功：全员跑到篝火边蹦一蹦
     celebrate() {
-      animals.forEach((a) => {
-        if (a.hidden || a.holdGift) return
-        const [sx, sy] = SCENE.seats[a.index % SCENE.seats.length]
+      const party = animals.filter((a) => !a.hidden && !a.holdGift)
+      party.forEach((a) => {
+        const [sx, sy] = seatOf(a, party)
         a.goal = null
         if (!walkTo(a, { x: sx, y: sy, action: 'jump' }, (b) => doFor(b, 'jump', JUMP_MS, '🎉'))) doFor(a, 'jump', JUMP_MS, '🎉')
       })
@@ -957,7 +956,7 @@ function createLife({
       if (!a || a.hidden) return false
       a.holdGift = true
       a.goal = null
-      const spot = { x: SCENE.fire[0], y: SCENE.fire[1] + 420, action: 'gift' }
+      const spot = frontOfPot(a, 'gift')
       a.goal = { spot, then: (b) => { b.action = 'gift'; b.emoji = '🎁'; emit(b) }, path: walk.route({ x: a.x, y: a.y }, spot) || [spot] }
       stepAlongGift(a)
       return true
@@ -970,13 +969,6 @@ function createLife({
         bubbles.take(a, '给你的！')
         rest(a)
       })
-    },
-
-    // 锅空着、出去找吃的（或者正要走）的住户名字：页面上提示「放点吃的它们就回来」
-    hungryAway() {
-      // 锅里有吃的了：正在回来的不算
-      if (!hungry()) return []
-      return animals.filter((a) => !a.visitor && ((a.hidden && a.why === 'hungry') || leaving(a))).map((a) => a.pet.name)
     },
 
     // 住户在哪、在干什么（「找它」、礼物用；客人不算）
@@ -994,10 +986,6 @@ function createLife({
 
     // 下锅了：爱吃的住户（ids）走到锅边吃一会儿；睡着的也醒过来去吃
     cook(ids) {
-      // 出去找吃的那几只：闻着香味，陆续从营地边上回来（turn 里回来先去锅边吃）
-      animals.forEach((a) => {
-        if (a.hidden && a.why === 'hungry' && running) schedule(a, between(START_MS) + a.index * 400)
-      })
       // 爱吃的都去锅边吃；只有第一只说「好吃」（不会一下子冒一排气泡）
       let first = true
       animals.forEach((a) => {
