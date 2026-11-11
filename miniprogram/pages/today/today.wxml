@@ -16,6 +16,16 @@
       <text class="guide-hide" catchtap="hideGuide">不用了</text>
     </view>
 
+    <!-- 补签卡：昨天漏了、还能用暖豆接上连续打卡（shared/streak.js） -->
+    <view wx:if="{{patch}}" class="card patch fx-rise">
+      <view class="patch-title">{{patch.title}}</view>
+      <view class="patch-sub">{{patch.sub}}</view>
+      <view class="patch-actions">
+        <button wx:if="{{patch.can}}" class="btn-primary patch-btn" bindtap="usePatch" disabled="{{patching}}">{{patch.button}}</button>
+        <text class="patch-skip" bindtap="hidePatch">{{patch.can ? '算了' : '知道了'}}</text>
+      </view>
+    </view>
+
     <view wx:if="{{card}}" class="fx-rise fx-d1">
       <view id="tour-next" class="card next-card {{card.warn ? 'next-card-warn fx-breathe-warn' : card.state === 'open' ? 'fx-breathe' : ''}}">
         <view class="next-title">{{card.title}}</view>
@@ -39,6 +49,15 @@
         <view wx:if="{{daily.onTimeText}}" class="beans-card-streak">⏰ {{daily.onTimeText}}</view>
       </view>
       <text class="beans-card-arrow">›</text>
+    </view>
+
+    <!-- 周一到周三：上周的小结（pages/week） -->
+    <view wx:if="{{weekCard}}" class="card week-card fx-rise" hover-class="fx-press" bindtap="goWeek">
+      <view class="week-card-body">
+        <view class="week-card-title">{{weekCard.title}}</view>
+        <view class="week-card-sub">{{weekCard.sub}}</view>
+      </view>
+      <text class="week-card-go">看看 ›</text>
     </view>
 
     <view id="tour-ring" class="card hero fx-rise fx-d3">
@@ -89,7 +108,8 @@
     <view class="section-title">小暖的今日总结</view>
     <view class="card">
       <view wx:if="{{view.summary}}" class="summary-text">{{view.summary.text}}</view>
-      <view wx:else class="muted">吃完今天最后一餐，让小暖帮你复盘一下吧。</view>
+      <view wx:elif="{{summarizing}}" class="muted">小暖正在写今天的总结…</view>
+      <view wx:else class="muted">拍完晚饭，小暖会自己写好今天的总结；想早点看，也可以现在让小暖写。</view>
       <button class="btn-plain" bindtap="generateSummary" loading="{{summarizing}}" disabled="{{summarizing || view.meals.length === 0}}">{{view.summary ? '重新总结' : '生成今日总结'}}</button>
     </view>
   </block>

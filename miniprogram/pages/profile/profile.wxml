@@ -92,6 +92,14 @@
     <text class="remind-entry-arrow">›</text>
   </view>
 
+  <view wx:if="{{!isNew}}" class="card remind-entry" hover-class="fx-press" bindtap="goWeek">
+    <view class="remind-entry-body">
+      <view class="remind-entry-title">📊 每周小结</view>
+      <view class="muted small">一周打卡几天、准时几顿、吃得怎么样</view>
+    </view>
+    <text class="remind-entry-arrow">›</text>
+  </view>
+
   <view class="card remind-entry" hover-class="fx-press" bindtap="goManual">
     <view class="remind-entry-body">
       <view class="remind-entry-title">📖 使用说明</view>

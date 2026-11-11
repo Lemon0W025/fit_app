@@ -210,6 +210,10 @@ function createFakeCloud({ openid = 'u1', replies = [] } = {}) {
     deletedFiles,
     messages,
     addedTemplates: added,
+    // 再排一个 AI 的回答（字符串，或 Error 让这次调用失败）
+    reply(next) {
+      queue.push(next)
+    },
     failSend(err) {
       sendError = err
     },

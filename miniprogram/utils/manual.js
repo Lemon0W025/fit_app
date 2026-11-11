@@ -3,7 +3,7 @@ const { BEANS } = require('./shared/forest')
 const { SPIN_COST, WELCOME_BEANS } = require('./shared/garden')
 const { PETS } = require('./shared/pets')
 const { MAIN_MEALS, MEAL_WORDS, windowText, mealTimesOf } = require('./shared/timing')
-const { MILESTONES } = require('./shared/streak')
+const { MILESTONES, PATCH } = require('./shared/streak')
 
 // 一天最多得多少暖豆：三顿都准时、都吃得好，再加三顿全准时
 const DAY_MAX = MAIN_MEALS.length * (BEANS.onTime + BEANS.green) + BEANS.allOnTime
@@ -43,6 +43,9 @@ function manualSections(times) {
         `这顿吃得好（小暖说「吃得好」），再加 ${BEANS.green}；三顿都准时，再加 ${BEANS.allOnTime}。一天最多 ${DAY_MAX} 暖豆。`,
         '每顿盖一个印章，准时的印章是金边、带个「准」字。',
         `天天打卡，连着 ${MILESTONES.slice(0, 5).join('、')} 天……能拿纪念章，在营地的「日历」里看。`,
+        `漏了一天不用慌：第二天首页会问要不要用 ${PATCH.cost} 暖豆补上（只能补昨天，一个月 ${PATCH.perMonth} 次），连续天数接着算。`,
+        '每周一出上周的小结：打卡几天、准时几顿、每天吃了多少，在「我的 → 每周小结」随时能看。',
+        '拍完晚饭，小暖会自己写一段今天的总结。',
         '暖豆拿去营地，养小动物、买家具。',
       ],
     },

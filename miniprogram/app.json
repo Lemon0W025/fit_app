@@ -13,7 +13,8 @@
     "pages/remind/remind",
     "pages/welcome/welcome",
     "pages/manual/manual",
-    "pages/family/family"
+    "pages/family/family",
+    "pages/week/week"
   ],
   "window": {
     "navigationBarBackgroundColor": "#F6F1E7",

@@ -229,3 +229,69 @@
   font-size: 26rpx;
   color: var(--red);
 }
+
+/* 补签卡 */
+.patch {
+  border: 2rpx solid #f0c98a;
+  background: #fff8ea;
+}
+
+.patch-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #a5632a;
+}
+
+.patch-sub {
+  margin-top: 8rpx;
+  font-size: 30rpx;
+  line-height: 1.5;
+}
+
+.patch-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 20rpx;
+}
+
+button.btn-primary.patch-btn {
+  flex: 1;
+  width: auto !important;
+  margin: 0;
+}
+
+.patch-skip {
+  flex-shrink: 0;
+  padding: 16rpx 8rpx 16rpx 32rpx;
+  font-size: 30rpx;
+  color: var(--muted);
+}
+
+/* 上周的小结 */
+.week-card {
+  display: flex;
+  align-items: center;
+}
+
+.week-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.week-card-title {
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.week-card-sub {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.week-card-go {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  font-size: 30rpx;
+  color: var(--primary);
+}

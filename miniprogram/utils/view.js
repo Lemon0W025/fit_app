@@ -181,7 +181,7 @@ function buildCalendarCells(days, firstWeekday, today = '') {
   for (let i = 0; i < blanks; i++) cells.push({ key: `blank-${i}`, blank: true })
   days.forEach((d) => {
     const logged = d.beans > 0
-    cells.push({ ...d, key: d.date, isToday: d.date === today, stamps: logged ? stampsView(d.stamps) : [], beansText: logged ? `+${d.beans}` : '' })
+    cells.push({ ...d, key: d.date, isToday: d.date === today, stamps: logged ? stampsView(d.stamps) : [], beansText: logged ? `+${d.beans}` : d.patched ? '补' : '' })
   })
   return cells
 }

@@ -8,6 +8,7 @@
 //   meal-adjusted：改过份量以后的结果页（「改过」「小暖原来估」）
 //   welcome / remind-first / today-guide / checkin-people / meal-people：新手指引、饭点提醒页、几个人一起吃（10/29）
 //   meal-feast / meal-feast-more / meal-pick：聚餐（饭量、范围、拿不准、吃完了吗、一次点掉几道没吃的）
+//   week / week-more / today-week / today-patch：每周小结页、首页周一的小结卡、补签卡
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -54,7 +55,7 @@ const DISHES = [
   { name: '番茄蛋汤', portion: '一碗', grams: 250, kcal: 78, protein: 4.5, carbs: 5, fat: 4.2, shared: false },
 ]
 const GAIN = { beans: 20, beansToday: 35, hint: '下一顿晚饭 17:00～19:00 拍算准时', stamps: STAMPS(false), mealType: 'lunch', timing: 'on', allOnTime: false, milestone: null }
-const profileInput = { nickname: '妈妈', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' }
+const profileInput = { nickname: '阿芳', sex: 'female', age: 52, heightCm: 158, weightKg: 70, targetWeightKg: 60, activity: 'light' }
 
 async function mealData(gain) {
   const wx = createWx(async (req) => (req.action === 'meal.get' ? { ok: true, data: MEAL } : { ok: true, data: null }))
@@ -244,6 +245,60 @@ async function calendarData() {
   return { data: snap(page) }
 }
 
+// 上周（10/12～10/18）吃了一周：有准时的、有过点的、有超预算的、周三漏了一天；周一 10/19 来看
+const WEEK_PLAN = [
+  ['12', [['breakfast', '07:30', 380], ['lunch', '12:00', 560], ['dinner', '18:00', 480]]],
+  ['13', [['breakfast', '07:40', 350], ['lunch', '12:10', 620], ['dinner', '18:20', 780]]],
+  ['14', []],
+  ['15', [['breakfast', '07:30', 360], ['lunch', '12:00', 540], ['dinner', '18:10', 460]]],
+  ['16', [['breakfast', '09:40', 420], ['lunch', '12:20', 900], ['dinner', '19:40', 650]]],
+  ['17', [['lunch', '14:30', 700], ['dinner', '18:00', 520]]],
+  ['18', [['breakfast', '07:30', 340], ['lunch', '12:00', 520], ['dinner', '18:00', 500]]],
+]
+
+async function weekApp() {
+  const clock = fixDate(T, '2026-10-12T07:00:00+08:00')
+  const meals = WEEK_PLAN.reduce((list, [, day]) => list.concat(day), [])
+  const cloud = createFakeCloud({ replies: meals.map((m) => analysisJson({ foods: [{ name: '家常菜', portion: '一份', grams: 300, kcal: m[2], protein: 20, carbs: 50, fat: 15 }], rating: m[2] > 700 ? 'yellow' : 'green' })) })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: profileInput })
+  for (const [d, day] of WEEK_PLAN) {
+    for (const [mealType, at] of day) {
+      clock.set(`2026-10-${d}T${at}:00+08:00`)
+      await main({ action: 'meal.analyze', data: { mealType, note: '家常菜' } })
+    }
+  }
+  clock.set('2026-10-12T09:00:00+08:00')
+  await main({ action: 'weight.save', data: { weightKg: 70.4 } })
+  clock.set('2026-10-18T09:00:00+08:00')
+  await main({ action: 'weight.save', data: { weightKg: 69.8 } })
+  return { clock, main }
+}
+
+// 每周小结页（上一周）
+async function weekData() {
+  const { clock, main } = await weekApp()
+  clock.set('2026-10-19T09:00:00+08:00')
+  const page = loadPage('week', createWx(main))
+  page.onLoad({ offset: '1' })
+  await settle()
+  return { data: snap(page) }
+}
+
+// 周一的首页：昨天（周日）打了卡所以没有补签卡，有「上周的小结出来了」；patch = true 时改成周二来看、周一漏了 → 补签卡
+async function todayWeekData({ patch = false } = {}) {
+  const { clock, main } = await weekApp()
+  clock.set(patch ? '2026-10-20T09:00:00+08:00' : '2026-10-19T09:00:00+08:00')
+  const page = loadPage('today', createWx(main))
+  page.clock = manualClock()
+  page.onShow()
+  await settle()
+  page.clock.advance(1000)
+  const data = snap(page)
+  page.onHide()
+  return { data }
+}
+
 // 滚到页面上的某一块再停着
 const scrollTo = (selector, block = 'start') => async (page) => {
   await page.evaluate(([sel, b]) => document.querySelector(sel).scrollIntoView({ block: b }), [selector, block])
@@ -318,6 +373,11 @@ const SCENARIOS = {
       await page.waitForTimeout(1500)
     },
   },
+  // 每周小结、首页的小结卡和补签卡
+  week: { page: 'week', seconds: 1.5, build: weekData },
+  'week-more': { page: 'week', seconds: 1.5, build: weekData, drive: scrollTo('.wk-chart', 'start') },
+  'today-week': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayWeekData() },
+  'today-patch': { page: 'today', tab: 'today', seconds: 1.5, build: () => todayWeekData({ patch: true }) },
   // 聚餐：4 个人、吃得比别人少、给个范围，两道「拿不准」；再往下是「吃完了吗」和「有几道没吃」
   'meal-feast': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less' } }), drive: scrollTo('.big-kcal') },
   'meal-feast-more': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less', left: 'some' } }), drive: scrollTo('.dish', 'start') },

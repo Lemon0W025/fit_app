@@ -37,6 +37,10 @@ Page({
       .catch((err) => api.showError(err))
   },
 
+  goWeek() {
+    wx.navigateTo({ url: '/pages/week/week?offset=1' })
+  },
+
   prevMonth() {
     if (this.data.view && this.data.view.prevMonth) this.load(this.data.view.prevMonth)
   },
@@ -48,7 +52,7 @@ Page({
   openDay(e) {
     const cell = this.data.cells.find((c) => c.key === e.currentTarget.dataset.key)
     if (!cell || cell.blank || cell.future) return
-    let content = '这天没有打卡'
+    let content = cell.patched ? '这天没有打卡，用补签卡补上了' : '这天没有打卡'
     if (cell.mealsCount) {
       content = `打卡 ${cell.mealsCount} 顿 · 约 ${cell.kcal} 千卡`
       if (cell.beans) content += ` · 得了 ${cell.beans} 暖豆`

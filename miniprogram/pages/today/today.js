@@ -7,8 +7,11 @@ const { guideCard } = require('../../utils/guide')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
 const { appVersion } = require('../../utils/remind')
 const { likesView, SEEN_LIKES_KEY } = require('../../utils/family')
+const { patchCard, weekCard } = require('../../utils/week')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
+const PATCH_HIDDEN_KEY = 'patchHidden' // 补签卡点过「算了」的那一天
+const WEEK_SEEN_KEY = 'weekSeen' // 看过小结的上一周（周一的日期）
 
 // 下一顿大卡和提示跟着时间走（倒计时、过点），每分钟按现在的时间重算一次
 const REFRESH_MS = 60000
@@ -25,6 +28,10 @@ Page({
     guide: null,
     tourSteps: TOURS.today,
     tourShow: false,
+    // 补签卡、上周的小结（utils/week.js）
+    patch: null,
+    patching: false,
+    weekCard: null,
     // 亲友的赞：by 是每顿下面那行，note 是新来的赞的提示（utils/family.js 的 likesView）
     likes: { by: {}, note: '' },
   },
@@ -70,10 +77,13 @@ Page({
           view: buildDayView(day),
           greeting: greetingText(localHour(), day.profile.nickname),
           guide: guideCard(day.guide, this.guideHidden()),
+          patch: patchCard(day.daily && day.daily.patch, this.stored(PATCH_HIDDEN_KEY)),
+          weekCard: weekCard(day.date, this.stored(WEEK_SEEN_KEY), !!(day.guide && day.guide.meal)),
         })
         this.refresh()
         this.maybeTour()
         this.showLikes(day)
+        this.maybeSummary(day)
       })
       .catch((err) => {
         this.setData({ loading: false })
@@ -200,14 +210,74 @@ Page({
     }
   },
 
+  stored(key) {
+    try {
+      return wx.getStorageSync(key) || ''
+    } catch (e) {
+      return ''
+    }
+  },
+
+  // 补签卡：问一句，花暖豆把昨天补上，连续打卡接着算
+  usePatch() {
+    const patch = this.data.patch
+    if (!patch || !patch.can || this.data.patching) return
+    wx.showModal({
+      title: '补上昨天？',
+      content: patch.confirm,
+      confirmText: '补上',
+      success: (res) => {
+        if (!res.confirm) return
+        this.setData({ patching: true })
+        api.call('forest.patch')
+          .then((done) => {
+            this.setData({ patching: false, patch: null })
+            wx.showToast({ title: done.milestone ? `补上了！拿到 ${done.milestone.days} 天纪念章` : `补上了，已连续 ${done.streak} 天`, icon: 'none' })
+            this.load()
+          })
+          .catch((err) => {
+            this.setData({ patching: false })
+            api.showError(err)
+          })
+      },
+    })
+  },
+
+  hidePatch() {
+    const patch = this.data.patch
+    try {
+      if (patch) wx.setStorageSync(PATCH_HIDDEN_KEY, patch.date)
+    } catch (e) {
+      // 存不了：这次先藏起来
+    }
+    this.setData({ patch: null })
+  },
+
+  goWeek() {
+    wx.navigateTo({ url: '/pages/week/week?offset=1' })
+  },
+
+  // 晚饭拍好了、今天还没有总结：小暖自己写一份（一天只自动试一次，没写出来不打扰，按钮还在）
+  maybeSummary(day) {
+    if (day.summary || this.data.summarizing || this.autoSummaryFor === day.date) return
+    const dinner = (day.meals || []).some((m) => m.mealType === 'dinner' && m.status === 'done')
+    if (!dinner) return
+    this.autoSummaryFor = day.date
+    this.summarize(true)
+  },
+
   generateSummary() {
+    this.summarize(false)
+  },
+
+  summarize(quiet) {
     if (this.data.summarizing) return
     this.setData({ summarizing: true })
     api.call('summary.generate')
       .then((summary) => this.setData({ summarizing: false, 'view.summary': summary }))
       .catch((err) => {
         this.setData({ summarizing: false })
-        api.showError(err)
+        if (!quiet) api.showError(err)
       })
   },
 })

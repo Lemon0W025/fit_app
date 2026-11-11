@@ -1,0 +1,59 @@
+<view wx:if="{{!loaded}}" class="empty">小暖正在翻这一周的记录…</view>
+
+<view class="page" wx:if="{{view}}">
+  <view class="card wk-head fx-rise">
+    <text class="wk-arrow" bindtap="older">‹</text>
+    <view class="wk-head-body">
+      <view class="wk-title">{{view.title}}</view>
+      <view class="wk-label">{{view.label}}</view>
+    </view>
+    <text class="wk-arrow {{view.newer === null ? 'wk-arrow-off' : ''}}" bindtap="newer">›</text>
+  </view>
+
+  <view wx:if="{{view.empty}}" class="card empty">{{view.emptyText}}</view>
+
+  <block wx:else>
+    <view class="wk-tiles fx-rise fx-d1">
+      <view wx:for="{{view.tiles}}" wx:key="key" class="card wk-tile">
+        <view class="wk-tile-label">{{item.label}}</view>
+        <view class="wk-tile-num">{{item.num}}<text class="wk-tile-unit">{{item.unit}}</text></view>
+      </view>
+    </view>
+
+    <view class="card fx-rise fx-d2">
+      <view class="card-title">每天吃了多少</view>
+      <view class="wk-nums">
+        <view wx:for="{{view.bars}}" wx:key="key" class="wk-kcal {{item.colCls}}">{{item.kcalText}}</view>
+      </view>
+      <view class="wk-chart">
+        <!-- 预算那条线 -->
+        <view wx:if="{{view.budgetAt}}" class="wk-budget" style="bottom: {{view.budgetAt}}%">
+          <text class="wk-budget-text">{{view.budgetText}}</text>
+        </view>
+        <view wx:for="{{view.bars}}" wx:key="key" class="wk-track {{item.colCls}}">
+          <view wx:if="{{item.h}}" class="wk-bar {{item.cls}}" style="height: {{item.h}}%"></view>
+        </view>
+      </view>
+      <view class="wk-days">
+        <view wx:for="{{view.bars}}" wx:key="key" class="wk-day {{item.colCls}}">
+          <view class="wk-weekday">{{item.weekday}}</view>
+          <view class="stamps stamps-small wk-stamps">
+            <view wx:for="{{item.stamps}}" wx:for-item="stamp" wx:key="key" class="stamp {{stamp.cls}}"></view>
+          </view>
+        </view>
+      </view>
+      <view class="wk-legend">柱子是那天吃的千卡，超过预算的是橙色；下面三个点是早午晚，带金边的是准时拍的</view>
+    </view>
+
+    <view class="card coach fx-rise fx-d3">
+      <view class="coach-name">🌿 小暖说</view>
+      <view wx:for="{{view.lines}}" wx:key="text" class="wk-line">
+        <view class="wk-dot wk-dot-{{item.tone}}"></view>
+        <text class="wk-line-text">{{item.text}}</text>
+      </view>
+      <view wx:if="{{view.goal}}" class="wk-goal">{{view.goal}}</view>
+    </view>
+  </block>
+
+  <button class="btn-plain" bindtap="goCalendar">看打卡日历</button>
+</view>

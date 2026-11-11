@@ -121,6 +121,10 @@ Page({
     wx.navigateTo({ url: '/pages/remind/remind' })
   },
 
+  goWeek() {
+    wx.navigateTo({ url: '/pages/week/week?offset=1' })
+  },
+
   goManual() {
     wx.navigateTo({ url: '/pages/manual/manual' })
   },

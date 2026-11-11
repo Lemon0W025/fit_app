@@ -42,4 +42,12 @@
     </view>
     <view class="month-stats">这个月打卡 {{view.stats.days}} 天，准时 {{view.stats.onTime}} 顿，得了 {{view.stats.beans}} 暖豆</view>
   </view>
+
+  <view class="card week-entry" hover-class="fx-press" bindtap="goWeek">
+    <view class="week-entry-body">
+      <view class="week-entry-title">每周小结</view>
+      <view class="muted small">一周打卡几天、准时几顿、每天吃了多少</view>
+    </view>
+    <text class="week-entry-arrow">›</text>
+  </view>
 </view>
