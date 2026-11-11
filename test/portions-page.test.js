@@ -276,6 +276,65 @@ test('结果页：饭量、吃完了吗各点各的，热量跟着变，写清�
   assert.match(wxml, /<segmented options="\{\{appetites\}\}" value="\{\{meal.appetite \|\| 'same'\}\}" bindchange="onAppetite"/)
 })
 
+test('结果页「整体看，实际吃的比估的」：点少一些每道菜一起少，写清按什么算的；改过份量的那道不动；点回差不多恢复', async (t) => {
+  const { page, wx, main, mealId } = await openMeal(t)
+  assert.equal(page.data.meal.kcalText, '约 244 千卡')
+  assert.equal(page.data.tuneText, '')
+  page.onTune(event({}, { value: 'less' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.tune, 'less')
+  assert.equal(page.data.meal.kcalText, '约 195 千卡')
+  assert.equal(page.data.tuneText, '按「实际吃的比估的少一些」算的')
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.kcalText), ['139 千卡', '56 千卡'])
+  // 和现在一样的不发
+  page.onTune(event({}, { value: 'less' }))
+  await settle()
+  assert.deepEqual(wx.log.toasts, ['按少一些算好了'])
+  // 米饭单独改成 100 克（116 千卡），再把整体调成多一些：米饭不动，青菜 70 × 1.25
+  assert.equal((await main({ action: 'meal.adjust', data: { mealId, index: 0, grams: 100 } })).ok, true)
+  page.onTune(event({}, { value: 'more' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.kcalText), ['116 千卡', '88 千卡'])
+  assert.equal(page.data.tuneText, '按「实际吃的比估的多一些」算的')
+  page.onTune(event({}, { value: 'same' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.kcalText), ['116 千卡', '70 千卡'])
+  assert.equal(page.data.tuneText, '')
+  assert.equal(wx.log.toasts.pop(), '按小暖估的算')
+  assert.match(readWxml('meal'), /<segmented options="\{\{tunes\}\}" value="\{\{meal.tune \|\| 'same'\}\}" bindchange="onTune"/)
+})
+
+test('结果页：几个人、吃完了吗、点掉没吃的收在「这顿有变化」一行里；一个人全吃了先收着，一起吃的 / 没吃完的先展开，点开过就不再收', async (t) => {
+  const { page } = await openMeal(t)
+  assert.equal(page.data.moreOpen, false)
+  page.toggleMore()
+  assert.equal(page.data.moreOpen, true)
+  page.onPeople(event({}, { value: 3 }))
+  await settle()
+  page.onPeople(event({}, { value: 1 }))
+  await settle()
+  assert.equal(page.data.moreOpen, true, '点开过，改回一个人也不收')
+  page.toggleMore()
+  assert.equal(page.data.moreOpen, false)
+  // 打卡时就选了 4 个人的：进来就是展开的
+  const shared = await openMeal(t, [analysisJson({ foods: DISHES })])
+  await shared.main({ action: 'meal.share', data: { mealId: shared.mealId, left: 'some' } })
+  const again = loadPage('meal', shared.wx)
+  again.clock = manualClock()
+  again.onLoad({ id: shared.mealId })
+  await settle()
+  assert.equal(again.data.moreOpen, true)
+  const wxml = readWxml('meal')
+  assert.match(wxml, /class="more-row"[^>]*bindtap="toggleMore"/)
+  // 一键整体调在外面，几个人 / 吃完了吗 / 点掉没吃的在展开的那块里
+  const body = wxml.slice(wxml.indexOf('class="more-body"'))
+  assert.ok(wxml.indexOf('bindchange="onTune"') < wxml.indexOf('class="more-row"'))
+  ;['bind:change="onPeople"', 'bindchange="onLeft"', 'bindtap="startPick"'].forEach((piece) => assert.ok(body.includes(piece), piece))
+})
+
 const FEAST = [
   { name: '米饭', portion: '一碗', grams: 150, kcal: 174, shared: false },
   { name: '火锅', portion: '一锅', grams: 1500, kcal: 1500, shared: true },

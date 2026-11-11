@@ -123,6 +123,19 @@ const LEFTS = [
   { value: 'some', label: '剩了一点' },
   { value: 'half', label: '剩了一半' },
 ]
+// 整体估得准不准（结果页一键调）：实际吃的比小暖估的
+const TUNES = [
+  { value: 'less', label: '少一些' },
+  { value: 'same', label: '差不多' },
+  { value: 'more', label: '多一些' },
+]
+const TUNE_NOTE = { less: '按「实际吃的比估的少一些」算的', more: '按「实际吃的比估的多一些」算的' }
+// 结果页大字下面那句（差不多就不写）
+const tuneText = (tune) => TUNE_NOTE[tune] || ''
+
+// 「这顿有变化？」那一行要不要先展开：和别人一起吃的、没吃完的先展开，免得找不到在哪儿改回来
+const moreOpenFor = (meal) => (meal.people || 1) > 1 || (!!meal.left && meal.left !== 'none')
+
 const APPETITE_NOTE = { less: '，按吃得比别人少算的', more: '，按吃得比别人多算的' }
 
 // 结果页大字下面那句
@@ -149,6 +162,7 @@ function rangeText(analysis, people) {
 
 // 改了人数 / 饭量 / 剩了多少以后的提示
 function howToast(how) {
+  if ('tune' in how) return how.tune === 'same' ? '按小暖估的算' : `按${TUNES.find((t) => t.value === how.tune).label}算好了`
   if ('left' in how) return how.left === 'none' ? '按全吃了算' : `按${LEFTS.find((l) => l.value === how.left).label}算好了`
   if ('appetite' in how) return '按你的饭量算好了'
   return how.people > 1 ? `按 ${how.people} 个人算好了` : '按一个人算好了'
@@ -160,4 +174,4 @@ function adjustRequest(view, value) {
   return view.mode === 'grams' ? { grams: value } : { factor: value }
 }
 
-module.exports = { sliderFor, previewText, chipsFor, partsFor, adjustView, adjustRequest, kcalAt, peopleChips, peopleText, rangeText, howToast, PEOPLE_MORE, APPETITES, LEFTS }
+module.exports = { sliderFor, previewText, chipsFor, partsFor, adjustView, adjustRequest, kcalAt, peopleChips, peopleText, rangeText, howToast, tuneText, moreOpenFor, PEOPLE_MORE, APPETITES, LEFTS, TUNES }

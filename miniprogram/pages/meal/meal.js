@@ -2,7 +2,7 @@ const api = require('../../utils/api')
 const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
-const { adjustView, adjustRequest, previewText, peopleText, rangeText, howToast, APPETITES, LEFTS } = require('../../utils/portion')
+const { adjustView, adjustRequest, previewText, peopleText, rangeText, howToast, tuneText, moreOpenFor, APPETITES, LEFTS, TUNES } = require('../../utils/portion')
 const { likesText } = require('../../utils/family')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
@@ -32,6 +32,10 @@ Page({
     rangeText: '',
     appetites: APPETITES,
     lefts: LEFTS,
+    // 整体比估的少一些 / 差不多 / 多一些；不常用的几项（几个人、吃完了吗、点掉没吃的）收在「这顿有变化？」里
+    tunes: TUNES,
+    tuneText: '',
+    moreOpen: false,
     // 一次点掉几道没吃的：picks[第几道] = true
     picking: false,
     picks: {},
@@ -218,7 +222,24 @@ Page({
   peopleView(meal) {
     const people = meal.people || 1
     const ok = meal.status === 'done' && meal.analysis && meal.analysis.isFood !== false
-    return { peopleText: peopleText(people, meal.appetite), rangeText: ok ? rangeText(meal.analysis, people) : '' }
+    return {
+      peopleText: peopleText(people, meal.appetite),
+      rangeText: ok ? rangeText(meal.analysis, people) : '',
+      tuneText: tuneText(meal.tune),
+      // 自己点开过就一直开着；和别人一起吃的、没吃完的先展开
+      moreOpen: this.data.moreOpen || moreOpenFor(meal),
+    }
+  },
+
+  toggleMore() {
+    this.setData({ moreOpen: !this.data.moreOpen })
+  },
+
+  // 整体看，实际吃的比估的少一些 / 差不多 / 多一些：每道菜一起调（自己改过份量的不动）
+  onTune(e) {
+    const tune = e.detail.value
+    if (!tune || tune === (this.data.meal.tune || 'same')) return
+    this.update('meal.share', { tune }, howToast({ tune }))
   },
 
   // 点「就我 / 2 人 / … / 更多」（components/people）：大家夹的菜按人数分（meal.share）

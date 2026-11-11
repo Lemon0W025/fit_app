@@ -1,7 +1,7 @@
 // test/dish.test.js：一道菜的份量（shared/dish.js）。结果页的预览和云函数存的都按这一套算
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { LIMITS, isShared, peopleOf, appetiteOf, leftOf, eatenOf, resize, share, reportion, totalsAfter } = require('../miniprogram/utils/shared/dish')
+const { LIMITS, TUNE, isShared, peopleOf, appetiteOf, leftOf, tuneOf, eatenOf, resize, share, reportion, totalsAfter } = require('../miniprogram/utils/shared/dish')
 const { previewText, adjustView, adjustRequest } = require('../miniprogram/utils/portion')
 
 const RICE = { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5, shared: false }
@@ -69,6 +69,32 @@ test('reportion：人数、饭量、剩了多少一起变，总数跟着每道�
   assert.deepEqual([half.foods[0].kcal, half.foods[1].kcal, half.totalKcal], [87, 74, 161])
   const back = reportion({ ...a, ...half }, { people: 2, appetite: 'less', left: 'half' }, { people: 1 })
   assert.deepEqual(back, { foods: [RICE, PORK], totalKcal: 594, protein: 31.9, carbs: 54.9, fat: 27.5 })
+})
+
+test('整体多 / 少（tune）：每道菜一起乘，自己改过份量的那道不动；改回「差不多」一模一样', () => {
+  assert.deepEqual(TUNE, { less: 0.8, same: 1, more: 1.25 })
+  assert.deepEqual(['less', 'more', 'x', undefined, 'constructor'].map(tuneOf), ['less', 'more', 'same', 'same', 'same'])
+  assert.equal(eatenOf(RICE, { tune: 'less' }), 0.8)
+  assert.equal(eatenOf(PORK, { people: 2, tune: 'more' }), 0.5 * 1.25)
+  assert.equal(eatenOf(PORK, { people: 2, left: 'half', tune: 'less' }), 0.5 * 0.5 * 0.8)
+  assert.equal(eatenOf({ ...RICE, adjusted: true }, { tune: 'less' }), 1, '改过份量的不跟着变')
+
+  const a = { foods: [RICE, PORK], totalKcal: 594, protein: 31.9, carbs: 54.9, fat: 27.5 }
+  const less = reportion(a, {}, { tune: 'less' })
+  assert.deepEqual(less.foods.map((f) => [f.grams, f.kcal]), [[120, 139], [240, 336]])
+  assert.equal(less.totalKcal, 475)
+  const more = reportion({ ...a, ...less }, { tune: 'less' }, { tune: 'more' })
+  assert.deepEqual(more.foods.map((f) => [f.grams, f.kcal]), [[188, 218], [375, 525]])
+  const back = reportion({ ...a, ...more }, { tune: 'more' }, { tune: 'same' })
+  assert.deepEqual(back, { foods: [RICE, PORK], totalKcal: 594, protein: 31.9, carbs: 54.9, fat: 27.5 })
+
+  // 调少以后把米饭单独改成 100 克：之后再调整体，米饭不动，只动肉丝
+  const rice = resize(less.foods[0], { grams: 100 }).dish
+  const fixed = { ...a, ...less, foods: [rice, less.foods[1]], ...totalsAfter({ ...a, ...less }, less.foods[0], rice) }
+  const same = reportion(fixed, { tune: 'less' }, { tune: 'same' })
+  assert.equal(same.foods[0], rice)
+  assert.deepEqual([same.foods[1].grams, same.foods[1].kcal], [300, 420])
+  assert.equal(same.totalKcal, rice.kcal + 420)
 })
 
 test('totalsAfter：按这道菜的变化量加减；老打卡没营养素按总热量的比例缩放', () => {

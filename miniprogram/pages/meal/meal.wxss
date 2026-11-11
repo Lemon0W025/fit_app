@@ -262,6 +262,48 @@ button.btn-primary.pick-ok {
   margin-top: 24rpx;
 }
 
+/* 一键整体调：和上面的菜隔一条线 */
+.tune {
+  margin-top: 16rpx;
+  border-top: 2rpx solid var(--line);
+}
+
+/* 「和别人一起吃、没吃完、有几道没动？」：点了展开 */
+.more-row {
+  display: flex;
+  align-items: center;
+  min-height: 96rpx;
+  margin-top: 20rpx;
+  padding: 0 24rpx;
+  border-radius: 24rpx;
+  background: var(--chip);
+  transition: transform 150ms;
+}
+
+.more-title {
+  flex: 1;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.more-arrow {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  transform: rotate(90deg);
+  transition: transform 200ms;
+}
+
+.more-arrow-open {
+  transform: rotate(-90deg);
+}
+
+.more-body .people {
+  margin-top: 12rpx;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .skip-link {
   margin-top: 28rpx;
   padding: 12rpx 0;

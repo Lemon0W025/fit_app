@@ -9,6 +9,7 @@
 //   welcome / remind-first / today-guide / checkin-people / meal-people：新手指引、饭点提醒页、几个人一起吃（10/29）
 //   meal-feast / meal-feast-more / meal-pick：聚餐（饭量、范围、拿不准、吃完了吗、一次点掉几道没吃的）
 //   week / week-more / today-week / today-patch：每周小结页、首页周一的小结卡、补签卡
+//   meal-tune：结果页「整体看，实际吃的比估的」一键调、收起来的「和别人一起吃、没吃完、有几道没动？」
 //   today-cards / today-cards-more：问好旁边的连续天数、「微信提醒只剩 1 次了」、邀请亲友的提示
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
@@ -408,6 +409,7 @@ const SCENARIOS = {
   'meal-feast': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less' } }), drive: scrollTo('.big-kcal') },
   'meal-feast-more': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less', left: 'some' } }), drive: scrollTo('.dish', 'start') },
   // 一次点掉几道没吃的
+  'meal-tune': { page: 'meal', seconds: 1.5, build: () => adjustData({ how: { tune: 'less' } }), drive: scrollTo('.dish-hint', 'start') },
   'meal-pick': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4 }, pick: [2, 4] }), drive: scrollTo('.dish-hint', 'start') },
   'meal-adjust': { page: 'meal', seconds: 8, build: () => adjustData({ open: 0 }), script: sliderScript, drive: driveAdjust },
   'meal-adjusted': {

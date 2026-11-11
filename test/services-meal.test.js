@@ -586,3 +586,23 @@ test('adjust confirm：拿不准的菜看了没错，只去掉标记，热量和
   const same = await service.adjust('u1', { mealId: meal._id, index: 0, confirm: true })
   assert.equal(same.analysis.totalKcal, changed.analysis.totalKcal)
 })
+
+test('share：整体比估的少一些 / 多一些（tune），存在打卡上；不认识的值不收；重新分析后回到差不多', async () => {
+  const { service } = setup({ results: [analysisJson(HOTPOT), analysisJson(HOTPOT)] })
+  const meal = await service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'dinner', note: '' })
+  assert.equal(meal.analysis.totalKcal, 1824)
+  const less = await service.share('u1', { mealId: meal._id, tune: 'less' })
+  assert.equal(less.tune, 'less')
+  assert.deepEqual(less.analysis.foods.map((f) => f.kcal), [139, 1200, 120])
+  assert.equal(less.analysis.totalKcal, 1459)
+  assert.equal(less.analysis.aiTotalKcal, 1824, '小暖原来估的留着')
+  // 和几个人一起吃叠着算：火锅、青菜再按 2 个人分，米饭只乘整体那一下
+  const two = await service.share('u1', { mealId: meal._id, people: 2 })
+  assert.deepEqual(two.analysis.foods.map((f) => f.kcal), [139, 600, 60])
+  await assert.rejects(() => service.share('u1', { mealId: meal._id, tune: 'tiny' }), /少一些、差不多、多一些/)
+  const same = await service.share('u1', { mealId: meal._id, tune: 'same' })
+  assert.deepEqual(same.analysis.foods.map((f) => f.kcal), [174, 750, 75])
+  await service.share('u1', { mealId: meal._id, tune: 'more' })
+  const again = await service.reanalyze('u1', { mealId: meal._id, note: '其实就吃了一点' })
+  assert.equal(again.tune, 'same')
+})

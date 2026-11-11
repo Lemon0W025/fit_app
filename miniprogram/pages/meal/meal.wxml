@@ -36,6 +36,7 @@
       <view wx:if="{{meal.mode === 'text'}}" class="muted small">（根据文字描述估算）</view>
       <view wx:if="{{peopleText}}" class="adjusted-note">{{peopleText}}</view>
       <view wx:if="{{rangeText}}" class="range-note">{{rangeText}}</view>
+      <view wx:if="{{tuneText}}" class="adjusted-note">{{tuneText}}</view>
       <view wx:if="{{meal.adjustedText}}" class="adjusted-note">{{meal.adjustedText}}</view>
       <view wx:if="{{meal.analysis.isFood}}" class="macros">
         <view class="macro">
@@ -69,15 +70,6 @@
     </view>
     <view class="dish-hint">{{picking ? '点一下没吃的那几道，再点下面的按钮' : '估得不对？点一道菜，拖一拖改份量'}}</view>
     <view wx:if="{{meal.unsureText && !picking}}" class="unsure-note">{{meal.unsureText}}</view>
-    <!-- 和别人一起吃的：点人数，大家夹的菜按人数分；饭量比别人小 / 大的再调一下 -->
-    <view wx:if="{{!picking}}" class="people">
-      <view class="people-title"><image class="people-icon" src="/images/icons/users.svg" mode="aspectFit" />几个人一起吃？</view>
-      <people-pick value="{{meal.people || 1}}" bind:change="onPeople" />
-      <block wx:if="{{(meal.people || 1) > 1}}">
-        <view class="people-title how-gap">和大家比，我吃得</view>
-        <segmented options="{{appetites}}" value="{{meal.appetite || 'same'}}" bindchange="onAppetite" />
-      </block>
-    </view>
     <view wx:for="{{meal.dishes}}" wx:key="index" class="dish {{picks[item.index] ? 'dish-off' : ''}}" hover-class="dish-press" hover-stay-time="100" data-index="{{item.index}}" bindtap="openDish">
       <view wx:if="{{picking}}" class="dish-check {{picks[item.index] ? 'dish-check-on' : ''}}">{{picks[item.index] ? '✕' : ''}}</view>
       <view class="dish-main">
@@ -88,12 +80,33 @@
       <image wx:if="{{!picking}}" class="dish-go" src="/images/icons/chevron-off.svg" mode="aspectFit" />
     </view>
     <block wx:if="{{!picking}}">
-      <!-- 拍的是吃之前的：吃完剩了的点一下 -->
-      <view class="how">
-        <view class="people-title">吃完了吗？</view>
-        <segmented options="{{lefts}}" value="{{meal.left || 'none'}}" bindchange="onLeft" />
+      <!-- 一键整体调：懒得一道一道改时，点一下每道菜一起多 / 少（自己改过份量的不动） -->
+      <view class="how tune">
+        <view class="people-title">整体看，实际吃的比估的</view>
+        <segmented options="{{tunes}}" value="{{meal.tune || 'same'}}" bindchange="onTune" />
       </view>
-      <view wx:if="{{meal.dishes.length > 1}}" class="skip-link" hover-class="fx-press" bindtap="startPick">有几道没吃？一次点掉 ›</view>
+      <!-- 不常用的收在一行里：和别人一起吃、没吃完、有几道没动（一起吃的、没吃完的先展开） -->
+      <view class="more-row" hover-class="fx-press" bindtap="toggleMore">
+        <text class="more-title">和别人一起吃、没吃完、有几道没动？</text>
+        <image class="more-arrow {{moreOpen ? 'more-arrow-open' : ''}}" src="/images/icons/chevron.svg" mode="aspectFit" />
+      </view>
+      <view wx:if="{{moreOpen}}" class="more-body">
+        <!-- 和别人一起吃的：点人数，大家夹的菜按人数分；饭量比别人小 / 大的再调一下 -->
+        <view class="people">
+          <view class="people-title"><image class="people-icon" src="/images/icons/users.svg" mode="aspectFit" />几个人一起吃？</view>
+          <people-pick value="{{meal.people || 1}}" bind:change="onPeople" />
+          <block wx:if="{{(meal.people || 1) > 1}}">
+            <view class="people-title how-gap">和大家比，我吃得</view>
+            <segmented options="{{appetites}}" value="{{meal.appetite || 'same'}}" bindchange="onAppetite" />
+          </block>
+        </view>
+        <!-- 拍的是吃之前的：吃完剩了的点一下 -->
+        <view class="how">
+          <view class="people-title">吃完了吗？</view>
+          <segmented options="{{lefts}}" value="{{meal.left || 'none'}}" bindchange="onLeft" />
+        </view>
+        <view wx:if="{{meal.dishes.length > 1}}" class="skip-link" hover-class="fx-press" bindtap="startPick">有几道没吃？一次点掉 ›</view>
+      </view>
     </block>
     <view wx:else class="pick-bar">
       <button class="btn-plain pick-cancel" bindtap="cancelPick">不去了</button>

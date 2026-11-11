@@ -6,7 +6,7 @@ const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
 const { MAIN_MEALS, dayBeans, mealStamps, beansHint } = require('../lib/shared/forest')
 const { mealTimesOf, timingFor } = require('../lib/shared/timing')
-const { LIMITS, APPETITE, LEFT, peopleOf, appetiteOf, leftOf, resize, reportion, totalsAfter } = require('../lib/shared/dish')
+const { LIMITS, APPETITE, LEFT, TUNE, peopleOf, appetiteOf, leftOf, tuneOf, resize, reportion, totalsAfter } = require('../lib/shared/dish')
 
 const NOTE_MAX = 200
 const PORTIONS_KEEP = 12 // 常用份量留最近几样
@@ -48,10 +48,10 @@ function withAiOriginal(a) {
 
 // 这顿是怎么吃的：几个人、饭量、剩了多少（shared/dish.js 的 reportion 按它算每道菜吃了几成）
 function howOf(meal) {
-  return { people: peopleOf(meal.people), appetite: appetiteOf(meal.appetite), left: leftOf(meal.left) }
+  return { people: peopleOf(meal.people), appetite: appetiteOf(meal.appetite), left: leftOf(meal.left), tune: tuneOf(meal.tune) }
 }
 
-const sameHow = (a, b) => a.people === b.people && a.appetite === b.appetite && a.left === b.left
+const sameHow = (a, b) => a.people === b.people && a.appetite === b.appetite && a.left === b.left && a.tune === b.tune
 
 // 菜名当字段名存：去掉数据库字段路径里有特殊含义的 . 和 $
 function portionKey(name) {
@@ -207,14 +207,14 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         times,
         portions: await portionsOf(openid),
         // 重新看一遍：人数、饭量照旧，「剩了多少」从头来（备注里多半已经写了）
-        how: { ...howOf(meal), left: 'none' },
+        how: { ...howOf(meal), left: 'none', tune: 'same' },
       })
       // 已经有结果的打卡，重试失败时不要把好结果覆盖掉
       if (result.status === 'failed' && meal.status === 'done') {
         throw new AppError(CODES.AI_FAILED, result.error)
       }
 
-      const patch = { note, left: 'none', ...result, updatedAt: now().getTime() }
+      const patch = { note, left: 'none', tune: 'same', ...result, updatedAt: now().getTime() }
       await repo.updateMeal(meal._id, patch)
       const updated = { ...meal, ...patch }
 
@@ -295,8 +295,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       return { ...meal, ...patch }
     },
 
-    // 这顿是怎么吃的（结果页点的）：{ mealId, people 几个人 | appetite 饭量 | left 剩了多少 }，给哪样改哪样。
+    // 这顿是怎么吃的（结果页点的）：{ mealId, people 几个人 | appetite 饭量 | left 剩了多少 | tune 整体比估的少 / 多 }，给哪样改哪样。
     // 大家夹的菜（shared 不是 false）按人数和饭量分，「剩了多少」每道菜都乘；用户单独改过的份量按比例留着。
+    // 「整体比估的少一些 / 多一些」每道菜都乘，用户单独改过份量的那道不动（它已经是准的）。
     // 总数按每道菜的变化量加减，评级、点评、暖豆不变
     async share(openid, input) {
       const src = input || {}
@@ -320,7 +321,11 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         if (!Object.prototype.hasOwnProperty.call(LEFT, src.left)) throw new AppError(CODES.BAD_REQUEST, '剩了多少选「全吃了、剩了一点、剩了一半」里的一个')
         after.left = src.left
       }
-      if (!('people' in src) && !('appetite' in src) && !('left' in src)) throw new AppError(CODES.BAD_REQUEST, '要改什么？')
+      if ('tune' in src) {
+        if (!Object.prototype.hasOwnProperty.call(TUNE, src.tune)) throw new AppError(CODES.BAD_REQUEST, '选「少一些、差不多、多一些」里的一个')
+        after.tune = src.tune
+      }
+      if (!('people' in src) && !('appetite' in src) && !('left' in src) && !('tune' in src)) throw new AppError(CODES.BAD_REQUEST, '要改什么？')
       if (sameHow(before, after)) return meal
 
       const analysis = { ...a, ...reportion(a, before, after), ...withAiOriginal(a) }

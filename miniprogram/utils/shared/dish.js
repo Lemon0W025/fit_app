@@ -1,11 +1,11 @@
 // 一道菜的份量怎么变（云函数 meal.adjust / meal.share 存的，和小程序结果页拖滑杆时的预览，都按这一套算，算出来一样）：
 //   resize(dish, { grams } | { factor })  用户说吃了多少克 / 原来的几倍 → { dish: 改好的这道菜 } 或 { error: 说给用户听的话 }
-//   reportion(analysis, before, after)    这一顿怎么吃的变了（how = { people 几个人, appetite 饭量, left 剩了多少 }）→ { foods, totalKcal, protein, carbs, fat }
-//   eatenOf(dish, how)                    这道菜吃了估出来那份的几成：大家夹的按人数和饭量分，再乘上剩了多少
+//   reportion(analysis, before, after)    这一顿怎么吃的变了（how = { people 几个人, appetite 饭量, left 剩了多少, tune 整体比估的多还是少 }）→ { foods, totalKcal, protein, carbs, fat }
+//   eatenOf(dish, how)                    这道菜吃了估出来那份的几成：大家夹的按人数和饭量分，再乘上剩了多少、整体多还是少
 //   share(dish, before, after)            一道菜从吃 before 成变成吃 after 成（reportion 里用，一般不用直接调）
 //   totalsAfter(analysis, dish, next)     一道菜从 dish 变成 next（null = 删掉）以后，这顿的总热量和营养素
 //   isShared(dish)                        大家夹的菜（单独盛的标 false；没标的老打卡当成大家夹的）
-//   peopleOf(v) / appetiteOf(v) / leftOf(v)  不对的值都落回默认：一个人 / 差不多 / 全吃了
+//   peopleOf(v) / appetiteOf(v) / leftOf(v) / tuneOf(v)  不对的值都落回默认：一个人 / 差不多 / 全吃了 / 差不多
 // 两边逐字节一致（cloudfunctions/api/lib/shared/ 和 miniprogram/utils/shared/）
 
 const { round1 } = require('./nutrition')
@@ -24,6 +24,8 @@ const MACROS = ['protein', 'carbs', 'fat']
 const APPETITE = { less: 0.7, same: 1, more: 1.3 }
 // 吃完了吗：全吃了 / 剩了一点 / 剩了一半
 const LEFT = { none: 1, some: 0.85, half: 0.5 }
+// 整体估得准不准（结果页一键调）：实际吃的比估的少一些 / 差不多 / 多一些。自己单独改过份量的菜已经是准的，不跟着变
+const TUNE = { less: 0.8, same: 1, more: 1.25 }
 const EPS = 1e-9
 
 const isShared = (dish) => dish.shared !== false
@@ -35,13 +37,16 @@ function peopleOf(v) {
 
 const appetiteOf = (v) => (Object.prototype.hasOwnProperty.call(APPETITE, v) ? v : 'same')
 const leftOf = (v) => (Object.prototype.hasOwnProperty.call(LEFT, v) ? v : 'none')
+const tuneOf = (v) => (Object.prototype.hasOwnProperty.call(TUNE, v) ? v : 'same')
 
-// 这道菜吃了估出来那份（一个人吃、全吃完）的几成。一个人吃时饭量不算（拍到多少就是多少）；最多整份
+// 这道菜吃了估出来那份（一个人吃、全吃完）的几成。一个人吃时饭量不算（拍到多少就是多少）；分到的最多整份；
+// 整体多 / 少（tune）每道菜都乘，自己改过份量的那道除外
 function eatenOf(dish, how) {
   const h = how || {}
   const people = peopleOf(h.people)
   const part = isShared(dish) && people > 1 ? Math.min(1, APPETITE[appetiteOf(h.appetite)] / people) : 1
-  return part * LEFT[leftOf(h.left)]
+  const tune = dish.adjusted ? 1 : TUNE[tuneOf(h.tune)]
+  return part * LEFT[leftOf(h.left)] * tune
 }
 
 const clampGrams = (g) => Math.min(LIMITS.gramsMax, Math.max(LIMITS.gramsMin, Math.round(g)))
@@ -150,4 +155,4 @@ function totalsAfter(a, dish, next) {
   return out
 }
 
-module.exports = { LIMITS, APPETITE, LEFT, isShared, peopleOf, appetiteOf, leftOf, eatenOf, resize, share, reportion, totalsAfter }
+module.exports = { LIMITS, APPETITE, LEFT, TUNE, isShared, peopleOf, appetiteOf, leftOf, tuneOf, eatenOf, resize, share, reportion, totalsAfter }
