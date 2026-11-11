@@ -18,13 +18,14 @@ const { createCampService } = require('./services/camp')
 const { createRemindService } = require('./services/remind')
 const { createTestPerks } = require('./lib/test-perks')
 const { createAccountService } = require('./services/account')
+const { createFamilyService } = require('./services/family')
 
 const log = (...args) => console.error(...args)
 const now = () => new Date()
 
 const repo = createRepo(cloud.database())
 const chat = createChat(cloud, { fallbackProviders: config.fallbackProviders, log })
-const { getImageUrl, deleteFile } = createStorage(cloud, config)
+const { getImageUrl, deleteFile, getPhotoUrls } = createStorage(cloud, config)
 const forest = createForestService({ repo, now })
 const camp = createCampService({ repo, now, forest, perks: createTestPerks({ config, now }) })
 // 微信服务通知（一次性订阅消息）：config.remindTemplate 填了模板 ID 才会发
@@ -38,6 +39,17 @@ const remind = createRemindService({
   send: (msg) => cloud.openapi.subscribeMessage.send(msg),
   wxapi: cloud.openapi({ convertCase: false }).subscribeMessage,
   log,
+  // 定时检查时顺带：谁过了饭点没拍，告诉开了提醒的亲友（family 在下面才建，叫的时候已经有了）
+  alsoTick: () => family.alertFollowers(),
+})
+// 亲友看板：邀请亲友看打卡、点赞、过了饭点没拍告诉亲友（用饭点提醒的同一个模板和「允许」次数）
+const family = createFamilyService({
+  repo,
+  now,
+  template: () => remind.template(),
+  send: (msg) => cloud.openapi.subscribeMessage.send(msg),
+  photoUrls: getPhotoUrls,
+  log,
 })
 
 const route = createRouter(
@@ -50,6 +62,7 @@ const route = createRouter(
     camp,
     remind,
     account: createAccountService({ repo, config, now, deleteFile, log }),
+    family,
   },
   { log },
 )

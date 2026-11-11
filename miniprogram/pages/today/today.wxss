@@ -227,3 +227,18 @@
   text-decoration: line-through;
 }
 
+
+/* 亲友看板：亲友的赞 */
+.likes-note {
+  padding: 24rpx 32rpx;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.meal-likes {
+  margin-top: 6rpx;
+  font-size: 26rpx;
+  color: var(--red);
+}

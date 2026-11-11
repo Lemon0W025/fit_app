@@ -100,6 +100,26 @@
     <text class="remind-entry-arrow">›</text>
   </view>
 
+  <!-- 亲友看板（pages/family）：把打卡分享给亲友看；我关注了别人的话多一行入口 -->
+  <view wx:if="{{family && (family.code || family.following)}}" class="card family-card">
+    <block wx:if="{{!isNew && family.code}}">
+      <view class="remind-entry-title">👪 亲友看板</view>
+      <view class="muted small">邀请亲友看你每天的打卡，TA 能给你点赞</view>
+      <button class="btn-primary family-invite" open-type="share">邀请亲友看我的打卡</button>
+      <view wx:if="{{family.viewers.length}}" class="family-list">
+        <view class="family-list-title">谁在看我的打卡</view>
+        <view wx:for="{{family.viewers}}" wx:key="viewer" class="family-row">
+          <text class="family-name">{{item.name}}</text>
+          <text class="family-remove" data-viewer="{{item.viewer}}" data-name="{{item.name}}" bindtap="removeViewer">移除</text>
+        </view>
+      </view>
+    </block>
+    <view wx:if="{{family.following}}" class="family-following" hover-class="fx-press" bindtap="goFamily">
+      <text>{{family.followingText}}</text>
+      <text class="remind-entry-arrow">›</text>
+    </view>
+  </view>
+
   <!-- 测试期间（云函数 config.testReset 开着）才有：清空自己的数据，从新手指引重新走一遍 -->
   <view wx:if="{{canReset}}" class="card remind-entry reset-entry" hover-class="fx-press" bindtap="startOver">
     <view class="remind-entry-body">

@@ -33,6 +33,14 @@ const ROUTES = {
   'remind.test': ['remind', 'test'],
   'account.info': ['account', 'info'],
   'account.reset': ['account', 'reset'],
+  'family.invite': ['family', 'invite'],
+  'family.accept': ['family', 'accept'],
+  'family.get': ['family', 'get'],
+  'family.like': ['family', 'like'],
+  'family.setNotify': ['family', 'setNotify'],
+  'family.leave': ['family', 'leave'],
+  'family.remove': ['family', 'remove'],
+  'family.mine': ['family', 'mine'],
 }
 
 function createRouter(services, { log = () => {} } = {}) {

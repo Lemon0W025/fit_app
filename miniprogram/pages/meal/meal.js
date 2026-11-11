@@ -3,6 +3,7 @@ const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
 const { adjustView, adjustRequest, previewText, peopleText } = require('../../utils/portion')
+const { likesText } = require('../../utils/family')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
 const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
@@ -26,6 +27,8 @@ Page({
     adjustShow: false,
     // 几个人一起吃
     peopleText: '',
+    // 亲友给这顿点的赞：「❤ 小明 赞了」
+    likesText: '',
   },
 
   onLoad(options) {
@@ -48,6 +51,7 @@ Page({
 
   showMeal(meal) {
     this.setData({ loading: false, meal: decorateMeal(meal), note: meal.note || '', ...this.peopleView(meal) })
+    this.setData({ likesText: likesText(meal.likes) })
     if (this.freshGain) {
       const raw = this.freshGain
       this.freshGain = null

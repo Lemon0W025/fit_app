@@ -1,0 +1,242 @@
+/* 接受邀请 */
+.join-title {
+  font-size: 38rpx;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.join-text {
+  margin-top: 12rpx;
+  font-size: 30rpx;
+}
+
+.join-label {
+  margin-top: 32rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.join-input-wrap {
+  margin-top: 12rpx;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: var(--gray-soft);
+}
+
+.join-input {
+  font-size: 34rpx;
+  height: 56rpx;
+}
+
+.join-note {
+  background: var(--yellow-soft);
+  color: var(--yellow);
+  font-size: 30rpx;
+}
+
+.none {
+  text-align: center;
+  padding: 56rpx 40rpx;
+}
+
+.none-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 16rpx;
+}
+
+/* 一位亲友 */
+.person-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.person-name {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.person-streak {
+  font-size: 28rpx;
+  color: var(--yellow);
+  font-weight: 600;
+}
+
+.person-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+}
+
+.person-week {
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.person-empty {
+  margin-top: 24rpx;
+  padding: 32rpx;
+  border-radius: 16rpx;
+  background: var(--gray-soft);
+  color: var(--muted);
+  text-align: center;
+  font-size: 30rpx;
+}
+
+/* 一顿 */
+.fmeal {
+  display: flex;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid var(--line);
+}
+
+.fmeal-photo {
+  width: 168rpx;
+  height: 168rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+  background: var(--gray-soft);
+}
+
+.fmeal-photo-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+}
+
+.fmeal-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: 24rpx;
+}
+
+.fmeal-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.fmeal-label {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.fmeal-time {
+  margin-left: 12rpx;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.fmeal-ontime {
+  margin-left: 12rpx;
+  padding: 2rpx 14rpx;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  color: #a8730a;
+  background: #fbefc9;
+}
+
+.fmeal-kcal {
+  margin-top: 4rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.fmeal-comment {
+  margin-top: 4rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.fmeal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+}
+
+.fmeal-likes {
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+  font-size: 26rpx;
+  color: var(--muted);
+}
+
+/* 赞：大一点好点；赞过了变实心 */
+.like {
+  flex-shrink: 0;
+  padding: 12rpx 28rpx;
+  border-radius: 40rpx;
+  border: 2rpx solid var(--line);
+  background: var(--card);
+  font-size: 30rpx;
+  color: var(--text);
+  transition: transform 0.15s, background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.like-on {
+  background: var(--red-soft);
+  border-color: var(--red-soft);
+  color: var(--red);
+  font-weight: 600;
+}
+
+/* 过了饭点没拍，提醒我 */
+.notify {
+  display: flex;
+  align-items: center;
+  margin-top: 28rpx;
+  padding-top: 24rpx;
+  border-top: 2rpx solid var(--line);
+}
+
+.notify-text {
+  flex: 1;
+  min-width: 0;
+  margin-right: 24rpx;
+}
+
+.notify-title {
+  font-size: 32rpx;
+  font-weight: 600;
+}
+
+.notify-sub {
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+.notify-add {
+  margin-left: 16rpx;
+  padding: 12rpx 0;
+  color: var(--primary);
+}
+
+.person-foot {
+  margin-top: 8rpx;
+  text-align: right;
+}
+
+.leave {
+  display: inline-block;
+  padding: 16rpx 0 0 32rpx;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+button.mine-btn {
+  margin-top: 40rpx;
+  font-size: 34rpx;
+  padding: 22rpx 0;
+}

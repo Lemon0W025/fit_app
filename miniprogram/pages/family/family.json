@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "亲友看板",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "switch-bar": "/components/switch/switch"
+  }
+}

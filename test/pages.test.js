@@ -10,7 +10,7 @@ const V = require('../miniprogram/utils/camp-view')
 const { manualClock } = require('./helpers/manual-clock')
 const { fixDate } = require('./helpers/fixed-date')
 
-const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile', 'remind', 'welcome', 'manual']
+const PAGES = ['today', 'camp', 'gacha', 'shop', 'album', 'forest', 'checkin', 'meal', 'weight', 'profile', 'remind', 'welcome', 'manual', 'family']
 
 test('app.json 里的页面文件和 tabBar 图标都存在', () => {
   const fs = require('node:fs')

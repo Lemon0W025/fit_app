@@ -6,6 +6,7 @@ const { clockOf } = require('../../utils/fx')
 const { guideCard } = require('../../utils/guide')
 const { TOURS, seen, markSeen } = require('../../utils/tours')
 const { appVersion } = require('../../utils/remind')
+const { likesView, SEEN_LIKES_KEY } = require('../../utils/family')
 
 const GUIDE_HIDDEN_KEY = 'guideHidden' // 新手三步点过「不用了」
 
@@ -24,6 +25,8 @@ Page({
     guide: null,
     tourSteps: TOURS.today,
     tourShow: false,
+    // 亲友的赞：by 是每顿下面那行，note 是新来的赞的提示（utils/family.js 的 likesView）
+    likes: { by: {}, note: '' },
   },
 
   onShow() {
@@ -70,6 +73,7 @@ Page({
         })
         this.refresh()
         this.maybeTour()
+        this.showLikes(day)
       })
       .catch((err) => {
         this.setData({ loading: false })
@@ -176,6 +180,24 @@ Page({
 
   openMeal(e) {
     wx.navigateTo({ url: `/pages/meal/meal?id=${e.currentTarget.dataset.id}` })
+  },
+
+  // 亲友看板：亲友给今天的打卡点的赞写在每顿下面；上次看过之后新来的赞，最上面提示一次（记在本地，下次进来就不再提）
+  showLikes(day) {
+    let seenAt = 0
+    try {
+      seenAt = Number(wx.getStorageSync(SEEN_LIKES_KEY)) || 0
+    } catch (e) {
+      // 读不到就当没看过
+    }
+    const v = likesView(day.meals, seenAt)
+    this.setData({ likes: { by: v.by, note: v.note } })
+    if (v.latest <= seenAt) return
+    try {
+      wx.setStorageSync(SEEN_LIKES_KEY, v.latest)
+    } catch (e) {
+      // 存不了：下次进来再提一次
+    }
   },
 
   generateSummary() {

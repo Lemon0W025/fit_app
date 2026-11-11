@@ -247,3 +247,10 @@
   justify-content: space-between;
   margin-top: 8rpx;
 }
+
+/* 亲友看板：亲友给这顿点的赞 */
+.likes-line {
+  margin: -8rpx 8rpx 24rpx;
+  font-size: 30rpx;
+  color: var(--red);
+}
