@@ -98,6 +98,13 @@
   color: var(--yellow);
 }
 
+/* 一起吃的：大概的范围 */
+.range-note {
+  margin-top: 8rpx;
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
 /* 吃了哪些：一道菜一行，整行能点 */
 .dish-hint {
   margin: -8rpx 0 8rpx;
@@ -141,6 +148,84 @@
   background: var(--yellow-soft);
   color: var(--yellow);
   font-size: 26rpx;
+}
+
+/* 小暖没看清的 */
+.dish-tag-unsure {
+  background: #fde9e4;
+  color: #c2452f;
+}
+
+.unsure-note {
+  margin: 4rpx 0 12rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 16rpx;
+  background: #fde9e4;
+  color: #a33a27;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+/* 一次点掉几道没吃的：左边一个圈，点了打叉、整行变淡 */
+.dish-check {
+  flex-shrink: 0;
+  width: 52rpx;
+  height: 52rpx;
+  margin-right: 20rpx;
+  border: 4rpx solid var(--gray);
+  border-radius: 50%;
+  text-align: center;
+  line-height: 46rpx;
+  font-size: 30rpx;
+  color: #fff;
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.dish-check-on {
+  border-color: #c2452f;
+  background: #c2452f;
+}
+
+.dish-off .dish-main,
+.dish-off .dish-kcal {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+
+.pick-bar {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 24rpx;
+}
+
+.pick-bar button {
+  margin: 0;
+}
+
+button.btn-plain.pick-cancel {
+  flex: 1;
+  width: auto !important;
+}
+
+button.btn-primary.pick-ok {
+  flex: 2;
+  width: auto !important;
+}
+
+.how {
+  margin-top: 12rpx;
+  padding-top: 20rpx;
+}
+
+.how-gap {
+  margin-top: 24rpx;
+}
+
+.skip-link {
+  margin-top: 28rpx;
+  padding: 12rpx 0;
+  font-size: 30rpx;
+  color: var(--primary);
 }
 
 .dish-sub {

@@ -2,12 +2,14 @@ const api = require('../../utils/api')
 const { decorateMeal, decorateGain, gainTitle, milestoneView } = require('../../utils/view')
 const { arrivalCard } = require('../../utils/camp-view')
 const { clockOf, countUp, buzz } = require('../../utils/fx')
-const { adjustView, adjustRequest, previewText, peopleText } = require('../../utils/portion')
+const { adjustView, adjustRequest, previewText, peopleText, rangeText, howToast, APPETITES, LEFTS } = require('../../utils/portion')
 
 // 刚打完卡的节奏（毫秒）：盖章落下时轻震，三顿都准时撒彩带，里程碑等前面都播完再弹
 const FX = { buzz: 250, beansMs: 600, kcalMs: 800, burst: 700, milestone: 1400 }
 // 改完份量，大字的热量从原来的滚到新的
 const ADJUST_KCAL_MS = 600
+// 不在「点掉没吃的」
+const NO_PICKS = { picking: false, picks: {}, pickCount: 0, pickText: '点一下没吃的' }
 
 Page({
   data: {
@@ -24,13 +26,21 @@ Page({
     // 改份量的抽屉（utils/portion.js 的 adjustView）
     adjust: null,
     adjustShow: false,
-    // 几个人一起吃
+    // 几个人一起吃、饭量、吃完了吗
     peopleText: '',
+    rangeText: '',
+    appetites: APPETITES,
+    lefts: LEFTS,
+    // 一次点掉几道没吃的：picks[第几道] = true
+    picking: false,
+    picks: {},
+    pickCount: 0,
+    pickText: '点一下没吃的',
   },
 
   onLoad(options) {
     this.mealId = options.id
-    // 刚打完卡跳过来时，告诉妈妈这次得了多少暖豆、有没有小动物搬来
+    // 刚打完卡跳过来时：这次得了多少暖豆、有没有小动物搬来
     const app = getApp()
     const last = app.globalData.lastGain
     if (last && last.mealId === options.id) {
@@ -125,6 +135,7 @@ Page({
     const index = Number(e.currentTarget.dataset.index)
     const dish = (a.foods || [])[index]
     if (!dish) return
+    if (this.data.picking) return this.togglePick(index)
     this.dish = dish
     const adjust = adjustView(dish, index, this.data.meal.people || 1)
     this.portionValue = adjust.value
@@ -155,10 +166,12 @@ Page({
     this.setData({ adjustShow: false })
   },
 
+  // 没改：小暖「拿不准」的菜算看过了、没错（去掉标记），别的直接关上
   saveAdjust() {
     const req = adjustRequest(this.data.adjust, this.portionValue)
-    if (!req) return this.closeAdjust()
-    this.sendAdjust(req, '改好了')
+    if (req) return this.sendAdjust(req, '改好了')
+    if (this.dish && this.dish.unsure) return this.sendAdjust({ confirm: true }, '好的')
+    this.closeAdjust()
   },
 
   removeDish() {
@@ -185,7 +198,7 @@ Page({
       .then((meal) => {
         const view = decorateMeal(meal)
         const to = meal.analysis.totalKcal
-        this.setData({ working: false, adjustShow: false, meal: { ...view, kcalText: `约 ${from} 千卡` }, ...this.peopleView(meal) })
+        this.setData({ working: false, adjustShow: false, meal: { ...view, kcalText: `约 ${from} 千卡` }, ...this.peopleView(meal), ...NO_PICKS })
         const c = countUp(from, to, ADJUST_KCAL_MS, (n) => this.setData({ 'meal.kcalText': `约 ${n} 千卡` }), clockOf(this))
         this.counters = (this.counters || []).concat(c)
         wx.showToast({ title: toast, icon: 'success' })
@@ -199,14 +212,60 @@ Page({
   // ---------------------------------------------------------------- 几个人一起吃
 
   peopleView(meal) {
-    return { peopleText: peopleText(meal.people || 1) }
+    const people = meal.people || 1
+    const ok = meal.status === 'done' && meal.analysis && meal.analysis.isFood !== false
+    return { peopleText: peopleText(people, meal.appetite), rangeText: ok ? rangeText(meal.analysis, people) : '' }
   },
 
   // 点「就我 / 2 人 / … / 更多」（components/people）：大家夹的菜按人数分（meal.share）
   onPeople(e) {
     const people = e.detail.value
     if (!people || people === (this.data.meal.people || 1)) return
-    this.update('meal.share', { people }, people > 1 ? `按 ${people} 个人算好了` : '按一个人算好了')
+    this.update('meal.share', { people }, howToast({ people }))
+  },
+
+  // 和大家比吃得少 / 差不多 / 多：大家夹的菜再乘一下；顺手记在手机上，下次打卡默认这个
+  onAppetite(e) {
+    const appetite = e.detail.value
+    if (!appetite || appetite === (this.data.meal.appetite || 'same')) return
+    wx.setStorageSync('appetite', appetite)
+    this.update('meal.share', { appetite }, howToast({ appetite }))
+  },
+
+  // 吃完了吗：全吃了 / 剩了一点 / 剩了一半，每道菜都按这个算
+  onLeft(e) {
+    const left = e.detail.value
+    if (!left || left === (this.data.meal.left || 'none')) return
+    this.update('meal.share', { left }, howToast({ left }))
+  },
+
+  // ---------------------------------------------------------------- 一次点掉几道没吃的
+
+  startPick() {
+    this.setData({ picking: true, picks: {}, pickCount: 0, pickText: '点一下没吃的' })
+  },
+
+  cancelPick() {
+    this.setData(NO_PICKS)
+  },
+
+  togglePick(index) {
+    const picks = { ...this.data.picks }
+    if (picks[index]) delete picks[index]
+    else picks[index] = true
+    const n = Object.keys(picks).length
+    // 至少留一道吃了的
+    if (n >= this.data.meal.dishes.length) {
+      wx.showToast({ title: '至少留一道吃了的', icon: 'none' })
+      return
+    }
+    this.setData({ picks, pickCount: n, pickText: n ? `去掉这 ${n} 道` : '点一下没吃的' })
+  },
+
+  confirmPick() {
+    const indexes = Object.keys(this.data.picks).map(Number)
+    if (!indexes.length) return
+    this.update('meal.skip', { indexes }, '去掉了')
   },
 
   previewPhoto() {

@@ -1,6 +1,7 @@
 // 模型输出不一定守规矩：可能带代码块围栏、前后有废话、字段缺失或数值离谱，这里统一兜住
 
 const { round1 } = require('./shared/nutrition')
+const { anchor } = require('./food-table')
 
 const RATINGS = ['green', 'yellow', 'red']
 const MAX_FOODS = 12
@@ -60,9 +61,13 @@ function parseMealAnalysis(text) {
       grams: Math.round(num(f.grams, MAX_DISH_GRAMS)),
       kcal: Math.round(num(f.kcal, MAX_FOOD_KCAL)),
       ...dishMacros(f),
-      // 大家一起夹的（一盘、一锅）true，单独盛给她的（一碗饭）false；没说就不记（当成大家夹的）
+      // 大家一起夹的（一盘、一锅）true，单独盛的（一碗饭）false；没说就不记（当成大家夹的）
       ...(typeof f.shared === 'boolean' ? { shared: f.shared } : {}),
+      // 模型自己说看不清的：结果页标「拿不准」，请用户点一下确认
+      ...(f.unsure === true ? { unsure: true } : {}),
     }))
+    // 认得出来的菜，每 100 克的热量离常见的数太远就拉回来（lib/food-table.js）
+    .map(anchor)
   // 总数由程序按菜加总（AI 自己加常常对不上）；菜的热量全是 0（只给了总数）或没有菜时才用 AI 的总数
   const foodsKcal = foods.reduce((sum, f) => sum + f.kcal, 0)
   const totalKcal = foodsKcal > 0 ? Math.min(foodsKcal, MAX_TOTAL_KCAL) : Math.round(num(raw.totalKcal, MAX_TOTAL_KCAL))

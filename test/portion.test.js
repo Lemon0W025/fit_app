@@ -59,6 +59,24 @@ test('结果页大字下面那句：几个人一起吃', () => {
   const { peopleText } = require('../miniprogram/utils/portion')
   assert.equal(peopleText(1), '')
   assert.equal(peopleText(5), '5 个人一起吃，算的是你那一份')
+  assert.equal(peopleText(5, 'same'), '5 个人一起吃，算的是你那一份')
+  assert.equal(peopleText(3, 'more'), '3 个人一起吃，算的是你那一份，按吃得比别人多算的')
+  assert.equal(peopleText(1, 'less'), '')
+})
+
+test('一起吃的给个范围：大家夹的那部分上下留一截，人越多越宽；一个人、没有大家夹的不写', () => {
+  const { rangeText, howToast } = require('../miniprogram/utils/portion')
+  const a = { totalKcal: 474, foods: [{ name: '火锅', kcal: 300, shared: true }, { name: '米饭', kcal: 174, shared: false }] }
+  assert.equal(rangeText(a, 1), '')
+  assert.equal(rangeText(a, 2), '一起吃的不好估准，大概在 410～530 千卡之间')
+  assert.equal(rangeText(a, 5), '一起吃的不好估准，大概在 400～550 千卡之间')
+  assert.equal(rangeText(a, 8), '一起吃的不好估准，大概在 370～580 千卡之间')
+  assert.equal(rangeText({ totalKcal: 174, foods: [{ name: '米饭', kcal: 174, shared: false }] }, 5), '')
+  assert.equal(rangeText(null, 5), '')
+  assert.deepEqual(
+    [howToast({ people: 3 }), howToast({ people: 1 }), howToast({ appetite: 'less' }), howToast({ left: 'some' }), howToast({ left: 'none' })],
+    ['按 3 个人算好了', '按一个人算好了', '按你的饭量算好了', '按剩了一点算好了', '按全吃了算'],
+  )
 })
 
 test('就这么多：克数发 grams、倍数发 factor，没动就不发', () => {

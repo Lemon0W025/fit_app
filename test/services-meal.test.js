@@ -417,7 +417,7 @@ test('adjust：参数不对 BAD_REQUEST；没分析好、不是食物、别人�
   await assert.rejects(cat.service.adjust('u1', { mealId: cat.meal._id, index: 0, grams: 100 }), { code: 'BAD_REQUEST' })
 })
 
-test('adjust：改了克数就记进她家常用份量（同名覆盖、留最近 12 样），删掉不记；下次分析写进提示词', async () => {
+test('adjust：改了克数就记进常用份量（同名覆盖、留最近 12 样），删掉不记；下次分析写进提示词', async () => {
   const { repo, chat, service, meal } = await gramsMeal([analysisJson(GRAMS_MEAL), analysisJson(GRAMS_MEAL)])
   await service.adjust('u1', { mealId: meal._id, index: 0, grams: 110 })
   await service.adjust('u1', { mealId: meal._id, index: 1, remove: true })
@@ -425,7 +425,7 @@ test('adjust：改了克数就记进她家常用份量（同名覆盖、留最�
   assert.equal((await repo.getPortions('u1'))['米饭'].grams, 110)
 
   await service.analyze('u1', { fileID: 'cloud://b.jpg', mealType: 'dinner', note: '' })
-  assert.match(lastUserText(chat.calls[1].messages), /【她家常用份量】她自己改过的：米饭一般吃约 110 克/)
+  assert.match(lastUserText(chat.calls[1].messages), /【常用份量】用户自己改过的：米饭一般吃约 110 克/)
 
   const items = {}
   for (let i = 0; i < 14; i++) items[`菜${i}`] = { grams: 100, at: i }
@@ -509,4 +509,80 @@ test('share：她单独改过的份量按比例留着；人数不对 BAD_REQUEST
   }
   const failed = await gramsMeal([new Error('down')])
   await assert.rejects(failed.service.share('u1', { mealId: failed.meal._id, people: 3 }), { code: 'BAD_REQUEST' })
+})
+
+// ---------------------------------------------------------------- 饭量、剩了多少、一次点掉几道、拿不准
+
+test('analyze：和别人一起吃、饭量比别人小，大家夹的菜程序再乘 0.7（自己那碗不动）；一个人吃不算饭量', async () => {
+  const { service } = setup({ results: [analysisJson(HOTPOT), analysisJson(HOTPOT)] })
+  const meal = await service.analyze('u1', { fileID: 'cloud://a.jpg', mealType: 'dinner', note: '', people: 5, appetite: 'less' })
+  assert.deepEqual([meal.people, meal.appetite, meal.left], [5, 'less', 'none'])
+  const f = meal.analysis.foods
+  assert.deepEqual([f[0].kcal, f[1].kcal, f[2].kcal], [174, 1050, 105])
+  assert.equal(meal.analysis.totalKcal, 174 + 1050 + 105)
+  assert.equal(meal.analysis.adjusted, undefined, '打卡时就按饭量算的，不算改过')
+  const alone = await service.analyze('u1', { fileID: 'cloud://b.jpg', mealType: 'snack', note: '', people: 1, appetite: 'less' })
+  assert.equal(alone.analysis.totalKcal, 1824)
+  const odd = await service.analyze('u1', { fileID: 'cloud://c.jpg', mealType: 'snack', note: '', people: 2, appetite: 'huge' }).catch((e) => e)
+  assert.equal(odd.appetite, 'same')
+})
+
+test('share：饭量、剩了多少各改各的，改回去一模一样；不认的值 BAD_REQUEST', async () => {
+  const { repo, service, meal } = await gramsMeal([analysisJson(HOTPOT)])
+  const two = await service.share('u1', { mealId: meal._id, people: 2 })
+  assert.equal(two.analysis.totalKcal, 174 + 750 + 75)
+  const more = await service.share('u1', { mealId: meal._id, appetite: 'more' })
+  assert.deepEqual([more.people, more.appetite], [2, 'more'])
+  assert.deepEqual(more.analysis.foods.map((f) => f.kcal), [174, 975, 98])
+  assert.equal(more.analysis.totalKcal, 174 + 975 + 98)
+  const half = await service.share('u1', { mealId: meal._id, left: 'half' })
+  assert.equal(half.left, 'half')
+  assert.deepEqual(half.analysis.foods.map((f) => f.kcal), [87, 488, 49])
+  assert.equal(half.analysis.totalKcal, 87 + 488 + 49)
+  assert.equal(half.analysis.aiTotalKcal, 1824)
+  assert.equal((await repo.getMeal('u1', meal._id)).left, 'half')
+  const back = await service.share('u1', { mealId: meal._id, people: 1, appetite: 'same', left: 'none' })
+  assert.equal(back.analysis.totalKcal, 1824)
+  assert.deepEqual(back.analysis.foods.map((f) => [f.grams, f.kcal]), HOTPOT.foods.map((f) => [f.grams, f.kcal]))
+  for (const bad of [{ appetite: 'huge' }, { left: 'all' }, { left: 1 }, {}]) {
+    await assert.rejects(service.share('u1', { mealId: meal._id, ...bad }), { code: 'BAD_REQUEST' }, JSON.stringify(bad))
+  }
+})
+
+test('reanalyze：人数、饭量照旧，剩了多少从头来', async () => {
+  const { service, meal } = await gramsMeal([analysisJson(HOTPOT), analysisJson(HOTPOT)])
+  await service.share('u1', { mealId: meal._id, people: 5, appetite: 'less', left: 'half' })
+  const again = await service.reanalyze('u1', { mealId: meal._id, note: '火锅' })
+  assert.deepEqual([again.people, again.appetite, again.left], [5, 'less', 'none'])
+  assert.equal(again.analysis.totalKcal, 174 + 1050 + 105)
+})
+
+test('skip：一次点掉几道没吃的，总数跟着减，存下 AI 原来的；至少留一道；不对的 BAD_REQUEST', async () => {
+  const { service, meal } = await gramsMeal([analysisJson(HOTPOT)])
+  const left = await service.skip('u1', { mealId: meal._id, indexes: [2, 0] })
+  assert.deepEqual(left.analysis.foods.map((f) => f.name), ['火锅'])
+  assert.equal(left.analysis.totalKcal, 1500)
+  assert.deepEqual([left.analysis.protein, left.analysis.carbs, left.analysis.fat], [90, 30, 100])
+  assert.equal(left.analysis.aiTotalKcal, 1824)
+  assert.equal(left.analysis.aiFoods.length, 3)
+  const other = await gramsMeal([analysisJson(HOTPOT)])
+  for (const indexes of [[], [0, 0], [3], [-1], ['1'], [0, 1, 2], null, undefined]) {
+    await assert.rejects(other.service.skip('u1', { mealId: other.meal._id, indexes }), { code: 'BAD_REQUEST' }, JSON.stringify(indexes))
+  }
+})
+
+test('adjust confirm：拿不准的菜看了没错，只去掉标记，热量和「改过」不动；改份量也算确认', async () => {
+  const UNSURE = { foods: [{ ...HOTPOT.foods[0] }, { ...HOTPOT.foods[1], unsure: true }, { ...HOTPOT.foods[2], unsure: true }] }
+  const { service, meal } = await gramsMeal([analysisJson(UNSURE)])
+  assert.equal(meal.analysis.foods[1].unsure, true)
+  const ok = await service.adjust('u1', { mealId: meal._id, index: 1, confirm: true })
+  assert.equal('unsure' in ok.analysis.foods[1], false)
+  assert.equal(ok.analysis.foods[2].unsure, true)
+  assert.equal(ok.analysis.totalKcal, 1824)
+  assert.equal(ok.analysis.adjusted, undefined)
+  const changed = await service.adjust('u1', { mealId: meal._id, index: 2, grams: 150 })
+  assert.equal('unsure' in changed.analysis.foods[2], false)
+  // 本来就有把握的：不用存
+  const same = await service.adjust('u1', { mealId: meal._id, index: 0, confirm: true })
+  assert.equal(same.analysis.totalKcal, changed.analysis.totalKcal)
 })

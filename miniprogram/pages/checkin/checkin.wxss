@@ -202,3 +202,16 @@
   color: var(--primary);
 }
 
+
+.appetite-title {
+  margin: 28rpx 8rpx 12rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.people-more {
+  margin: 16rpx 8rpx 0;
+  font-size: 28rpx;
+  line-height: 1.6;
+  color: var(--muted);
+}

@@ -10,6 +10,7 @@ const ROUTES = {
   'meal.delete': ['meal', 'remove'],
   'meal.adjust': ['meal', 'adjust'],
   'meal.share': ['meal', 'share'],
+  'meal.skip': ['meal', 'skip'],
   'day.get': ['day', 'get'],
   'summary.generate': ['day', 'summarize'],
   'weight.save': ['weight', 'save'],

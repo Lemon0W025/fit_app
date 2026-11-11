@@ -1,6 +1,7 @@
 const { ACTIVITY_LABELS, MIN_KCAL, round1 } = require('./shared/nutrition')
 const { MEAL_LABELS, RATING_LABELS } = require('./shared/meal-types')
 const { timeText } = require('./shared/date')
+const { promptRefs } = require('./food-table')
 
 const COACH_NAME = '小暖'
 
@@ -20,10 +21,12 @@ const MEAL_SYSTEM = `${PERSONA}
 你的任务：用户每餐拍照或文字打卡，你估算这一餐的热量和营养素，给出点评和下一餐建议。
 
 估算方法：
-- 每道菜单独估：先按碗、盘、筷子的大小估克数（端上桌的熟重，估她吃下去的量），再按克数算热量和营养素；中国家常菜按常见做法的用油量计算。
-- 有【她家常用份量】的菜，照片看不清份量时按她家常用份量估，优先于你的经验。
-- 有【几个人一起吃】时：大家夹的菜先估整盘整锅，再按人数平分，grams、kcal 写她那一份；单独盛给她的按她那一份算，不用分。
-- 用户备注优先于你的判断（比如"米饭只吃了一半"）。
+- 每道菜单独估：先按碗、盘、筷子的大小估克数（端上桌的熟重，估用户吃下去的量），再按克数算热量和营养素；中国家常菜按常见做法的用油量计算。
+- 每 100 克熟重的热量参考（千卡）：${promptRefs()}。同类的菜照这个量级估，别差太多。
+- 有【常用份量】的菜，照片看不清份量时按常用份量估，优先于你的经验。
+- 有【几个人一起吃】时：大家夹的菜先估整盘整锅，再按人数平分，grams、kcal 写用户那一份；单独盛给用户的按那一份算，不用分。
+- 用户备注优先于你的判断（比如"米饭只吃了一半"）；备注里写了照片上没有的（喝的酒、饮料、后来加的菜）也要算进 foods。
+- 看不清的菜（被挡住、认不出是什么、份量很难估）照常估一个数，同时标 "unsure": true；有把握的不用标。
 - 点评不超过 80 字，建议不超过 60 字，要具体到吃什么、吃多少；结合今天剩余的热量预算。
 - 【拍照时间】写着「准时」的，顺口夸一句按时吃饭；写着「不在饭点」的，温和提醒下顿按时吃、吃之前先拍，不要批评。
 
@@ -32,7 +35,7 @@ const MEAL_SYSTEM = `${PERSONA}
 只输出一个 JSON 对象，不要输出任何其他文字。格式：
 {"isFood": true, "foods": [{"name": "米饭", "portion": "一碗", "grams": 150, "kcal": 174, "protein": 3.9, "carbs": 38.9, "fat": 0.5, "shared": false}, {"name": "清炒青菜", "portion": "半盘", "grams": 120, "kcal": 70, "protein": 2.5, "carbs": 4, "fat": 5, "shared": true}], "rating": "green", "comment": "点评", "suggestion": "下一餐建议"}
 foods 里每道菜都要有 grams（克）、kcal、protein、carbs、fat（克）、shared；portion 是口语的份量（一碗、半盘、两个）。总数不用写，程序会按每道菜加起来。
-shared：一盘一锅、大家一起夹的菜是 true；单独盛给她的（一碗饭、一碗汤、一个包子）是 false。
+shared：一盘一锅、大家一起夹的菜是 true；单独盛给用户的（一碗饭、一碗汤、一个包子）是 false。
 如果图片里不是食物，只输出 {"isFood": false, "comment": "简短说明"}。`
 
 const SUMMARY_SYSTEM = `${PERSONA}
@@ -67,8 +70,8 @@ function timingText(mealType, timing, at, times) {
   return `【拍照时间】${clock}，${status}（${MEAL_LABELS[mealType]}饭点 ${times[mealType]}）`
 }
 
-// 她在结果页改过份量的菜（portions 集合，{ 菜名: { grams, at } }），最近改的 8 样。
-// 记的是「她一般吃多少」：把一碗拖成半碗，可能是碗小、也可能只吃了一半，这样说两种都对
+// 用户在结果页改过份量的菜（portions 集合，{ 菜名: { grams, at } }），最近改的 8 样。
+// 记的是「一般吃多少」：把一碗拖成半碗，可能是碗小、也可能只吃了一半，这样说两种都对
 const PORTION_LINES = 8
 
 function portionsText(items) {
@@ -77,12 +80,12 @@ function portionsText(items) {
     .sort((a, b) => (b[1].at || 0) - (a[1].at || 0))
     .slice(0, PORTION_LINES)
   if (!list.length) return ''
-  return `【她家常用份量】她自己改过的：${list.map(([name, p]) => `${name}一般吃约 ${p.grams} 克`).join('；')}。同样的菜照片看不清份量时按这个估`
+  return `【常用份量】用户自己改过的：${list.map(([name, p]) => `${name}一般吃约 ${p.grams} 克`).join('；')}。同样的菜照片看不清份量时按这个估`
 }
 
 // 几个人一起吃（打卡页选的）：1 个人就不写
 function peopleText(people) {
-  return people > 1 ? `【几个人一起吃】${people} 个人一起吃这一顿，大家夹的菜按 ${people} 份算她那一份` : ''
+  return people > 1 ? `【几个人一起吃】${people} 个人一起吃这一顿，大家夹的菜按 ${people} 份平分，写用户那一份` : ''
 }
 
 function buildMealMessages({ profile, mealType, note, imageUrl, consumedKcal, timing, at, times, portions, people }) {

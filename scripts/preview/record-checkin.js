@@ -7,6 +7,7 @@
 //   meal-adjust：点米饭弹出改份量的抽屉，鼠标按住滑杆拖来拖去、再点快捷按钮；slider.wxs 在浏览器里真的跑（假的 owner 直接改 DOM 的样式）
 //   meal-adjusted：改过份量以后的结果页（「改过」「小暖原来估」）
 //   welcome / remind-first / today-guide / checkin-people / meal-people：新手指引、饭点提醒页、几个人一起吃（10/29）
+//   meal-feast / meal-feast-more / meal-pick：聚餐（饭量、范围、拿不准、吃完了吗、一次点掉几道没吃的）
 //   输出到 .preview/checkin/<场景>.mp4、.gif，第一帧 <场景>.png（.preview 不进仓库）
 // 需要 Playwright 和 ffmpeg（云端环境里都装好了）
 const fs = require('fs')
@@ -71,15 +72,26 @@ async function mealData(gain) {
 }
 
 // 真的打一顿卡（云函数假的），打开结果页；adjust：先按这些改份量；open：再点开第几道菜
-async function adjustData({ adjust = [], open = null, share = 0 } = {}) {
+// 聚餐：一桌菜，有两道小暖没看清
+const FEAST = [
+  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, protein: 3.9, carbs: 38.9, fat: 0.5, shared: false },
+  { name: '水煮鱼', portion: '一盆', grams: 300, kcal: 450, protein: 42, carbs: 6, fat: 30, shared: true },
+  { name: '宫保鸡丁', portion: '一盘', grams: 100, kcal: 180, protein: 13, carbs: 8, fat: 11, shared: true, unsure: true },
+  { name: '清炒小白菜', portion: '一盘', grams: 80, kcal: 44, protein: 1.6, carbs: 2.8, fat: 2.8, shared: true },
+  { name: '凉拌木耳', portion: '一碟', grams: 40, kcal: 24, protein: 1, carbs: 2, fat: 1.4, shared: true, unsure: true },
+  { name: '啤酒', portion: '一杯', grams: 300, kcal: 114, protein: 1.2, carbs: 9, fat: 0, shared: false },
+]
+
+async function adjustData({ adjust = [], open = null, share = 0, how = null, foods = DISHES, pick = null } = {}) {
   fixDate(T, '2026-10-22T12:10:00+08:00')
-  const cloud = createFakeCloud({ replies: [analysisJson({ foods: DISHES, comment: '荤素搭配得好，米饭的量也合适。', suggestion: '晚饭多来点绿叶菜。' })] })
+  const cloud = createFakeCloud({ replies: [analysisJson({ foods, comment: '荤素搭配得好，米饭的量也合适。', suggestion: '晚饭多来点绿叶菜。' })] })
   const { main } = loadCloudFunction(cloud)
   await main({ action: 'profile.save', data: profileInput })
   const meal = await main({ action: 'meal.analyze', data: { mealType: 'lunch', fileID: 'cloud://env/meals/a.jpg' } })
   const mealId = meal.data._id
   for (const req of adjust) await main({ action: 'meal.adjust', data: { mealId, ...req } })
   if (share) await main({ action: 'meal.share', data: { mealId, people: share } })
+  if (how) await main({ action: 'meal.share', data: { mealId, ...how } })
   const wx = createWx(async (req) => {
     const res = await main(req)
     // 照片用包里的图（假的云函数里没有真的照片）
@@ -91,6 +103,10 @@ async function adjustData({ adjust = [], open = null, share = 0 } = {}) {
   page.onLoad({ id: mealId })
   await settle()
   page.clock.advance(5000)
+  if (pick) {
+    page.startPick()
+    pick.forEach((index) => page.openDish({ currentTarget: { dataset: { index } }, detail: {} }))
+  }
   if (open !== null) page.openDish({ currentTarget: { dataset: { index: open } }, detail: {} })
   return { data: snap(page) }
 }
@@ -228,6 +244,12 @@ async function calendarData() {
   return { data: snap(page) }
 }
 
+// 滚到页面上的某一块再停着
+const scrollTo = (selector, block = 'start') => async (page) => {
+  await page.evaluate(([sel, b]) => document.querySelector(sel).scrollIntoView({ block: b }), [selector, block])
+  await page.waitForTimeout(1500)
+}
+
 const SCENARIOS = {
   meal: { page: 'meal', seconds: 2.5, build: () => mealData(GAIN) },
   'meal-allontime': { page: 'meal', seconds: 2.5, build: () => mealData({ ...GAIN, beans: 35, beansToday: 75, stamps: STAMPS(true), mealType: 'dinner', allOnTime: true }) },
@@ -296,6 +318,11 @@ const SCENARIOS = {
       await page.waitForTimeout(1500)
     },
   },
+  // 聚餐：4 个人、吃得比别人少、给个范围，两道「拿不准」；再往下是「吃完了吗」和「有几道没吃」
+  'meal-feast': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less' } }), drive: scrollTo('.big-kcal') },
+  'meal-feast-more': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4, appetite: 'less', left: 'some' } }), drive: scrollTo('.dish', 'start') },
+  // 一次点掉几道没吃的
+  'meal-pick': { page: 'meal', seconds: 1.5, build: () => adjustData({ foods: FEAST, how: { people: 4 }, pick: [2, 4] }), drive: scrollTo('.dish-hint', 'start') },
   'meal-adjust': { page: 'meal', seconds: 8, build: () => adjustData({ open: 0 }), script: sliderScript, drive: driveAdjust },
   'meal-adjusted': {
     page: 'meal',

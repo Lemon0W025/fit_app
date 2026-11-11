@@ -6,10 +6,10 @@ const { dateKey } = require('../lib/shared/date')
 const { isMealType } = require('../lib/shared/meal-types')
 const { MAIN_MEALS, dayBeans, mealStamps, beansHint } = require('../lib/shared/forest')
 const { mealTimesOf, timingFor } = require('../lib/shared/timing')
-const { LIMITS, isShared, peopleOf, resize, share, totalsAfter } = require('../lib/shared/dish')
+const { LIMITS, APPETITE, LEFT, peopleOf, appetiteOf, leftOf, resize, reportion, totalsAfter } = require('../lib/shared/dish')
 
 const NOTE_MAX = 200
-const PORTIONS_KEEP = 12 // 她家常用份量留最近几样
+const PORTIONS_KEEP = 12 // 常用份量留最近几样
 
 function text(v, max) {
   return typeof v === 'string' ? v.trim().slice(0, max) : ''
@@ -46,6 +46,13 @@ function withAiOriginal(a) {
   }
 }
 
+// 这顿是怎么吃的：几个人、饭量、剩了多少（shared/dish.js 的 reportion 按它算每道菜吃了几成）
+function howOf(meal) {
+  return { people: peopleOf(meal.people), appetite: appetiteOf(meal.appetite), left: leftOf(meal.left) }
+}
+
+const sameHow = (a, b) => a.people === b.people && a.appetite === b.appetite && a.left === b.left
+
 // 菜名当字段名存：去掉数据库字段路径里有特殊含义的 . 和 $
 function portionKey(name) {
   return String(name || '').replace(/[.$]/g, '').trim()
@@ -69,7 +76,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
     return sumMeals(meals.filter((m) => m._id !== excludeId)).kcal
   }
 
-  // 她家常用份量：读不到不影响打卡
+  // 常用份量：读不到不影响打卡
   async function portionsOf(openid) {
     try {
       return await repo.getPortions(openid)
@@ -93,19 +100,22 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
     }
   }
 
-  async function ask(model, messages) {
+  // 小暖按「几个人平分」估的；饭量比别人小 / 大的，大家夹的菜程序再乘一下（模型自己乘常常忘）
+  async function ask(model, messages, how) {
     const reply = await chat({ provider: config.provider, model, messages })
-    return parseMealAnalysis(reply)
+    const analysis = parseMealAnalysis(reply)
+    if (analysis.isFood === false) return analysis
+    return { ...analysis, ...reportion(analysis, { people: how.people }, how) }
   }
 
   // 先看图；看图不可用或失败时，有文字描述就按描述估算；都不行就记为失败，留给用户补描述后重试
-  async function runAnalysis({ profile, mealType, note, fileID, consumed, timing, at, times, portions, people }) {
-    const base = { profile, mealType, note, consumedKcal: consumed, timing, at, times, portions, people }
+  async function runAnalysis({ profile, mealType, note, fileID, consumed, timing, at, times, portions, how }) {
+    const base = { profile, mealType, note, consumedKcal: consumed, timing, at, times, portions, people: how.people }
 
     if (fileID && config.visionModel) {
       try {
         const imageUrl = await getImageUrl(fileID)
-        const analysis = await ask(config.visionModel, buildMealMessages({ ...base, imageUrl }))
+        const analysis = await ask(config.visionModel, buildMealMessages({ ...base, imageUrl }), how)
         return { status: 'done', mode: 'vision', analysis, error: '' }
       } catch (e) {
         log('vision analysis failed', e)
@@ -114,7 +124,7 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
 
     if (note) {
       try {
-        const analysis = await ask(config.textModel, buildMealMessages({ ...base, imageUrl: null }))
+        const analysis = await ask(config.textModel, buildMealMessages({ ...base, imageUrl: null }), how)
         return { status: 'done', mode: 'text', analysis, error: '' }
       } catch (e) {
         log('text analysis failed', e)
@@ -146,8 +156,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const timing = timingFor(src.mealType, at, times)
       const meals = await repo.listMeals(openid, date)
       const portions = await portionsOf(openid)
-      const people = peopleOf(src.people)
-      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals), timing, at, times, portions, people })
+      // 几个人一起吃、饭量（比别人少 / 差不多 / 多）：打卡页选的
+      const how = { people: peopleOf(src.people), appetite: appetiteOf(src.appetite), left: 'none' }
+      const result = await runAnalysis({ profile, mealType: src.mealType, note, fileID, consumed: consumedKcal(meals), timing, at, times, portions, how })
 
       const meal = {
         _openid: openid,
@@ -156,7 +167,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         timing,
         fileID,
         note,
-        people,
+        people: how.people,
+        appetite: how.appetite,
+        left: how.left,
         ...result,
         createdAt: at.getTime(),
         updatedAt: at.getTime(),
@@ -193,14 +206,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
         at: new Date(meal.createdAt),
         times,
         portions: await portionsOf(openid),
-        people: peopleOf(meal.people),
+        // 重新看一遍：人数、饭量照旧，「剩了多少」从头来（备注里多半已经写了）
+        how: { ...howOf(meal), left: 'none' },
       })
       // 已经有结果的打卡，重试失败时不要把好结果覆盖掉
       if (result.status === 'failed' && meal.status === 'done') {
         throw new AppError(CODES.AI_FAILED, result.error)
       }
 
-      const patch = { note, ...result, updatedAt: now().getTime() }
+      const patch = { note, left: 'none', ...result, updatedAt: now().getTime() }
       await repo.updateMeal(meal._id, patch)
       const updated = { ...meal, ...patch }
 
@@ -212,8 +226,9 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       return { ...updated, gain }
     },
 
-    // 结果页点一道菜改份量：{ mealId, index, grams | factor | remove }。只动这道菜和总数，评级、点评、暖豆不变；
-    // 第一次改把 AI 原来的菜单和总热量存下（结果页「小暖原来估 N 千卡」）；改了克数的记进她家常用份量
+    // 结果页点一道菜改份量：{ mealId, index, grams | factor | remove | confirm }。只动这道菜和总数，评级、点评、暖豆不变；
+    // 第一次改把 AI 原来的菜单和总热量存下（结果页「小暖原来估 N 千卡」）；改了克数的记进常用份量。
+    // confirm：小暖「拿不准」的菜，用户看了说没错，只把标记去掉
     async adjust(openid, input) {
       const src = input || {}
       const meal = await requireMeal(openid, src.mealId)
@@ -223,6 +238,15 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       const index = src.index
       if (!Number.isInteger(index) || index < 0 || index >= foods.length) throw new AppError(CODES.BAD_REQUEST, '找不到这道菜了，回去刷新一下')
       const dish = foods[index]
+
+      if (src.confirm === true) {
+        if (!dish.unsure) return meal
+        const sure = { ...dish }
+        delete sure.unsure
+        const patch = { analysis: { ...a, foods: foods.map((f, i) => (i === index ? sure : f)) }, updatedAt: now().getTime() }
+        await repo.updateMeal(meal._id, patch)
+        return { ...meal, ...patch }
+      }
 
       let next = null
       if (src.remove === true) {
@@ -248,28 +272,59 @@ function createMealService({ repo, chat, config, getImageUrl, deleteFile, now, f
       return { ...meal, ...patch }
     },
 
-    // 几个人一起吃（结果页改人数）：{ mealId, people }。大家夹的菜（shared 不是 false）按 原来人数 / 新人数 缩放
-    // （她单独改过的份量也按比例留着），单独盛给她的不动；总数按每道菜的变化量加减。评级、点评、暖豆不变
+    // 大聚餐一次点掉几道没吃的：{ mealId, indexes }。至少留一道；总数按每道菜减，存下 AI 原来的
+    async skip(openid, input) {
+      const src = input || {}
+      const meal = await requireMeal(openid, src.mealId)
+      const a = meal.analysis
+      if (meal.status !== 'done' || !a || a.isFood === false) throw new AppError(CODES.BAD_REQUEST, '这顿还没算好，先不能改')
+      const foods = a.foods || []
+      const list = Array.isArray(src.indexes) ? src.indexes : []
+      const gone = new Set(list)
+      const valid = list.length > 0 && gone.size === list.length && list.every((i) => Number.isInteger(i) && i >= 0 && i < foods.length)
+      if (!valid) throw new AppError(CODES.BAD_REQUEST, '点一下没吃的那几道')
+      if (gone.size >= foods.length) throw new AppError(CODES.BAD_REQUEST, '至少留一道吃了的；都没吃的话删掉整条打卡吧')
+
+      let totals = { totalKcal: a.totalKcal, protein: a.protein, carbs: a.carbs, fat: a.fat }
+      foods.forEach((dish, i) => {
+        if (gone.has(i)) totals = totalsAfter({ ...a, ...totals }, dish, null)
+      })
+      const analysis = { ...a, foods: foods.filter((_, i) => !gone.has(i)), ...totals, ...withAiOriginal(a) }
+      const patch = { analysis, updatedAt: now().getTime() }
+      await repo.updateMeal(meal._id, patch)
+      return { ...meal, ...patch }
+    },
+
+    // 这顿是怎么吃的（结果页点的）：{ mealId, people 几个人 | appetite 饭量 | left 剩了多少 }，给哪样改哪样。
+    // 大家夹的菜（shared 不是 false）按人数和饭量分，「剩了多少」每道菜都乘；用户单独改过的份量按比例留着。
+    // 总数按每道菜的变化量加减，评级、点评、暖豆不变
     async share(openid, input) {
       const src = input || {}
       const meal = await requireMeal(openid, src.mealId)
       const a = meal.analysis
-      if (meal.status !== 'done' || !a || a.isFood === false) throw new AppError(CODES.BAD_REQUEST, '这顿还没算好，先不能改人数')
-      const people = src.people
-      if (typeof people !== 'number' || !Number.isInteger(people) || people < 1 || people > LIMITS.peopleMax) {
-        throw new AppError(CODES.BAD_REQUEST, `人数要在 1～${LIMITS.peopleMax} 之间`)
+      if (meal.status !== 'done' || !a || a.isFood === false) throw new AppError(CODES.BAD_REQUEST, '这顿还没算好，先不能改')
+      const before = howOf(meal)
+      const after = { ...before }
+      if ('people' in src) {
+        const people = src.people
+        if (typeof people !== 'number' || !Number.isInteger(people) || people < 1 || people > LIMITS.peopleMax) {
+          throw new AppError(CODES.BAD_REQUEST, `人数要在 1～${LIMITS.peopleMax} 之间`)
+        }
+        after.people = people
       }
-      const before = peopleOf(meal.people)
-      if (people === before) return meal
-      let totals = { totalKcal: a.totalKcal, protein: a.protein, carbs: a.carbs, fat: a.fat }
-      const foods = (a.foods || []).map((dish) => {
-        if (!isShared(dish)) return dish
-        const next = share(dish, before, people)
-        totals = totalsAfter({ ...a, ...totals }, dish, next)
-        return next
-      })
-      const analysis = { ...a, foods, ...totals, ...withAiOriginal(a) }
-      const patch = { people, analysis, updatedAt: now().getTime() }
+      if ('appetite' in src) {
+        if (!Object.prototype.hasOwnProperty.call(APPETITE, src.appetite)) throw new AppError(CODES.BAD_REQUEST, '饭量选「比别人少、差不多、比别人多」里的一个')
+        after.appetite = src.appetite
+      }
+      if ('left' in src) {
+        if (!Object.prototype.hasOwnProperty.call(LEFT, src.left)) throw new AppError(CODES.BAD_REQUEST, '剩了多少选「全吃了、剩了一点、剩了一半」里的一个')
+        after.left = src.left
+      }
+      if (!('people' in src) && !('appetite' in src) && !('left' in src)) throw new AppError(CODES.BAD_REQUEST, '要改什么？')
+      if (sameHow(before, after)) return meal
+
+      const analysis = { ...a, ...reportion(a, before, after), ...withAiOriginal(a) }
+      const patch = { ...after, analysis, updatedAt: now().getTime() }
       await repo.updateMeal(meal._id, patch)
       return { ...meal, ...patch }
     },

@@ -112,8 +112,47 @@ function peopleChips(people) {
   return chips.map((c) => ({ ...c, on: c.value === n || (c.value === 'more' && n > 5) }))
 }
 
+// 和别人一起吃时的饭量（打卡页、结果页的分段控制器）；吃完了吗（结果页）
+const APPETITES = [
+  { value: 'less', label: '比别人少' },
+  { value: 'same', label: '差不多' },
+  { value: 'more', label: '比别人多' },
+]
+const LEFTS = [
+  { value: 'none', label: '全吃了' },
+  { value: 'some', label: '剩了一点' },
+  { value: 'half', label: '剩了一半' },
+]
+const APPETITE_NOTE = { less: '，按吃得比别人少算的', more: '，按吃得比别人多算的' }
+
 // 结果页大字下面那句
-const peopleText = (people) => (people > 1 ? `${people} 个人一起吃，算的是你那一份` : '')
+const peopleText = (people, appetite) => (people > 1 ? `${people} 个人一起吃，算的是你那一份${APPETITE_NOTE[appetite] || ''}` : '')
+
+// 一起吃的没法估得很准：大家夹的那部分上下留一截（人越多越没准），给个范围心里有数
+const SPREAD = [
+  { people: 6, pct: 0.35 },
+  { people: 4, pct: 0.25 },
+  { people: 2, pct: 0.2 },
+]
+const round10 = (n) => Math.round(n / 10) * 10
+
+function rangeText(analysis, people) {
+  const rule = SPREAD.find((r) => people >= r.people)
+  if (!rule || !analysis) return ''
+  const shared = (analysis.foods || []).filter(isShared).reduce((sum, f) => sum + (f.kcal || 0), 0)
+  if (!(shared > 0)) return ''
+  const total = analysis.totalKcal || 0
+  const lo = Math.max(0, round10(total - shared * rule.pct))
+  const hi = round10(total + shared * rule.pct)
+  return lo < hi ? `一起吃的不好估准，大概在 ${lo}～${hi} 千卡之间` : ''
+}
+
+// 改了人数 / 饭量 / 剩了多少以后的提示
+function howToast(how) {
+  if ('left' in how) return how.left === 'none' ? '按全吃了算' : `按${LEFTS.find((l) => l.value === how.left).label}算好了`
+  if ('appetite' in how) return '按你的饭量算好了'
+  return how.people > 1 ? `按 ${how.people} 个人算好了` : '按一个人算好了'
+}
 
 // 「就这么多」：发给 meal.adjust 的参数；和打开时一样就不用发（null）
 function adjustRequest(view, value) {
@@ -121,4 +160,4 @@ function adjustRequest(view, value) {
   return view.mode === 'grams' ? { grams: value } : { factor: value }
 }
 
-module.exports = { sliderFor, previewText, chipsFor, partsFor, adjustView, adjustRequest, kcalAt, peopleChips, peopleText, PEOPLE_MORE }
+module.exports = { sliderFor, previewText, chipsFor, partsFor, adjustView, adjustRequest, kcalAt, peopleChips, peopleText, rangeText, howToast, PEOPLE_MORE, APPETITES, LEFTS }

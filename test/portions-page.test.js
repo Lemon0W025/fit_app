@@ -60,7 +60,7 @@ test('点米饭：抽屉打开、滑杆按克数；拖的时候大字跟着算�
   assert.equal(page.data.adjust.preview, '约 80 克 · 93 千卡')
 })
 
-test('就这么多：改好存下，热量从原来的滚到新的，写上「小暖原来估」，抽屉关上；她家常用份量记下了', async (t) => {
+test('就这么多：改好存下，热量从原来的滚到新的，写上「小暖原来估」，抽屉关上；常用份量记下了', async (t) => {
   const { cloud, wx, page } = await openMeal(t)
   page.openDish(event({ index: 0 }))
   page.onPortionSlide(event({}, { value: 110 }))
@@ -72,7 +72,7 @@ test('就这么多：改好存下，热量从原来的滚到新的，写上「�
   page.clock.advance(1000)
   assert.equal(page.data.meal.kcalText, '约 198 千卡')
   assert.equal(page.data.meal.adjustedText, '份量按你说的改过（小暖原来估 244 千卡）')
-  assert.deepEqual(page.data.meal.dishes[0], { index: 0, name: '米饭', sub: '一碗 · 约 110 克', kcalText: '128 千卡', adjusted: true })
+  assert.deepEqual(page.data.meal.dishes[0], { index: 0, name: '米饭', sub: '一碗 · 约 110 克', kcalText: '128 千卡', adjusted: true, unsure: false })
   assert.deepEqual(wx.log.toasts, ['改好了'])
   assert.equal(cloud.db.collections.get('portions').get('u1').items['米饭'].grams, 110)
   page.onUnload()
@@ -211,4 +211,118 @@ test('结果页改人数：火锅按 5 个人分、米饭不动，热量滚到�
   page.clock.advance(1000)
   assert.equal(page.data.meal.kcalText, '约 1674 千卡')
   assert.equal(page.data.peopleText, '')
+})
+
+// ---------------------------------------------------------------- 饭量、吃完了吗、一次点掉几道、拿不准
+
+test('打卡页：和别人一起吃才问饭量，默认上次选的，交给小暖时带上；大家夹的菜按饭量再乘', async (t) => {
+  fixDate(t, '2026-10-22T18:10:00+08:00')
+  const cloud = createFakeCloud({ replies: [analysisJson({ foods: HOTPOT })] })
+  const { main } = loadCloudFunction(cloud)
+  await main({ action: 'profile.save', data: PROFILE })
+  const wx = createWx(main)
+  wx.setStorageSync('appetite', 'less')
+  const page = loadPage('checkin', wx)
+  page.onLoad({})
+  assert.equal(page.data.appetite, 'less')
+  assert.deepEqual(page.data.appetites.map((a) => a.label), ['比别人少', '差不多', '比别人多'])
+  page.onAppetite(event({}, { value: 'more' }))
+  assert.equal(wx.getStorageSync('appetite'), 'more')
+  page.onPeople(event({}, { value: 5 }))
+  page.onNote(event({}, { value: '火锅' }))
+  page.submit()
+  await settle()
+  const mealId = wx.log.nav.pop()[1].split('id=')[1]
+  const meal = (await main({ action: 'meal.get', data: { mealId } })).data
+  assert.deepEqual([meal.people, meal.appetite], [5, 'more'])
+  // 小暖回的已经是按 5 个人平分的那一份；吃得比别人多，大家夹的再乘 1.3
+  assert.deepEqual(meal.analysis.foods.map((f) => f.kcal), [174, 1950])
+  const wxml = readWxml('checkin')
+  assert.match(wxml, /<block wx:if="\{\{people > 1\}\}">[\s\S]*<segmented options="\{\{appetites\}\}" value="\{\{appetite\}\}" bindchange="onAppetite"/)
+  assert.match(wxml, /夹到碗里再拍/)
+})
+
+test('结果页：饭量、吃完了吗各点各的，热量跟着变，写清按什么算的；一起吃的给个大概范围', async (t) => {
+  const { page, wx } = await openMeal(t, [analysisJson({ foods: HOTPOT })])
+  assert.equal(page.data.rangeText, '')
+  page.onPeople(event({}, { value: 5 }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.rangeText, '一起吃的不好估准，大概在 400～550 千卡之间')
+  page.onAppetite(event({}, { value: 'less' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.appetite, 'less')
+  assert.equal(page.data.meal.kcalText, '约 384 千卡')
+  assert.equal(page.data.peopleText, '5 个人一起吃，算的是你那一份，按吃得比别人少算的')
+  assert.equal(wx.getStorageSync('appetite'), 'less', '下次打卡默认这个')
+  page.onLeft(event({}, { value: 'half' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.left, 'half')
+  assert.equal(page.data.meal.kcalText, '约 192 千卡')
+  assert.deepEqual(wx.log.toasts, ['按 5 个人算好了', '按你的饭量算好了', '按剩了一半算好了'])
+  // 和现在一样的不发
+  page.onLeft(event({}, { value: 'half' }))
+  page.onAppetite(event({}, { value: 'less' }))
+  await settle()
+  assert.equal(wx.log.toasts.length, 3)
+  page.onLeft(event({}, { value: 'none' }))
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.meal.kcalText, '约 384 千卡')
+  const wxml = readWxml('meal')
+  assert.match(wxml, /<segmented options="\{\{lefts\}\}" value="\{\{meal.left \|\| 'none'\}\}" bindchange="onLeft"/)
+  assert.match(wxml, /<segmented options="\{\{appetites\}\}" value="\{\{meal.appetite \|\| 'same'\}\}" bindchange="onAppetite"/)
+})
+
+const FEAST = [
+  { name: '米饭', portion: '一碗', grams: 150, kcal: 174, shared: false },
+  { name: '火锅', portion: '一锅', grams: 1500, kcal: 1500, shared: true },
+  { name: '凉拌黄瓜', portion: '一盘', grams: 200, kcal: 90, shared: true },
+  { name: '可乐', portion: '一杯', grams: 300, kcal: 129, shared: false },
+]
+
+test('结果页「有几道没吃？」：点的时候不开抽屉，圈几道一次去掉；至少留一道；不去了就恢复', async (t) => {
+  const { page, wx } = await openMeal(t, [analysisJson({ foods: FEAST })])
+  page.startPick()
+  assert.equal(page.data.picking, true)
+  page.openDish(event({ index: 2 }))
+  assert.equal(page.data.adjustShow, false)
+  assert.deepEqual([page.data.picks, page.data.pickCount, page.data.pickText], [{ 2: true }, 1, '去掉这 1 道'])
+  page.openDish(event({ index: 2 }))
+  assert.deepEqual([page.data.pickCount, page.data.pickText], [0, '点一下没吃的'])
+  page.cancelPick()
+  assert.equal(page.data.picking, false)
+
+  page.startPick()
+  for (const index of [0, 2, 3]) page.openDish(event({ index }))
+  page.openDish(event({ index: 1 }))
+  assert.equal(page.data.pickCount, 3, '最后一道点不上')
+  assert.equal(wx.log.toasts.at(-1), '至少留一道吃了的')
+  page.openDish(event({ index: 0 }))
+  page.confirmPick()
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.picking, false)
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.name), ['米饭', '火锅'])
+  assert.equal(page.data.meal.kcalText, '约 1674 千卡')
+  assert.equal(wx.log.toasts.at(-1), '去掉了')
+})
+
+test('结果页「拿不准」：小暖没看清的菜带标记和一句提醒；点开没改就点「就这么多」算确认，标记去掉', async (t) => {
+  const foods = [DISHES[0], { ...DISHES[1], unsure: true }]
+  const { page, wx } = await openMeal(t, [analysisJson({ foods })])
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.unsure), [false, true])
+  assert.equal(page.data.meal.unsureText, '有 1 道小暖没看清（标着「拿不准」），点开看一眼对不对')
+  page.openDish(event({ index: 1 }))
+  page.saveAdjust()
+  await settle()
+  page.clock.advance(1000)
+  assert.equal(page.data.adjustShow, false)
+  assert.deepEqual(page.data.meal.dishes.map((d) => d.unsure), [false, false])
+  assert.equal(page.data.meal.unsureText, '')
+  assert.equal(page.data.meal.adjustedText, '', '只是确认，不算改过')
+  assert.deepEqual(wx.log.toasts, ['好的'])
+  assert.match(readWxml('meal'), /dish-tag-unsure">拿不准</)
 })

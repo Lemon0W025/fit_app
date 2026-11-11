@@ -5,6 +5,8 @@ const { localHour } = require('../../utils/shared/date')
 const { MEAL_WORDS, mealTimesOf, mealAt, timingFor, windowText } = require('../../utils/shared/timing')
 const { clockOf } = require('../../utils/fx')
 const { analysisSteps } = require('../../utils/view')
+const { APPETITES } = require('../../utils/portion')
+const { appetiteOf } = require('../../utils/shared/dish')
 
 // 认菜和算热量是同一次调用：认菜这步走 6 秒后把「算热量」点亮，让等的人知道还在往前走
 const COUNT_AFTER_MS = 6000
@@ -28,8 +30,10 @@ Page({
     timingText: '',
     timingOn: false,
     photoTips: PHOTO_TIPS,
-    // 几个人一起吃：默认就我
+    // 几个人一起吃：默认就我；和别人一起吃时的饭量（比别人少 / 差不多 / 多），记在手机上、下次默认这个
     people: 1,
+    appetites: APPETITES,
+    appetite: 'same',
     // 点微信提醒进来的：顶上一句「到午饭时间啦」
     remindText: '',
   },
@@ -41,9 +45,13 @@ Page({
     const want = options && options.mealType
     const mealType = isMealType(want) ? want : mealAt(this.times, new Date()) || guessMealType(localHour())
     const fromRemind = !!options && options.from === 'remind' && isMealType(want)
-    this.setData({ mealType, remindText: fromRemind ? `到${MEAL_WORDS[want] || '吃饭'}时间啦，拍一张给小暖看看` : '' })
+    this.setData({
+      mealType,
+      appetite: appetiteOf(wx.getStorageSync('appetite')),
+      remindText: fromRemind ? `到${MEAL_WORDS[want] || '吃饭'}时间啦，拍一张给小暖看看` : '',
+    })
     this.updateTiming()
-    // 点通知直接打开到这一页（首页还没加载过）：读一次她的饭点和微信提醒开没开，
+    // 点通知直接打开到这一页（首页还没加载过）：读一次饭点和微信提醒开没开，
     // 不然准不准时按默认饭点算，交给小暖时也不会顺手攒「允许」（提醒次数越用越少）
     if (!g.mealTimes) this.loadDay()
   },
@@ -105,9 +113,14 @@ Page({
     this.setData({ note: e.detail.value })
   },
 
-  // 「几个人一起吃？」（components/people）：和家里人一起吃的，小暖按人数算她那一份
+  // 「几个人一起吃？」（components/people）：和别人一起吃的，小暖按人数算自己那一份
   onPeople(e) {
     this.setData({ people: e.detail.value })
+  },
+
+  onAppetite(e) {
+    this.setData({ appetite: e.detail.value })
+    wx.setStorageSync('appetite', e.detail.value)
   },
 
   // 开了微信提醒的：交给小暖之前顺手申请一次「允许」（要在点击里调；勾了「总是保持」就不弹），允许了攒一次提醒
@@ -131,7 +144,7 @@ Page({
   },
 
   send() {
-    const { photo, note, mealType, submitting, people } = this.data
+    const { photo, note, mealType, submitting, people, appetite } = this.data
     if (submitting) return
 
     const hasPhoto = !!photo
@@ -145,7 +158,7 @@ Page({
           this.stepTimer = null
           this.setData({ steps: analysisSteps(hasPhoto, look + 1) })
         }, COUNT_AFTER_MS)
-        return api.call('meal.analyze', { fileID, mealType, note, people })
+        return api.call('meal.analyze', { fileID, mealType, note, people, appetite })
       })
       .then((meal) => {
         this.stopSteps()

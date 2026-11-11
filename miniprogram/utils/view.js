@@ -23,8 +23,16 @@ function dishRows(foods, people = 1) {
       sub: [f.portion, grams].filter(Boolean).join(' · '),
       kcalText: `${f.kcal} 千卡`,
       adjusted: !!f.adjusted,
+      // 小暖自己说没看清的：标出来，请用户点开确认
+      unsure: !!f.unsure,
     }
   })
+}
+
+// 「吃了哪些」上面那句：有几道小暖没看清
+function unsureText(foods) {
+  const n = (foods || []).filter((f) => f.unsure).length
+  return n ? `有 ${n} 道小暖没看清（标着「拿不准」），点开看一眼对不对` : ''
 }
 
 function decorateMeal(meal) {
@@ -48,6 +56,7 @@ function decorateMeal(meal) {
       // 结果页能点一道菜改份量
       dishes: dishRows(a.foods, meal.people || 1),
       adjustedText: a.adjusted && typeof a.aiTotalKcal === 'number' ? `份量按你说的改过（小暖原来估 ${a.aiTotalKcal} 千卡）` : '',
+      unsureText: unsureText(a.foods),
     })
   }
   return { ...meal, ...view }
