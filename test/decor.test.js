@@ -68,9 +68,13 @@ test('placeProblem：每种不能放的原因', () => {
   assert.equal(P('ball', 3800, 3800), '') // 右下角的空草坪
   assert.equal(P('ball', 1520, 1810), '这儿挤不下，往旁边挪一点')
   assert.equal(P('ball', 1520, 1810, 'd1'), '')
-  assert.equal(P('swing', 2000, 3250), '这儿放不下，挪开一点') // 秋千的架子顶到篝火石圈
-  assert.equal(P('swing', 2000, 3400), '')
+  // 家具高：紧贴着摆在篝火前面会把锅挡住，离石圈要留出块高的 0.4（秋千 420）；花草矮，贴着石圈种
+  assert.equal(P('swing', 2000, 3400), '这儿放不下，挪开一点')
+  assert.equal(P('swing', 2000, 3650), '')
   assert.equal(P('ball', 2000, 3500), '')
+  assert.equal(P('ball', 2130, 3200), '这儿放不下，挪开一点')
+  assert.equal(P('tulips', 2130, 3200), '')
+  assert.equal(P('tulips', 2130, 3150), '这儿放不下，挪开一点') // 占地框压到石圈了
 })
 
 test('占地框按画出来的大小：都不比整块图的 0.6 × 0.4 大（旧档里摆好的不会变成挤着），花草又窄又浅', () => {
@@ -81,6 +85,7 @@ test('占地框按画出来的大小：都不比整块图的 0.6 × 0.4 大（�
   })
   assert.deepEqual(D.decorById('tulips').foot, { w: 220, h: 100 })
   assert.deepEqual(D.decorById('swing').foot, D.decorById(D.GOLD_SWING).foot)
+  assert.deepEqual([D.decorById('swing').clear, D.decorById('ball').clear, D.decorById('tulips').clear, D.decorById('roses').clear], [420, 200, 100, 100])
 })
 
 test('花挨着种：同一种花一朵挨一朵排成一排、前后两排隔一个占地框的深就行；花和家具之间留一点空', () => {
@@ -142,4 +147,14 @@ test('nearestSpot：能放就是原地；放不下吸到旁边最近能放的地
   assert.ok(back && back.moved && back.y >= 960)
   assert.equal(D.nearestSpot([], 'nope', 2000, 3000), null)
   assert.equal(D.nearestSpot([], 'tulips', NaN, 3000), null)
+})
+
+test('草坪往下开到画下面补的那片草地里：y 超过画高（4096）的地方也能摆，再往下（4760 以外）不行', () => {
+  assert.equal(D.placeProblem([], 'tulips', 2000, 4100), '')
+  assert.equal(D.placeProblem([], 'tulips', 2000, 4600), '')
+  assert.equal(D.placeProblem([], 'swing', 2000, 4700), '')
+  assert.equal(D.placeProblem([], 'tulips', 2000, 4800), '只能放在草地上')
+  // 压着下沿：吸回草地里
+  const back = D.nearestSpot([], 'tulips', 2000, 4800)
+  assert.ok(back && back.moved && back.y <= 4760)
 })

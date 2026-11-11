@@ -62,7 +62,7 @@
         <image wx:for="{{lit.tiles}}" wx:key="key" class="base" src="{{item.image}}" style="left: {{item.left}}px; top: {{item.top}}px; width: {{item.width}}px; height: {{item.height}}px" />
       </view>
       <view wx:if="{{tint}}" class="tint tint-{{tint}}"></view>
-      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.height}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
+      <view wx:if="{{mode !== 'view'}}" class="drag-layer" style="top: {{world.top}}px; width: {{world.width}}px; height: {{world.worldHeight - world.top}}px" catchtouchstart="onDragStart" catchtouchmove="onDragMove" catchtouchend="onDragEnd" catchtouchcancel="onDragEnd">
         <view wx:if="{{drag && drag.foot}}" class="drag-foot {{drag.ok ? 'ok' : 'bad'}}" style="left: {{drag.foot.left}}px; top: {{drag.foot.top}}px; width: {{drag.foot.width}}px; height: {{drag.foot.height}}px"></view>
         <image wx:if="{{drag}}" class="drag-ghost {{drag.ok ? '' : 'bad'}}" src="{{drag.image}}" mode="scaleToFill" style="left: {{drag.left}}px; top: {{drag.top}}px; width: {{drag.width}}px; height: {{drag.height}}px" />
       </view>

@@ -260,3 +260,16 @@ test('夜里火着的点火版：画 16 块 + 下面草地 8 块，坐标是整�
   assert.deepEqual([d00.left, d00.top, d00.height], ['left', 'top', 'height'].map((k) => V.frameTiles(L, 'cloud://x/base-v4/', true).find((t) => t.key === 'd00')[k]))
   assert.equal(V.LIT_BACKDROP, '/images/camp/base/lit-world.jpg')
 })
+
+test('摆在画下面那片补的草地上的装饰（y > 画高）：照样算位置和夜里的光，画在 #world 下面、排在更前面', () => {
+  const L = V.campLayout({ width: 375, height: 812 })
+  const [up, low] = V.decorViews([{ uid: 'a', id: 'tulips', x: 2000, y: 3600 }, { uid: 'b', id: 'tulips', x: 2000, y: 4600 }], L, '', false)
+  assert.ok(low.top > up.top && low.z > up.z)
+  assert.ok(low.top + low.height > L.height, '下半截在画的下沿以外')
+  const night = V.decorViews([{ uid: 'b', id: 'tulips', x: 2000, y: 4600 }], L, '', true, true)[0]
+  assert.equal(night.night, true)
+  assert.ok(typeof night.light === 'string' && night.light.indexOf('NaN') === -1)
+  assert.match(V.placingText('place', '郁金香', 3), /还有 3 个/)
+  assert.ok(!/还有/.test(V.placingText('place', '郁金香', 1)))
+  assert.match(V.placingText('move', '秋千', 1), /^挪「秋千」/)
+})

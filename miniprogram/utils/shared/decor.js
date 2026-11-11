@@ -27,6 +27,9 @@ Object.keys(BASE_SIZES).forEach((k) => {
 //   花草：宽 = 画宽 × 0.7、深 100：挨着种叶子搭上一点才像一片花，前后两排隔 100 就行
 //   家具：宽 ≈ 落在地上的那一截，深按个头
 // 新加的装饰先按块的大小给个默认的，图回来以后量一下再填（都不比以前的大：旧档里摆好的不会变成挤着）
+// 离篝火、帐篷这些画上的东西要留多远（clear，从落脚点往上算）：花草矮，贴着石圈、帐篷边种没关系，就按占地框；
+// 家具高，紧贴着摆在前面会把锅、帐篷门挡住，还按以前的留法（块高的 0.4）
+const CLEAR_RATIO = 0.4
 const DEFAULT_FOOT = { s: [300, 110], m: [450, 120], l: [760, 160] }
 // 两件之间留的空：花和花之间不留（能挨着种成一片），别的每件自己外面留一点
 const GAP = 12
@@ -51,7 +54,8 @@ function decor(id, name, category, price, size, extra = {}) {
   const [fw, fh] = extra.foot || DEFAULT_FOOT[size]
   const foot = { w: fw, h: fh }
   const spots = (extra.spots || []).map((s) => ({ x: Math.round(s.x * patch.w), y: Math.round(s.y * patch.h), action: s.action }))
-  return { id, name, category, price, size, max: extra.max || 1, patch, foot, anchor: { x: Math.round(patch.w / 2), y: Math.round(patch.h * 0.82) }, spots, fx: extra.fx || '' }
+  const clear = category === 'plant' ? fh : Math.round(patch.h * CLEAR_RATIO)
+  return { id, name, category, price, size, max: extra.max || 1, patch, foot, clear, anchor: { x: Math.round(patch.w / 2), y: Math.round(patch.h * 0.82) }, spots, fx: extra.fx || '' }
 }
 
 // 花：点在花前面（落脚框外），小动物背对着我们凑过去闻
@@ -123,7 +127,7 @@ function placeProblem(placed, decorId, x, y, ignoreUid) {
   if (!d || typeof x !== 'number' || typeof y !== 'number' || !isFinite(x) || !isFinite(y)) return '放不到这里哦'
   const foot = footRect(decorId, x, y)
   if (!rectInPoly(foot, SCENE.grass)) return '只能放在草地上'
-  if (hitsNogo(foot, 0)) return '这儿放不下，挪开一点'
+  if (hitsNogo({ ...foot, top: y - d.clear }, 0)) return '这儿放不下，挪开一点'
   const mine = expand(foot, gapOf(d))
   for (const p of placed) {
     const o = decorById(p.id)

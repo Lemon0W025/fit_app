@@ -1,7 +1,7 @@
 // 营地实时录屏：真实的页面逻辑（假云 + 手动时钟 + 真实的宠物走动）驱动，浏览器里只改宠物的样式，CSS 过渡真的在跑，
 // Playwright 录成视频再转 MP4 / GIF。用来逐帧看宠物从锅后面、木盖旁、提灯旁、帐篷门口经过时前后对不对、夜里的光对不对。
 //
-//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night big-play tent-sleep tent-sleep-night talk-phone hungry-phone arrive-phone bag-phone residents-phone（不写全录）
+//   node scripts/preview/record-camp.js [场景 ...]      场景：pot-day pot-night tent-night overview-day overview-dusk pit-off-day pit-off-night decor-day decor-night decor2-day decor2-night all-pets-phone home-phone home-phone-night panorama-phone panorama-phone-night detail-phone pot-cook night-lit night-lamps naps facing walks play play-night big-play tent-sleep tent-sleep-night talk-phone hungry-phone arrive-phone bag-phone residents-phone flower-bed flower-bed-low（不写全录）
 //   potLevel：锅里煮着几样（刚下锅、管 8 小时，火点没点、夜里的光都跟着它）；pets 第一只住下了、其余是常客（锅空着就不在场）；
 //   events：[毫秒, (life, camp) => …] 录的时候到点调
 //   ui：背包 / 住户抽屉的操作（见下面 sheetUi）；bag：背包里放的 { foods, decor }
@@ -19,7 +19,7 @@ const { renderPage } = require('./wxml-render')
 const { SCENE, POT_STAY_MS } = require(`${REPO}/miniprogram/utils/shared/camp`)
 const { dateKey } = require(`${REPO}/miniprogram/utils/shared/date`)
 const V = require(`${REPO}/miniprogram/utils/camp-view`)
-const { placeProblem } = require(`${REPO}/miniprogram/utils/shared/decor`)
+const { placeProblem, nearestSpot } = require(`${REPO}/miniprogram/utils/shared/decor`)
 const { chromium } = require('playwright')
 const { execSync } = require('child_process')
 
@@ -59,6 +59,32 @@ function layout(list, prefix) {
   })
   return placed
 }
+// 一片花：像在页面上那样一朵一朵摆——每朵都松在上一朵偏右一点的地方，放不下就靠到旁边（shared/decor.js 的 nearestSpot）。
+// rows：[[花, 几朵, 起点 x, y], …]
+function bed(rows, prefix) {
+  const placed = []
+  rows.forEach(([id, n, x0, y]) => {
+    let x = x0
+    for (let i = 0; i < n; i++) {
+      const spot = nearestSpot(placed, id, x, y)
+      if (!spot) {
+        console.warn(`  ${id} 摆不下`)
+        return
+      }
+      placed.push({ uid: `${prefix}${placed.length}`, id, x: spot.x, y: spot.y })
+      x = spot.x + 120
+    }
+  })
+  return placed
+}
+// 篝火前面一片花（三排，挨着种），右边一排向日葵；画下面补的那片草地上（y > 4096）再种两排
+const FLOWER_BED = bed([
+  ['tulips', 3, 1100, 3450], ['daisies', 3, 1800, 3450], ['bluebells', 3, 2600, 3450],
+  ['poppies', 3, 1150, 3560], ['cosmos', 3, 1900, 3560], ['mint', 3, 2750, 3560],
+  ['lavender', 3, 1150, 3680], ['hydrangea', 2, 2300, 3680], ['sunflower', 3, 3050, 3400],
+  ['roses', 3, 1000, 4300], ['chrysanthemum', 3, 2400, 4300], ['dandelions', 3, 1100, 4520], ['clover', 3, 1900, 4520], ['mushrooms', 3, 2800, 4520],
+], 'f')
+
 // 留下的家具（11/07 精简：吊床、野餐垫、花坛这些下架了），摆在火堆周围的草地上
 const DECOR_1B = layout([['swing', 3300, 2150], ['strawbed', 2600, 3700], ['sunflowers', 1300, 3400], ['ball', 3000, 3400],
   ['lavender', 1100, 2600], ['sunflower', 3700, 2800], ['windmill', 3650, 3500], ['lantern', 1850, 3750]], 'd')
@@ -129,6 +155,9 @@ const SCENARIOS = {
     plan: [[0, 0, 2550, 3300], [0, 1, 1700, 3400], [0, 2, 3150, 2500], [0, 3, 2200, 3700],
       [500, 0, 2950, 3500], [500, 1, 1350, 3050], [1500, 2, 2600, 2200], [1500, 3, 3300, 3600]],
   },
+  // 挨着种的一片花（11/11 占地框按画的大小、花和花之间不留空）；flower-bed-low 往下看画下面补的那片草地（也能种了）
+  'flower-bed': { phone: true, hour: 10, potLevel: 2, focus: null, scale: null, seconds: 6, decor: FLOWER_BED, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
+  'flower-bed-low': { phone: true, hour: 10, potLevel: 2, focus: [2048, 3900], scale: 1, seconds: 6, decor: FLOWER_BED, pets: ['doudou', 'nuonuo', 'qiqi'], plan: [] },
   'decor-night': {
     hour: 22, potLevel: 2, focus: [2450, 2950], scale: 1.1, seconds: 10, decor: DECOR_1B,
     pets: ['doudou', 'nuonuo', 'lianlian', 'shishi'],

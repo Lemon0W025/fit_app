@@ -13,7 +13,11 @@ test('画的尺寸和远近缩放', () => {
 
 test('SCENE：草地、禁区、篝火、坐点、食盆、入口都在画里', () => {
   const inside = ([x, y]) => x >= 0 && x <= C.W && y >= 0 && y <= C.H
-  assert.ok(C.SCENE.grass.length >= 4 && C.SCENE.grass.every(inside))
+  // 草地往下开到画下面补的那片草地里（11/11），不超过补的那一段
+  const inWorld = ([x, y]) => x >= 0 && x <= C.W && y >= 0 && y <= C.H + C.SCENE.frame.bottom
+  assert.ok(C.SCENE.grass.length >= 4 && C.SCENE.grass.every(inWorld))
+  assert.equal(Math.max(...C.SCENE.grass.map((p) => p[1])), 4760)
+  assert.ok(C.inGrass(2000, 4500) && !C.inGrass(2000, 4800))
   assert.deepEqual(Object.keys(C.SCENE.nogo).sort(), ['fire', 'lantern', 'lid', 'tent'])
   assert.equal(C.SCENE.seats.length, 12)
   assert.ok(!('bowls' in C.SCENE) && !('bowl' in C.SCENE)) // 画上两个碗 10/26 擦掉了
