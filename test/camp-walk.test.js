@@ -81,11 +81,12 @@ test('route：直着走得过去就是一段；挡着就绕，路不穿禁区和
 
 test('update：装饰挪了，障碍跟着变', () => {
   const { walk } = make([])
-  const from = { x: 2400, y: 3450 }
-  const to = { x: 3400, y: 3450 }
+  // 水壶炉的占地框是 230 × 110（(2785..3015, 3490..3600)），从它正中间横着穿过去的要绕
+  const from = { x: 2400, y: 3550 }
+  const to = { x: 3400, y: 3550 }
   assert.equal(walk.route(from, to).length, 1)
   walk.update(DECOR)
-  assert.ok(walk.route(from, to).length > 1, '野餐垫挡着要绕')
+  assert.ok(walk.route(from, to).length > 1, '水壶炉挡着要绕')
   walk.update([])
   assert.equal(walk.route(from, to).length, 1)
 })
