@@ -12,7 +12,7 @@
         长出圆鼓鼓的云顶；高处再飘几朵云；夜里是深蓝、几颗画上那种四角小星
 输出：
     art/camp/u{行}{列}.jpg、d{行}{列}.jpg（+ night-）   天空两行、草地两行，每行 4 块，和底图切块一起 npm run wx:art 传云存储（campArt）
-    miniprogram/images/camp/base/world.jpg、night-world.jpg   包里垫的整个世界（768 宽）：一打开就有，高清块下完盖在上面
+    miniprogram/images/camp/base/world.jpg、night-world.jpg   包里垫的整个世界（576 宽）：一打开就有，高清块下完盖在上面
 画换了重跑（在 cut_art.py 之后）。Codex 按工单第 1e 节画了天空（art/raw/camp/out-sky.png、out-night-sky.png）就用它的上半张当天空，
 紧挨着画顶那一小段还是从画顶一行接过来（接得上）。需要 Pillow 和 numpy。
 """
@@ -30,7 +30,7 @@ RAW = os.path.join(REPO, 'art', 'raw', 'camp')
 OUT = os.path.join(REPO, 'art', 'camp')
 LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'base')
 RES = {'': 0.75, 'night-': 0.5}   # 和底图切块一样：日景 3072 宽、夜景 2048 宽
-LOCAL_RES = 0.1875                # 包里垫的整个世界：768 宽
+LOCAL_RES = 0.140625              # 包里垫的整个世界：576 宽（只在高清块下完之前垫一下，别再调大：主包只有 2MB）
 TILE = 1024                       # 一块（画的像素）
 HAZE = 100                        # 画最下面发虚的那段：接缝要在它上面（草地从画里面 SCENE.frame.overlap 处盖上去）
 PATCH = 256                       # 草地小块（画的像素）
@@ -361,7 +361,7 @@ def build(preview=None):
         tiles(world, pfx, res, F, H)
         lo = Image.fromarray(np.uint8(np.clip(world, 0, 255))).resize((round(W * LOCAL_RES), round((H + F['top'] + F['bottom']) * LOCAL_RES)), Image.LANCZOS)
         path = os.path.join(LOCAL, f'{pfx}world.jpg')
-        lo.save(path, quality=74, optimize=True, progressive=True)
+        lo.save(path, quality=62, optimize=True, progressive=True)
         print(f'  ✓  包里垫的整个世界 {pfx}world.jpg {lo.width}×{lo.height}  {os.path.getsize(path) // 1024} KB')
     if preview:
         os.makedirs(preview, exist_ok=True)

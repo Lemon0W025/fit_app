@@ -17,7 +17,7 @@ RAW = os.path.join(REPO, 'art', 'raw', 'pets')
 OUT = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'pets')
 FAMILY = os.path.join(REPO, 'art', 'raw', 'camp', 'family.png')
 PET_PX, FACE_PX = 320, 96
-FAMILY_W = 840      # 图册一页约 620rpx 宽，3 倍屏够清楚
+FAMILY_W = 640      # 图册一页约 620rpx 宽（2 倍屏正好；主包只有 2MB，别再调大）
 MARGIN = 0.04       # 人物四周留的空（边长的比例）
 
 
@@ -61,7 +61,7 @@ def main():
         img = Image.open(FAMILY).convert('RGB')
         img = img.resize((FAMILY_W, round(img.height * FAMILY_W / img.width)), Image.LANCZOS)
         path = os.path.join(OUT, '..', 'family.jpg')
-        img.save(path, quality=80, optimize=True, progressive=True)
+        img.save(path, quality=72, optimize=True, progressive=True)
         print(f'  ✓  全家福 family.jpg {img.width}×{img.height} {os.path.getsize(path) // 1024} KB')
 
 

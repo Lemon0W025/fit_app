@@ -10,7 +10,7 @@
 整个世界一起做（天空 + 画 + 下面补的草地），从已经切好的日景、夜景块（art/camp/*.jpg，cut_art.py + extend_art.py 出的）拼回来算，
 所以先跑那两个。输出：
     art/camp/lit-t*.jpg（画，16 块）、lit-d*.jpg（下面的草地，8 块），和夜景同分辨率；天空和夜景一样，不另出
-    miniprogram/images/camp/base/lit-world.jpg   包里垫的整个世界（768 宽）
+    miniprogram/images/camp/base/lit-world.jpg   包里垫的整个世界（576 宽）
     art/lit/painting.png                           点火版的画（夜景分辨率），cutouts.py 从它抠点火版的帐篷 / 木盖 / 提灯
 接着：cutouts.py --from-base --local（会出 lit- 那套抠图）、cutouts.py --local、cutouts.py --local --night、light_map.py，
 ART_VERSION.base / cut 加一，npm run wx:art -- base cut。需要 Pillow 和 numpy。
@@ -29,7 +29,7 @@ LIT = os.path.join(REPO, 'art', 'lit')
 LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'base')
 RES = {'': 0.75, 'night-': 0.5}   # 日景块 3072 宽、夜景块 2048 宽（cut_art.py / extend_art.py）
 TILE = 1024
-LOCAL_RES = 0.1875
+LOCAL_RES = 0.140625    # 和 extend_art.py 一样：576 宽
 GLOW = (0, -120)                   # 光心：篝火往上一点（火苗和锅底）
 R, FLOOR, PEAK = 2200, 0.12, 0.92
 FLAT = 0.62
@@ -113,7 +113,7 @@ def main():
     print(f'  ✓  点火版的画 → art/lit/painting.png {painting.width}×{painting.height}')
     lo = img.resize((round(S['W'] * LOCAL_RES), round(img.height / res * LOCAL_RES)), Image.LANCZOS)
     path = os.path.join(LOCAL, 'lit-world.jpg')
-    lo.save(path, quality=74, optimize=True, progressive=True)
+    lo.save(path, quality=62, optimize=True, progressive=True)
     print(f'  ✓  包里垫的整个世界 lit-world.jpg {lo.width}×{lo.height}  {os.path.getsize(path) // 1024} KB')
     if a.preview:
         os.makedirs(a.preview, exist_ok=True)

@@ -4,7 +4,7 @@
     python3 scripts/camp/cut_art.py art/raw/camp/night-hd.png --prefix night-     # 夜景：同样切 16 块，文件名 night-t00.jpg…
 
 输出到 art/camp/t00.jpg … t33.jpg（npm run wx:art 上传到 camp/base/）；画必须是正方形（和 shared/camp.js 的 W×H 一致），不是就按宽度缩放后上下居中裁 / 补边。
-切完接着跑 scripts/camp/extend_art.py：画的上下补天空和草地（高清块 u*/d*），并把整个世界缩成 768 宽写进包里
+切完接着跑 scripts/camp/extend_art.py：画的上下补天空和草地（高清块 u*/d*），并把整个世界缩成 576 宽写进包里
 miniprogram/images/camp/base/world.jpg（夜景 night-world.jpg）当垫图——页面先垫这张，高清块盖在上面。
 """
 import argparse

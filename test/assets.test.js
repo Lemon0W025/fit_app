@@ -33,7 +33,11 @@ test('每只宠物、每样食物、每件装饰都有图；日 / 夜垫图和�
   })
 })
 
-test('主包不超过 2MB', () => {
+// 微信的上限是 2MB（它算的是压缩过的，比文件加起来小 200KB 左右）。这里按文件加起来卡在 1.8MB：
+// 快到了就先瘦身（大图走云存储、垫底的图别调大、没人用的图删掉），别等传不上去才发现
+const BUDGET = 1800 * 1024
+
+test('主包留着余量：文件加起来不超过 1.8MB（微信上限 2MB）', () => {
   let total = 0
   const walk = (dir) => fs.readdirSync(dir).forEach((f) => {
     const p = path.join(dir, f)
@@ -42,7 +46,30 @@ test('主包不超过 2MB', () => {
     else total += st.size
   })
   walk(path.join(__dirname, '../miniprogram'))
-  assert.ok(total < 2 * 1024 * 1024, `miniprogram ${total} 字节`)
+  assert.ok(total < BUDGET, `miniprogram ${total} 字节，超过预算 ${BUDGET}`)
+})
+
+// 只查大的位图（线条图标是几百字节的 SVG，名字多半是拼出来的，不查）
+test('包里的界面图、表情图没有没人用的', () => {
+  const root = path.join(__dirname, '../miniprogram')
+  const texts = []
+  const walk = (dir) => fs.readdirSync(dir).forEach((f) => {
+    const p = path.join(dir, f)
+    if (fs.statSync(p).isDirectory()) walk(p)
+    else if (/\.(js|wxml|wxss|json|wxs)$/.test(f)) texts.push(fs.readFileSync(p, 'utf8'))
+  })
+  walk(root)
+  const all = texts.join('\n')
+  const unused = []
+  ;['garden/ui', 'garden/fx', 'camp/fx'].forEach((dir) => {
+    fs.readdirSync(path.join(root, 'images', dir)).forEach((f) => {
+      const stem = f.replace(/\.[a-z]+$/, '')
+      // 拼出来的名字（capsule-${id}、tab-${name}-on）按前缀认
+      const head = stem.split('-')[0]
+      if (!all.includes(`${dir}/${f}`) && !all.includes(`${dir}/${head}-\${`) && !all.includes(`${dir}/\${`)) unused.push(`${dir}/${f}`)
+    })
+  })
+  assert.deepEqual(unused, [])
 })
 
 test('页面用到的线条图标（images/icons/*.svg）都在；页面模板里不拿表情符号当图标', () => {

@@ -206,11 +206,29 @@ async function main() {
 
   const setting = { es6: true, enhance: true, minify: true, minifyWXSS: true, minifyWXML: true }
 
+  // 微信算的包有多大（主包和每个分包各不能超过 2MB）：预览、上传完都报一下，离上限多远心里有数
+  const LIMIT = 2 * 1024 * 1024
+const WARN = 400 * 1024
+  const kb = (n) => `${(n / 1024).toFixed(0)}KB`
+  // 微信算的包大小（压缩过的，比文件加起来小一截）。没有分包时只有 __FULL__，它就是主包
+  const reportSize = (res) => {
+    const list = (res && res.subPackageInfo) || []
+    if (!list.length) return
+    const split = list.some((p) => p.name === '__APP__')
+    const name = (n) => (n === '__APP__' ? '主包' : n === '__FULL__' ? (split ? '整个小程序' : '主包（没有分包）') : `分包 ${n}`)
+    list.forEach((p) => {
+      const left = LIMIT - p.size
+      const limited = p.name !== '__FULL__' || !split
+      const note = limited ? `，离 2MB 上限还有 ${kb(left)}${left < WARN ? `  ⚠️ 余量不到 ${kb(WARN)}，该瘦身了` : ''}` : ''
+      console.log(`  ${name(p.name)}：${kb(p.size)}${note}`)
+    })
+  }
+
   if (command === 'preview') {
     fs.mkdirSync(OUT_DIR, { recursive: true })
     const dest = path.join(OUT_DIR, 'preview-qrcode.jpg')
     const [pagePath, searchQuery] = args
-    await ci.preview({
+    const res = await ci.preview({
       project,
       desc: lastCommitSubject() || 'preview',
       setting,
@@ -221,13 +239,15 @@ async function main() {
       ...(searchQuery ? { searchQuery } : {}),
     })
     console.log(`✓ 预览二维码已生成：${dest}${pagePath ? `（打开到 ${pagePath}${searchQuery ? `?${searchQuery}` : ''}）` : ''}`)
+    reportSize(res)
     return
   }
 
   const version = args[0] || require(path.join(ROOT, 'package.json')).version
   const desc = args[1] || lastCommitSubject() || `v${version}`
-  await ci.upload({ project, version, desc, setting, robot: ROBOT })
+  const res = await ci.upload({ project, version, desc, setting, robot: ROBOT })
   console.log(`✓ 已上传开发版本 ${version}（ci 机器人 ${ROBOT}）：${desc}`)
+  reportSize(res)
   console.log('  第一次上传后，到小程序后台「版本管理」把它选为体验版')
 }
 

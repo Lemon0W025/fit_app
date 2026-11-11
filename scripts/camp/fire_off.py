@@ -11,7 +11,7 @@
 输出：
     art/cut/fire-off.jpg、night-fire-off.jpg       盖在底图上的补丁，随 npm run wx:art -- cut 上传。框外圈和原画一模一样、框落在底图切块的像素格上，
                                                    所以存成不透明的 JPG 盖上去也没有接缝（和篝火逐帧图一样）；框的位置填进 shared/camp.js 的 SCENE.flame.off
-    miniprogram/images/camp/cut/fire-off.jpg …      包里的兜底小图（和包里垫的整张低清画一样 768 宽的分辨率）
+    miniprogram/images/camp/cut/fire-off.jpg …      包里的兜底小图（和包里垫的整张低清画一样 576 宽的分辨率）
 别的脚本要熄了火的整张画就调 unlit_day() / unlit_night()：cutouts.py 出空锅 pot-0 和夜里的 night-lid-off，
 light_map.py 出熄了火时宠物身上的光。
 画换了：重新量 LOGS（--preview 会把量的木柴框画在画上对），这几个脚本都重跑。
@@ -37,7 +37,7 @@ OUT = os.path.join(REPO, 'art', 'cut')
 LOCAL = os.path.join(REPO, 'miniprogram', 'images', 'camp', 'cut')
 DAY_RES = 0.75          # 和日景底图切块一样（3072 宽）
 NIGHT_RES = 0.5         # 和夜景底图切块一样（2048 宽）
-LOCAL_RES = 0.1875      # 包里的兜底小图：和包里垫的整张低清画（768 宽）一样
+LOCAL_RES = 0.140625    # 包里的兜底小图：和包里垫的整张低清画（576 宽）一样
 
 # 火堆里的木柴（画的像素）：(柴头 x, y, 里头那端 x, y, 柴头半径, 里头半径)，从后往前排（后面的先画）
 LOGS = {
@@ -390,7 +390,7 @@ def patches(preview=None):
         path = os.path.join(OUT, f'{name}.jpg')
         piece.save(path, quality=90)
         small = piece.resize((round(piece.width * LOCAL_RES / res), round(piece.height * LOCAL_RES / res)), Image.LANCZOS)
-        small.save(os.path.join(LOCAL, f'{name}.jpg'), quality=82)
+        small.save(os.path.join(LOCAL, f'{name}.jpg'), quality=64, optimize=True)
         print(f'  ✓  {name}.jpg  {piece.width}×{piece.height}  {os.path.getsize(path) // 1024} KB（包里 {os.path.getsize(os.path.join(LOCAL, name + ".jpg")) // 1024} KB）')
     print('补丁的框（画的像素）→ shared/camp.js 的 SCENE.flame.off：', json.dumps({'day': boxes['fire-off'], 'night': boxes['night-fire-off']}))
     if preview:
