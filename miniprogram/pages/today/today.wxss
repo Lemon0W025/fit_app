@@ -402,3 +402,69 @@
   font-weight: 400;
   text-decoration: line-through;
 }
+
+/* 补签卡：昨天漏了，用暖豆补上 */
+.patch {
+  background: var(--bean-soft);
+}
+
+.patch .chip-icon {
+  background: #fff;
+}
+
+.patch-sub {
+  font-size: 30rpx;
+  line-height: 1.5;
+  color: var(--bean-ink);
+}
+
+.patch-actions {
+  display: flex;
+  align-items: center;
+  margin-top: 24rpx;
+}
+
+button.btn-primary.patch-btn {
+  flex: 1;
+  width: auto !important;
+  margin: 0;
+}
+
+.patch-skip {
+  flex-shrink: 0;
+  padding: 16rpx 8rpx 16rpx 36rpx;
+  font-size: 30rpx;
+  color: var(--bean-ink);
+}
+
+/* 上周的小结 */
+.week-card-head {
+  margin-bottom: 8rpx;
+}
+
+.week-card-sub {
+  font-size: 28rpx;
+  color: var(--muted);
+}
+
+/* 亲友的赞 */
+.likes-note {
+  padding: 24rpx 32rpx;
+  background: var(--carbs-soft);
+  color: var(--carbs-ink);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.meal-likes {
+  margin-top: 6rpx;
+  font-size: 26rpx;
+  color: var(--carbs-ink);
+}
+
+/* 没拍照、只写了字的那顿：一支笔 */
+.thumb-ic {
+  width: 56rpx;
+  height: 56rpx;
+  opacity: 0.55;
+}

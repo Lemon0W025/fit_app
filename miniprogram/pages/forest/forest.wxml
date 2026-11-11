@@ -44,10 +44,11 @@
   </view>
 
   <view class="card week-entry" hover-class="fx-press" bindtap="goWeek">
+    <view class="chip-icon"><image src="/images/icons/chart.svg" mode="aspectFit" /></view>
     <view class="week-entry-body">
       <view class="week-entry-title">每周小结</view>
       <view class="muted small">一周打卡几天、准时几顿、每天吃了多少</view>
     </view>
-    <text class="week-entry-arrow">›</text>
+    <image class="week-entry-arrow" src="/images/icons/chevron-off.svg" mode="aspectFit" />
   </view>
 </view>

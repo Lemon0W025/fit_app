@@ -2,12 +2,12 @@
 
 <view class="page" wx:if="{{view}}">
   <view class="card wk-head fx-rise">
-    <text class="wk-arrow" bindtap="older">‹</text>
+    <view class="round-btn wk-round" hover-class="fx-press" bindtap="older"><image class="wk-flip" src="/images/icons/chevron.svg" mode="aspectFit" /></view>
     <view class="wk-head-body">
       <view class="wk-title">{{view.title}}</view>
       <view class="wk-label">{{view.label}}</view>
     </view>
-    <text class="wk-arrow {{view.newer === null ? 'wk-arrow-off' : ''}}" bindtap="newer">›</text>
+    <view class="round-btn wk-round {{view.newer === null ? 'wk-round-off' : ''}}" hover-class="fx-press" bindtap="newer"><image src="/images/icons/chevron.svg" mode="aspectFit" /></view>
   </view>
 
   <view wx:if="{{view.empty}}" class="card empty">{{view.emptyText}}</view>
@@ -16,12 +16,16 @@
     <view class="wk-tiles fx-rise fx-d1">
       <view wx:for="{{view.tiles}}" wx:key="key" class="card wk-tile">
         <view class="wk-tile-label">{{item.label}}</view>
-        <view class="wk-tile-num">{{item.num}}<text class="wk-tile-unit">{{item.unit}}</text></view>
+        <view class="wk-tile-num num">{{item.num}}<text class="wk-tile-unit">{{item.unit}}</text></view>
       </view>
     </view>
 
     <view class="card fx-rise fx-d2">
-      <view class="card-title">每天吃了多少</view>
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/chart.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">每天吃了多少</text>
+        <text wx:if="{{view.budgetText}}" class="card-head-more">{{view.budgetText}} 千卡</text>
+      </view>
       <view class="wk-nums">
         <view wx:for="{{view.bars}}" wx:key="key" class="wk-kcal {{item.colCls}}">{{item.kcalText}}</view>
       </view>
@@ -42,11 +46,14 @@
           </view>
         </view>
       </view>
-      <view class="wk-legend">柱子是那天吃的千卡，超过预算的是橙色；下面三个点是早午晚，带金边的是准时拍的</view>
+      <view class="wk-legend">柱子是那天吃的千卡，虚线是预算，超过预算的是橙色；下面三个点是早午晚，带金边的是准时拍的</view>
     </view>
 
-    <view class="card coach fx-rise fx-d3">
-      <view class="coach-name"><image class="ic ic-s" src="/images/icons/leaf.svg" mode="aspectFit" />小暖说</view>
+    <view class="card fx-rise fx-d3">
+      <view class="card-head">
+        <view class="chip-icon"><image src="/images/icons/sparkle.svg" mode="aspectFit" /></view>
+        <text class="card-head-title">小暖说</text>
+      </view>
       <view wx:for="{{view.lines}}" wx:key="text" class="wk-line">
         <view class="wk-dot wk-dot-{{item.tone}}"></view>
         <text class="wk-line-text">{{item.text}}</text>

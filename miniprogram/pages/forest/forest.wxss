@@ -140,22 +140,29 @@
   background: var(--lime-soft);
 }
 
-/* 每周小结的入口 */
+/* 每周小结的入口：和「我的」里那几行一个样（图标小圆章 + 两行字 + 箭头） */
 .week-entry {
   display: flex;
   align-items: center;
 }
 
+.week-entry .chip-icon {
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
+
 .week-entry-body {
   flex: 1;
+  min-width: 0;
 }
 
 .week-entry-title {
   font-size: 34rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .week-entry-arrow {
-  font-size: 44rpx;
-  color: var(--gray);
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
 }
